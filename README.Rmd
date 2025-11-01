@@ -75,7 +75,7 @@ pak::pak("SeraphineM/quallmer")
 
 To learn more about how to use the package, please refer to the following examples:
 
-- [Sentiment analysis with LLMs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
+- [Sentiment analysis with text-based data](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
 - More to come.
 
 
