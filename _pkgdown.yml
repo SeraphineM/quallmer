@@ -29,6 +29,6 @@ navbar:
         href: articles/pkgdown/examples/sentiment.html
     github:
       icon: fab fa-github
-      href: https://github.com/quanteda/quallmer
+      href: https://github.com/SeraphineM/quallmer
       aria-label: View on GitHub
 
