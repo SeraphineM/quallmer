@@ -26,6 +26,7 @@ RoxygenNote: 7.3.2
 Suggests: 
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    kableExtra
 Config/testthat/edition: 3
 VignetteBuilder: knitr
