@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   getting-started: getting-started.html
   pkgdown/examples/sentiment: pkgdown/examples/sentiment.html
-last_built: 2025-11-01T04:38Z
+last_built: 2025-11-01T04:40Z
 urls:
   reference: https://seraphinem.github.io/quallmer/reference
   article: https://seraphinem.github.io/quallmer/articles
