@@ -4,13 +4,29 @@ Title: What the Package Does (Title Case)
 Version: 0.1.0
 Authors@R: c(
     person(
-      "Jane", "Doe",
-      email = "jane@example.com",
-      role = c("aut", "cre")
+      "Seraphine F.", "Maerz",
+      email = "seraphine.maerz@unimelb.edu.au",
+      role = c("aut", "cre"), comment = c(ORCID = "0000-0002-7173-9617")
+    ),
+    person(
+      "Kenneth", "Benoit",
+      email = "kbenoit@smu.edu.sg",
+      role = c("aut"), comment = c(ORCID = "0000-0002-0797-564X")
     )
   )
-Description: More about what it does (maybe more than one line).
-    Continuation lines should be indented.
-License: What license is it under?
+Description: Provides userfriendly support for qualitative analysis with large language models (LLMs).
+License: GPL-3
+URL: https://SeraphineM.github.io/quallmer
+Depends:
+    R (>= 3.5.0),
+    ellmer (>= 0.2.1)
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.3.2
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+

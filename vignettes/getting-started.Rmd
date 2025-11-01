@@ -1,0 +1,49 @@
+---
+title: "Getting started with quallmer"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with quallmer}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+This vignette provides a brief introduction to the `quallmer` package, which is designed to facilitate the use of large language models (LLMs) for qualitative research tasks. The package relies on the `ellmer` package for LLM interactions, providing a seamless interface for users to work with different LLM providers. For more information on the `ellmer` package and supported LLM interactions, please refer to its documentation [here](https://ellmer.tidyverse.org/index.html).
+
+## Basic usage
+
+To get started with `quallmer`, you first need to install the package from GitHub. Then, you can load the package and begin using its functions. 
+
+```{r setup}
+library(quallmer)
+```
+
+## Analysing texts
+
+The `quanteda.llm` package provides functions to analyse large amounts of texts using LLMs. This is similar to manual annotations, but it automates the process using LLMs. The package includes functions for summarization, salience rating, scaling, and other text analysis tasks.
+
+## Structuring LLM responses
+
+The package allows you to structure the responses from LLMs in a way that is useful for common qualitative research tasks such as text analysis, image interpretation, and much more. This means you can easily integrate LLM-generated interpretations into your research workflows. For example, you can use the `annotate()` function to ask an LLM to summarize a large number of documents and receive structured summaries that can be easily analysed further.
+
+If you need more flexibility in how the LLM generates its output, you can use the `define_task()` function to define custom prompts and response structures. With `define_task()` and the help of the `type_object()` argument from the `ellmer` package, you can define how the LLM should format its output, such as specifying the fields to include in the response or the format of the response itself. This flexibility enables you to tailor the LLMs' output to your analysis requirements, making it easier to integrate LLM-generated data into your specific workflows.
+
+## Example uses
+
+This vignette provides a brief overview of how to use the `quallmer` package for analysing different material with LLMs by briefly describing the main functions and their purposes. 
+
+### Sentiment analysis of text-based data
+
+More to come...
+
+## Conclusion
+
+The `quallmer` package provides a powerful and flexible framework for integrating large language models into research workflows. By leveraging LLMs, users can automate various text, image, video, etc., processing tasks, such as summarization, classification, and scoring. The package's ability to structure LLM responses and customize output formats makes it a valuable tool for researchers and analysts looking to harness the capabilities of LLMs in their work. For more detailed examples and use cases, please refer to the other vignettes and documentation provided with the package.

@@ -1,0 +1,42 @@
+url: https://SeraphineM.github.io/quallmer/
+template:
+  bootstrap: 5
+
+
+get_started:
+  template: getting-started.html
+
+
+navbar:
+  structure:
+    left:
+      - home
+      - quick-start
+      - reference
+      - examples
+    right:
+      - search
+      - github
+
+  components:
+    quick-start:
+      text: "Quick Start"
+      menu:
+        - text: "Quick Start Guide"
+          href: articles/getting-started.html
+
+    reference:
+      text: "Reference"
+      href: reference/index.html
+
+    examples:
+      text: "Examples"
+      menu:
+        - text: "sentiment"
+          href: articles/pkgdown/examples/sentiment.html
+
+    github:
+      icon: "fab fa-github"
+      href: https://SeraphineM.github.io/quallmer/
+      aria-label: "View on GitHub"
+
