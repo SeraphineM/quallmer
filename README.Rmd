@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# quallmer <a href="https://SeraphineM.github.io/quallmer/"><img src="man/figures/logo.png" align="center" height="200" alt="quallmer website" /></a>
+# quallmer <a href="https://SeraphineM.github.io/quallmer/"><img src="man/figures/logo.png" align="right" height="139" alt="quallmer website" /></a>
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)

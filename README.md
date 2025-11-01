@@ -1,15 +1,15 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# quallmer <a href="https://SeraphineM.github.io/quallmer/"><img src="man/figures/logo.png" align="center" height="200" alt="quallmer website" /></a>
+# quallmer <a href="https://SeraphineM.github.io/quallmer/"><img src="man/figures/logo.png" align="right" height="139" alt="quallmer website" /></a>
 
 <!-- badges: start -->
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
-status](https://www.r-pkg.org/badges/version/quanteda.llm)](https://CRAN.R-project.org/package=quallmer)
-[![R-CMD-check](https://SeraphineM.github.io/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://SeraphineM.github.io/quallmer/actions/workflows/R-CMD-check.yaml)
+status](https://www.r-pkg.org/badges/version/quallmer)](https://CRAN.R-project.org/package=quallmer)
+[![R-CMD-check](https://github.com/SeraphineM/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/SeraphineM/quallmer/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/SeraphineM/quallmer/graph/badge.svg)](https://app.codecov.io/gh/SeraphineM/quallmer)
 [![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://SeraphineM.github.io/quallmer/)
@@ -88,6 +88,6 @@ pak::pak("SeraphineM/quallmer")
 To learn more about how to use the package, please refer to the
 following examples:
 
-- [Sentiment analysis with
-  LLMs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
+- [Sentiment analysis with text-based
+  data](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
 - More to come.
