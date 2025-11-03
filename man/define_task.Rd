@@ -9,14 +9,14 @@ define_task(name, system_prompt, type_object, input_type = "text")
 \arguments{
 \item{name}{Name of the task}
 
-\item{system_prompt}{System prompt (text to guide the model)}
+\item{system_prompt}{System prompt as required by ellmer's chat_fn (text to guide the model)}
 
-\item{type_object}{Structured output definition (ellmer type_object)}
+\item{type_object}{Structured output definition (ellmer's type_object)}
 
 \item{input_type}{Type of input data: "text", "image", "audio", etc.}
 }
 \value{
-A task object
+A task object with a run() method
 }
 \description{
 Define an annotation task

@@ -15,7 +15,7 @@ annotate <- function(.data, task, ...) {
 
   input_type <- task$input_type
 
-  # Simple validation — later you can extend this with classes (e.g., "magick-image", "data.frame")
+  # Simple validation
   if (input_type == "text" && !is.character(.data)) {
     stop("This task expects text input.")
   }

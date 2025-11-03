@@ -34,7 +34,7 @@ Using `annotate()`, users can generate structured, interpretable outputs powered
 The package provides the following core functions:
 
 ### `annotate()`
-- A generic function that works with any LLM supported by [ellmer](https://ellmer.tidyverse.org/articles/structured-data.html).  
+- A generic function that works with any LLM supported by [ellmer](https://ellmer.tidyverse.org/index.html).  
 - Generates structured responses based on [predefined](https://seraphinem.github.io/quallmer/articles/pkgdown/examples.html) or user-defined tasks.  
 
 ### `define_task()`
