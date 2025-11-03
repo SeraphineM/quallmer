@@ -40,6 +40,7 @@
 <li><a class="dropdown-item" href="../../../articles/getting-started.html">Quick start guide</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/openai.html">Signing up for an openai API key</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/customtask.html">Defining custom tasks</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
@@ -129,8 +130,8 @@ explanation
 1.0
 </td>
 <td style="text-align:left;">
-The text expresses strong positive emotion by using the word
-‘wonderful,’ which is inherently positive and enthusiastic.
+The word “wonderful” conveys a strong sense of positivity and delight,
+indicating a very positive sentiment.
 </td>
 </tr>
 <tr>
@@ -138,12 +139,11 @@ The text expresses strong positive emotion by using the word
 2
 </td>
 <td style="text-align:right;">
--0.7
+-0.8
 </td>
 <td style="text-align:left;">
-The word ‘dislike’ indicates a strong negative sentiment, though it is
-not the strongest possible expression of negativity, hence the score of
--0.7.
+The word ‘dislike’ indicates a strong negative sentiment towards the
+approach, justifying a score close to -1.
 </td>
 </tr>
 <tr>
@@ -154,8 +154,9 @@ not the strongest possible expression of negativity, hence the score of
 -0.5
 </td>
 <td style="text-align:left;">
-The word ‘disappointing’ indicates a negative sentiment, but the use of
-‘somewhat’ softens it, suggesting it’s not extremely negative.
+The sentiment is negative because ‘disappointing’ indicates a failure to
+meet expectations or achieve desired outcomes, although ‘somewhat’
+softens the negativity slightly.
 </td>
 </tr>
 <tr>
@@ -166,8 +167,9 @@ The word ‘disappointing’ indicates a negative sentiment, but the use of
 1.0
 </td>
 <td style="text-align:left;">
-The text uses highly positive language with words like ‘absolutely’ and
-‘fantastic’, indicating a very positive sentiment.
+The phrase “Absolutely fantastic work!” expresses a strong positive
+sentiment, using words like “fantastic” and “absolutely” to emphasize
+enthusiasm and approval.
 </td>
 </tr>
 </tbody>

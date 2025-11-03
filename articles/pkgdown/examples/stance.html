@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Example: Sentiment analysis • quallmer</title>
+<title>Example: Stance detection • quallmer</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../../../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../../../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../../../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../../../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../../../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../../../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Sentiment analysis">
+<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Stance detection">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -40,6 +40,7 @@
 <li><a class="dropdown-item" href="../../../articles/getting-started.html">Quick start guide</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/openai.html">Signing up for an openai API key</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/customtask.html">Defining custom tasks</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
@@ -65,10 +66,10 @@
 
 
 
-<script src="stance_files/kePrint-0.0.1/kePrint.js"></script><link href="stance_files/lightable-0.0.1/lightable.css" rel="stylesheet">
+
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Sentiment analysis</h1>
+      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Stance detection</h1>
             
       
 
@@ -79,101 +80,9 @@
     
 <p>The <code><a href="../../../reference/annotate.html">annotate()</a></code> function with a predefined sentiment task
 allows you to rate the sentiment of texts using an LLM. The predefined
-<code><a href="../../../reference/sentiment.html">sentiment()</a></code> object structures the response with a numeric
-sentiment score from -1 (very negative) to 1 (very positive) and a brief
-explanation.</p>
-<div class="section level3">
-<h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
-</h3>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://SeraphineM.github.io/quallmer" class="external-link">quallmer</a></span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Loading required package: ellmer</span></span></code></pre>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#Example texts</span></span>
-<span><span class="va">texts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span><span class="st">"This is wonderful!"</span>,</span>
-<span><span class="st">"I really dislike this approach."</span>,</span>
-<span><span class="st">"The results are somewhat disappointing."</span>,</span>
-<span><span class="st">"Absolutely fantastic work!"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="using-annotate-for-sentiment-analysis-of-texts">Using <code>annotate()</code> for sentiment analysis of texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-sentiment-analysis-of-texts"></a>
-</h3>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Apply predefined sentiment task with sentiment() in the annotate() function</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/sentiment.html">sentiment</a></span><span class="op">(</span><span class="op">)</span>, chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Running task 'Sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
-<table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
-<thead><tr>
-<th style="text-align:right;">
-id
-</th>
-<th style="text-align:right;">
-score
-</th>
-<th style="text-align:left;">
-explanation
-</th>
-</tr></thead>
-<tbody>
-<tr>
-<td style="text-align:right;">
-1
-</td>
-<td style="text-align:right;">
-1.0
-</td>
-<td style="text-align:left;">
-The word ‘wonderful’ conveys a strong positive sentiment.
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-2
-</td>
-<td style="text-align:right;">
--0.8
-</td>
-<td style="text-align:left;">
-The word ‘dislike’ indicates a strong negative sentiment towards the
-approach. The adverb ‘really’ amplifies this negativity.
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-3
-</td>
-<td style="text-align:right;">
--0.5
-</td>
-<td style="text-align:left;">
-The word ‘disappointing’ conveys a negative sentiment, suggesting that
-the results did not meet expectations. The use of ‘somewhat’ slightly
-mitigates the negativity, indicating that while the results are not very
-negative, they are still unfavorable.
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-4
-</td>
-<td style="text-align:right;">
-1.0
-</td>
-<td style="text-align:left;">
-The phrase “Absolutely fantastic work!” is strongly positive. The use of
-‘absolutely’ and ‘fantastic’ both convey a high level of satisfaction
-and admiration.
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
-    </nav></aside>
+<code>stance()</code> object structures the response with …</p>
+<p>Coming soon!</p>
+  </main>
 </div>
 
 
