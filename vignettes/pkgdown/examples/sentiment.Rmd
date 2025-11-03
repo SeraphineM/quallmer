@@ -27,15 +27,14 @@ texts <- c(
 
 ```{r sentiment}
 # Apply predefined sentiment task with sentiment() in the annotate() function
-result <- annotate(texts, task = sentiment(), chat_fn = chat_openai, model = "gpt-4o")
+result <- annotate(texts, task = sentiment(), 
+                   chat_fn = chat_openai, model = "gpt-4o",
+                   api_args = list(temperature = 0, seed = 42))
 ```
 
-```{r display_results1, eval = FALSE}
-result
-```
 
 ```{r display_results2, echo = FALSE}
-# topic and score are created as new docvars in the corpus
+# sentiment analysis results table
 library(kableExtra)
 result %>%
   kable("html", escape = FALSE) %>%

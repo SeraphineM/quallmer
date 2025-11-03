@@ -7,4 +7,71 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Coming soon!
+With the `quallmer` package, you can define custom annotation tasks tailored to your specific research questions and data types using the `define_task()` function. This allows you to create structured prompts and response formats that suit your qualitative coding needs.
+
+In the following example, we will demonstrate how to define a custom task for scoring documents 
+based on their alignment with political left ideologies. For this, we formulate a prompt that asks the LLM to score documents on a scale of political left alignment. We then define the expected response structure using the `define_task()` function. Finally, we will use the `annotate()` function to apply this custom task to a sample corpus of inaugural speeches from US presidents.
+
+### Loading packages and data
+
+```{r getting-started}
+# We will use the quanteda package for loading a sample corpus of innaugural speeches
+# If you have not yet installed the quanteda package, you can do so by:
+# install.packages("quanteda")
+library(quanteda)
+library(quallmer)
+
+# For educational purposes, we will use a subset of the inaugural speeches corpus
+# The three most recent speeches in the corpus
+data_corpus_inaugural <- data_corpus_inaugural[57:60]
+
+```
+
+### Defining a custom prompt
+```{r define-prompt}
+
+prompt <- "Score the following document on a scale of how much it aligns
+with the political left. The political left is defined as groups which
+advocate for social equality, government intervention in the economy,
+and progressive policies. Use the following metrics:
+SCORING METRIC:
+3 : extremely left
+2 : very left
+1 : slightly left
+0 : not at all left"
+
+```
+
+### Defining the structure of the response
+```{r define-structure}
+# Important elements of define_task() are the name, system_prompt, type_object, and input_type arguments.
+# The type_object argument specifies the expected structure of the response from the LLM.
+# For more options, see the documentation for ellmer::type_object()
+# https://ellmer.tidyverse.org/reference/type_boolean.html
+ideology_scores <- define_task(
+  name = "Score Political Left Alignment",
+  system_prompt = prompt,
+  type_object = type_object(
+    score = type_number("Score"),
+    explanation = type_string("Explanation")
+  ),
+  input_type = "text"
+)
+```
+
+### Applying the custom task to the corpus
+```{r apply-task}
+# This is straightforward using the annotate() function and our custom task
+result <- annotate(data_corpus_inaugural, task = ideology_scores,
+                   chat_fn = chat_openai, model = "gpt-4o",
+                   api_args = list(temperature = 0, seed = 42))
+```
+
+```{r display_results, echo = FALSE}
+# sentiment analysis results table
+library(kableExtra)
+result %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3) 
+```
