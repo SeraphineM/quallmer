@@ -35,6 +35,8 @@ navbar:
         href: articles/pkgdown/examples/overview.html
       - text: Sentiment analysis
         href: articles/pkgdown/examples/sentiment.html
+      - text: Stance detection / position taking
+        href: articles/pkgdown/examples/stance.html
     github:
       icon: fab fa-github
       href: https://github.com/SeraphineM/quallmer

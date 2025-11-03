@@ -1,5 +1,5 @@
 ---
-title: "Overview on predefined tasks"
+title: "Overview of predefined tasks"
 output: html_document
 ---
 
@@ -9,10 +9,11 @@ Before creating your own tasks, you might want to explore the predefined tasks a
 
 The `quallmer` package currently includes the following predefined tasks:
 
-| **Task** | **Description** | **Output** |
-|-----------|-----------------|-------------|
-| [**Sentiment analysis**](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html) | Rates the sentiment of texts on a scale from -1 (very negative) to 1 (very positive), and provides a brief explanation of the rating. | Sentiment score (`-1` to `1`) and explanation |
-| [**Stance detection**](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/stance.html) | Assesses the stance or position a text takes toward a specific topic or issue. | Stance label (e.g., *supportive*, *neutral*, *opposed*) and explanation |
+| **Task** | **Function** | **Description** | **Output** |
+|-----------|---------------|-----------------|-------------|
+| [**Sentiment analysis**](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html) | `sentiment()` | Rates overall sentiment of text. | Sentiment score (`-1` to `1`) and explanation |
+| [**Stance detection**](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/stance.html) | `stance()` | Identifies stance/position taking toward a topic. | Stance label and explanation |
+
 
 
 If you wish to create custom tasks tailored to your specific research questions and data types, you can use the `define_task()` function. This function allows you to specify the system prompt and output structure, enabling you to customize the annotation process according to your needs. For a tutorial on how to create custom tasks, please refer to our [custom tasks tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).

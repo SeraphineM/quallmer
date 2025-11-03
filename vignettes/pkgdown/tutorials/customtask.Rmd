@@ -90,3 +90,5 @@ result %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
   column_spec(3) 
 ```
+
+Now you have successfully created and applied a custom annotation task using the `quallmer` package! You can further modify the prompt and response structure to suit your specific research needs.
