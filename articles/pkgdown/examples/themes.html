@@ -66,7 +66,7 @@
 
 
 
-
+<script src="themes_files/kePrint-0.0.1/kePrint.js"></script><link href="themes_files/lightable-0.0.1/lightable.css" rel="stylesheet">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../../../logo.png" class="logo" alt=""><h1>Example: Thematic coding</h1>
@@ -80,9 +80,195 @@
     
 <p>The <code><a href="../../../reference/annotate.html">annotate()</a></code> function with a predefined sentiment task
 allows you to rate the sentiment of texts using an LLM. The predefined
-<code>themes()</code> object structures the response with …</p>
-<p>Coming soon!</p>
-  </main>
+<code><a href="../../../reference/themes.html">themes()</a></code> object structures the response by indicating
+whether specific themes are present in the text, along with proportion
+scores (0-1) and explanations for each theme.</p>
+<div class="section level3">
+<h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
+</h3>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># We will use the quanteda package for loading a sample corpus of innaugural speeches</span></span>
+<span><span class="co"># If you have not yet installed the quanteda package, you can do so by:</span></span>
+<span><span class="co"># install.packages("quanteda")</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quanteda.io" class="external-link">quanteda</a></span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Package version: 4.3.1</span></span>
+<span><span class="co">## Unicode version: 15.1</span></span>
+<span><span class="co">## ICU version: 74.2</span></span></code></pre>
+<pre><code><span><span class="co">## Parallel computing: disabled</span></span></code></pre>
+<pre><code><span><span class="co">## See https://quanteda.io for tutorials and examples.</span></span></code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://SeraphineM.github.io/quallmer" class="external-link">quallmer</a></span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Loading required package: ellmer</span></span></code></pre>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># For educational purposes, we will use a subset of the inaugural speeches corpus</span></span>
+<span><span class="co"># The three most recent speeches in the corpus</span></span>
+<span><span class="va">data_corpus_inaugural</span> <span class="op">&lt;-</span> <span class="fu">quanteda</span><span class="fu">::</span><span class="va"><a href="https://quanteda.io/reference/data_corpus_inaugural.html" class="external-link">data_corpus_inaugural</a></span><span class="op">[</span><span class="fl">57</span><span class="op">:</span><span class="fl">60</span><span class="op">]</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="using-annotate-for-thematic-coding-of-texts">Using <code>annotate()</code> for thematic coding of texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-thematic-coding-of-texts"></a>
+</h3>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Define themes of interest</span></span>
+<span><span class="va">topics</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Politics"</span>, <span class="st">"Economy"</span>, <span class="st">"Artificial Intelligence"</span>, <span class="st">"Environment"</span>, <span class="st">"Healthcare"</span><span class="op">)</span></span>
+<span><span class="co"># Apply predefined themes task with themes() in the annotate() function</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/themes.html">themes</a></span><span class="op">(</span><span class="va">topics</span><span class="op">)</span>, </span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Running task 'Theme coding' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
+<table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
+<thead><tr>
+<th style="text-align:left;">
+id
+</th>
+<th style="text-align:right;">
+Politics
+</th>
+<th style="text-align:right;">
+Economy
+</th>
+<th style="text-align:right;">
+Artificial Intelligence
+</th>
+<th style="text-align:right;">
+Environment
+</th>
+<th style="text-align:right;">
+Healthcare
+</th>
+<th style="text-align:left;">
+explanation
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2013-Obama
+</td>
+<td style="text-align:right;">
+0.5
+</td>
+<td style="text-align:right;">
+0.20
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0.15
+</td>
+<td style="text-align:right;">
+0.15
+</td>
+<td style="text-align:left;">
+The text is a presidential inaugural address, heavily focused on
+political themes such as democracy, equality, and governance, which
+accounts for 50% of the content. Economic aspects are also discussed,
+particularly in terms of economic recovery and the importance of a
+strong middle class, making up 20% of the content. Environmental issues,
+specifically climate change and sustainable energy, are addressed,
+contributing 15% to the content. Healthcare is mentioned in the context
+of Medicare, Medicaid, and Social Security, also accounting for 15%.
+Artificial Intelligence is not mentioned, so it is assigned 0%.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2017-Trump
+</td>
+<td style="text-align:right;">
+0.7
+</td>
+<td style="text-align:right;">
+0.20
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0.00
+</td>
+<td style="text-align:right;">
+0.10
+</td>
+<td style="text-align:left;">
+The text is primarily a political speech, focusing on themes of
+governance, power transfer, and national unity, which accounts for 70%
+of the content. Economic issues are also addressed, such as job
+creation, trade, and infrastructure, making up 20% of the content.
+Healthcare is briefly mentioned in the context of freeing the Earth from
+disease, contributing 10% to the content. There is no mention of
+Artificial Intelligence or specific environmental issues.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2021-Biden
+</td>
+<td style="text-align:right;">
+0.7
+</td>
+<td style="text-align:right;">
+0.05
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0.05
+</td>
+<td style="text-align:right;">
+0.20
+</td>
+<td style="text-align:left;">
+The text is primarily focused on politics, discussing democracy, unity,
+and the peaceful transfer of power, which accounts for 70% of the
+content. Healthcare is also a significant topic, mentioned in the
+context of the pandemic and the need to overcome the virus, making up
+20% of the content. The economy is briefly mentioned in terms of job
+losses and rebuilding, accounting for 5%. The environment is touched
+upon with a reference to a ‘cry for survival from the planet,’ also
+making up 5%. Artificial Intelligence is not mentioned.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2025-Trump
+</td>
+<td style="text-align:right;">
+0.6
+</td>
+<td style="text-align:right;">
+0.25
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+0.10
+</td>
+<td style="text-align:right;">
+0.05
+</td>
+<td style="text-align:left;">
+The text is a political speech focusing heavily on political themes such
+as national sovereignty, government reform, and national unity, which
+accounts for 60% of the content. Economic issues are also prominent,
+with discussions on inflation, energy policy, and trade, making up 25%
+of the text. Environmental topics are mentioned in the context of energy
+policy and the Green New Deal, accounting for 10%. Healthcare is briefly
+mentioned in terms of public health system failures and COVID vaccine
+mandates, making up 5% of the content. Artificial Intelligence is not
+mentioned.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
