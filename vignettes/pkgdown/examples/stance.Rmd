@@ -7,6 +7,36 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The `annotate()` function with a predefined sentiment task allows you to rate the sentiment of texts using an LLM. The predefined `stance()` object structures the response with ...
+The `annotate()` function with a predefined sentiment task allows you to rate the sentiment of texts using an LLM. The predefined `stance()` object structures the response by including a `stance` score and an `explanation` to illustrate how positively or negatively the text views a specific topic.
 
-Coming soon!
+### Loading packages and data
+
+```{r getting-started}
+# We will use the quanteda package for loading a sample corpus of innaugural speeches
+# If you have not yet installed the quanteda package, you can do so by:
+# install.packages("quanteda")
+library(quanteda)
+library(quallmer)
+
+# For educational purposes, we will use a subset of the inaugural speeches corpus
+# The three most recent speeches in the corpus
+data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
+
+```
+### Using `annotate()` for stance detection of texts
+```{r stance}
+# Define topic of interest
+topic <- "Climate Change"
+# Apply predefined stance task with stance() in the annotate() function
+result <- annotate(data_corpus_inaugural, task = stance(topic), 
+                   chat_fn = chat_openai, model = "gpt-4o",
+                   api_args = list(temperature = 0, seed = 42))
+```
+```{r display_results, echo = FALSE}
+# stance detection results table
+library(kableExtra)
+result %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3)
+```

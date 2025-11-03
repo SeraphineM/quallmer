@@ -57,3 +57,25 @@ themes <- function(topics = c("Environment", "Economy", "Health", "Education")) 
     input_type = "text"
   )
 }
+
+
+#' Stance detection task
+#' The `stance()` task assesses the stance of a text towards a specific topic or issue.
+#' @param topic A character string specifying the topic for stance detection.
+#' @return A task object
+#' @export
+stance <- function(topic = "the given topic") {
+  define_task(
+    name = "Stance detection",
+    system_prompt = paste0(
+      "You are an expert annotator. Read each short text carefully and determine its stance towards '",
+      topic,
+      "'. Classify the stance as 'Pro', 'Neutral', or 'Contra', and provide a brief explanation for your classification."
+    ),
+    type_object = ellmer::type_object(
+      stance = ellmer::type_string("Stance towards the topic: 'Pro', 'Neutral', or 'Contra'"),
+      explanation = ellmer::type_string("Brief explanation of the classification")
+    ),
+    input_type = "text"
+  )
+}
