@@ -29,7 +29,7 @@ navbar:
     examples:
       text: Predefined tasks
       menu:
-      - text: Sentiment Analysis
+      - text: Sentiment analysis
         href: articles/pkgdown/examples/sentiment.html
     github:
       icon: fab fa-github

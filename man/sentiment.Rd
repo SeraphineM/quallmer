@@ -2,7 +2,7 @@
 % Please edit documentation in R/tasks.R
 \name{sentiment}
 \alias{sentiment}
-\title{Built-in tasks}
+\title{Predefined tasks}
 \usage{
 sentiment()
 }

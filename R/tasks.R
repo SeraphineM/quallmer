@@ -1,4 +1,4 @@
-#' Built-in tasks
+#' Predefined tasks
 #'
 #' Sentiment analysis task
 #' Analyzes short texts and returns a sentiment score (-1 to 1) and a short explanation.
@@ -6,7 +6,7 @@
 #' @export
 sentiment <- function() {
   define_task(
-    name = "Sentiment Analysis",
+    name = "Sentiment analysis",
     system_prompt = "You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive) and briefly explain why.",
     type_object = ellmer::type_object(
       score = ellmer::type_number("Sentiment score between -1 (very negative) and 1 (very positive)"),
@@ -17,6 +17,6 @@ sentiment <- function() {
 }
 
 # Internal registry of built-in tasks
-.builtin_tasks <- list(
+.predefined_tasks <- list(
   sentiment = sentiment
 )

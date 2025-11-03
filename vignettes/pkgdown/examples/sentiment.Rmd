@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The `annotate()` function with a predefined sentiment task allows you to rate the sentiment of texts using an LLM. The predefined `define_task()` object structures the response with a numeric sentiment score and a brief explanation. This approach is ideal for quickly analyzing large sets of documents without manual coding.
+The `annotate()` function with a predefined sentiment task allows you to rate the sentiment of texts using an LLM. The predefined `sentiment()` object structures the response with a numeric sentiment score from -1 (very negative) to 1 (very positive) and a brief explanation. 
 
 ### Loading packages and data
 
@@ -26,11 +26,8 @@ texts <- c(
 ### Using `annotate()` for sentiment analysis of texts
 
 ```{r sentiment}
-# Load predefined sentiment task
-sentiment_task <- sentiment()
-
-#Annotate texts
-result <- annotate(texts, task = sentiment_task, chat_fn = ellmer::chat_openai, model = "gpt-4o")
+# Apply predefined sentiment task with sentiment() in the annotate() function
+result <- annotate(texts, task = sentiment(), chat_fn = chat_openai, model = "gpt-4o")
 ```
 
 ```{r display_results1, eval = FALSE}
