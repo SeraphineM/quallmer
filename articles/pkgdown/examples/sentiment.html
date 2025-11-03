@@ -105,9 +105,7 @@ explanation.</p>
 <code class="sourceCode R"><span><span class="co"># Apply predefined sentiment task with sentiment() in the annotate() function</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/sentiment.html">sentiment</a></span><span class="op">(</span><span class="op">)</span>, chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -130,8 +128,9 @@ explanation
 1.0
 </td>
 <td style="text-align:left;">
-The word “wonderful” conveys a strong sense of positivity and delight,
-indicating a very positive sentiment.
+The text expresses a high level of positivity, as indicated by the use
+of the word ‘wonderful,’ which is a clear indicator of positive
+sentiment.
 </td>
 </tr>
 <tr>
@@ -142,8 +141,8 @@ indicating a very positive sentiment.
 -0.8
 </td>
 <td style="text-align:left;">
-The word ‘dislike’ indicates a strong negative sentiment towards the
-approach, justifying a score close to -1.
+The use of ‘dislike’ indicates a strong negative sentiment towards the
+approach, leading to a negative sentiment score.
 </td>
 </tr>
 <tr>
@@ -154,9 +153,8 @@ approach, justifying a score close to -1.
 -0.5
 </td>
 <td style="text-align:left;">
-The sentiment is negative because ‘disappointing’ indicates a failure to
-meet expectations or achieve desired outcomes, although ‘somewhat’
-softens the negativity slightly.
+The term ‘disappointing’ suggests a negative sentiment, but ‘somewhat’
+softens the negativity, making it less severe.
 </td>
 </tr>
 <tr>
@@ -167,9 +165,9 @@ softens the negativity slightly.
 1.0
 </td>
 <td style="text-align:left;">
-The phrase “Absolutely fantastic work!” expresses a strong positive
-sentiment, using words like “fantastic” and “absolutely” to emphasize
-enthusiasm and approval.
+The phrase ‘absolutely fantastic work’ is highly positive, as
+‘absolutely’ amplifies the word ‘fantastic’, which itself suggests
+excellence and high quality.
 </td>
 </tr>
 </tbody>

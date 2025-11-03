@@ -10,7 +10,7 @@ articles:
   pkgdown/examples/sentiment: pkgdown/examples/sentiment.html
   pkgdown/examples/stance: pkgdown/examples/stance.html
   pkgdown/examples/themes: pkgdown/examples/themes.html
-last_built: 2025-11-03T01:14Z
+last_built: 2025-11-03T01:19Z
 urls:
   reference: https://seraphinem.github.io/quallmer/reference
   article: https://seraphinem.github.io/quallmer/articles
