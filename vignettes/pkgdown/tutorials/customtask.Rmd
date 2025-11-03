@@ -23,7 +23,7 @@ library(quallmer)
 
 # For educational purposes, we will use a subset of the inaugural speeches corpus
 # The three most recent speeches in the corpus
-data_corpus_inaugural <- data_corpus_inaugural[57:60]
+data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
 
 ```
 

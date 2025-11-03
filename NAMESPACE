@@ -3,4 +3,5 @@
 export(annotate)
 export(define_task)
 export(sentiment)
+export(themes)
 import(ellmer)

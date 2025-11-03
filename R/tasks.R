@@ -22,20 +22,38 @@ sentiment <- function() {
 )
 
 #' Theme coding task
-#' Codes short texts for the presence of predefined themes and provides brief explanations.
-#' @return A task object
+#'
+#' Codes short texts for the proportional presence of predefined topics and provides brief explanations.
+#'
+#' @param topics A character vector of topics to code for.
+#' The default topics are "Environment", "Economy", "Health", and "Education".
+#' @return A task object.
 #' @export
-themes <- function() {
+themes <- function(topics = c("Environment", "Economy", "Health", "Education")) {
+  # Create a list of typed objects for each topic
+  topic_types <- lapply(topics, function(topic) {
+    ellmer::type_number(paste0("Proportion (0–1) of text related to ", topic))
+  })
+  names(topic_types) <- topics
+
+  # Construct the type_object dynamically
+  type_obj <- do.call(
+    ellmer::type_object,
+    c(topic_types, list(explanation = ellmer::type_string("Brief explanation of the coding")))
+  )
+
+  # Define the task
   define_task(
     name = "Theme coding",
-    system_prompt = "You are an expert annotator. For each text, indicate whether the following themes are present: 'Health', 'Environment', 'Technology', 'Education'. Provide a brief explanation for each theme's presence or absence.",
-    type_object = ellmer::type_object(
-      Health = ellmer::type_boolean("Indicates if the theme 'Health' is present"),
-      Environment = ellmer::type_boolean("Indicates if the theme 'Environment' is present"),
-      Technology = ellmer::type_boolean("Indicates if the theme 'Technology' is present"),
-      Education = ellmer::type_boolean("Indicates if the theme 'Education' is present"),
-      explanations = ellmer::type_string("Brief explanations for the presence or absence of each theme")
+    system_prompt = paste0(
+      "You are an expert annotator. Read each short text carefully and assign proportions of content ",
+      "related to the following topics: ",
+      paste(topics, collapse = ", "),
+      ". Each proportion must be between 0 and 1, and all proportions must add up to exactly 1. ",
+      "If a topic is not mentioned, assign it a proportion of 0. ",
+      "Provide a brief explanation summarizing your reasoning."
     ),
+    type_object = type_obj,
     input_type = "text"
   )
 }
