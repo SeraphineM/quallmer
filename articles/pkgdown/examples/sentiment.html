@@ -49,6 +49,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/sentiment.html">Sentiment analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/stance.html">Stance detection / position taking</a></li>
   </ul>
 </li>
       </ul>
@@ -108,7 +109,7 @@ texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-predefined-
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -131,8 +132,8 @@ explanation
 1.0
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a very positive sentiment, indicating
-delight or admiration.
+The word ‘wonderful’ conveys a strong positive sentiment, indicating
+that something is very good or pleasing.
 </td>
 </tr>
 <tr>
@@ -155,9 +156,8 @@ approach.
 -0.5
 </td>
 <td style="text-align:left;">
-The word ‘disappointing’ indicates a negative sentiment, but the use of
-‘somewhat’ suggests that the disappointment is not very strong, leading
-to a moderately negative score.
+The word ‘disappointing’ indicates a negative sentiment, but ‘somewhat’
+softens the impact, suggesting a moderate level of negativity.
 </td>
 </tr>
 <tr>
@@ -170,7 +170,7 @@ to a moderately negative score.
 <td style="text-align:left;">
 The phrase ‘Absolutely fantastic work!’ is highly positive, using strong
 positive adjectives like ‘fantastic’ and the intensifier ‘absolutely’ to
-express a high level of satisfaction and praise.
+express high praise and satisfaction.
 </td>
 </tr>
 </tbody>
@@ -201,8 +201,6 @@ confidence level.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -227,8 +225,8 @@ confidence
 1.0
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ is a strong positive adjective, indicating a very
-positive sentiment.
+The word ‘wonderful’ is strongly positive, indicating a very positive
+sentiment.
 </td>
 <td style="text-align:right;">
 1.0
@@ -272,9 +270,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 1.0
 </td>
 <td style="text-align:left;">
-The phrase ‘Absolutely fantastic work!’ is highly positive, as it uses
-strong positive adjectives like ‘fantastic’ and the intensifier
-‘absolutely’ to express high praise and satisfaction.
+The phrase ‘Absolutely fantastic work!’ is highly positive, expressing
+strong approval and admiration.
 </td>
 <td style="text-align:right;">
 1.0
@@ -284,7 +281,7 @@ strong positive adjectives like ‘fantastic’ and the intensifier
 </table>
 <p>Or, you might want to change the scoring scale to a 5-point Likert
 scale.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">likert_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/define_task.html">define_task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Likert scale sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text on a scale from 1 (very negative) to 5 (very positive) and briefly explain why."</span>,</span>
@@ -299,7 +296,7 @@ scale.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Likert scale sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -334,9 +331,8 @@ that the speaker is very pleased or impressed.
 2
 </td>
 <td style="text-align:left;">
-The sentiment is negative as the word ‘dislike’ indicates
-dissatisfaction or disapproval, but it’s not extremely negative as it
-lacks strong negative language.
+The word ‘dislike’ indicates a negative sentiment, but it is not
+extremely negative, hence a score of 2.
 </td>
 </tr>
 <tr>
@@ -349,7 +345,7 @@ lacks strong negative language.
 <td style="text-align:left;">
 The word ‘disappointing’ indicates a negative sentiment, but the use of
 ‘somewhat’ suggests that the disappointment is not very strong, leading
-to a score of 2.
+to a slightly negative overall sentiment.
 </td>
 </tr>
 <tr>
@@ -360,8 +356,9 @@ to a score of 2.
 5
 </td>
 <td style="text-align:left;">
-The phrase ‘Absolutely fantastic work!’ is highly positive, expressing
-strong approval and admiration.
+The phrase ‘Absolutely fantastic work!’ is highly positive, using strong
+adjectives like ‘absolutely’ and ‘fantastic’ to express a high level of
+satisfaction and praise.
 </td>
 </tr>
 </tbody>

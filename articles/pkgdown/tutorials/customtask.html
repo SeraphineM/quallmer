@@ -49,6 +49,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/sentiment.html">Sentiment analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/stance.html">Stance detection / position taking</a></li>
   </ul>
 </li>
       </ul>
@@ -186,7 +187,6 @@ increasing reliability.</p>
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -219,8 +219,7 @@ typically supported by the left. Additionally, it calls for reforms in
 education, tax policy, and immigration, and stresses the need for equal
 rights for women and the LGBTQ+ community. However, it also acknowledges
 the importance of personal responsibility and skepticism of central
-authority, which are not typically leftist positions, preventing it from
-being extremely left.
+authority, which slightly tempers its alignment with the extreme left.
 </td>
 </tr>
 <tr>
@@ -233,13 +232,11 @@ being extremely left.
 <td style="text-align:left;">
 The speech emphasizes nationalism, protectionism, and a focus on
 ‘America first’ policies, which are not aligned with the political
-left’s emphasis on global cooperation and social equality. The speech
-criticizes the political establishment and suggests a return of power to
-the people, but it does not advocate for government intervention in the
-economy or progressive policies typically associated with the political
-left. Instead, it focuses on reducing welfare and promoting American
-industry, which are more aligned with conservative or right-wing
-ideologies.
+left’s emphasis on global cooperation and social equality. It criticizes
+government elites and suggests a return of power to the people, but does
+not advocate for government intervention in the economy or progressive
+policies. The focus on military strength and national pride further
+distances it from leftist ideals.
 </td>
 </tr>
 <tr>
@@ -256,9 +253,9 @@ addressing major societal issues. It acknowledges systemic racism,
 climate change, and economic inequality, which are key concerns of the
 political left. The call for racial justice, healthcare security for
 all, and rebuilding the middle class are progressive policies. However,
-the speech also focuses heavily on unity and bipartisanship, which
-slightly tempers its alignment with the political left, as it seeks to
-appeal to a broader audience beyond just left-leaning individuals.
+the speech also emphasizes unity and bipartisanship, which slightly
+tempers its alignment with the political left, as it seeks to appeal to
+a broader audience beyond just left-leaning individuals.
 </td>
 </tr>
 <tr>
@@ -269,19 +266,20 @@ appeal to a broader audience beyond just left-leaning individuals.
 0
 </td>
 <td style="text-align:left;">
-The speech aligns with a right-wing political perspective, emphasizing
-nationalism, strong borders, military strength, and a rollback of
-progressive policies such as the Green New Deal and gender inclusivity.
-It advocates for reduced government intervention in certain areas, such
-as energy and education, and promotes a return to traditional values and
-economic nationalism. These positions are generally contrary to the
-principles of the political left, which focuses on social equality,
-progressive policies, and government intervention in the economy to
-address social issues.
+The speech aligns with right-wing political ideologies rather than the
+political left. It emphasizes nationalism, border security, and a strong
+military, which are typically associated with conservative values. The
+speech also criticizes government intervention in the economy, opposes
+progressive policies like the Green New Deal, and promotes traditional
+values, all of which are contrary to the principles of the political
+left.
 </td>
 </tr>
 </tbody>
 </table>
+<p>Now you have successfully created and applied a custom annotation
+task using the <code>quallmer</code> package! You can further modify the
+prompt and response structure to suit your specific research needs.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Overview on predefined tasks • quallmer</title>
+<title>Overview of predefined tasks • quallmer</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../../../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../../../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../../../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../../../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../../../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../../../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Overview on predefined tasks">
+<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Overview of predefined tasks">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -49,6 +49,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/sentiment.html">Sentiment analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/stance.html">Stance detection / position taking</a></li>
   </ul>
 </li>
       </ul>
@@ -69,7 +70,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../../../logo.png" class="logo" alt=""><h1>Overview on predefined tasks</h1>
+      <img src="../../../logo.png" class="logo" alt=""><h1>Overview of predefined tasks</h1>
             
       
 
@@ -89,12 +90,14 @@ easily integrated into your workflow.</p>
 predefined tasks:</p>
 <table class="table">
 <colgroup>
+<col width="19%">
 <col width="26%">
-<col width="41%">
-<col width="31%">
+<col width="30%">
+<col width="23%">
 </colgroup>
 <thead><tr class="header">
 <th><strong>Task</strong></th>
+<th><strong>Function</strong></th>
 <th><strong>Description</strong></th>
 <th><strong>Output</strong></th>
 </tr></thead>
@@ -102,18 +105,17 @@ predefined tasks:</p>
 <tr class="odd">
 <td><a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html"><strong>Sentiment
 analysis</strong></a></td>
-<td>Rates the sentiment of texts on a scale from -1 (very negative) to 1
-(very positive), and provides a brief explanation of the rating.</td>
+<td><code><a href="../../../reference/sentiment.html">sentiment()</a></code></td>
+<td>Rates overall sentiment of text.</td>
 <td>Sentiment score (<code>-1</code> to <code>1</code>) and
 explanation</td>
 </tr>
 <tr class="even">
 <td><a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/stance.html"><strong>Stance
 detection</strong></a></td>
-<td>Assesses the stance or position a text takes toward a specific topic
-or issue.</td>
-<td>Stance label (e.g., <em>supportive</em>, <em>neutral</em>,
-<em>opposed</em>) and explanation</td>
+<td><code><a href="../../../reference/stance.html">stance()</a></code></td>
+<td>Identifies stance/position taking toward a topic.</td>
+<td>Stance label and explanation</td>
 </tr>
 </tbody>
 </table>

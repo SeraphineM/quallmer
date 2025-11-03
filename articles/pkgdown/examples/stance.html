@@ -44,11 +44,12 @@
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
-<li class="nav-item dropdown">
+<li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-predefined-tasks" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Predefined tasks</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/sentiment.html">Sentiment analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/stance.html">Stance detection / position taking</a></li>
   </ul>
 </li>
       </ul>
@@ -141,12 +142,13 @@ explanation
 Pro
 </td>
 <td style="text-align:left;">
-The text explicitly states that the United States will respond to the
-threat of climate change, acknowledging the overwhelming judgment of
-science and the devastating impacts of climate-related events. It
-emphasizes the need for a transition to sustainable energy sources and
-positions America as a leader in this effort, highlighting the
-importance of preserving the planet for future generations.
+The text explicitly acknowledges the threat of climate change and
+emphasizes the need for collective action to address it. It mentions the
+importance of transitioning to sustainable energy sources and leading in
+technology that will power new jobs and industries. The text also
+highlights the devastating impacts of climate change, such as fires,
+droughts, and storms, and stresses the responsibility to future
+generations to respond to these challenges.
 </td>
 </tr>
 <tr>
@@ -159,7 +161,7 @@ Neutral
 <td style="text-align:left;">
 The text is an inaugural speech that focuses on themes of national
 pride, economic revitalization, and political change. It does not
-specifically address climate change or environmental policies, so it
+specifically address climate change or environmental issues, so it
 cannot be classified as Pro or Contra regarding climate change.
 </td>
 </tr>
@@ -172,10 +174,10 @@ Pro
 </td>
 <td style="text-align:left;">
 The text acknowledges climate change as a significant issue by referring
-to ‘a cry for survival comes from the planet itself’ and ‘a climate in
-crisis.’ This indicates a recognition of the urgency and importance of
-addressing climate change, aligning with a pro stance towards taking
-action on climate change.
+to it as a ‘climate in crisis’ and includes it among the major
+challenges facing the nation. This indicates a recognition of climate
+change as a real and pressing problem, aligning with a pro stance
+towards addressing climate change.
 </td>
 </tr>
 <tr>
@@ -189,8 +191,8 @@ Contra
 The text expresses a stance against climate change initiatives,
 specifically mentioning the end of the Green New Deal and the revocation
 of the electric vehicle mandate. It emphasizes increasing fossil fuel
-production and use, which is contrary to efforts to combat climate
-change.
+production and use, such as drilling for oil and gas, which are contrary
+to efforts to combat climate change.
 </td>
 </tr>
 </tbody>
@@ -223,7 +225,7 @@ to include an additional field for confidence level.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom stance detection' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -249,11 +251,12 @@ confidence
 Pro
 </td>
 <td style="text-align:left;">
-The text explicitly acknowledges the threat of climate change and
-emphasizes the need for collective action to address it. It mentions the
-importance of transitioning to sustainable energy sources and leading in
-technology that will power new jobs and industries. This indicates a
-clear pro stance towards taking action on climate change.
+The text explicitly states that the country will respond to the threat
+of climate change, acknowledging the overwhelming judgment of science
+and the devastating impacts of environmental issues like fires,
+droughts, and storms. It emphasizes the need for sustainable energy
+sources and America’s leadership in this transition, which aligns with a
+pro-climate change action stance.
 </td>
 <td style="text-align:right;">
 1.00
@@ -269,7 +272,7 @@ Neutral
 <td style="text-align:left;">
 The text is an inaugural speech that focuses on themes of national
 pride, economic revitalization, and political change. It does not
-specifically address climate change or environmental issues, so it
+explicitly mention climate change or environmental policies, so it
 cannot be classified as Pro or Contra regarding climate change.
 </td>
 <td style="text-align:right;">
@@ -301,11 +304,11 @@ change, aligning with a pro stance towards addressing it.
 Contra
 </td>
 <td style="text-align:left;">
-The text expresses a stance against climate change initiatives,
-specifically mentioning the end of the Green New Deal and the revocation
-of the electric vehicle mandate. It emphasizes increased drilling and
-use of fossil fuels, which are contrary to efforts to combat climate
-change.
+The text explicitly mentions ending the Green New Deal and revoking the
+electric vehicle mandate, which are policies aimed at addressing climate
+change. The speaker’s focus on drilling for oil and gas and dismissing
+climate-related initiatives indicates a stance against climate change
+action.
 </td>
 <td style="text-align:right;">
 0.95
@@ -373,9 +376,9 @@ betray future generations, indicating a moral obligation to act.</li>
 <li>It acknowledges the overwhelming judgment of science on climate
 change and the devastating impacts of natural disasters, reinforcing the
 urgency of the issue.</li>
-<li>The text emphasizes the economic benefits of leading the transition
-to sustainable energy, suggesting that it will maintain economic
-vitality and create new jobs and industries.
+<li>The text emphasizes the economic opportunities in leading the
+transition to sustainable energy, suggesting that it is both an
+environmental and economic imperative.
 </li>
 </ol>
 </td>
@@ -401,8 +404,8 @@ climate change.</li>
 </ol>
 <li>The focus is on national interests and economic growth, with no
 reference to environmental sustainability or climate action.</li>
-<li>The speech promotes a vision of American strength and prosperity
-without addressing environmental challenges or climate change.
+<li>The speech is centered on political and social unity, without
+addressing environmental issues or climate change.
 </li>
 </td>
 </tr>
@@ -425,11 +428,10 @@ responsibilities facing the nation.
 <li>The text refers to a ‘cry for survival’ from the planet, indicating
 the urgent need to address climate change.</li>
 </ol>
-<li>It describes the climate as being in crisis, highlighting the
-severity of the issue.</li>
-<li>The speaker calls for boldness and action to resolve the cascading
-crises, including climate change, suggesting a proactive approach to
-environmental issues.
+<li>It mentions the ‘climate in crisis’ as one of the significant
+challenges that must be faced, highlighting its importance.</li>
+<li>The call for boldness and action to resolve the ‘cascading crises of
+our era’ includes climate change as a key issue to be addressed.
 </li>
 </td>
 </tr>
@@ -443,17 +445,17 @@ Contra
 <td style="text-align:left;">
 The speech explicitly opposes climate change initiatives by declaring an
 end to the Green New Deal and revoking the electric vehicle mandate. It
-emphasizes increasing fossil fuel production and usage, which
-contradicts efforts to combat climate change.
+emphasizes increased fossil fuel production and use, which contradicts
+efforts to combat climate change.
 </td>
 <td style="text-align:left;">
 <ol style="list-style-type: decimal">
-<li>Declares a national energy emergency to increase drilling and fossil
-fuel production.</li>
+<li>Declares a national energy emergency to increase fossil fuel
+production (‘drill, baby, drill’).</li>
 </ol>
 <li>Ends the Green New Deal and revokes the electric vehicle
 mandate.</li>
-<li>Emphasizes using the country’s oil and gas reserves to become a
+<li>Emphasizes using the U.S.’s oil and gas reserves to become a
 manufacturing nation again.
 </li>
 </td>
