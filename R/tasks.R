@@ -14,6 +14,7 @@ sentiment <- function() {
 }
 
 
+
 #' The `themes()` task assesses texts for the proportional presence of predefined topics.
 #' @param topics A character vector of topics to code for.
 #' The default topics are "Environment", "Economy", "Health", and "Education".
@@ -22,7 +23,7 @@ sentiment <- function() {
 themes <- function(topics = c("Environment", "Economy", "Health", "Education")) {
   # Create a list of typed objects for each topic
   topic_types <- lapply(topics, function(topic) {
-    ellmer::type_number(paste0("Proportion (0–1) of text related to ", topic))
+    ellmer::type_number(paste0("Proportion (0-1) of text related to ", topic))
   })
   names(topic_types) <- topics
 
@@ -36,7 +37,7 @@ themes <- function(topics = c("Environment", "Economy", "Health", "Education")) 
   define_task(
     name = "Theme coding",
     system_prompt = paste0(
-      "You are an expert annotator. Read each short text carefully and assign proportions of content ",
+      "You are an expert annotator. Read each short text carefully and assign proportions of content",
       "related to the following topics: ",
       paste(topics, collapse = ", "),
       ". Each proportion must be between 0 and 1, and all proportions must add up to exactly 1. ",
@@ -57,12 +58,12 @@ stance <- function(topic = "the given topic") {
   define_task(
     name = "Stance detection",
     system_prompt = paste0(
-      "You are an expert annotator. Read each short text carefully and determine its stance towards '",
+      "You are an expert annotator. Read each short text carefully and determine its stance towards ",
       topic,
-      "'. Classify the stance as 'Pro', 'Neutral', or 'Contra', and provide a brief explanation for your classification."
+      " Classify the stance as Pro, Neutral, or Contra, and provide a brief explanation for your classification."
     ),
     type_object = ellmer::type_object(
-      stance = ellmer::type_string("Stance towards the topic: 'Pro', 'Neutral', or 'Contra'"),
+      stance = ellmer::type_string("Stance towards the topic: Pro, Neutral, or Contra"),
       explanation = ellmer::type_string("Brief explanation of the classification")
     ),
     input_type = "text"
