@@ -7,18 +7,20 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-The `annotate()` function with a predefined sentiment task allows you to rate the sentiment of texts using an LLM. The predefined `stance()` object structures the response by including a `stance` score and an `explanation` to illustrate how positively or negatively the text views a specific topic.
+The `annotate()` function with a predefined `stance()` task allows you to perform stance detection on texts regarding a specific topic. This position taking analysis classifies texts as Pro, Neutral, or Contra towards the given topic, along with a brief explanation. In this example, we will analyze a set of inaugural speeches to determine their stance on "Climate Change".
 
 ### Loading packages and data
 
 ```{r getting-started}
-# We will use the quanteda package for loading a sample corpus of innaugural speeches
+# We will use the quanteda package 
+# for loading a sample corpus of innaugural speeches
 # If you have not yet installed the quanteda package, you can do so by:
 # install.packages("quanteda")
 library(quanteda)
 library(quallmer)
 
-# For educational purposes, we will use a subset of the inaugural speeches corpus
+# For educational purposes, 
+# we will use a subset of the inaugural speeches corpus
 # The three most recent speeches in the corpus
 data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
 
@@ -40,3 +42,65 @@ result %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
   column_spec(3)
 ```
+### Adjusting the stance detection task
+You can customize the stance detection task by defining your own task with `define_task()` (for a more detailed explanation, [see our "Defining custom tasks" tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)).
+For example, you might want to include an additional field for confidence level.
+```{r custom_stance}
+custom_stance <- define_task(
+  name = "Custom stance detection",
+  system_prompt = paste0(
+    "You are an expert annotator. Read each short text carefully and determine its stance towards ",
+    topic,
+    ". Classify the stance as Pro, Neutral, or Contra, provide a brief explanation for your classification, and indicate your confidence level from 0 to 1."
+  ),
+  type_object = ellmer::type_object(
+    stance = ellmer::type_string("Stance towards the topic: Pro, Neutral, or Contra"),
+    explanation = ellmer::type_string("Brief explanation of the classification"),
+    confidence = ellmer::type_number("Confidence level from 0 to 1")
+  ),
+  input_type = "text"
+)
+# Apply the custom stance task
+custom_result <- annotate(data_corpus_inaugural, task = custom_stance, 
+                          chat_fn = chat_openai, model = "gpt-4o",
+                          api_args = list(temperature = 0, seed = 42))
+```
+```{r display_results_custom, echo = FALSE}
+# custom stance detection results table
+library(kableExtra)
+custom_result %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3)
+```
+Or, you might want the LLM to extract specific arguments supporting the stance.
+```{r argument_stance}
+argument_stance <- define_task(
+  name = "Argument-based stance detection",
+  system_prompt = paste0(
+    "You are an expert annotator. Read each short text carefully and determine its stance towards ",
+    topic,
+    ". Classify the stance as Pro, Neutral, or Contra, provide a brief explanation for your classification, and list up to three key arguments supporting the stance."
+  ),
+  type_object = ellmer::type_object(
+    stance = ellmer::type_string("Stance towards the topic: Pro, Neutral, or Contra"),
+    explanation = ellmer::type_string("Brief explanation of the classification"),
+    arguments = ellmer::type_list(ellmer::type_string("Key arguments supporting the stance"))
+  ),
+  input_type = "text"
+)
+# Apply the argument-based stance task
+argument_result <- annotate(data_corpus_inaugural, task = argument_stance, 
+                            chat_fn = chat_openai, model = "gpt-4o",
+                            api_args = list(temperature = 0, seed = 42))
+```
+```{r display_results_argument, echo = FALSE}
+# argument-based stance detection results table
+library(kableExtra)
+argument_result %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3)
+```
+
+In this example, we demonstrated how to use the `stance()` task for stance detection on texts regarding "Climate Change". We also showed how to customize the task to include additional fields such as confidence level and key arguments supporting the stance. Now it is your turn to explore stance detection with your own texts and topics of interest!
