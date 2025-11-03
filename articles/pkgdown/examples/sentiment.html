@@ -103,10 +103,12 @@ explanation.</p>
 </h3>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply predefined sentiment task with sentiment() in the annotate() function</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/sentiment.html">sentiment</a></span><span class="op">(</span><span class="op">)</span>, chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/sentiment.html">sentiment</a></span><span class="op">(</span><span class="op">)</span>, </span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">result</span></span></code></pre></div>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -128,9 +130,8 @@ explanation
 1.0
 </td>
 <td style="text-align:left;">
-The text expresses a high level of positivity, as indicated by the use
-of the word ‘wonderful,’ which is a clear indicator of positive
-sentiment.
+The word ‘wonderful’ conveys a very positive sentiment, indicating
+delight or admiration.
 </td>
 </tr>
 <tr>
@@ -141,8 +142,8 @@ sentiment.
 -0.8
 </td>
 <td style="text-align:left;">
-The use of ‘dislike’ indicates a strong negative sentiment towards the
-approach, leading to a negative sentiment score.
+The word ‘dislike’ indicates a strong negative sentiment towards the
+approach.
 </td>
 </tr>
 <tr>
@@ -153,8 +154,9 @@ approach, leading to a negative sentiment score.
 -0.5
 </td>
 <td style="text-align:left;">
-The term ‘disappointing’ suggests a negative sentiment, but ‘somewhat’
-softens the negativity, making it less severe.
+The word ‘disappointing’ indicates a negative sentiment, but the use of
+‘somewhat’ suggests that the disappointment is not very strong, leading
+to a moderately negative score.
 </td>
 </tr>
 <tr>
@@ -165,9 +167,9 @@ softens the negativity, making it less severe.
 1.0
 </td>
 <td style="text-align:left;">
-The phrase ‘absolutely fantastic work’ is highly positive, as
-‘absolutely’ amplifies the word ‘fantastic’, which itself suggests
-excellence and high quality.
+The phrase ‘Absolutely fantastic work!’ is highly positive, using strong
+positive adjectives like ‘fantastic’ and ‘absolutely’ to express
+admiration and approval.
 </td>
 </tr>
 </tbody>

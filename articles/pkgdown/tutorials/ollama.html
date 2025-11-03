@@ -78,7 +78,53 @@
 
     
     
-<p>Coming soon!</p>
+<p>In this tutorial, we will demonstrate how to use the
+<code>quallmer</code> package with an open-source Ollama model for
+qualitative coding tasks. Ollama provides a platform for running large
+language models (LLMs) locally on your machine, allowing you to leverage
+their capabilities without relying on cloud-based services.</p>
+<p>We first install and run the <code>Ollama</code> app (outside of R)
+from <a href="https://ollama.com/download" class="external-link">https://ollama.com/download</a>.
+Then, we install and load the <code>rollama</code> package in R and ping
+<code>Ollama</code> to ensure connectivity. We then download the model
+<code>llama3.2:1b</code>. Although it is a comparatively small LLM, this
+can take some time, depending on your machine.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Do not forget to run the ollama app (outside of R) first!</span></span>
+<span><span class="co"># If you installed Ollama using the Windows/Mac installer, </span></span>
+<span><span class="co"># you can simply start Ollama from your start menu/by clicking on the app icon.</span></span>
+<span></span>
+<span><span class="co"># Install R package rollama </span></span>
+<span><span class="co">#install.packages("rollama")</span></span>
+<span></span>
+<span><span class="co"># Load the rollama package and ping Ollama to ensure connectivity.</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jbgruber.github.io/rollama/" class="external-link">rollama</a></span><span class="op">)</span></span>
+<span><span class="fu">ping_ollama</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># if everything works as it should, </span></span>
+<span><span class="co"># you should see the following in your console:</span></span>
+<span><span class="co"># Ollama (v0.4.2) is running at &lt;http://localhost:11434&gt;!</span></span>
+<span></span>
+<span><span class="co"># install the light-weight model of Ollama, llama3.2:1b</span></span>
+<span><span class="co">#pull_model("llama3.2:1b")</span></span>
+<span></span>
+<span><span class="co"># NOTE: llama3.2:1b is a comparatively small LLM </span></span>
+<span><span class="co"># (only 1 billion parameters compared to over 1 trillion of gpt-o4)</span></span>
+<span><span class="co"># and might not be as powerful as other LLMs, </span></span>
+<span><span class="co"># but it is a good starting point for educational purposes</span></span>
+<span><span class="co"># for more advanced tasks, you might want to use larger models</span></span>
+<span><span class="co"># which you can pull with the command pull_model("model_name")</span></span>
+<span></span>
+<span><span class="co"># let's do a simple test with the model</span></span>
+<span><span class="fu">query</span><span class="op">(</span><span class="st">"What is the capital of Australia."</span>, model <span class="op">=</span> <span class="st">"llama3.2:1b"</span><span class="op">)</span></span></code></pre></div>
+<p>Now that we have set up the Ollama model, we can use it with the
+<code>quallmer</code> package for qualitative coding tasks. The
+<code>quallmer</code> package uses openai’s <code>gpt-4o</code> model by
+default, but we can easily switch to the Ollama model by specifying the
+<code>chat_fn</code> and <code>model</code> parameters in the
+<code><a href="../../../reference/annotate.html">annotate()</a></code> function. For example, for Ollama models we
+would use <code>chat_ollama</code> as the <code>chat_fn</code> and
+specify the model name (e.g., <code>llama3.2:1b</code>) in the
+<code>model</code> parameter.</p>
   </main>
 </div>
 

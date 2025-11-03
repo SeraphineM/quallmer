@@ -78,8 +78,95 @@
 
     
     
-<p>Coming soon!</p>
-  </main>
+<p>In this tutorial, we will guide you through the process of obtaining
+an API key from openai, which is necessary for using openai’s large
+language models (LLMs) such as <code>gpt-4o</code> or <code>gpt-5</code>
+with the <code>quallmer</code> package. We will also cover how to
+configure your R environment to use the openai API key securely.</p>
+<div class="section level2">
+<h2 id="precautions">Precautions<a class="anchor" aria-label="anchor" href="#precautions"></a>
+</h2>
+<p><strong>Closed LLMs such as OpenAI’s GPT-4o are not free to use and
+require a subscription. They also come with ethical concerns and risks,
+especially when it comes to data privacy and security. Therefore, always
+be aware of the data you use and the potential consequences of your
+analysis and make sure to enable the necessary safeguards to protect
+privacy and security. In addition, be aware that the license to use <a href="https://openai.com/policies/row-terms-of-use/" class="external-link">OpenAI models</a>
+comes along with adhering to specific regulations to avoid misuse.
+Therefore, always be aware of the data you use and the potential
+consequences of your analysis and make sure to enable the necessary
+safeguards to protect privacy and security.</strong></p>
+</div>
+<div class="section level2">
+<h2 id="setting-up-an-api-key-for-openai-models">Setting up an API key for openai models<a class="anchor" aria-label="anchor" href="#setting-up-an-api-key-for-openai-models"></a>
+</h2>
+<p>The openai API provides access to various so called closed models
+(fee-based, not open-source). There are other services available (for
+example, Claude or Google Gemini, etc.) which require slightly different
+set-ups. You can find more information on pricing of openai <a href="https://platform.openai.com/pricing%3E" class="external-link">here</a>.</p>
+<div class="section level4">
+<h4 id="to-use-the-openai-api-please-follow-these-steps">To use the openai API, please follow these steps:<a class="anchor" aria-label="anchor" href="#to-use-the-openai-api-please-follow-these-steps"></a>
+</h4>
+<ol style="list-style-type: decimal">
+<li>Go to the openai playground: <a href="https://platform.openai.com/playground" class="external-link">https://platform.openai.com/playground&gt;</a>
+</li>
+<li>Click on <code>Sign up</code> in the top right corner</li>
+<li>Fill in your details and confirm <code>Sign up</code>
+</li>
+<li>Click now on the <code>Settings</code> icon in the top right
+corner</li>
+<li>Go to <code>Billing</code> and <strong>provide your billing
+information</strong> (otherwise it won’t work!)</li>
+<li>Once your billing information is complete, you can create a
+<code>new project</code> (top left corner, click on
+<code>Default Project</code>)</li>
+<li>Click on <code>Dashboard</code> in the top right corner</li>
+<li>Click on <code>API keys</code> in the left side panel at the
+bottom</li>
+<li>Click on <code>Create new secret key</code>
+</li>
+<li>
+<strong>Copy</strong> the key before you close the window</li>
+</ol>
+<p>Once you copied the key, you should <strong>save it somewhere safe
+and accessible.</strong> For security reasons, you won’t be able to view
+it again through your openai account. If you lose it, you will need to
+regenerate it. Keep your API key safe and do not share it with others.
+If you suspect that your key has been compromised, you can regenerate it
+in the dashboard. <strong>Be aware that you will be charged for any
+usage of the API via your key.</strong></p>
+</div>
+<div class="section level4">
+<h4 id="configuring-your-openai-api-key-in-rstudio">Configuring your openai API key in RStudio<a class="anchor" aria-label="anchor" href="#configuring-your-openai-api-key-in-rstudio"></a>
+</h4>
+<p>To interact with the openai API, it’s required to have a valid
+<code>OPENAI_API_KEY</code> environment variable in R. You can establish
+this environment variable globally by including it in the so-called
+.Renviron file. This approach ensures that the environment variable
+persists across all your R sessions as the Shiny app runs in the
+background. Here is a set of commands to open the .Renviron file for
+modification:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://usethis.r-lib.org" class="external-link">usethis</a></span><span class="op">)</span></span>
+<span><span class="fu">edit_r_environ</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Add the following line to .Renviron, replacing “APIKEY” with your
+actual API key: OPENAI_API_KEY=“APIKEY”. You need to restart your R
+session for the changes to take effect. You can do this by clicking on
+the <code>Session</code> menu in RStudio and selecting
+<code>Restart R</code>.</p>
+<p><strong>Caution:</strong> If you’re using version control systems
+like GitHub or GitLab, remember to include .Renviron in your .gitignore
+file to prevent exposing your API key! To maintain the privacy of your
+data when using gptstudio, do not highlight, include in a prompt, or
+otherwise upload any sensitive data, code, or text that should remain
+confidential.</p>
+<p>Now you are ready to use openai models with the <code>quallmer</code>
+package! For example, you can <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html">test
+the setup by running the example on sentiment analysis.</a></p>
+</div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 

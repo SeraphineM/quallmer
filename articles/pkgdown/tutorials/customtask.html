@@ -66,7 +66,7 @@
 
 
 
-
+<script src="customtask_files/kePrint-0.0.1/kePrint.js"></script><link href="customtask_files/lightable-0.0.1/lightable.css" rel="stylesheet">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../../../logo.png" class="logo" alt=""><h1>Tutorial: Defining custom tasks</h1>
@@ -78,8 +78,179 @@
 
     
     
-<p>Coming soon!</p>
-  </main>
+<p>With the <code>quallmer</code> package, you can define custom
+annotation tasks tailored to your specific research questions and data
+types using the <code><a href="../../../reference/define_task.html">define_task()</a></code> function. This allows you to
+create structured prompts and response formats that suit your
+qualitative coding needs.</p>
+<p>In the following example, we will demonstrate how to define a custom
+task for scoring documents based on their alignment with political left
+ideologies. For this, we formulate a prompt that asks the LLM to score
+documents on a scale of political left alignment. We then define the
+expected response structure using the <code><a href="../../../reference/define_task.html">define_task()</a></code>
+function. Finally, we will use the <code><a href="../../../reference/annotate.html">annotate()</a></code> function to
+apply this custom task to a sample corpus of inaugural speeches from US
+presidents.</p>
+<div class="section level3">
+<h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
+</h3>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># We will use the quanteda package for loading a sample corpus of innaugural speeches</span></span>
+<span><span class="co"># If you have not yet installed the quanteda package, you can do so by:</span></span>
+<span><span class="co"># install.packages("quanteda")</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quanteda.io" class="external-link">quanteda</a></span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Package version: 4.3.1</span></span>
+<span><span class="co">## Unicode version: 15.1</span></span>
+<span><span class="co">## ICU version: 74.2</span></span></code></pre>
+<pre><code><span><span class="co">## Parallel computing: disabled</span></span></code></pre>
+<pre><code><span><span class="co">## See https://quanteda.io for tutorials and examples.</span></span></code></pre>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://SeraphineM.github.io/quallmer" class="external-link">quallmer</a></span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Loading required package: ellmer</span></span></code></pre>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># For educational purposes, we will use a subset of the inaugural speeches corpus</span></span>
+<span><span class="co"># The three most recent speeches in the corpus</span></span>
+<span><span class="va">data_corpus_inaugural</span> <span class="op">&lt;-</span> <span class="va">data_corpus_inaugural</span><span class="op">[</span><span class="fl">57</span><span class="op">:</span><span class="fl">60</span><span class="op">]</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="defining-a-custom-prompt">Defining a custom prompt<a class="anchor" aria-label="anchor" href="#defining-a-custom-prompt"></a>
+</h3>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">prompt</span> <span class="op">&lt;-</span> <span class="st">"Score the following document on a scale of how much it aligns</span></span>
+<span><span class="st">with the political left. The political left is defined as groups which</span></span>
+<span><span class="st">advocate for social equality, government intervention in the economy,</span></span>
+<span><span class="st">and progressive policies. Use the following metrics:</span></span>
+<span><span class="st">SCORING METRIC:</span></span>
+<span><span class="st">3 : extremely left</span></span>
+<span><span class="st">2 : very left</span></span>
+<span><span class="st">1 : slightly left</span></span>
+<span><span class="st">0 : not at all left"</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="defining-the-structure-of-the-response">Defining the structure of the response<a class="anchor" aria-label="anchor" href="#defining-the-structure-of-the-response"></a>
+</h3>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Important elements of define_task() are the name, system_prompt, type_object, and input_type arguments.</span></span>
+<span><span class="co"># The type_object argument specifies the expected structure of the response from the LLM.</span></span>
+<span><span class="co"># For more options, see the documentation for ellmer::type_object()</span></span>
+<span><span class="co"># https://ellmer.tidyverse.org/reference/type_boolean.html</span></span>
+<span><span class="va">ideology_scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/define_task.html">define_task</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Score Political Left Alignment"</span>,</span>
+<span>  system_prompt <span class="op">=</span> <span class="va">prompt</span>,</span>
+<span>  type_object <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
+<span>    score <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="st">"Score"</span><span class="op">)</span>,</span>
+<span>    explanation <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Explanation"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  input_type <span class="op">=</span> <span class="st">"text"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="applying-the-custom-task-to-the-corpus">Applying the custom task to the corpus<a class="anchor" aria-label="anchor" href="#applying-the-custom-task-to-the-corpus"></a>
+</h3>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># This is straightforward using the annotate() function and our custom task</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">ideology_scores</span>,</span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
+<table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
+<thead><tr>
+<th style="text-align:left;">
+id
+</th>
+<th style="text-align:right;">
+score
+</th>
+<th style="text-align:left;">
+explanation
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2013-Obama
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:left;">
+The speech aligns very well with the political left, as it emphasizes
+themes of social equality, government intervention, and progressive
+policies. It advocates for collective action to address modern
+challenges, such as economic inequality, climate change, and social
+justice. The speech also highlights the importance of government
+programs like Medicare, Medicaid, and Social Security, which are
+typically supported by the left. Additionally, it calls for reforms in
+education, tax policy, and immigration, and stresses the need for equal
+rights for women and the LGBTQ+ community. However, it also acknowledges
+the importance of personal responsibility and skepticism of central
+authority, which slightly tempers its alignment with the extreme left.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2017-Trump
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+The speech emphasizes nationalism, protectionism, and a focus on
+‘America First’ policies, which are not aligned with the political
+left’s emphasis on global cooperation and social equality. The speech
+criticizes the political establishment and suggests a return of power to
+the people, but it does not advocate for government intervention in the
+economy or progressive policies. Instead, it focuses on reducing foreign
+influence and prioritizing American interests, which are more
+characteristic of right-wing populism.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2021-Biden
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:left;">
+The speech aligns very well with the political left, as it emphasizes
+themes of unity, social equality, and government intervention in
+addressing major issues such as racial justice, climate change, and
+economic recovery. The call for racial justice, addressing systemic
+racism, and the emphasis on rebuilding the middle class and securing
+healthcare for all are particularly aligned with progressive policies.
+However, the speech also focuses heavily on unity and bipartisanship,
+which slightly tempers its alignment with the more extreme left, which
+might prioritize more radical changes and less emphasis on unity with
+opposing political views.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2025-Trump
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:left;">
+The speech aligns with a right-wing political perspective, emphasizing
+nationalism, strong border control, military strength, and a rollback of
+progressive policies such as the Green New Deal and gender inclusivity.
+It advocates for reducing government intervention in certain areas, such
+as energy policy, and promotes a vision of American exceptionalism and
+sovereignty. These positions are generally contrary to the principles of
+the political left, which typically supports social equality,
+progressive policies, and government intervention in the economy to
+address social issues.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside>
 </div>
 
 
