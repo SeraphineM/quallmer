@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>What the Package Does (Title Case) • quallmer</title>
+<title>Qualitative analysis with large language models. • quallmer</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="What the Package Does (Title Case)">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Qualitative analysis with large language models.">
 <meta name="description" content="Provides userfriendly support for qualitative analysis with large language models (LLMs).">
 <meta property="og:description" content="Provides userfriendly support for qualitative analysis with large language models (LLMs).">
 <meta property="og:image" content="https://seraphinem.github.io/quallmer/logo.png">
@@ -38,16 +38,18 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-quick-start" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Quick Start</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-quick-start">
-<li><a class="dropdown-item" href="articles/getting-started.html">Quick Start Guide</a></li>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
+<li><a class="dropdown-item" href="articles/getting-started.html">Quick start guide</a></li>
+    <li><a class="dropdown-item" href="articles/pkgdown/tutorials/openai.html">Signing up for an openai API key</a></li>
+    <li><a class="dropdown-item" href="articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-examples">
-<li><a class="dropdown-item" href="articles/pkgdown/examples/sentiment.html">sentiment</a></li>
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-predefined-tasks" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Predefined tasks</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
+<li><a class="dropdown-item" href="articles/pkgdown/examples/sentiment.html">Sentiment Analysis</a></li>
   </ul>
 </li>
       </ul>
@@ -71,7 +73,9 @@
 </div>
 <!-- badges: start -->
 
-<p><code>quallmer</code> is an <strong>accessible and easy-to-use R package for qualitative researchers to quickly apply AI-assisted annotation to texts, images, pdfs, and other structured data.</strong> Using <code><a href="reference/annotate.html">annotate()</a></code> and predefined or custom tasks via <code><a href="reference/define_task.html">define_task()</a></code>, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of example tasks (more to come). It also provides <code>agreement()</code>, which launches an interactive app to manually code data, compare LLM outputs with human annotations, and assess inter-coder reliability. <code>quallmer</code> makes AI-assisted qualitative coding accessible without requiring deep expertise in programming or machine learning.</p>
+<p>The <code>quallmer</code> package is an <strong>easy-to-use tool for qualitative researchers to quickly apply AI-assisted annotation to texts, images, pdfs, tabular data and other structured data.</strong></p>
+<p>Using <code><a href="reference/annotate.html">annotate()</a></code>, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples.html">predefined tasks for common qualitative coding needs</a>, such as sentiment analysis, thematic coding, and stance detection. It also allows users to create their own custom annotation tasks tailored to their specific research questions and data types using <code><a href="reference/define_task.html">define_task()</a></code>. To ensure quality and reliability of AI-generated annotations, <code>quallmer</code> offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With <code>agreement()</code>, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.</p>
+<p><strong>The <code>quallmer</code> package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.</strong></p>
 </div>
 <div class="section level1">
 <h1 id="included-functions">Included functions<a class="anchor" aria-label="anchor" href="#included-functions"></a>
@@ -84,7 +88,7 @@
 <ul>
 <li>A generic function that works with any LLM supported by <a href="https://ellmer.tidyverse.org/articles/structured-data.html" class="external-link">ellmer</a>.<br>
 </li>
-<li>Generates structured responses based on predefined or user-defined tasks.</li>
+<li>Generates structured responses based on <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples.html">predefined</a> or user-defined tasks.</li>
 </ul>
 </div>
 <div class="section level3">
@@ -94,7 +98,7 @@
 <ul>
 <li>Create custom annotation tasks with structured outputs.<br>
 </li>
-<li>Uses <code>system_prompt</code> and <code>type_object()</code> to define how the LLM should interpret inputs and format outputs.<br>
+<li>Uses <code>system_prompt</code> and <code>type_object()</code> from the <a href="https://ellmer.tidyverse.org/articles/structured-data.html" class="external-link">ellmer</a> package to define how the LLM should interpret inputs and format outputs.<br>
 </li>
 <li>Tasks created with <code><a href="reference/define_task.html">define_task()</a></code> can be passed directly to <code><a href="reference/annotate.html">annotate()</a></code>.<br>
 </li>
@@ -117,22 +121,19 @@
 </h1>
 <p>The package supports all LLMs currently available with the <code>ellmer</code> package:</p>
 <p>For authentication and usage of each of these LLMs, please refer to the respective <code>ellmer</code> documentation <a href="https://ellmer.tidyverse.org/reference/index.html" class="external-link">here</a>. <strong>For example,</strong> to use the <code>chat_openai</code> models, you would need to sign up for an API key from <a href="https://platform.openai.com/playground/prompts" class="external-link">OpenAI</a> which you can save in your <code>.Renviron</code> file as <code>OPENAI_API_KEY</code>. To use the <code>chat_ollama</code> models, first download and install <a href="https://ollama.com/" class="external-link">Ollama</a>. Then install some models either from the command line (e.g. with ollama pull llama3.1) or within R using the <code>rollama</code> package. The Ollama app must be running for the models to be used.</p>
+<p>Please see our <a href="(https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials.html)">tutorials with step-by-step instructions</a> on using different LLMs with <code>quallmer</code>.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of <strong>quallmer</strong> from <a href="https://github.com/SeraphineM/quallmer" class="external-link uri">https://github.com/SeraphineM/quallmer</a> with:</p>
+<p>You can install the development version of <code>quallmer</code> from <a href="https://github.com/SeraphineM/quallmer" class="external-link uri">https://github.com/SeraphineM/quallmer</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"SeraphineM/quallmer"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="example-use">Example use<a class="anchor" aria-label="anchor" href="#example-use"></a>
+<h2 id="example-use-and-tutorials">Example use and tutorials<a class="anchor" aria-label="anchor" href="#example-use-and-tutorials"></a>
 </h2>
-<p>To learn more about how to use the package, please refer to the following examples:</p>
-<ul>
-<li><a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html">Sentiment analysis with text-based data</a></li>
-<li>More to come.</li>
-</ul>
+<p>To learn more about how to use the package, please refer to our provided <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples.html">user examples</a> and <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials.html">step-by-step tutorials</a>.</p>
 </div>
 </div>
 
