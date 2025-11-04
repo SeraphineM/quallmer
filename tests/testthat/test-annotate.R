@@ -5,14 +5,14 @@ test_that("annotate runs a task and returns a data frame", {
   texts <- c("I love democracy.", "This is terrible.")
 
   # Define a simple dummy task that doesn't actually call OpenAI
-  type_obj <- ellmer::type_object(
+  type_def <- ellmer::type_object(
     score = ellmer::type_number("Sentiment score")
   )
 
   mock_task <- define_task(
     name = "Mock Sentiment",
     system_prompt = "Return +1 for positive text, -1 for negative text.",
-    type_object = type_obj
+    type_def = type_def
   )
 
   # Mock run function to simulate ellmer call
@@ -26,6 +26,7 @@ test_that("annotate runs a task and returns a data frame", {
   # Test annotate()
   results <- annotate(texts, task = mock_task, verbose = FALSE)
 
+  # Basic checks
   expect_s3_class(results, "data.frame")
   expect_true(all(c("id", "score") %in% names(results)))
   expect_equal(nrow(results), length(texts))

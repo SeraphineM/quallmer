@@ -55,8 +55,8 @@ The package provides the following core functions:
 
 - Creates custom annotation tasks tailored to specific research
   questions and data types.
-- Uses `system_prompt` and `type_object()` from the
-  [ellmer](https://ellmer.tidyverse.org/articles/structured-data.html)
+- Uses `system_prompt` and various type specifications from the
+  [ellmer](https://ellmer.tidyverse.org/reference/type_boolean.html)
   package to define how the LLM should interpret inputs and format
   outputs.  
 - Tasks created with `define_task()` can be passed directly to

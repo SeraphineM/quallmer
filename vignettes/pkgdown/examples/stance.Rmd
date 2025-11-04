@@ -53,7 +53,7 @@ custom_stance <- define_task(
     topic,
     ". Classify the stance as Pro, Neutral, or Contra, provide a brief explanation for your classification, and indicate your confidence level from 0 to 1."
   ),
-  type_object = ellmer::type_object(
+  type_def = ellmer::type_object(
     stance = ellmer::type_string("Stance towards the topic: Pro, Neutral, or Contra"),
     explanation = ellmer::type_string("Brief explanation of the classification"),
     confidence = ellmer::type_number("Confidence level from 0 to 1")
@@ -82,7 +82,7 @@ argument_stance <- define_task(
     topic,
     ". Classify the stance as Pro, Neutral, or Contra, provide a brief explanation for your classification, and list up to three key arguments supporting the stance."
   ),
-  type_object = ellmer::type_object(
+  type_def = ellmer::type_object(
     stance = ellmer::type_string("Stance towards the topic: Pro, Neutral, or Contra"),
     explanation = ellmer::type_string("Brief explanation of the classification"),
     arguments = ellmer::type_string("Key arguments supporting the stance")

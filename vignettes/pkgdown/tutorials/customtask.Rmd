@@ -53,16 +53,16 @@ The `define_task()` function allows us to specify the expected structure of the 
 
 - `name`: A descriptive name for the task.
 - `system_prompt`: The prompt that guides the LLM on how to perform the task.
-- `type_object`: Defines the expected structure of the response using `ellmer::type_object()`.
+- `type_def`: Defines the expected structure of the response using [ellmers type specifications](https://ellmer.tidyverse.org/reference/type_boolean.html) such as `type_object()`, `type_array()`, etc.
 
-For more information on defining `type_object` and additional type specifications such as `type_array`, please refer to the [ellmer documentation on type specifications](https://ellmer.tidyverse.org/reference/type_boolean.html).
+For more information on how to use ellmer's type specifications, please refer to the [ellmer documentation on type specifications](https://ellmer.tidyverse.org/reference/type_boolean.html).
 
 ```{r define-structure}
 # Define the custom task using define_task()
 ideology_scores <- define_task(
   name = "Score Political Left Alignment",
   system_prompt = prompt,
-  type_object = type_object(
+  type_def = type_object(
     score = type_number("Score"),
     explanation = type_string("Explanation")
   ),

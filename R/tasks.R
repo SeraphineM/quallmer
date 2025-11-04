@@ -5,7 +5,7 @@ sentiment <- function() {
   define_task(
     name = "Sentiment analysis",
     system_prompt = "You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive) and briefly explain why.",
-    type_object = ellmer::type_object(
+    type_def = ellmer::type_object(
       score = ellmer::type_number("Sentiment score between -1 (very negative) and 1 (very positive)"),
       explanation = ellmer::type_string("Brief explanation of the rating")
     ),
@@ -26,7 +26,7 @@ stance <- function(topic = "the given topic") {
       topic,
       " Classify the stance as Pro, Neutral, or Contra, and provide a brief explanation for your classification."
     ),
-    type_object = ellmer::type_object(
+    type_def = ellmer::type_object(
       stance = ellmer::type_string("Stance towards the topic: Pro, Neutral, or Contra"),
       explanation = ellmer::type_string("Brief explanation of the classification")
     ),

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tasks.R
 \name{stance}
 \alias{stance}
-\title{Predefined task for position taking (stance detection)}
+\title{Predefined task for stance detection (position taking)}
 \usage{
 stance(topic = "the given topic")
 }
@@ -13,5 +13,5 @@ stance(topic = "the given topic")
 A task object
 }
 \description{
-Predefined task for position taking (stance detection)
+Predefined task for stance detection (position taking)
 }

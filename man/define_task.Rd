@@ -4,20 +4,23 @@
 \alias{define_task}
 \title{Define an annotation task}
 \usage{
-define_task(name, system_prompt, type_object, input_type = "text")
+define_task(name, system_prompt, type_def, input_type = "text")
 }
 \arguments{
-\item{name}{Name of the task}
+\item{name}{Name of the task.}
 
-\item{system_prompt}{System prompt as required by ellmer's chat_fn (text to guide the model)}
+\item{system_prompt}{System prompt to guide the model (as required by ellmer's `chat_fn`).}
 
-\item{type_object}{Structured output definition (ellmer's type_object)}
+\item{type_def}{Structured output definition, e.g., created by `ellmer::type_object()`,
+`ellmer::type_array()`, or `ellmer::type_enum()`.}
 
-\item{input_type}{Type of input data: "text", "image", "audio", etc.}
+\item{input_type}{Type of input data: `"text"`, `"image"`, `"audio"`, etc.}
 }
 \value{
-A task object with a run() method
+A task object with a `run()` method.
 }
 \description{
-Define an annotation task
+A flexible task definition wrapper for ellmer.
+Supports any structured output type, including `type_object()`, `type_array()`,
+`type_enum()`, `type_boolean()`, and others.
 }
