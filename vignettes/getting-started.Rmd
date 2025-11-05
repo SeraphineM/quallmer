@@ -1,8 +1,6 @@
 ---
 title: "Getting started with quallmer"
-output:
-  rmarkdown::html_vignette:
-    pandoc_args: ["--syntax-highlighting=tango"]
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Getting started with quallmer}
   %\VignetteEngine{knitr::rmarkdown}
@@ -50,6 +48,6 @@ Using `annotate()`, users can generate structured, interpretable outputs powered
 
 3. [**Using predefined tasks**](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html): These illustrations will show you how to utilize the library of predefined annotation tasks available in the `quallmer` package to perform common qualitative coding tasks efficiently.
 
-3. [**Creating custom tasks**](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html): This tutorial will walk you through the process of defining your own custom annotation tasks using the `define_task()` function, allowing you to tailor the LLM's output to your specific research needs.
+4. [**Creating custom tasks**](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html): This tutorial will walk you through the process of defining your own custom annotation tasks using the `define_task()` function, allowing you to tailor the LLM's output to your specific research needs.
 
 We hope these tutorials will help you get started with the `quallmer` package and empower you to leverage large language models for your qualitative research projects!
