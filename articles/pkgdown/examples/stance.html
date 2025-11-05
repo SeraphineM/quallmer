@@ -40,6 +40,7 @@
 <li><a class="dropdown-item" href="../../../articles/getting-started.html">Quick start guide</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/openai.html">Signing up for an openai API key</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/predefined.html">Using predefined tasks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/customtask.html">Defining custom tasks</a></li>
   </ul>
 </li>
@@ -102,20 +103,7 @@ of inaugural speeches to determine their stance on “Climate Change”.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://SeraphineM.github.io/quallmer" class="external-link">quallmer</a></span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Loading required package: ellmer</span></span></code></pre>
-<pre><code><span><span class="co">## Loading required package: shiny</span></span></code></pre>
-<pre><code><span><span class="co">## Loading required package: dplyr</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     filter, lag</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:base':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     intersect, setdiff, setequal, union</span></span></code></pre>
-<pre><code><span><span class="co">## Loading required package: tidyr</span></span></code></pre>
-<pre><code><span><span class="co">## Loading required package: irr</span></span></code></pre>
-<pre><code><span><span class="co">## Loading required package: lpSolve</span></span></code></pre>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For educational purposes, </span></span>
 <span><span class="co"># we will use a subset of the inaugural speeches corpus</span></span>
 <span><span class="co"># The three most recent speeches in the corpus</span></span>
@@ -124,7 +112,7 @@ of inaugural speeches to determine their stance on “Climate Change”.</p>
 <div class="section level3">
 <h3 id="using-annotate-for-stance-detection-of-texts">Using <code>annotate()</code> for stance detection of texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-stance-detection-of-texts"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define topic of interest</span></span>
 <span><span class="va">topic</span> <span class="op">&lt;-</span> <span class="st">"Climate Change"</span></span>
 <span><span class="co"># Apply predefined stance task with stance() in the annotate() function</span></span>
@@ -133,13 +121,7 @@ of inaugural speeches to determine their stance on “Climate Change”.</p>
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Stance detection' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'kableExtra'</span></span></code></pre>
-<pre><code><span><span class="co">## The following object is masked from 'package:dplyr':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     group_rows</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -161,13 +143,13 @@ explanation
 Pro
 </td>
 <td style="text-align:left;">
-The text explicitly states that the United States will respond to the
-threat of climate change, acknowledging the overwhelming judgment of
-science and the devastating impacts of environmental issues like fires,
-droughts, and storms. It emphasizes the need for a transition to
-sustainable energy sources and positions America as a leader in this
-effort, highlighting the importance of preserving the planet for future
-generations.
+The text explicitly acknowledges the threat of climate change and
+emphasizes the need for collective action to address it. It mentions the
+importance of transitioning to sustainable energy sources and leading in
+technology that will power new jobs and industries. The text also
+highlights the devastating impacts of climate change, such as fires,
+droughts, and storms, and frames the response to climate change as a
+responsibility to future generations.
 </td>
 </tr>
 <tr>
@@ -194,9 +176,9 @@ Pro
 <td style="text-align:left;">
 The text acknowledges climate change as a significant issue by referring
 to it as a ‘climate in crisis’ and includes it among the major
-challenges facing the nation. This indicates a recognition of the
-seriousness of climate change and a commitment to addressing it, which
-aligns with a pro stance towards taking action on climate change.
+challenges facing the nation. This indicates a recognition of climate
+change as a real and pressing problem, aligning with a pro stance
+towards addressing climate change.
 </td>
 </tr>
 <tr>
@@ -207,11 +189,11 @@ aligns with a pro stance towards taking action on climate change.
 Contra
 </td>
 <td style="text-align:left;">
-The text expresses a stance against climate change initiatives,
-specifically mentioning the end of the Green New Deal and the revocation
-of the electric vehicle mandate. It emphasizes increased drilling and
-use of fossil fuels, which are contrary to efforts to combat climate
-change.
+The text explicitly mentions ending the Green New Deal and revoking the
+electric vehicle mandate, which are policies aimed at addressing climate
+change. The speaker’s focus on drilling for oil and gas and dismissing
+green initiatives indicates a stance against climate change mitigation
+efforts.
 </td>
 </tr>
 </tbody>
@@ -224,7 +206,7 @@ change.
 with <code><a href="../../../reference/define_task.html">define_task()</a></code> (for a more detailed explanation, <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">see
 our “Defining custom tasks” tutorial</a>). For example, you might want
 to include an additional field for confidence level.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_stance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/define_task.html">define_task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Custom stance detection"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
@@ -245,7 +227,6 @@ to include an additional field for confidence level.</p>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom stance detection' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -271,10 +252,12 @@ confidence
 Pro
 </td>
 <td style="text-align:left;">
-The text explicitly states that the country will respond to the threat
-of climate change and acknowledges the overwhelming judgment of science.
-It emphasizes the need for sustainable energy sources and the importance
-of leading the transition to preserve the planet.
+The text explicitly states that the United States will respond to the
+threat of climate change, acknowledging the overwhelming judgment of
+science and the devastating impacts of environmental issues like fires,
+droughts, and storms. It emphasizes the need for sustainable energy
+sources and America’s leadership in this transition, indicating a
+proactive stance towards addressing climate change.
 </td>
 <td style="text-align:right;">
 1.00
@@ -290,7 +273,7 @@ Neutral
 <td style="text-align:left;">
 The text is an inaugural speech that focuses on themes of national
 pride, economic revitalization, and political change. It does not
-explicitly mention climate change or environmental policies, so it
+specifically address climate change or environmental issues, so it
 cannot be classified as Pro or Contra regarding climate change.
 </td>
 <td style="text-align:right;">
@@ -307,8 +290,9 @@ Pro
 <td style="text-align:left;">
 The text acknowledges climate change as a crisis, referring to it as a
 ‘cry for survival from the planet itself’ and a ‘climate in crisis.’
-This indicates a recognition of the urgency and seriousness of climate
-change, aligning with a pro stance towards addressing it.
+This indicates a recognition of the seriousness of climate change and
+the need to address it, which aligns with a pro stance towards taking
+action on climate change.
 </td>
 <td style="text-align:right;">
 0.95
@@ -322,11 +306,11 @@ change, aligning with a pro stance towards addressing it.
 Contra
 </td>
 <td style="text-align:left;">
-The text explicitly mentions ending the Green New Deal and revoking the
-electric vehicle mandate, which are policies aimed at addressing climate
-change. The speaker’s focus on drilling for oil and gas and dismissing
-these environmental initiatives indicates a stance against taking action
-on climate change.
+The text explicitly states the intention to end the Green New Deal and
+revoke the electric vehicle mandate, which are policies aimed at
+addressing climate change. The speaker’s focus on increasing oil and gas
+production and dismissing climate-related initiatives indicates a stance
+against climate change action.
 </td>
 <td style="text-align:right;">
 0.95
@@ -336,7 +320,7 @@ on climate change.
 </table>
 <p>Or, you might want the LLM to extract specific arguments supporting
 the stance.</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">argument_stance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/define_task.html">define_task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Argument-based stance detection"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
@@ -390,14 +374,13 @@ leading in technology that will power new jobs and industries.
 <td style="text-align:left;">
 <ol style="list-style-type: decimal">
 <li>The text states that failing to respond to climate change would
-betray future generations, acknowledging the scientific consensus on its
-impact.</li>
-<li>It emphasizes the need for America to lead the transition to
-sustainable energy sources to maintain economic vitality and preserve
-natural resources.</li>
-<li>The text argues that addressing climate change is essential for
-preserving the planet, which is a responsibility entrusted to humanity
-by God.
+betray future generations, indicating a moral obligation to act.</li>
+<li>It acknowledges the overwhelming judgment of science on climate
+change and the devastating impacts of natural disasters, reinforcing the
+urgency of the issue.</li>
+<li>The text emphasizes the economic opportunities in leading the
+transition to sustainable energy, suggesting that it is both an
+environmental and economic imperative.
 </li>
 </ol>
 </td>
@@ -410,19 +393,22 @@ by God.
 Neutral
 </td>
 <td style="text-align:left;">
-The text is an inaugural speech that focuses on themes of national
-pride, economic revitalization, and political change. It does not
-explicitly address climate change or environmental policies, making it
-neutral on the topic.
+The text is a political speech focused on national issues, primarily
+concerning economic revitalization, national pride, and governance. It
+does not explicitly address climate change or environmental policies,
+making it neutral on the topic.
 </td>
 <td style="text-align:left;">
-<ol style="list-style-type: decimal"><li>The speech emphasizes economic growth and job creation, particularly
-through rebuilding infrastructure and promoting American industry. 2. It
-focuses on national interests and protectionism, with a strong emphasis
-on ‘America first’ policies. 3. The speech does not mention climate
-change, environmental protection, or sustainability, indicating a lack
-of stance on the issue.
-</li></ol>
+<ol style="list-style-type: decimal">
+<li>The speech emphasizes economic revitalization and infrastructure
+development, but does not mention environmental considerations or
+climate change.</li>
+</ol>
+<li>The focus is on national interests and economic growth, with no
+reference to environmental sustainability or climate action.</li>
+<li>The speech is centered on political and social unity, without
+addressing environmental challenges or climate change.
+</li>
 </td>
 </tr>
 <tr>
@@ -434,22 +420,19 @@ Pro
 </td>
 <td style="text-align:left;">
 The text expresses a clear stance in favor of addressing climate change,
-referring to it as a ‘cry for survival’ from the planet and
-acknowledging it as one of the significant challenges facing the nation.
-The speaker emphasizes the need for unity and bold action to tackle this
-and other pressing issues.
+referring to it as a ‘climate in crisis’ and emphasizing the need to
+tackle this issue as part of a broader set of challenges facing the
+nation.
 </td>
 <td style="text-align:left;">
 <ol style="list-style-type: decimal">
-<li>The text describes climate change as a ‘cry for survival’ from the
-planet, indicating the urgency and seriousness of the issue.</li>
+<li>The text describes climate change as a ‘crisis,’ indicating the
+severity and urgency of the issue.</li>
 </ol>
-<li>It is listed among other critical challenges such as the pandemic
-and systemic racism, highlighting its importance in the national
-agenda.</li>
-<li>The call for unity and boldness suggests a proactive approach to
-addressing climate change as part of a broader effort to resolve
-multiple crises.
+<li>It calls for bold action to address the ‘cascading crises of our
+era,’ which includes climate change.</li>
+<li>The speech emphasizes the responsibility to pass on a better world
+to future generations, implying the need for environmental stewardship.
 </li>
 </td>
 </tr>
@@ -461,23 +444,21 @@ multiple crises.
 Contra
 </td>
 <td style="text-align:left;">
-The speech explicitly opposes climate change initiatives by declaring an
-end to the Green New Deal and revoking the electric vehicle mandate. It
-emphasizes increasing fossil fuel production and usage, which
-contradicts efforts to combat climate change.
+The speech explicitly opposes climate change initiatives by declaring a
+national energy emergency to increase fossil fuel production and ending
+the Green New Deal. It emphasizes the use of oil and gas resources and
+revokes mandates for electric vehicles, which are contrary to efforts to
+combat climate change.
 </td>
 <td style="text-align:left;">
 <ol style="list-style-type: decimal">
-<li>The speaker declares a national energy emergency and promotes
-increased drilling for oil and gas, which opposes efforts to reduce
-fossil fuel dependency.</li>
+<li>Declares a national energy emergency to increase fossil fuel
+production, specifically oil and gas.</li>
 </ol>
-<li>The speech announces the end of the Green New Deal and the
-revocation of the electric vehicle mandate, which are key climate change
-initiatives.</li>
-<li>The focus on using the country’s oil and gas reserves to become a
-‘rich nation’ again suggests a prioritization of economic growth over
-environmental concerns.
+<li>Ends the Green New Deal and revokes the electric vehicle
+mandate.</li>
+<li>Emphasizes the use of America’s oil and gas reserves as a means to
+economic prosperity.
 </li>
 </td>
 </tr>
