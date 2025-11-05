@@ -1,6 +1,8 @@
 ---
 title: "Getting started with quallmer"
-output: rmarkdown::html_vignette
+output:
+  rmarkdown::html_vignette:
+    pandoc_args: ["--syntax-highlighting=tango"]
 vignette: >
   %\VignetteIndexEntry{Getting started with quallmer}
   %\VignetteEngine{knitr::rmarkdown}
