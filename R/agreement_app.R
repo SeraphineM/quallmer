@@ -1,17 +1,19 @@
-# Single-file Shiny app with manual coding, LLM checking, and ICR analysis
-
-# Declare global variables for dplyr NSE
-utils::globalVariables(c("unit_id", "coder_id", "code"))
+#' @keywords internal
+#' @import dplyr
+#' @import tidyr
+#' @import shiny
+#' @import bslib
+#' @importFrom irr kripp.alpha kappam.fleiss
 
 # -------------------------------
 # Helpers
 # -------------------------------
-
 na_to_empty <- function(x) {
   x <- as.character(x)
   x[is.na(x)] <- ""
   x
 }
+`%||%` <- function(x, y) if (length(x) == 0) y else x
 
 read_data_file <- function(path, name) {
   if (grepl("\\.rds$", name, ignore.case = TRUE)) {
@@ -23,70 +25,49 @@ read_data_file <- function(path, name) {
   }
 }
 
-preview_head <- function(df, n = 10) {
-  utils::head(df, n)
-}
+preview_head <- function(df, n = 10) utils::head(df, n)
 
 make_long_icr <- function(df, unit_id_col, coder_cols) {
   stopifnot(unit_id_col %in% names(df), all(coder_cols %in% names(df)))
   df %>%
     mutate(unit_id = as.character(.data[[unit_id_col]])) %>%
     select(unit_id, all_of(coder_cols)) %>%
-    pivot_longer(
-      cols = all_of(coder_cols),
-      names_to = "coder_id",
-      values_to = "code"
-    ) %>%
-    mutate(
-      coder_id = as.character(coder_id),
-      code = as.character(code)
-    ) %>%
-    select(unit_id, coder_id, code) %>%
-    complete(unit_id, coder_id, fill = list(code = NA_character_))
+    pivot_longer(cols = all_of(coder_cols), names_to = "coder_id", values_to = "code") %>%
+    mutate(coder_id = as.character(coder_id), code = as.character(code)) %>%
+    group_by(unit_id, coder_id) %>%
+    summarise(code = dplyr::first(code[!is.na(code)] %||% NA_character_), .groups = "drop") %>%
+    tidyr::complete(unit_id, coder_id, fill = list(code = NA_character_))
 }
 
 filter_units_by_coders <- function(long_df, min_coders = 2L) {
-  long_df %>%
-    group_by(unit_id) %>%
-    filter(sum(!is.na(code)) >= min_coders) %>%
-    ungroup()
+  long_df %>% group_by(unit_id) %>% filter(sum(!is.na(code)) >= min_coders) %>% ungroup()
 }
 
 compute_icr_summary <- function(long_df) {
-  wide <- long_df %>%
-    pivot_wider(names_from = coder_id, values_from = code) %>%
-    arrange(unit_id)
-
+  wide <- long_df %>% pivot_wider(names_from = coder_id, values_from = code) %>% arrange(unit_id)
   if (!"unit_id" %in% names(wide)) {
+    return(data.frame(metric = character(), value = character(), stringsAsFactors = FALSE))
+  }
+  ratings_raw <- wide %>% select(-unit_id)
+  n_units <- nrow(ratings_raw); n_coders <- ncol(ratings_raw)
+  if (n_units == 0L || n_coders < 2L) {
     return(data.frame(
-      metric = character(), value = character(), stringsAsFactors = FALSE
+      metric = c("units_included", "coders", "kripp_alpha_nominal", "fleiss_kappa"),
+      value = c(n_units, n_coders, NA, NA),
+      stringsAsFactors = FALSE
     ))
   }
-
-  ratings <- wide %>% select(-unit_id)
-  n_units <- nrow(ratings)
-  n_coders <- ncol(ratings)
-
+  all_levels <- sort(unique(na.omit(unlist(ratings_raw))))
+  ratings_fac <- as.data.frame(lapply(ratings_raw, function(col) factor(col, levels = all_levels)))
+  ratings_int <- as.data.frame(lapply(ratings_fac, function(col) as.integer(col)))
   alpha_val <- tryCatch({
-    if (n_units > 0 && n_coders >= 2) {
-      rmat <- t(as.matrix(ratings))
-      out <- irr::kripp.alpha(rmat, method = "nominal")
-      unname(out$value)
-    } else NA_real_
+    rmat <- t(as.matrix(ratings_int))
+    irr::kripp.alpha(rmat, method = "nominal")$value
   }, error = function(e) NA_real_)
-
   fleiss_val <- tryCatch({
-    if (n_units > 0 && n_coders >= 2) {
-      comp <- ratings[stats::complete.cases(ratings), , drop = FALSE]
-      if (nrow(comp) >= 1) {
-        out <- irr::kappam.fleiss(comp)
-        unname(out$value)
-      } else {
-        NA_real_
-      }
-    } else NA_real_
+    comp <- ratings_int[stats::complete.cases(ratings_int), , drop = FALSE]
+    if (nrow(comp) >= 2L && length(all_levels) >= 2L) irr::kappam.fleiss(comp)$value else NA_real_
   }, error = function(e) NA_real_)
-
   data.frame(
     metric = c("units_included", "coders", "kripp_alpha_nominal", "fleiss_kappa"),
     value = c(n_units, n_coders, round(alpha_val, 4), round(fleiss_val, 4)),
@@ -99,316 +80,337 @@ compute_icr_summary <- function(long_df) {
 # -------------------------------
 humancheck_ui <- function(id) {
   ns <- NS(id)
-  fluidPage(
+  tagList(
     tags$head(
       tags$style(HTML("
-        /* Make navigation buttons smaller */
-        #sidebar-box .btn {
-          font-size: 12px !important;   /* smaller text */
-          padding: 4px 8px !important;  /* tighter spacing */
-          line-height: 1.2 !important;  /* more compact vertically */
-        }
-
-        /* Optional: smaller margin between buttons */
-        #sidebar-box .btn + .btn {
-          margin-left: 2px;
-        }
-
-        /* Optional: make all text/buttons uniform */
-        #sidebar-box h4,
-        #sidebar-box h5,
-        #sidebar-box p,
-        #sidebar-box label {
-          font-size: 13px;
-        }
-
-        :root { --panel-height: 200px; --small-box-height: 140px; --max-panel-height: 600px; }
-
-        .box-base {
-          background-color: #f8f9fa;
-          padding: 10px;
-          border-radius: 5px;
-          border: 1px solid #dee2e6;
-          width: 100%;
-          box-sizing: border-box;
-          overflow-x: hidden !important;
-          overflow-y: auto;
-        }
-
-        .box-small { height: var(--small-box-height); }
-        .box-tall  { height: var(--panel-height); }
-
-        /* Limit the maximum height of sidebar and main text area */
-        #sidebar-box, #main-text-box {
-          height: auto;
-          max-height: var(--max-panel-height);
-          overflow-y: auto;
-        }
-
-        #sidebar-box, #main-text-box { height: var(--panel-height); overflow-y: auto; }
-
-        .box-base pre, .box-base {
-          white-space: pre-wrap !important;
-          word-wrap: break-word !important;
-          overflow-wrap: anywhere !important;
-          font-family: 'Consolas','Monaco','Courier New',monospace;
-          font-size: 12px;
-          line-height: 1.2;
-          margin-left: 2px;
-        }
-
-        .main-panel {
-          padding: 10px;
-          max-width: 100%;
-          overflow-x: hidden;
-          margin-right: 5px; /* reduced right margin */
-        }
-
-        /* Pastel colors for validation buttons */
-        #sidebar-box .btn-success { background-color: #b3e6b3 !important; border-color: #99d699 !important; color: #000; }
-        #sidebar-box .btn-danger  { background-color: #f5b3b3 !important; border-color: #e69999 !important; color: #000; }
+        :root { --max-panel-height: 900px; --bluish: #5A6F8F; }
+        #sidebar-box, #main-text-box { overflow-y: auto; max-height: var(--max-panel-height); padding-right: 10px; }
+        .btn-primary { background-color: var(--bluish) !important; border-color: var(--bluish) !important; }
+        .btn-secondary { background-color: #6c757d !important; border-color: #6c757d !important; color: #fff !important; }
+        #main-text { font-size: 0.9rem; background: #f8f9fa; border-radius: 8px; padding: 10px; }
+        .small-box { max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 6px; margin-bottom: 6px; }
+        .progress-bar { height: 5px; background: var(--bluish); border-radius: 3px; margin-bottom: 6px; }
       ")),
-      tags$script(HTML("
-        function updateHeights() {
-          var sb = document.getElementById('sidebar-box');
-          var mp = document.getElementById('main-text-box');
-          if (!sb || !mp) return;
-          var h1 = sb.scrollHeight || sb.offsetHeight || 0;
-          var h2 = mp.scrollHeight || mp.offsetHeight || 0;
-          var h = Math.max(h1, h2, 400);
-          document.documentElement.style.setProperty('--panel-height', h + 'px');
-        }
-        window.addEventListener('resize', function(){ setTimeout(updateHeights, 100); });
-        document.addEventListener('DOMContentLoaded', function(){ setTimeout(updateHeights, 300); });
-        Shiny.addCustomMessageHandler('pingUpdateHeights', function(_) { setTimeout(updateHeights, 100); });
-        Shiny.addCustomMessageHandler('getSelectedText', function(message) {
-          var selection = window.getSelection().toString();
-          Shiny.setInputValue(message.inputId, selection, {priority: 'event'});
+      tags$script(HTML(sprintf("
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'ArrowRight') Shiny.setInputValue('%s', Math.random());
+          if (e.key === 'ArrowLeft') Shiny.setInputValue('%s', Math.random());
         });
-      "))
+      ", ns("next_text"), ns("prev_text"))))
     ),
-    sidebarLayout(
-      sidebarPanel(
-        div(id = "sidebar-box",
-            h4(textOutput(ns("navigation_info"))),
-            div(class = "document-info",
-                tags$strong("Document: "),
-                textOutput(ns("document_name"), inline = TRUE)
-            ),
-            fluidRow(
-              column(8, actionButton(ns("jump_last"), "Jump to last coded",
-                                     class = "btn btn-primary", width = "100%"))  # same as Save Highlight
-            ),
-            hr(),
-            h5("Metadata"),
-            tableOutput(ns("meta_table")),
-            hr(),
-            conditionalPanel(
-              condition = sprintf("output['%s']", ns("has_llm_output")),
-              h4("LLM output"),
-              div(class = "box-base box-small", verbatimTextOutput(ns("llm_output_display")))
-            ),
-            conditionalPanel(
-              condition = sprintf("output['%s']", ns("has_evidence")),
-              h5("LLM evidence"),
-              div(class = "box-base box-small", verbatimTextOutput(ns("llm_evidence_display")))
-            ),
-            hr(),
-            conditionalPanel(
-              condition = sprintf("output['%s']", ns("show_validation_buttons")),
-              fluidRow(
-                column(6, actionButton(ns("valid_btn"), "Valid", class = "btn btn-success", width = "100%")),
-                column(6, actionButton(ns("invalid_btn"), "Invalid", class = "btn btn-danger", width = "100%"))
-              ),
-              br(),
-              textOutput(ns("status_display")),
-              hr()
-            ),
-            fluidRow(
-              column(4, actionButton(ns("prev_text"), "Previous", class = "btn btn-secondary", width = "100%")),
-              column(4, actionButton(ns("next_text"), "Next", class = "btn btn-secondary", width = "100%"))
-            ),
-            br(),
-            textAreaInput(ns("comments"), "Comments:", "", width = "100%", height = "80px"),
-            actionButton(ns("save_highlight"), "Save Highlight", class = "btn btn-primary"),
-            h5("Highlighted examples:"),
-            verbatimTextOutput(ns("highlighted_text_display")),
-            p("Examples highlighted in the text are saved to new file.",
-              style = "font-size: 0.9em; color: #6c757d;")
+    fluidRow(
+      column(
+        width = 4,
+        div(
+          id = "sidebar-box",
+          uiOutput(ns("meta_ui")),
+          hr(),
+          uiOutput(ns("progress_ui")),
+          fluidRow(
+            column(4, actionButton(ns("prev_text"), "← Previous", class = "btn btn-light w-100")),
+            column(4, actionButton(ns("next_text"), "Next →", class = "btn btn-light w-100")),
+            column(4, actionButton(ns("manual_save"), "Save Now", class = "btn btn-secondary w-100"))
+          ),
+          hr(),
+          uiOutput(ns("llm_side")),     # LLM output / justification (LLM mode)
+          uiOutput(ns("mode_fields")),  # Score (manual) or Status (LLM)
+          textAreaInput(ns("comments"), "Comments", "", rows = 3, placeholder = "Type your notes..."),
+          textAreaInput(ns("examples"), "Examples (optional)", "", rows = 3, placeholder = "Paste or type examples..."),
+          verbatimTextOutput(ns("status_msg"))
         )
       ),
-      mainPanel(
-        div(class = "main-panel",
-            h4("Text to assess"),
-            div(id = "main-text-box", class = "box-base box-tall", verbatimTextOutput(ns("text_display")))
+      column(
+        width = 8,
+        div(
+          id = "main-text-box",
+          uiOutput(ns("text_ui"))
         )
       )
-    ),
-    div(class = "footer",
-        HTML(paste0(
-          "Agreement App made with <span style='color: red;'>", "\u2665", "</span> and ",
-          "<a href='https://shiny.posit.co/' target='_blank'>Shiny</a>"
-        ))
     )
   )
 }
 
-
-humancheck_server <- function(id, data, text_col, blind,
-                              llm_output_col = reactive(NULL),
-                              llm_evidence_col = reactive(NULL),
-                              original_file_name = reactive("data.csv"),
-                              meta_cols = reactive(character())) {
+humancheck_server <- function(
+    id,
+    data,
+    text_col,
+    blind = reactive(TRUE),
+    llm_output_col = reactive(NULL),
+    llm_evidence_col = reactive(NULL), # internally named evidence; UI shows justification
+    original_file_name = reactive("data.csv"),
+    meta_cols = reactive(character())
+) {
   moduleServer(id, function(input, output, session) {
-
+    ns <- session$ns
     rv <- reactiveValues(df = NULL, n = 0L, text_vec = NULL)
     current_index <- reactiveVal(1L)
 
-    save_path <- reactive({
-      base <- tools::file_path_sans_ext(req(original_file_name()))
-      paste0(base, "_assessed.rds")
+    assessed_path <- reactive({
+      base_path <- req(original_file_name())
+      out_dir <- dirname(base_path) # always the agreement folder (uploads saved there)
+      file.path(out_dir, paste0(tools::file_path_sans_ext(basename(base_path)), "_assessed.rds"))
     })
 
-    observeEvent(list(data(), text_col(), blind(),
-                      llm_output_col(), llm_evidence_col(), original_file_name()), {
-                        df <- req(data())
-                        txt <- req(text_col())
-                        if (!txt %in% names(df)) stop(sprintf("Text column '%s' not found in data.", txt))
-
-                        n_texts <- nrow(df)
-                        if (!"comments" %in% names(df)) df$comments <- rep("", n_texts) else df$comments <- na_to_empty(df$comments)
-                        if (!"examples" %in% names(df)) df$examples <- rep("", n_texts) else df$examples <- na_to_empty(df$examples)
-                        if (!isTRUE(blind()) && !"status" %in% names(df)) df$status <- rep("Unmarked", n_texts)
-
-                        # merge saved progress when available
-                        sp <- save_path()
-                        if (file.exists(sp)) {
-                          saved <- tryCatch(readRDS(sp), error = function(e) NULL)
-                          if (!is.null(saved) && nrow(saved) == nrow(df)) {
-                            for (nm in intersect(c("comments", "examples", "status"), names(saved))) {
-                              df[[nm]] <- na_to_empty(saved[[nm]])
-                            }
-                          }
-                        }
-
-                        rv$df <- df
-                        rv$n <- n_texts
-                        rv$text_vec <- as.character(df[[txt]])
-
-                        session$sendCustomMessage("pingUpdateHeights", TRUE)
-                      }, ignoreInit = FALSE, priority = 10)
-
-    has_llm_output <- reactive({
-      !is.null(llm_output_col()) && nzchar(llm_output_col()) && llm_output_col() %in% names(rv$df)
-    })
-    has_evidence <- reactive({
-      !is.null(llm_evidence_col()) && llm_evidence_col() != "None" && nzchar(llm_evidence_col()) && llm_evidence_col() %in% names(rv$df)
-    })
-    show_buttons <- reactive({ isFALSE(isTRUE(blind())) })
-
-    output$has_llm_output <- reactive({ has_llm_output() })
-    outputOptions(output, "has_llm_output", suspendWhenHidden = FALSE)
-    output$has_evidence <- reactive({ has_evidence() })
-    outputOptions(output, "has_evidence", suspendWhenHidden = FALSE)
-    output$show_validation_buttons <- reactive({ show_buttons() })
-    outputOptions(output, "show_validation_buttons", suspendWhenHidden = FALSE)
-
-    output$navigation_info <- renderText({
-      paste("Document", current_index(), "of", max(1L, rv$n))
-    })
-    output$document_name <- renderText({ req(original_file_name()) })
-
-    # metadata table for current row
-    output$meta_table <- renderTable({
-      cols <- meta_cols()
-      if (length(cols) == 0 || is.null(rv$df)) return(NULL)
-      i <- current_index()
-      vals <- vapply(cols, function(c) na_to_empty(rv$df[[c]][i]), character(1))
-      data.frame(Field = cols, Value = vals, stringsAsFactors = FALSE)
-    }, striped = TRUE, bordered = TRUE, colnames = TRUE)
-
-    # decouple text rendering from df to prevent jumping
-    output$text_display <- renderText({
-      idx <- current_index()
-      na_to_empty(rv$text_vec[idx])
-    })
-    output$llm_output_display <- renderText({
-      if (has_llm_output()) na_to_empty(rv$df[[llm_output_col()]][current_index()]) else ""
-    })
-    output$llm_evidence_display <- renderText({
-      if (has_evidence()) na_to_empty(rv$df[[llm_evidence_col()]][current_index()]) else ""
-    })
-    output$status_display <- renderText({
-      if (show_buttons()) paste("Status:", rv$df$status[current_index()]) else ""
-    })
-
+    # Atomic save of full dataframe + last_index
     save_now <- function() {
-      try(saveRDS(rv$df, save_path()), silent = TRUE)
+      if (is.null(rv$df)) return(invisible(NULL))
+      sp <- tryCatch(assessed_path(), error = function(e) NULL)
+      if (is.null(sp) || !nzchar(sp)) return(invisible(NULL))
+      dir.create(dirname(sp), recursive = TRUE, showWarnings = FALSE)
+      tmp <- tempfile("assessed_", tmpdir = dirname(sp), fileext = ".rds")
+      payload <- list(
+        version = 4L,
+        last_index = current_index(),
+        df = rv$df
+      )
+      ok <- tryCatch({
+        saveRDS(payload, tmp, compress = "xz")
+        if (!file.rename(tmp, sp)) {
+          if (file.copy(tmp, sp, overwrite = TRUE)) unlink(tmp) else stop("copy failed")
+        }
+        TRUE
+      }, error = function(e) FALSE)
+      if (!ok && file.exists(tmp)) try(unlink(tmp), silent = TRUE)
+      invisible(NULL)
     }
 
-    observeEvent(input$comments, {
-      i <- current_index()
-      if (!is.null(rv$df) && i >= 1 && i <= nrow(rv$df)) {
-        rv$df$comments[i] <- na_to_empty(if (is.null(input$comments)) "" else input$comments)
-        save_now()
+    # Load/merge progress when inputs change
+    observeEvent(list(data(), text_col(), blind(), llm_output_col(), llm_evidence_col(), original_file_name(), meta_cols()), {
+      df <- req(data())
+      txt <- req(text_col())
+      if (!is.data.frame(df)) return()
+      if (!txt %in% names(df)) {
+        showNotification(sprintf("Text column '%s' not found in data.", txt), type = "error", duration = 5)
+        return()
       }
-    }, ignoreInit = TRUE)
+      n <- nrow(df)
 
-    observeEvent(input$valid_btn, {
-      if (show_buttons()) { rv$df$status[current_index()] <- "Valid"; save_now() }
+      # Ensure IDs and columns exist
+      if (!".row_id" %in% names(df)) df$.row_id <- sprintf("row_%s", seq_len(n))
+
+      # Split comments/examples by mode; keep legacy columns if present
+      if (!"comments_manual" %in% names(df)) df$comments_manual <- ""
+      if (!"examples_manual" %in% names(df)) df$examples_manual <- ""
+      if (!"comments_llm" %in% names(df)) df$comments_llm <- ""
+      if (!"examples_llm" %in% names(df)) df$examples_llm <- ""
+      df$comments_manual <- na_to_empty(df$comments_manual)
+      df$examples_manual <- na_to_empty(df$examples_manual)
+      df$comments_llm    <- na_to_empty(df$comments_llm)
+      df$examples_llm    <- na_to_empty(df$examples_llm)
+
+      # Legacy migration (if generic columns exist)
+      if ("comments" %in% names(df)) {
+        df$comments_manual <- ifelse(nzchar(df$comments_manual), df$comments_manual, na_to_empty(df$comments))
+        df$comments_llm    <- ifelse(nzchar(df$comments_llm),    df$comments_llm,    na_to_empty(df$comments))
+      }
+      if ("examples" %in% names(df)) {
+        df$examples_manual <- ifelse(nzchar(df$examples_manual), df$examples_manual, na_to_empty(df$examples))
+        df$examples_llm    <- ifelse(nzchar(df$examples_llm),    df$examples_llm,    na_to_empty(df$examples))
+      }
+
+      if (!"status" %in% names(df)) df$status <- rep("Unmarked", n) else df$status <- na_to_empty(df$status)
+      if (!"score"  %in% names(df)) df$score  <- rep(NA_real_, n)
+
+      # Merge saved progress
+      saved_last <- NA_integer_
+      sp <- tryCatch(assessed_path(), error = function(e) NULL)
+      if (!is.null(sp) && file.exists(sp)) {
+        saved <- tryCatch(readRDS(sp), error = function(e) NULL)
+        saved_df <- NULL
+        if (is.list(saved) && "df" %in% names(saved)) saved_df <- saved$df
+        if (is.data.frame(saved)) saved_df <- saved
+        if (!is.null(saved_df) && ".row_id" %in% names(saved_df)) {
+          keep <- intersect(c(
+            ".row_id",
+            "comments_manual","examples_manual",
+            "comments_llm","examples_llm",
+            "comments","examples",  # legacy fallback
+            "status","score"
+          ), names(saved_df))
+          m <- dplyr::left_join(df, saved_df[, keep, drop = FALSE], by = ".row_id", suffix = c("", ".saved"))
+          df$comments_manual <- na_to_empty(dplyr::coalesce(m$comments_manual.saved, df$comments_manual, m$comments.saved))
+          df$examples_manual <- na_to_empty(dplyr::coalesce(m$examples_manual.saved, df$examples_manual, m$examples.saved))
+          df$comments_llm    <- na_to_empty(dplyr::coalesce(m$comments_llm.saved,    df$comments_llm,    m$comments.saved))
+          df$examples_llm    <- na_to_empty(dplyr::coalesce(m$examples_llm.saved,    df$examples_llm,    m$examples.saved))
+          df$status          <- na_to_empty(dplyr::coalesce(m$status.saved, df$status))
+          if ("score.saved" %in% names(m)) df$score <- dplyr::coalesce(m$score.saved, df$score)
+        }
+        if (is.list(saved) && is.numeric(saved$last_index)) saved_last <- as.integer(saved$last_index)
+      }
+
+      rv$df <- df
+      rv$n <- n
+      rv$text_vec <- as.character(df[[txt]])
+
+      # Start index (mode-aware)
+      if (isTRUE(blind())) {
+        coded <- nzchar(df$comments_manual) | nzchar(df$examples_manual) | !is.na(df$score)
+      } else {
+        coded <- nzchar(df$comments_llm) | nzchar(df$examples_llm) | !(df$status %in% c("", "Unmarked"))
+      }
+      start_idx <- if (is.finite(saved_last) && !is.na(saved_last)) max(1L, min(saved_last, n)) else if (any(coded)) max(which(coded)) else 1L
+      move_and_refresh(start_idx)
+    }, ignoreInit = FALSE, priority = 10)
+
+    # LLM side panel in sidebar
+    output$llm_side <- renderUI({
+      req(rv$df)
+      if (isTRUE(blind())) return(NULL)
+      out_col <- llm_output_col()
+      just_col  <- llm_evidence_col()
+      tagList(
+        h5("LLM output / justification"),
+        if (!is.null(out_col) && nzchar(out_col) && out_col %in% names(rv$df)) {
+          div(class = "small-box", strong("LLM output:"), verbatimTextOutput(ns("llm_output")))
+        } else {
+          div(class = "small-box", strong("LLM output:"), span("Select a valid LLM output column.", style = "color:#dc3545"))
+        },
+        if (!is.null(just_col) && nzchar(just_col) && !identical(just_col, "None") && just_col %in% names(rv$df)) {
+          div(class = "small-box", strong("LLM justification:"), verbatimTextOutput(ns("llm_justification")))
+        } else NULL
+      )
     })
-    observeEvent(input$invalid_btn, {
-      if (show_buttons()) { rv$df$status[current_index()] <- "Invalid"; save_now() }
+    output$llm_output <- renderText({
+      if (isTRUE(blind())) return("")
+      col <- llm_output_col()
+      if (is.null(col) || !nzchar(col) || !(col %in% names(rv$df))) return("")
+      i <- current_index(); na_to_empty(rv$df[[col]][i])
+    })
+    output$llm_justification <- renderText({
+      if (isTRUE(blind())) return("")
+      col <- llm_evidence_col()
+      if (is.null(col) || !nzchar(col) || identical(col, "None") || !(col %in% names(rv$df))) return("")
+      i <- current_index(); na_to_empty(rv$df[[col]][i])
     })
 
-    observeEvent(input$save_highlight, {
-      session$sendCustomMessage("getSelectedText", list(inputId = session$ns("highlighted_text")))
-    })
-    observeEvent(input$highlighted_text, {
-      txt <- input$highlighted_text
-      if (!is.null(txt) && nzchar(txt)) { rv$df$examples[current_index()] <- txt; save_now() }
+    # Mode-specific fields (score vs status)
+    output$mode_fields <- renderUI({
+      if (isTRUE(blind())) {
+        numericInput(ns("score"), "Score", value = NA, step = 1)
+      } else {
+        radioButtons(ns("status_sel"), "Status", choices = c("Valid","Invalid","Unmarked"), selected = "Unmarked", inline = TRUE)
+      }
     })
 
+    # Meta table
+    output$meta_ui <- renderUI({
+      req(rv$df)
+      cols <- meta_cols()
+      if (length(cols) == 0) return(NULL)
+      i <- current_index()
+      df <- rv$df
+      tags$div(
+        h5("Metadata"),
+        tags$table(
+          class = "table table-sm table-bordered",
+          do.call(tags$tbody, lapply(cols, function(cn) {
+            tags$tr(tags$th(cn), tags$td(na_to_empty(df[[cn]][i])))
+          }))
+        )
+      )
+    })
+
+    # Text + progress
+    output$text_ui <- renderUI({
+      req(rv$text_vec, rv$n)
+      tagList(
+        tags$div(class = "progress-bar", style = sprintf("width:%s%%;", round(100 * current_index() / max(1, rv$n), 1))),
+        tags$div(id = "main-text", rv$text_vec[current_index()])
+      )
+    })
+
+    # Sync UI to row (mode-aware comments/examples)
     move_and_refresh <- function(to) {
+      if (is.null(rv$n) || is.na(to)) return()
       to <- max(1L, min(to, rv$n))
       current_index(to)
       i <- to
-      updateTextAreaInput(session, "comments", value = na_to_empty(rv$df$comments[i]))
-      output$highlighted_text_display <- renderText({ na_to_empty(rv$df$examples[i]) })
-      output$status_display <- renderText({ if (show_buttons()) paste("Status:", rv$df$status[i]) else "" })
-      session$sendCustomMessage("pingUpdateHeights", TRUE)
+      if (isTRUE(blind())) {
+        updateTextAreaInput(session, "comments", value = na_to_empty(rv$df$comments_manual[i]))
+        updateTextAreaInput(session, "examples", value = na_to_empty(rv$df$examples_manual[i]))
+        updateNumericInput(session, "score", value = suppressWarnings(as.numeric(rv$df$score[i])))
+      } else {
+        updateTextAreaInput(session, "comments", value = na_to_empty(rv$df$comments_llm[i]))
+        updateTextAreaInput(session, "examples", value = na_to_empty(rv$df$examples_llm[i]))
+        updateRadioButtons(session, "status_sel", selected = na_to_empty(rv$df$status[i] %||% "Unmarked"))
+      }
+      output$progress_ui <- renderUI({
+        p(sprintf("Progress: %d / %d (%.1f%%)", current_index(), rv$n, 100 * current_index() / max(1, rv$n)))
+      })
     }
 
-    observeEvent(input$next_text, { move_and_refresh(current_index() + 1L) })
-    observeEvent(input$prev_text, { move_and_refresh(current_index() - 1L) })
+    # Persist edits (mode-aware)
+    observeEvent(input$comments, {
+      if (is.null(rv$df)) return()
+      i <- current_index()
+      if (isTRUE(blind())) {
+        rv$df$comments_manual[i] <- na_to_empty(input$comments %||% "")
+      } else {
+        rv$df$comments_llm[i] <- na_to_empty(input$comments %||% "")
+      }
+      save_now()
+    }, ignoreInit = TRUE)
 
-    observeEvent(input$jump_last, {
-      if (is.null(rv$df) || nrow(rv$df) == 0) return()
-      coded <- rep(FALSE, nrow(rv$df))
-      if ("status" %in% names(rv$df)) coded <- coded | (!is.na(rv$df$status) & !(rv$df$status %in% c("", "Unmarked")))
-      if ("comments" %in% names(rv$df)) coded <- coded | nzchar(na_to_empty(rv$df$comments))
-      if ("examples" %in% names(rv$df)) coded <- coded | nzchar(na_to_empty(rv$df$examples))
-      idx <- if (any(coded)) max(which(coded)) else 1L
-      move_and_refresh(idx)
-    })
+    observeEvent(input$examples, {
+      if (is.null(rv$df)) return()
+      i <- current_index()
+      if (isTRUE(blind())) {
+        rv$df$examples_manual[i] <- na_to_empty(input$examples %||% "")
+      } else {
+        rv$df$examples_llm[i] <- na_to_empty(input$examples %||% "")
+      }
+      save_now()
+    }, ignoreInit = TRUE)
 
-    observe({ if (rv$n >= 1) move_and_refresh(1L) })
+    observeEvent(input$score, {
+      if (!isTRUE(blind()) || is.null(rv$df)) return()
+      i <- current_index()
+      rv$df$score[i] <- suppressWarnings(as.numeric(input$score))
+      save_now()
+    }, ignoreInit = TRUE)
+
+    observeEvent(input$status_sel, {
+      if (isTRUE(blind()) || is.null(rv$df)) return()
+      i <- current_index()
+      rv$df$status[i] <- na_to_empty(input$status_sel %||% "Unmarked")
+      save_now()
+    }, ignoreInit = TRUE)
+
+    # Navigation
+    observeEvent(input$next_text, { if (!is.null(rv$n) && current_index() < rv$n) { save_now(); move_and_refresh(current_index() + 1L) } })
+    observeEvent(input$prev_text, { if (!is.null(rv$n) && current_index() > 1L)  { save_now(); move_and_refresh(current_index() - 1L) } })
+
+    observeEvent(input$manual_save, ignoreInit = TRUE, handlerExpr = save_now)
+
+    list(current_index = reactive(current_index()))
   })
 }
 
 # -------------------------------
 # Main App
 # -------------------------------
-
 agreement_app <- function() {
   ui <- fluidPage(
-    titlePanel("Agreement App"),
+    theme = bs_theme(
+      version = 5,
+      bootswatch = "flatly",
+      base_font = font_google("Inter", local = TRUE),
+      heading_font = font_google("Inter", local = TRUE),
+      code_font = font_collection("Fira Mono", "Consolas"),
+      "font-size-base" = ".85rem",
+      "primary" = "#5A6F8F"
+    ),
+    tags$head(tags$style(HTML("
+      .app-title { font-size: 1.35rem; font-weight: 700; margin: 6px 0 12px 0; }
+    "))),
+    div(class = "app-title", strong("Agreement App")),
     sidebarLayout(
       sidebarPanel(
         width = 3,
         h4("1. Select a data file"),
-        fileInput("file", "Choose a data file (.rds or .csv):",
-                  accept = c(".rds", ".csv")),
+        fileInput("file", "Choose a data file (.rds or .csv):", accept = c(".rds", ".csv")),
+        div(style="margin-top:-6px; color:#6c757d;", textOutput("loaded_file_name")),
+        actionButton("reset_btn", "Save and reset", class = "btn btn-secondary w-100"),
         hr(),
         h4("2. Choose mode"),
         radioButtons("mode", "Mode:",
@@ -417,15 +419,14 @@ agreement_app <- function() {
                        "Checking LLM outputs" = "llm",
                        "Calculate agreement scores" = "agreement"
                      ),
-                     selected = "blind"),
+                     selected = "blind"
+        ),
         hr(),
         uiOutput("column_selectors"),
         br(),
-        helpText("All changes will be automatically saved to a new file in your working directory with the ending _assessed.rds.")
+        helpText("Progress is saved to *_assessed.rds in a newly created folder called agreement")
       ),
-      mainPanel(
-        uiOutput("main_content")
-      )
+      mainPanel(uiOutput("main_content"))
     )
   )
 
@@ -433,66 +434,169 @@ agreement_app <- function() {
     dataset <- reactiveVal(NULL)
     last_file <- reactiveVal(NULL)
 
-    # -----------------------
-    # Load last-used file if exists
-    # -----------------------
+    state_path <- ".app_state.rds"
+    hc <- NULL
+    get_hc_index <- function() {
+      if (is.null(hc)) return(NA_integer_)
+      idx <- tryCatch(isolate(hc$current_index()), error = function(e) NA_integer_)
+      if (is.null(idx)) NA_integer_ else as.integer(idx)
+    }
+
+    save_state <- function() {
+      st <- list(
+        last_file = tryCatch(isolate(last_file()), error = function(e) NULL),
+        mode = input$mode,
+        text_col = isolate(input$text_col),
+        meta_cols = isolate(input$meta_cols),
+        llm_output_col = isolate(input$llm_output_col),
+        llm_evidence_col = isolate(input$llm_evidence_col),
+        unit_id_col = isolate(input$unit_id_col),
+        coder_cols = isolate(input$coder_cols),
+        hc_last_index = get_hc_index()
+      )
+      try(saveRDS(st, state_path), silent = TRUE)
+    }
+
+    # Restore last file and mode
     observe({
-      if (is.null(dataset()) && file.exists(".last_file.txt")) {
-        lf <- readLines(".last_file.txt", warn = FALSE)
-        if (length(lf) == 1 && file.exists(lf)) {
-          df <- tryCatch(read_data_file(lf, basename(lf)),
-                         error = function(e) { showNotification(e$message, type = "error"); NULL })
-          if (!is.null(df)) {
-            dataset(df)
-            last_file(lf)
-            showNotification(paste("Loaded previous file:", basename(lf)), type = "message")
+      st <- if (file.exists(state_path)) tryCatch(readRDS(state_path), error = function(e) NULL) else NULL
+      if (!is.null(st)) {
+        if (!is.null(st$last_file) && file.exists(st$last_file) && is.null(dataset())) {
+          obj <- tryCatch(read_data_file(st$last_file, basename(st$last_file)),
+                          error = function(e) { showNotification(e$message, type = "error"); NULL })
+          if (!is.null(obj) && is.data.frame(obj)) { dataset(obj); last_file(st$last_file) }
+          if (!is.null(obj) && !is.data.frame(obj)) {
+            showNotification("Wrong format: please upload a .rds or .csv that contains a data frame.", type = "error")
           }
+        }
+        if (!is.null(st$mode)) updateRadioButtons(session, "mode", selected = st$mode)
+      } else if (is.null(dataset()) && file.exists(".last_file.txt")) {
+        lf <- readLines(".last_file.txt", warn = FALSE)
+        if (length(lf) == 1 && nzchar(lf) && file.exists(lf)) {
+          obj <- tryCatch(read_data_file(lf, basename(lf)), error = function(e) NULL)
+          if (!is.null(obj) && is.data.frame(obj)) { dataset(obj); last_file(lf) }
         }
       }
     })
 
-    # -----------------------
-    # File input observer
-    # -----------------------
+    output$loaded_file_name <- renderText({
+      p <- last_file(); if (is.null(p)) "No file loaded" else paste("Loaded:", basename(p))
+    })
+
+    # Persist upload locally to agreement folder and validate
     observeEvent(input$file, {
       req(input$file)
-      df <- tryCatch(read_data_file(input$file$datapath, input$file$name),
-                     error = function(e) { showNotification(e$message, type = "error"); NULL })
-      if (!is.null(df)) {
-        dataset(df)
-        last_file(input$file$datapath)
-        writeLines(input$file$datapath, ".last_file.txt")
+      dir.create("agreement", showWarnings = FALSE, recursive = TRUE)
+      dest <- normalizePath(file.path("agreement", input$file$name), mustWork = FALSE)
+      if (!isTRUE(file.copy(input$file$datapath, dest, overwrite = TRUE))) {
+        showNotification("Could not persist uploaded file.", type = "error")
+        return()
       }
+      obj <- tryCatch(read_data_file(dest, basename(dest)),
+                      error = function(e) { showNotification(e$message, type = "error"); NULL })
+      if (is.null(obj)) return()
+      if (!is.data.frame(obj)) {
+        showNotification("Wrong format: please upload a .rds or .csv that contains a data frame.", type = "error")
+        return()
+      }
+      dataset(obj)
+      last_file(dest)
+      writeLines(dest, ".last_file.txt")
+      save_state()
     }, ignoreInit = TRUE)
 
-    # -----------------------
+    # Save and reset
+    observeEvent(input$reset_btn, {
+      if (file.exists(state_path)) try(unlink(state_path), silent = TRUE)
+      if (file.exists(".last_file.txt")) try(unlink(".last_file.txt"), silent = TRUE)
+      dataset(NULL); last_file(NULL)
+      showNotification("App reset. You can load a new file now.", type = "message")
+    })
+
     # Column selectors UI
-    # -----------------------
     output$column_selectors <- renderUI({
       req(dataset())
+      if (!is.data.frame(dataset())) return(NULL)
       cols <- names(dataset())
+      st <- if (file.exists(state_path)) tryCatch(readRDS(state_path), error = function(e) NULL) else NULL
       mode <- input$mode
       tagList(
         h4("3. Select columns"),
-        if (mode != "agreement")
-          selectInput("text_col", "Text column:", choices = cols),
-        if (mode == "blind")
-          selectInput("meta_cols", "Metadata columns (optional):", choices = cols, multiple = TRUE),
-        if (mode == "llm") tagList(
-          selectInput("llm_output_col", "LLM output column:", choices = cols),
-          selectInput("llm_evidence_col", "LLM evidence column (optional):",
-                      choices = c("None", cols), selected = "None")
-        ),
-        if (mode == "agreement") tagList(
-          selectInput("unit_id_col", "Unit ID column:", choices = cols),
-          selectInput("coder_cols", "Coder columns (multiple):", choices = cols, multiple = TRUE)
-        )
+        selectInput("text_col", "Text column:", choices = cols,
+                    selected = {
+                      sel <- if (!is.null(st) && !is.null(st$text_col)) st$text_col else NULL
+                      if (!is.null(sel) && sel %in% cols) sel else cols[[1]]
+                    }),
+        if (mode == "blind") {
+          selectInput("meta_cols", "Metadata columns (optional):", choices = cols, multiple = TRUE,
+                      selected = if (!is.null(st) && !is.null(st$meta_cols)) intersect(st$meta_cols, cols) else NULL)
+        } else if (mode == "llm") {
+          tagList(
+            selectInput("llm_output_col", "LLM output column (required):", choices = cols,
+                        selected = {
+                          sel <- if (!is.null(st) && !is.null(st$llm_output_col)) st$llm_output_col else NULL
+                          if (!is.null(sel) && sel %in% cols) sel else cols[[1]]
+                        }),
+            selectInput("llm_evidence_col", "LLM justification column (optional):", choices = c("None", cols),
+                        selected = {
+                          sel <- if (!is.null(st) && !is.null(st$llm_evidence_col)) st$llm_evidence_col else "None"
+                          if (!is.null(sel) && sel %in% c("None", cols)) sel else "None"
+                        })
+          )
+        } else if (mode == "agreement") {
+          tagList(
+            selectInput("unit_id_col", "Unit ID column:", choices = cols,
+                        selected = if (!is.null(st) && !is.null(st$unit_id_col) && st$unit_id_col %in% cols) st$unit_id_col else NULL),
+            selectInput("coder_cols", "Coder columns (multiple):", choices = cols, multiple = TRUE,
+                        selected = if (!is.null(st) && !is.null(st$coder_cols)) intersect(st$coder_cols, cols) else NULL)
+          )
+        }
       )
     })
 
-    # -----------------------
+    # Data preview
+    output$data_preview <- renderTable({
+      req(dataset()); if (!is.data.frame(dataset())) return(NULL); preview_head(dataset())
+    })
+
+    # Human check server
+    observe({
+      req(dataset(), is.data.frame(dataset()))
+      mode <- input$mode
+      txt <- input$text_col
+      if (is.null(txt) || !(txt %in% names(dataset()))) return()
+      if (mode == "llm") req(input$llm_output_col)
+      hc <<- humancheck_server(
+        id = "hc",
+        data = reactive(dataset()),
+        text_col = reactive(txt),
+        blind = reactive(mode == "blind"),
+        llm_output_col = reactive(if (mode == "llm") req(input$llm_output_col) else NULL),
+        llm_evidence_col = reactive({
+          if (mode == "llm") {
+            col <- input$llm_evidence_col
+            if (is.null(col) || identical(col, "None")) NULL else col
+          } else NULL
+        }),
+        original_file_name = reactive({
+          lf <- last_file()
+          if (is.null(lf) || !nzchar(lf)) "agreement/unknown.csv" else lf
+        }),
+        meta_cols = reactive(if (mode == "blind") input$meta_cols else character())
+      )
+    })
+
+    # Persist state on changes
+    observeEvent(input$mode, save_state, ignoreInit = FALSE)
+    observeEvent(input$text_col, save_state, ignoreInit = TRUE)
+    observeEvent(input$meta_cols, save_state, ignoreInit = TRUE)
+    observeEvent(input$llm_output_col, save_state, ignoreInit = TRUE)
+    observeEvent(input$llm_evidence_col, save_state, ignoreInit = TRUE)
+    observeEvent(input$unit_id_col, save_state, ignoreInit = TRUE)
+    observeEvent(input$coder_cols, save_state, ignoreInit = TRUE)
+    observeEvent({ if (!is.null(hc)) hc$current_index() }, save_state, ignoreInit = TRUE)
+
     # Main content UI
-    # -----------------------
     output$main_content <- renderUI({
       if (is.null(dataset())) {
         tagList(
@@ -503,6 +607,11 @@ agreement_app <- function() {
           hr(),
           h4("File Preview:"),
           tableOutput("data_preview")
+        )
+      } else if (!is.data.frame(dataset())) {
+        tagList(
+          h4("Loaded object is not a data frame."),
+          p("Please upload a .rds or .csv containing a data frame.")
         )
       } else if (input$mode %in% c("blind", "llm")) {
         humancheck_ui("hc")
@@ -515,79 +624,48 @@ agreement_app <- function() {
       }
     })
 
-    # -----------------------
-    # Data preview
-    # -----------------------
-    output$data_preview <- renderTable({
-      req(dataset()); preview_head(dataset())
-    })
-
-    # -----------------------
-    # Human check server
-    # -----------------------
-    observe({
-      req(dataset(), input$mode %in% c("blind", "llm"), input$text_col)
-      humancheck_server(
-        id = "hc",
-        data = reactive({
-          df <- dataset()
-          sp <- paste0(tools::file_path_sans_ext(last_file()), "_assessed.rds")
-          if (file.exists(sp)) {
-            saved <- tryCatch(readRDS(sp), error = function(e) NULL)
-            if (!is.null(saved) && nrow(saved) == nrow(df)) {
-              for (nm in intersect(c("comments","examples","status"), names(saved))) {
-                df[[nm]] <- na_to_empty(saved[[nm]])
-              }
-            }
-          }
-          df
-        }),
-        text_col = reactive(req(input$text_col)),
-        blind = reactive(input$mode == "blind"),
-        llm_output_col = reactive(if (input$mode == "llm") req(input$llm_output_col) else NULL),
-        llm_evidence_col = reactive({
-          if (input$mode == "llm") {
-            col <- req(input$llm_evidence_col)
-            if (identical(col, "None")) NULL else col
-          } else NULL
-        }),
-        original_file_name = reactive(if (!is.null(last_file())) basename(last_file()) else "data.csv"),
-        meta_cols = reactive(if (input$mode == "blind") input$meta_cols else character())
-      )
-    })
-
-    # -----------------------
-    # Agreement mode server
-    # -----------------------
-    observe({
-      req(dataset(), input$mode == "agreement")
-      req(input$unit_id_col, input$coder_cols, length(input$coder_cols) >= 2)
+    # Agreement mode
+    icr_result <- reactive({
+      req(dataset(), is.data.frame(dataset()), input$mode == "agreement")
       df <- dataset()
-      long_data <- make_long_icr(df, unit_id_col = input$unit_id_col, coder_cols = input$coder_cols)
+      unit_id <- input$unit_id_col
+      coder_cols <- input$coder_cols
+      if (is.null(unit_id) || !unit_id %in% names(df) ||
+          is.null(coder_cols) || length(coder_cols) < 2 || !all(coder_cols %in% names(df))) {
+        return(NULL)
+      }
+      long_data <- make_long_icr(df, unit_id_col = unit_id, coder_cols = coder_cols)
       long_filtered <- filter_units_by_coders(long_data, min_coders = 2L)
-
       if (nrow(long_filtered) == 0) {
-        output$icr_summary <- renderTable({
-          data.frame(metric = "message",
-                     value = "No units have at least 2 coders. Cannot compute agreement.",
-                     stringsAsFactors = FALSE)
-        }, striped = TRUE, bordered = TRUE)
-        output$export_icr <- downloadHandler(
-          filename = function() "icr_results.csv",
-          content = function(file) utils::write.csv(
-            data.frame(metric = "message", value = "No units to compute", stringsAsFactors = FALSE),
-            file, row.names = FALSE
-          )
-        )
+        data.frame(metric = "message", value = "No units have at least 2 coders. Cannot compute agreement.",
+                   stringsAsFactors = FALSE)
       } else {
-        icr <- compute_icr_summary(long_filtered)
-        output$icr_summary <- renderTable(icr, striped = TRUE, bordered = TRUE)
-        output$export_icr <- downloadHandler(
-          filename = function() "icr_results.csv",
-          content = function(file) utils::write.csv(icr, file, row.names = FALSE)
-        )
+        compute_icr_summary(long_filtered)
       }
     })
+
+    output$icr_summary <- renderTable({
+      req(input$mode == "agreement")
+      res <- icr_result()
+      if (is.null(res)) {
+        data.frame(metric = "message",
+                   value = "Select a unit ID and at least two coder columns.",
+                   stringsAsFactors = FALSE)
+      } else res
+    }, striped = TRUE, bordered = TRUE)
+
+    output$export_icr <- downloadHandler(
+      filename = function() "icr_results.csv",
+      content = function(file) {
+        res <- icr_result()
+        if (is.null(res)) {
+          utils::write.csv(data.frame(metric="message", value="No valid selection.", stringsAsFactors=FALSE),
+                           file, row.names = FALSE)
+        } else {
+          utils::write.csv(res, file, row.names = FALSE)
+        }
+      }
+    )
   }
 
   shinyApp(ui, server)

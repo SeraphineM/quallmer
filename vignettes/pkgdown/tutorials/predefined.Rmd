@@ -1,0 +1,5 @@
+---
+title: "Using predefined tasks"
+output: html_document
+---
+You can use predefined tasks in `quallmer` to quickly set up common text analysis tasks without having to define them from scratch. For a list of available predefined tasks, see the [overview of predefined tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html). Each predefined task comes with an illustration on how to use and customize it.
