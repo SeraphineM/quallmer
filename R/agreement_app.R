@@ -5,6 +5,7 @@
 #' @import bslib
 #' @importFrom irr kripp.alpha kappam.fleiss
 #' @importFrom stats na.omit
+#' @export
 
 # Declare global variables for dplyr NSE
 utils::globalVariables(c("unit_id", "coder_id", "code"))
@@ -678,3 +679,4 @@ agreement_app <- function() {
 if (identical(environment(), globalenv()) && !length(commandArgs(trailingOnly = TRUE))) {
   agreement_app()
 }
+shinApp(ui=ui, server=server)
