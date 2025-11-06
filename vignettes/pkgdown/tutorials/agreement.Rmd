@@ -1,5 +1,5 @@
 ---
-title: "Using the Aggreement App"
+title: "Using the Agreement App"
 output: html_document
 ---
 
@@ -20,7 +20,7 @@ If you have previously used the `quallmer` package to generate annotations using
 
 ![](pics/llm.png)
 
-## Calculating intercoder reliability
+## Calculating agreement scores such as Krippendorff's alpha or Fleiss' kappa
 
 After completing the manual coding and reviewing the LLM-generated annotations, the Agreement App provides functionality to calculate intercoder reliability scores. You can choose from various metrics, such as Krippendorff's alpha or Fleiss' kappa, to assess the agreement between different coders or between your manual codes and the LLM annotations or, as shown below, between multiple LLM runs.
 
