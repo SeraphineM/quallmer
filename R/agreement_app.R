@@ -3,7 +3,7 @@
 #' @import tidyr
 #' @import shiny
 #' @import bslib
-#' @importFrom irr kripp.alpha kappam.fleiss
+#' @importFrom irr kripp.alpha kappam.fleiss kappa2
 #' @importFrom stats na.omit
 
 # Declare global variables for dplyr NSE
@@ -38,6 +38,19 @@ read_data_file <- function(path, name) {
 preview_head <- function(df, n = 10) utils::head(df, n)
 
 #' @noRd
+escape_regex <- function(x) gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
+
+#' @noRd
+highlight_query <- function(text, query) {
+  if (is.null(query) || !nzchar(query)) return(htmltools::HTML(htmltools::htmlEscape(text)))
+  esc <- escape_regex(query)
+  # Escape text then inject <mark> around matches (case-insensitive)
+  safe <- htmltools::htmlEscape(text)
+  marked <- gsub(paste0("(", esc, ")"), "<mark>\\1</mark>", safe, ignore.case = TRUE, perl = TRUE)
+  htmltools::HTML(marked)
+}
+
+#' @noRd
 make_long_icr <- function(df, unit_id_col, coder_cols) {
   stopifnot(unit_id_col %in% names(df), all(coder_cols %in% names(df)))
   df %>%
@@ -65,25 +78,76 @@ compute_icr_summary <- function(long_df) {
   n_units <- nrow(ratings_raw); n_coders <- ncol(ratings_raw)
   if (n_units == 0L || n_coders < 2L) {
     return(data.frame(
-      metric = c("units_included", "coders", "kripp_alpha_nominal", "fleiss_kappa"),
-      value = c(n_units, n_coders, NA, NA),
+      metric = c("units_included", "coders", "categories", "percent_unanimous_units",
+                 "mean_pairwise_percent_agreement", "mean_pairwise_cohens_kappa",
+                 "kripp_alpha_nominal", "fleiss_kappa"),
+      value = c(n_units, n_coders, NA, NA, NA, NA, NA, NA),
       stringsAsFactors = FALSE
     ))
   }
+
+  # Factorize on common levels
   all_levels <- sort(unique(na.omit(unlist(ratings_raw))))
   ratings_fac <- as.data.frame(lapply(ratings_raw, function(col) factor(col, levels = all_levels)))
   ratings_int <- as.data.frame(lapply(ratings_fac, function(col) as.integer(col)))
+
+  # Krippendorff's alpha (nominal)
   alpha_val <- tryCatch({
     rmat <- t(as.matrix(ratings_int))
     irr::kripp.alpha(rmat, method = "nominal")$value
   }, error = function(e) NA_real_)
+
+  # Fleiss' kappa (complete cases only)
   fleiss_val <- tryCatch({
     comp <- ratings_int[stats::complete.cases(ratings_int), , drop = FALSE]
     if (nrow(comp) >= 2L && length(all_levels) >= 2L) irr::kappam.fleiss(comp)$value else NA_real_
   }, error = function(e) NA_real_)
+
+  # Percent unanimous units (among units with >=2 non-NA codings)
+  unanim <- tryCatch({
+    nn <- apply(ratings_fac, 1L, function(r) sum(!is.na(r)))
+    eligible <- which(nn >= 2L)
+    if (length(eligible) == 0L) NA_real_ else {
+      ok <- vapply(eligible, function(i) {
+        v <- ratings_fac[i, , drop = TRUE]
+        v <- v[!is.na(v)]
+        length(unique(v)) == 1L
+      }, logical(1))
+      mean(ok)
+    }
+  }, error = function(e) NA_real_)
+
+  # Mean pairwise percent agreement and Cohen's kappa
+  pw_cols <- names(ratings_fac)
+  pairs <- utils::combn(pw_cols, 2L, simplify = FALSE)
+  pw_agree <- numeric()
+  pw_kappa <- numeric()
+  for (pr in pairs) {
+    a <- ratings_fac[[pr[1]]]
+    b <- ratings_fac[[pr[2]]]
+    keep <- !is.na(a) & !is.na(b)
+    if (sum(keep) >= 2L) {
+      pw_agree <- c(pw_agree, mean(as.character(a[keep]) == as.character(b[keep])))
+      k2 <- tryCatch({
+        irr::kappa2(data.frame(a = a[keep], b = b[keep]))$value
+      }, error = function(e) NA_real_)
+      pw_kappa <- c(pw_kappa, k2)
+    }
+  }
+  mean_pw_agree <- if (length(pw_agree)) mean(pw_agree, na.rm = TRUE) else NA_real_
+  mean_pw_kappa <- if (length(pw_kappa)) mean(pw_kappa, na.rm = TRUE) else NA_real_
+
   data.frame(
-    metric = c("units_included", "coders", "kripp_alpha_nominal", "fleiss_kappa"),
-    value = c(n_units, n_coders, round(alpha_val, 4), round(fleiss_val, 4)),
+    metric = c("units_included", "coders", "categories",
+               "percent_unanimous_units",
+               "mean_pairwise_percent_agreement",
+               "mean_pairwise_cohens_kappa",
+               "kripp_alpha_nominal", "fleiss_kappa"),
+    value = c(n_units, n_coders, length(all_levels),
+              round(unanim, 4),
+              round(mean_pw_agree, 4),
+              round(mean_pw_kappa, 4),
+              round(alpha_val, 4), round(fleiss_val, 4)),
     stringsAsFactors = FALSE
   )
 }
@@ -105,13 +169,18 @@ humancheck_ui <- function(id) {
         #main-text { font-size: 0.9rem; background: #f8f9fa; border-radius: 8px; padding: 10px; }
         .small-box { max-height: 220px; overflow-y: auto; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 6px; margin-bottom: 6px; }
         .progress-bar { height: 5px; background: var(--bluish); border-radius: 3px; margin-bottom: 6px; }
+        mark { background-color: #ffea70; padding: 0 2px; }
       ")),
+      # Arrow keys + Enter to search-next
       tags$script(HTML(sprintf("
         document.addEventListener('keydown', function(e) {
           if (e.key === 'ArrowRight') Shiny.setInputValue('%s', Math.random());
           if (e.key === 'ArrowLeft') Shiny.setInputValue('%s', Math.random());
         });
-      ", ns("next_text"), ns("prev_text"))))
+        $(document).on('keydown', '#%s', function(e){
+          if (e.key === 'Enter') { e.preventDefault(); Shiny.setInputValue('%s', Math.random()); }
+        });
+      ", ns("next_text"), ns("prev_text"), ns("search"), ns("search_next"))))
     ),
     fluidRow(
       column(
@@ -138,6 +207,15 @@ humancheck_ui <- function(id) {
         width = 8,
         div(
           id = "main-text-box",
+          # Search controls in main panel
+          div(
+            class = "d-flex gap-2 align-items-end",
+            div(style = "flex:1;",
+                textInput(ns("search"), "Search in text", value = "", placeholder = "Type keyword...")),
+            actionButton(ns("search_prev"), "Find Prev", class = "btn btn-light"),
+            actionButton(ns("search_next"), "Find Next", class = "btn btn-light")
+          ),
+          br(),
           uiOutput(ns("text_ui"))
         )
       )
@@ -214,20 +292,10 @@ humancheck_server <- function(
       df$comments_llm    <- na_to_empty(df$comments_llm)
       df$examples_llm    <- na_to_empty(df$examples_llm)
 
-      # Legacy migration (if generic columns exist)
-      if ("comments" %in% names(df)) {
-        df$comments_manual <- ifelse(nzchar(df$comments_manual), df$comments_manual, na_to_empty(df$comments))
-        df$comments_llm    <- ifelse(nzchar(df$comments_llm),    df$comments_llm,    na_to_empty(df$comments))
-      }
-      if ("examples" %in% names(df)) {
-        df$examples_manual <- ifelse(nzchar(df$examples_manual), df$examples_manual, na_to_empty(df$examples))
-        df$examples_llm    <- ifelse(nzchar(df$examples_llm),    df$examples_llm,    na_to_empty(df$examples))
-      }
-
       if (!"status" %in% names(df)) df$status <- rep("Unmarked", n) else df$status <- na_to_empty(df$status)
       if (!"score"  %in% names(df)) df$score  <- rep(NA_real_, n)
 
-      # Merge saved progress
+      # Merge saved progress (safe, no unknown column warnings)
       saved_last <- NA_integer_
       sp <- tryCatch(assessed_path(), error = function(e) NULL)
       if (!is.null(sp) && file.exists(sp)) {
@@ -240,16 +308,21 @@ humancheck_server <- function(
             ".row_id",
             "comments_manual","examples_manual",
             "comments_llm","examples_llm",
-            "comments","examples",  # legacy fallback
+            "comments","examples",  # legacy
             "status","score"
           ), names(saved_df))
           m <- dplyr::left_join(df, saved_df[, keep, drop = FALSE], by = ".row_id", suffix = c("", ".saved"))
-          df$comments_manual <- na_to_empty(dplyr::coalesce(m$comments_manual.saved, df$comments_manual, m$comments.saved))
-          df$examples_manual <- na_to_empty(dplyr::coalesce(m$examples_manual.saved, df$examples_manual, m$examples.saved))
-          df$comments_llm    <- na_to_empty(dplyr::coalesce(m$comments_llm.saved,    df$comments_llm,    m$comments.saved))
-          df$examples_llm    <- na_to_empty(dplyr::coalesce(m$examples_llm.saved,    df$examples_llm,    m$examples.saved))
-          df$status          <- na_to_empty(dplyr::coalesce(m$status.saved, df$status))
-          if ("score.saved" %in% names(m)) df$score <- dplyr::coalesce(m$score.saved, df$score)
+          getm <- function(nm) if (nm %in% names(m)) m[[nm]] else NULL
+
+          # Manual
+          df$comments_manual <- na_to_empty(dplyr::coalesce(getm("comments_manual.saved"), df$comments_manual, getm("comments")))
+          df$examples_manual <- na_to_empty(dplyr::coalesce(getm("examples_manual.saved"), df$examples_manual, getm("examples")))
+          # LLM
+          df$comments_llm    <- na_to_empty(dplyr::coalesce(getm("comments_llm.saved"),    df$comments_llm,    getm("comments")))
+          df$examples_llm    <- na_to_empty(dplyr::coalesce(getm("examples_llm.saved"),    df$examples_llm,    getm("examples")))
+          # Status/score
+          df$status          <- na_to_empty(dplyr::coalesce(getm("status.saved"), df$status, getm("status")))
+          if ("score.saved" %in% names(m)) df$score <- dplyr::coalesce(getm("score.saved"), df$score, getm("score"))
         }
         if (is.list(saved) && is.numeric(saved$last_index)) saved_last <- as.integer(saved$last_index)
       }
@@ -326,12 +399,14 @@ humancheck_server <- function(
       )
     })
 
-    # Text + progress
+    # Text + progress (highlight search query)
     output$text_ui <- renderUI({
       req(rv$text_vec, rv$n)
+      q <- input$search
+      cur_txt <- rv$text_vec[current_index()]
       tagList(
         tags$div(class = "progress-bar", style = sprintf("width:%s%%;", round(100 * current_index() / max(1, rv$n), 1))),
-        tags$div(id = "main-text", rv$text_vec[current_index()])
+        tags$div(id = "main-text", highlight_query(cur_txt, q))
       )
     })
 
@@ -392,6 +467,41 @@ humancheck_server <- function(
       save_now()
     }, ignoreInit = TRUE)
 
+    # Search utilities
+    find_matches <- function(q) {
+      if (is.null(q) || !nzchar(q)) integer(0) else which(grepl(q, rv$text_vec, ignore.case = TRUE))
+    }
+    # Move on query change to first match
+    observeEvent(input$search, {
+      q <- input$search
+      if (!nzchar(q)) return()
+      idxs <- find_matches(q)
+      if (length(idxs)) move_and_refresh(min(idxs))
+    }, ignoreInit = TRUE)
+    # Buttons navigation
+    observeEvent(input$search_next, {
+      idxs <- find_matches(input$search)
+      if (!length(idxs)) {
+        showNotification("No matches found.", type = "warning")
+        return()
+      }
+      cur <- current_index()
+      nexts <- idxs[idxs > cur]
+      goto <- if (length(nexts)) min(nexts) else min(idxs) # wrap
+      move_and_refresh(goto)
+    }, ignoreInit = TRUE)
+    observeEvent(input$search_prev, {
+      idxs <- find_matches(input$search)
+      if (!length(idxs)) {
+        showNotification("No matches found.", type = "warning")
+        return()
+      }
+      cur <- current_index()
+      prevs <- idxs[idxs < cur]
+      goto <- if (length(prevs)) max(prevs) else max(idxs) # wrap
+      move_and_refresh(goto)
+    }, ignoreInit = TRUE)
+
     # Navigation
     observeEvent(input$next_text, { if (!is.null(rv$n) && current_index() < rv$n) { save_now(); move_and_refresh(current_index() + 1L) } })
     observeEvent(input$prev_text, { if (!is.null(rv$n) && current_index() > 1L)  { save_now(); move_and_refresh(current_index() - 1L) } })
@@ -409,6 +519,8 @@ humancheck_server <- function(
 #' Launch the Agreement App
 #'
 #' Starts the Shiny app for manual coding, LLM checking, and agreement calculation.
+#' - In LLM mode, you can also select metadata columns.
+#' - In Agreement mode, select unit ID and coder columns (no text column).
 #' @return A shiny.appobj
 #' @export
 agreement_app <- function() {
@@ -544,26 +656,32 @@ agreement_app <- function() {
       mode <- input$mode
       tagList(
         h4("3. Select columns"),
-        selectInput("text_col", "Text column:", choices = cols,
-                    selected = {
-                      sel <- if (!is.null(st) && !is.null(st$text_col)) st$text_col else NULL
-                      if (!is.null(sel) && sel %in% cols) sel else cols[[1]]
-                    }),
-        if (mode == "blind") {
-          selectInput("meta_cols", "Metadata columns (optional):", choices = cols, multiple = TRUE,
-                      selected = if (!is.null(st) && !is.null(st$meta_cols)) intersect(st$meta_cols, cols) else NULL)
-        } else if (mode == "llm") {
+        if (mode %in% c("blind","llm")) {
           tagList(
-            selectInput("llm_output_col", "LLM output column (required):", choices = cols,
+            selectInput("text_col", "Text column:", choices = cols,
                         selected = {
-                          sel <- if (!is.null(st) && !is.null(st$llm_output_col)) st$llm_output_col else NULL
+                          sel <- if (!is.null(st) && !is.null(st$text_col)) st$text_col else NULL
                           if (!is.null(sel) && sel %in% cols) sel else cols[[1]]
                         }),
-            selectInput("llm_evidence_col", "LLM justification column (optional):", choices = c("None", cols),
-                        selected = {
-                          sel <- if (!is.null(st) && !is.null(st$llm_evidence_col)) st$llm_evidence_col else "None"
-                          if (!is.null(sel) && sel %in% c("None", cols)) sel else "None"
-                        })
+            if (mode == "blind") {
+              selectInput("meta_cols", "Metadata columns (optional):", choices = cols, multiple = TRUE,
+                          selected = if (!is.null(st) && !is.null(st$meta_cols)) intersect(st$meta_cols, cols) else NULL)
+            } else {
+              tagList(
+                selectInput("llm_output_col", "LLM output column (required):", choices = cols,
+                            selected = {
+                              sel <- if (!is.null(st) && !is.null(st$llm_output_col)) st$llm_output_col else NULL
+                              if (!is.null(sel) && sel %in% cols) sel else cols[[1]]
+                            }),
+                selectInput("llm_evidence_col", "LLM justification column (optional):", choices = c("None", cols),
+                            selected = {
+                              sel <- if (!is.null(st) && !is.null(st$llm_evidence_col)) st$llm_evidence_col else "None"
+                              if (!is.null(sel) && sel %in% c("None", cols)) sel else "None"
+                            }),
+                selectInput("meta_cols", "Metadata columns (optional):", choices = cols, multiple = TRUE,
+                            selected = if (!is.null(st) && !is.null(st$meta_cols)) intersect(st$meta_cols, cols) else NULL)
+              )
+            }
           )
         } else if (mode == "agreement") {
           tagList(
@@ -585,27 +703,29 @@ agreement_app <- function() {
     observe({
       req(dataset(), is.data.frame(dataset()))
       mode <- input$mode
-      txt <- input$text_col
-      if (is.null(txt) || !(txt %in% names(dataset()))) return()
-      if (mode == "llm") req(input$llm_output_col)
-      hc <<- humancheck_server(
-        id = "hc",
-        data = reactive(dataset()),
-        text_col = reactive(txt),
-        blind = reactive(mode == "blind"),
-        llm_output_col = reactive(if (mode == "llm") req(input$llm_output_col) else NULL),
-        llm_evidence_col = reactive({
-          if (mode == "llm") {
-            col <- input$llm_evidence_col
-            if (is.null(col) || identical(col, "None")) NULL else col
-          } else NULL
-        }),
-        original_file_name = reactive({
-          lf <- last_file()
-          if (is.null(lf) || !nzchar(lf)) "agreement/unknown.csv" else lf
-        }),
-        meta_cols = reactive(if (mode == "blind") input$meta_cols else character())
-      )
+      if (mode %in% c("blind","llm")) {
+        txt <- input$text_col
+        if (is.null(txt) || !(txt %in% names(dataset()))) return()
+        if (mode == "llm") req(input$llm_output_col)
+        hc <<- humancheck_server(
+          id = "hc",
+          data = reactive(dataset()),
+          text_col = reactive(txt),
+          blind = reactive(mode == "blind"),
+          llm_output_col = reactive(if (mode == "llm") req(input$llm_output_col) else NULL),
+          llm_evidence_col = reactive({
+            if (mode == "llm") {
+              col <- input$llm_evidence_col
+              if (is.null(col) || identical(col, "None")) NULL else col
+            } else NULL
+          }),
+          original_file_name = reactive({
+            lf <- last_file()
+            if (is.null(lf) || !nzchar(lf)) "agreement/unknown.csv" else lf
+          }),
+          meta_cols = reactive(if (mode %in% c("blind","llm")) input$meta_cols else character())
+        )
+      }
     })
 
     # Persist state on changes
@@ -641,6 +761,7 @@ agreement_app <- function() {
         tagList(
           h4("Agreement scores:"),
           tableOutput("icr_summary"),
+          uiOutput("icr_interpret"),
           downloadButton("export_icr", "Export agreement scores")
         )
       }
@@ -675,6 +796,38 @@ agreement_app <- function() {
                    stringsAsFactors = FALSE)
       } else res
     }, striped = TRUE, bordered = TRUE)
+
+    output$icr_interpret <- renderUI({
+      req(input$mode == "agreement")
+      res <- icr_result()
+      if (is.null(res) || !nrow(res)) return(NULL)
+      val <- function(name) suppressWarnings(as.numeric(res$value[match(name, res$metric)]))
+      alpha <- val("kripp_alpha_nominal")
+      fleiss <- val("fleiss_kappa")
+      mkp <- val("mean_pairwise_cohens_kappa")
+      txt_alpha <- if (is.na(alpha)) "Krippendorff's alpha unavailable." else if (alpha >= 0.8) "Krippendorff's alpha > 0.80 indicates good reliability." else if (alpha >= 0.67) "Krippendorff's alpha between 0.67 and 0.80 is acceptable for tentative conclusions." else "Krippendorff's alpha < 0.67 indicates low reliability."
+      # Landis & Koch for kappa
+      lk <- function(k) {
+        if (is.na(k)) "unavailable"
+        else if (k < 0) "poor"
+        else if (k < 0.20) "slight"
+        else if (k < 0.40) "fair"
+        else if (k < 0.60) "moderate"
+        else if (k < 0.80) "substantial"
+        else "almost perfect"
+      }
+      txt_fleiss <- if (is.na(fleiss)) "Fleiss' kappa unavailable." else sprintf("Fleiss' kappa = %.2f (%s agreement).", fleiss, lk(fleiss))
+      txt_mkp <- if (is.na(mkp)) NULL else sprintf("Mean pairwise Cohen's kappa = %.2f (%s).", mkp, lk(mkp))
+      tagList(
+        br(),
+        tags$p("Interpretation guidance:"),
+        tags$ul(
+          tags$li(txt_alpha),
+          tags$li(txt_fleiss),
+          if (!is.null(txt_mkp)) tags$li(txt_mkp)
+        )
+      )
+    })
 
     output$export_icr <- downloadHandler(
       filename = function() "icr_results.csv",
