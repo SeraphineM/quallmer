@@ -11,7 +11,7 @@ articles:
   pkgdown/tutorials/predefined: pkgdown/tutorials/predefined.html
   pkgdown/examples/sentiment: pkgdown/examples/sentiment.html
   pkgdown/examples/stance: pkgdown/examples/stance.html
-last_built: 2025-11-06T06:04Z
+last_built: 2025-11-06T06:26Z
 urls:
   reference: https://seraphinem.github.io/quallmer/reference
   article: https://seraphinem.github.io/quallmer/articles
