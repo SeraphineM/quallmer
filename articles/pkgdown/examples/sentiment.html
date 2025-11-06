@@ -112,7 +112,6 @@ texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-predefined-
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Sentiment analysis' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -136,7 +135,7 @@ explanation
 </td>
 <td style="text-align:left;">
 The word ‘wonderful’ conveys a very positive sentiment, indicating
-delight or admiration.
+something is excellent or delightful.
 </td>
 </tr>
 <tr>
@@ -173,8 +172,8 @@ to a moderately negative score.
 </td>
 <td style="text-align:left;">
 The phrase ‘Absolutely fantastic work!’ is highly positive, using strong
-positive adjectives like ‘fantastic’ and the intensifier ‘absolutely’ to
-express a high level of satisfaction and approval.
+positive adjectives like ‘fantastic’ and ‘absolutely’ to express
+admiration and approval.
 </td>
 </tr>
 </tbody>
@@ -189,7 +188,7 @@ task with <code><a href="../../../reference/define_task.html">define_task()</a><
 our “Defining custom tasks” tutorial</a>).</p>
 <p>For example, you might want to include an additional field for
 confidence level.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/define_task.html">define_task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Custom sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive), briefly explain why, and provide a confidence level from 0 to 1."</span>,</span>
@@ -205,8 +204,6 @@ confidence level.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -231,8 +228,8 @@ confidence
 1.0
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a very positive sentiment, indicating
-delight or admiration.
+The word ‘wonderful’ is a strong positive adjective, indicating a very
+positive sentiment.
 </td>
 <td style="text-align:right;">
 1.0
@@ -261,9 +258,8 @@ approach.
 -0.5
 </td>
 <td style="text-align:left;">
-The word ‘disappointing’ indicates a negative sentiment, but the use of
-‘somewhat’ suggests that the disappointment is not very strong, leading
-to a moderately negative score.
+The word ‘disappointing’ indicates a negative sentiment, though
+‘somewhat’ suggests it’s not extremely negative.
 </td>
 <td style="text-align:right;">
 0.9
@@ -289,7 +285,7 @@ admiration and satisfaction.
 </table>
 <p>Or, you might want to change the scoring scale to a 5-point Likert
 scale.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">likert_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/define_task.html">define_task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Likert scale sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text on a scale from 1 (very negative) to 5 (very positive) and briefly explain why."</span>,</span>
@@ -304,6 +300,8 @@ scale.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Likert scale sentiment analysis' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -337,8 +335,9 @@ that the speaker is very pleased or impressed.
 2
 </td>
 <td style="text-align:left;">
-The sentiment is negative as indicated by the word ‘dislike’, but it is
-not extremely negative, hence a score of 2.
+The sentiment is negative as the word ‘dislike’ indicates
+dissatisfaction or disapproval, but it’s not extremely negative as it
+lacks strong language or intensity.
 </td>
 </tr>
 <tr>
@@ -350,8 +349,8 @@ not extremely negative, hence a score of 2.
 </td>
 <td style="text-align:left;">
 The word ‘disappointing’ indicates a negative sentiment, but the use of
-‘somewhat’ suggests it’s not extremely negative, leading to a score of
-2.
+‘somewhat’ suggests that the disappointment is not very strong, leading
+to a slightly negative overall sentiment.
 </td>
 </tr>
 <tr>
@@ -363,8 +362,8 @@ The word ‘disappointing’ indicates a negative sentiment, but the use of
 </td>
 <td style="text-align:left;">
 The phrase ‘Absolutely fantastic work!’ is highly positive, using strong
-adjectives like ‘absolutely’ and ‘fantastic’ to express a high level of
-satisfaction and praise.
+adjectives like ‘absolutely’ and ‘fantastic’ to express admiration and
+satisfaction.
 </td>
 </tr>
 </tbody>
