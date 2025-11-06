@@ -1,47 +1,29 @@
-#' Agreement App: Human–LLM Coding Validation
-#'
-#' Launches a Shiny interface for comparing and validating human and LLM text codings.
-#' This app allows users to load data, inspect inter-coder reliability, and manually
-#' review or adjust classifications.
-#'
-#' @details
-#' The app includes modules for:
-#' \itemize{
-#'   \item Data upload and preview
-#'   \item Human–LLM code comparison
-#'   \item Reliability statistics (Krippendorff’s Alpha, Fleiss’ Kappa)
-#'   \item Comment and example tracking
-#' }
-#'
-#' @return A `shiny.appobj` object that launches in the default web browser.
 #' @keywords internal
-#' @import shiny
-#' @import bslib
 #' @import dplyr
 #' @import tidyr
+#' @import shiny
+#' @import bslib
 #' @importFrom irr kripp.alpha kappam.fleiss
-#' @importFrom utils read.csv head
 #' @importFrom stats na.omit
-#'
-#' @importFrom shiny NS moduleServer reactive reactiveVal observeEvent renderUI renderText updateTextAreaInput updateNumericInput updateRadioButtons fileInput selectInput radioButtons textAreaInput textOutput sidebarLayout sidebarPanel mainPanel actionButton helpText fluidPage fluidRow column
-#'
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' agreement_app()
-#' }
-agreement_app <- function() {
+
+# Declare global variables for dplyr NSE
+utils::globalVariables(c("unit_id", "coder_id", "code"))
+
 # -------------------------------
 # Helpers
 # -------------------------------
+
+#' @noRd
 na_to_empty <- function(x) {
   x <- as.character(x)
   x[is.na(x)] <- ""
   x
 }
+
+#' @noRd
 `%||%` <- function(x, y) if (length(x) == 0) y else x
 
+#' @noRd
 read_data_file <- function(path, name) {
   if (grepl("\\.rds$", name, ignore.case = TRUE)) {
     readRDS(path)
@@ -52,8 +34,10 @@ read_data_file <- function(path, name) {
   }
 }
 
+#' @noRd
 preview_head <- function(df, n = 10) utils::head(df, n)
 
+#' @noRd
 make_long_icr <- function(df, unit_id_col, coder_cols) {
   stopifnot(unit_id_col %in% names(df), all(coder_cols %in% names(df)))
   df %>%
@@ -66,10 +50,12 @@ make_long_icr <- function(df, unit_id_col, coder_cols) {
     tidyr::complete(unit_id, coder_id, fill = list(code = NA_character_))
 }
 
+#' @noRd
 filter_units_by_coders <- function(long_df, min_coders = 2L) {
   long_df %>% group_by(unit_id) %>% filter(sum(!is.na(code)) >= min_coders) %>% ungroup()
 }
 
+#' @noRd
 compute_icr_summary <- function(long_df) {
   wide <- long_df %>% pivot_wider(names_from = coder_id, values_from = code) %>% arrange(unit_id)
   if (!"unit_id" %in% names(wide)) {
@@ -105,6 +91,8 @@ compute_icr_summary <- function(long_df) {
 # -------------------------------
 # Human check module (UI + server)
 # -------------------------------
+
+#' @noRd
 humancheck_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -157,6 +145,7 @@ humancheck_ui <- function(id) {
   )
 }
 
+#' @noRd
 humancheck_server <- function(
     id,
     data,
@@ -416,6 +405,12 @@ humancheck_server <- function(
 # -------------------------------
 # Main App
 # -------------------------------
+
+#' Launch the Agreement App
+#'
+#' Starts the Shiny app for manual coding, LLM checking, and agreement calculation.
+#' @return A shiny.appobj
+#' @export
 agreement_app <- function() {
   ui <- fluidPage(
     theme = bs_theme(
@@ -701,5 +696,4 @@ agreement_app <- function() {
 # Run the app if executed directly
 if (identical(environment(), globalenv()) && !length(commandArgs(trailingOnly = TRUE))) {
   agreement_app()
-}
 }

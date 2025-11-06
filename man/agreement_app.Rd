@@ -2,30 +2,13 @@
 % Please edit documentation in R/agreement_app.R
 \name{agreement_app}
 \alias{agreement_app}
-\title{Agreement App: Human–LLM Coding Validation}
+\title{Launch the Agreement App}
 \usage{
 agreement_app()
 }
 \value{
-A `shiny.appobj` object that launches in the default web browser.
+A shiny.appobj
 }
 \description{
-Launches a Shiny interface for comparing and validating human and LLM text codings.
-This app allows users to load data, inspect inter-coder reliability, and manually
-review or adjust classifications.
+Starts the Shiny app for manual coding, LLM checking, and agreement calculation.
 }
-\details{
-The app includes modules for:
-\itemize{
-  \item Data upload and preview
-  \item Human–LLM code comparison
-  \item Reliability statistics (Krippendorff’s Alpha, Fleiss’ Kappa)
-  \item Comment and example tracking
-}
-}
-\examples{
-\dontrun{
-agreement_app()
-}
-}
-\keyword{internal}
