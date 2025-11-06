@@ -23,10 +23,7 @@
 #' @importFrom utils read.csv head
 #' @importFrom stats na.omit
 #'
-#' @importFrom shiny NS moduleServer reactive reactiveVal observeEvent renderUI renderText
-#'   updateTextAreaInput updateNumericInput updateRadioButtons
-#'   fileInput selectInput radioButtons textAreaInput textOutput
-#'   sidebarLayout sidebarPanel mainPanel actionButton helpText fluidPage fluidRow column
+#' @importFrom shiny NS moduleServer reactive reactiveVal observeEvent renderUI renderText updateTextAreaInput updateNumericInput updateRadioButtons fileInput selectInput radioButtons textAreaInput textOutput sidebarLayout sidebarPanel mainPanel actionButton helpText fluidPage fluidRow column
 #'
 #' @export
 #'
@@ -35,8 +32,6 @@
 #' agreement_app()
 #' }
 agreement_app <- function() {
-# Declare global variables for dplyr NSE
-  utils::globalVariables(c("unit_id", "coder_id", "code"))
 # -------------------------------
 # Helpers
 # -------------------------------
