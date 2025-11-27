@@ -9,7 +9,7 @@ annotate(.data, task, ...)
 \arguments{
 \item{.data}{Input data (text, image, etc.)}
 
-\item{task}{A task created with [define_task()]}
+\item{task}{A task created with [task()]}
 
 \item{...}{Additional arguments passed to task$run()}
 }

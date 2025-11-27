@@ -4,13 +4,13 @@
 #' Delegates the actual processing to the task's internal run() method.
 #'
 #' @param .data Input data (text, image, etc.)
-#' @param task A task created with [define_task()]
+#' @param task A task created with [task()]
 #' @param ... Additional arguments passed to task$run()
 #' @return Structured data frame with results
 #' @export
 annotate <- function(.data, task, ...) {
-  if (!inherits(task, "define_task")) {
-    stop("`task` must be created using define_task().")
+  if (!inherits(task, "task")) {
+    stop("`task` must be created using task().")
   }
 
   input_type <- task$input_type
