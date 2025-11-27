@@ -46,7 +46,7 @@ result %>%
 You can customize the stance detection task by defining your own task with `define_task()` (for a more detailed explanation, [see our "Defining custom tasks" tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)).
 For example, you might want to include an additional field for confidence level.
 ```{r custom_stance}
-custom_stance <- define_task(
+custom_stance <- task(
   name = "Custom stance detection",
   system_prompt = paste0(
     "You are an expert annotator. Read each short text carefully and determine its stance towards ",
@@ -75,7 +75,7 @@ custom_result %>%
 ```
 Or, you might want the LLM to extract specific arguments supporting the stance.
 ```{r argument_stance}
-argument_stance <- define_task(
+argument_stance <- task(
   name = "Argument-based stance detection",
   system_prompt = paste0(
     "You are an expert annotator. Read each short text carefully and determine its stance towards ",

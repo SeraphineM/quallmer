@@ -44,11 +44,11 @@ result %>%
 
 ### Adjusting the sentiment task
 
-You can customize the sentiment analysis task by defining your own task with `define_task()` (for a more detailed explanation, [see our "Defining custom tasks" tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)).
+You can customize the sentiment analysis task by defining your own task with `task()` (for a more detailed explanation, [see our "Defining custom tasks" tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)).
 
 For example, you might want to include an additional field for confidence level.
 ```{r custom_sentiment}
-custom_sentiment <- define_task(
+custom_sentiment <- task(
   name = "Custom sentiment analysis",
   system_prompt = "You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive), briefly explain why, and provide a confidence level from 0 to 1.",
   type_def = ellmer::type_object(
@@ -73,7 +73,7 @@ custom_result %>%
 ```
 Or, you might want to change the scoring scale to a 5-point Likert scale.
 ```{r likert_sentiment}
-likert_sentiment <- define_task(
+likert_sentiment <- task(
   name = "Likert scale sentiment analysis",
   system_prompt = "You are an expert annotator. Rate the sentiment of each text on a scale from 1 (very negative) to 5 (very positive) and briefly explain why.",
   type_def = ellmer::type_object(

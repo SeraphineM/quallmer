@@ -1,8 +1,8 @@
 #' Predefined task for sentiment analysis
 #' @return A task object
 #' @export
-sentiment <- function() {
-  define_task(
+task_sentiment <- function() {
+  task(
     name = "Sentiment analysis",
     system_prompt = "You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive) and briefly explain why.",
     type_def = ellmer::type_object(
@@ -18,8 +18,8 @@ sentiment <- function() {
 #' @param topic A character string specifying the topic for stance detection.
 #' @return A task object
 #' @export
-stance <- function(topic = "the given topic") {
-  define_task(
+task_stance <- function(topic = "the given topic") {
+  task(
     name = "Stance detection",
     system_prompt = paste0(
       "You are an expert annotator. Read each short text carefully and determine its stance towards ",

@@ -2,9 +2,9 @@
 
 export(agreement_app)
 export(annotate)
-export(define_task)
-export(sentiment)
-export(stance)
+export(task)
+export(task_sentiment)
+export(task_stance)
 import(bslib)
 import(dplyr)
 import(ellmer)

@@ -16,4 +16,4 @@ The `quallmer` package currently includes the following predefined tasks:
 
 
 
-If you wish to create custom tasks tailored to your specific research questions and data types, you can use the `define_task()` function. This function allows you to specify the system prompt and output structure, enabling you to customize the annotation process according to your needs. For a tutorial on how to create custom tasks, please refer to our [custom tasks tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).
+If you wish to create custom tasks tailored to your specific research questions and data types, you can use the `task()` function. This function allows you to specify the system prompt and output structure, enabling you to customize the annotation process according to your needs. For a tutorial on how to create custom tasks, please refer to our [custom tasks tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).

@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 
 The `quallmer` package is an **easy-to-use toolbox for qualitative researchers to quickly apply AI-assisted annotation to texts, images, pdfs, tabular data and other structured data.** 
 
-Using `annotate()`, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of [predefined tasks for common qualitative coding needs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html), such as sentiment analysis, thematic coding, and stance detection. It also allows users to [create their own custom annotation tasks tailored to their specific research questions and data types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html) using `define_task()`. To ensure quality and reliability of AI-generated annotations, `quallmer` offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With `agreement()`, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.
+Using `annotate()`, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of [predefined tasks for common qualitative coding needs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html), such as sentiment analysis, thematic coding, and stance detection. It also allows users to [create their own custom annotation tasks tailored to their specific research questions and data types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html) using `task()`. To ensure quality and reliability of AI-generated annotations, `quallmer` offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With `agreement()`, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.
 
 **The `quallmer` package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.**
 
@@ -37,10 +37,10 @@ The package provides the following core functions:
 - A generic function that works with any LLM supported by [ellmer](https://ellmer.tidyverse.org/index.html).  
 - Generates structured responses based on [predefined](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.htmll) or [user-defined tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).  
 
-### `define_task()`
+### `task()`
 - Creates custom annotation tasks tailored to specific research questions and data types.
 - Uses `system_prompt` and various type specifications from the [ellmer](https://ellmer.tidyverse.org/reference/type_boolean.html) package to define how the LLM should interpret inputs and format outputs.  
-- Tasks created with `define_task()` can be passed directly to `annotate()`.  
+- Tasks created with `task()` can be passed directly to `annotate()`.  
 - This allows users to tailor the annotation process to their specific data types and makes our package extensible for future use cases.
 
 ### `agreement_app()`

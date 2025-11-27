@@ -12,7 +12,7 @@
 #' @param input_type Type of input data: `"text"`, `"image"`, `"audio"`, etc.
 #' @return A task object with a `run()` method.
 #' @export
-define_task <- function(name, system_prompt, type_def, input_type = "text") {
+task <- function(name, system_prompt, type_def, input_type = "text") {
 
   run <- function(.data, chat_fn = NULL, model = NULL, verbose = TRUE, ...) {
     # Basic input validation
@@ -59,6 +59,6 @@ define_task <- function(name, system_prompt, type_def, input_type = "text") {
       input_type = input_type,
       run = run
     ),
-    class = "define_task"
+    class = "task"
   )
 }

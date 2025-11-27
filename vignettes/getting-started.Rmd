@@ -40,7 +40,7 @@ library(quallmer)
 
 Before using large language models, most users will need to sign up for an API key from an LLM provider, such as openai, or download an open-source model like those from Ollama. The `quallmer` package supports multiple LLM providers through the `ellmer` package, allowing users to choose the one that best fits their needs.
 
-Using `annotate()`, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of [predefined tasks for common qualitative coding needs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html), such as sentiment analysis, thematic coding, and stance detection. It also allows users to [create their own custom annotation tasks tailored to their specific research questions and data types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html) using `define_task()`. Our tutorials will guide you through the following topics:
+Using `annotate()`, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of [predefined tasks for common qualitative coding needs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html), such as sentiment analysis, thematic coding, and stance detection. It also allows users to [create their own custom annotation tasks tailored to their specific research questions and data types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html) using `task()`. Our tutorials will guide you through the following topics:
 
 1. [**Signing up for an OpenAI API key**](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/openai.html): This tutorial will guide you through the process of obtaining an API key from OpenAI, which is necessary for using OpenAI's LLMs with the `quallmer` package.
 
@@ -48,7 +48,7 @@ Using `annotate()`, users can generate structured, interpretable outputs powered
 
 3. [**Using predefined tasks**](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html): These illustrations will show you how to utilize the library of predefined annotation tasks available in the `quallmer` package to perform common qualitative coding tasks efficiently.
 
-4. [**Creating custom tasks**](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html): This tutorial will walk you through the process of defining your own custom annotation tasks using the `define_task()` function, allowing you to tailor the LLM's output to your specific research needs.
+4. [**Creating custom tasks**](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html): This tutorial will walk you through the process of defining your own custom annotation tasks using the `task()` function, allowing you to tailor the LLM's output to your specific research needs.
 
 5. [**Using the Agreement App**](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/agreement.html): This tutorial will introduce you to the Agreement App to manually code data, check LLM annotations, and calculate interrater reliability in a user-friendly and intuitive interface.
 

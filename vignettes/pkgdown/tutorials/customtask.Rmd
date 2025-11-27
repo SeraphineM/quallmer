@@ -7,10 +7,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-In this tutorial, we will explore how to create custom annotation tasks using the `quallmer` package. Custom tasks allow you to tailor the LLM's output to your specific research questions and data types using the `define_task()` function, providing greater flexibility and control over the annotation process.
+In this tutorial, we will explore how to create custom annotation tasks using the `quallmer` package. Custom tasks allow you to tailor the LLM's output to your specific research questions and data types using the `task()` function, providing greater flexibility and control over the annotation process.
 
 In the following example, we will demonstrate how to define a custom task for scoring documents 
-based on their alignment with political left ideologies. For this, we formulate a prompt that asks the LLM to score documents on a scale of political left alignment. We then define the expected response structure using the `define_task()` function. Finally, we will use the `annotate()` function to apply this custom task to a sample corpus of inaugural speeches from US presidents.
+based on their alignment with political left ideologies. For this, we formulate a prompt that asks the LLM to score documents on a scale of political left alignment. We then define the expected response structure using the `task()` function. Finally, we will use the `annotate()` function to apply this custom task to a sample corpus of inaugural speeches from US presidents.
 
 ### Loading packages and data
 
@@ -49,7 +49,7 @@ SCORING METRIC:
 
 ### Defining the structure of the response with define_task()
 
-The `define_task()` function allows us to specify the expected structure of the LLM's response. It has the following important arguments which users need to specify:
+The `task()` function allows us to specify the expected structure of the LLM's response. It has the following important arguments which users need to specify:
 
 - `name`: A descriptive name for the task.
 - `system_prompt`: The prompt that guides the LLM on how to perform the task.
@@ -59,7 +59,7 @@ For more information on how to use ellmer's type specifications, please refer to
 
 ```{r define-structure}
 # Define the custom task using define_task()
-ideology_scores <- define_task(
+ideology_scores <- task(
   name = "Score Political Left Alignment",
   system_prompt = prompt,
   type_def = type_object(

@@ -27,7 +27,7 @@ such as sentiment analysis, thematic coding, and stance detection. It
 also allows users to [create their own custom annotation tasks tailored
 to their specific research questions and data
 types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)
-using `define_task()`. To ensure quality and reliability of AI-generated
+using `task()`. To ensure quality and reliability of AI-generated
 annotations, `quallmer` offers tools for comparing LLM outputs with
 human-coded data and assessing inter-coder reliability. With
 `agreement()`, users can launch an interactive app to manually code
@@ -51,7 +51,7 @@ The package provides the following core functions:
   or [user-defined
   tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).
 
-### `define_task()`
+### `task()`
 
 - Creates custom annotation tasks tailored to specific research
   questions and data types.
@@ -59,8 +59,7 @@ The package provides the following core functions:
   [ellmer](https://ellmer.tidyverse.org/reference/type_boolean.html)
   package to define how the LLM should interpret inputs and format
   outputs.  
-- Tasks created with `define_task()` can be passed directly to
-  `annotate()`.  
+- Tasks created with `task()` can be passed directly to `annotate()`.  
 - This allows users to tailor the annotation process to their specific
   data types and makes our package extensible for future use cases.
 
