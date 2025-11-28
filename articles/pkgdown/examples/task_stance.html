@@ -122,20 +122,15 @@ of inaugural speeches to determine their stance on “Climate Change”.</p>
 <span><span class="co"># Apply predefined stance task with task_stance() in the annotate() function</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_stance.html">task_stance</a></span><span class="op">(</span><span class="va">topic</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Stance detection' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
-<pre><code><span><span class="co">## The following object is masked from 'package:kableExtra':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     group_rows</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     filter, lag</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:base':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     intersect, setdiff, setequal, union</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -154,10 +149,14 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:left;">
-NA
+Pro
 </td>
 <td style="text-align:left;">
-NA
+The text explicitly acknowledges the threat of climate change and
+emphasizes the need for collective action to address it. It highlights
+the importance of transitioning to sustainable energy sources and
+leading in technology to combat climate change, aligning with a
+pro-climate action stance.
 </td>
 </tr>
 <tr>
@@ -165,10 +164,12 @@ NA
 2017-Trump
 </td>
 <td style="text-align:left;">
-NA
+Neutral
 </td>
 <td style="text-align:left;">
-NA
+The text does not explicitly mention climate change or environmental
+issues. It focuses on national pride, economic growth, and political
+change without addressing climate-related topics.
 </td>
 </tr>
 <tr>
@@ -176,10 +177,14 @@ NA
 2021-Biden
 </td>
 <td style="text-align:left;">
-NA
+Pro
 </td>
 <td style="text-align:left;">
-NA
+The text acknowledges climate change as a crisis, referring to it as a
+‘cry for survival from the planet itself’ and a ‘climate in crisis.’
+This indicates a recognition of climate change as a significant issue
+that needs to be addressed, aligning with a pro stance on climate change
+action.
 </td>
 </tr>
 <tr>
@@ -187,10 +192,13 @@ NA
 2025-Trump
 </td>
 <td style="text-align:left;">
-NA
+Contra
 </td>
 <td style="text-align:left;">
-NA
+The text expresses a stance against climate change initiatives by
+stating the intention to end the Green New Deal and revoke the electric
+vehicle mandate. It emphasizes increasing fossil fuel production and
+use, which contradicts efforts to combat climate change.
 </td>
 </tr>
 </tbody>
@@ -203,7 +211,7 @@ NA
 with <code><a href="../../../reference/task.html">task()</a></code> (for a more detailed explanation, <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">see
 our “Defining custom tasks” tutorial</a>). For example, you might want
 to include an additional field for confidence level.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_stance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Custom stance detection"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
@@ -221,9 +229,15 @@ to include an additional field for confidence level.</p>
 <span><span class="co"># Apply the custom stance task</span></span>
 <span><span class="va">custom_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">custom_stance</span>, </span>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                          params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom stance detection' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -245,13 +259,17 @@ confidence
 2013-Obama
 </td>
 <td style="text-align:left;">
-NA
+Pro
 </td>
 <td style="text-align:left;">
-NA
+The text explicitly acknowledges the threat of climate change and
+emphasizes the need for collective action to address it. It mentions the
+importance of transitioning to sustainable energy sources and leading in
+technology to combat climate change, aligning with a pro-climate change
+stance.
 </td>
 <td style="text-align:right;">
-NA
+0.95
 </td>
 </tr>
 <tr>
@@ -259,13 +277,15 @@ NA
 2017-Trump
 </td>
 <td style="text-align:left;">
-NA
+Neutral
 </td>
 <td style="text-align:left;">
-NA
+The text is a political speech focused on national pride, economic
+revitalization, and unity. It does not explicitly mention climate change
+or environmental policies, making it neutral on the topic.
 </td>
 <td style="text-align:right;">
-NA
+0.90
 </td>
 </tr>
 <tr>
@@ -273,13 +293,16 @@ NA
 2021-Biden
 </td>
 <td style="text-align:left;">
-NA
+Pro
 </td>
 <td style="text-align:left;">
-NA
+The text acknowledges climate change as a crisis, referring to it as a
+‘climate in crisis’ and includes it among the significant challenges
+facing the nation. This indicates a recognition of climate change as a
+serious issue that needs to be addressed.
 </td>
 <td style="text-align:right;">
-NA
+0.90
 </td>
 </tr>
 <tr>
@@ -287,13 +310,16 @@ NA
 2025-Trump
 </td>
 <td style="text-align:left;">
-NA
+Contra
 </td>
 <td style="text-align:left;">
-NA
+The text includes statements about ending the Green New Deal and
+revoking the electric vehicle mandate, which are actions against climate
+change initiatives. The focus is on increasing fossil fuel production,
+which is contrary to climate change mitigation efforts.
 </td>
 <td style="text-align:right;">
-NA
+0.95
 </td>
 </tr>
 </tbody>
@@ -318,9 +344,15 @@ the stance.</p>
 <span><span class="co"># Apply the argument-based stance task</span></span>
 <span><span class="va">argument_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">argument_stance</span>, </span>
 <span>                            chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                            api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                            api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                            params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Argument-based stance detection' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -342,13 +374,24 @@ arguments
 2013-Obama
 </td>
 <td style="text-align:left;">
-NA
+Pro
 </td>
 <td style="text-align:left;">
-NA
+The text explicitly acknowledges the threat of climate change and
+emphasizes the need for action to address it, aligning with a
+pro-climate change stance.
 </td>
 <td style="text-align:left;">
-NA
+<ol style="list-style-type: decimal">
+<li>Acknowledgment of the threat: The text states that failing to
+address climate change would betray future generations.</li>
+<li>Scientific consensus: It mentions the overwhelming judgment of
+science on climate change.</li>
+<li>Economic and environmental leadership: The text argues for leading
+the transition to sustainable energy to maintain economic vitality and
+preserve natural resources.
+</li>
+</ol>
 </td>
 </tr>
 <tr>
@@ -356,13 +399,23 @@ NA
 2017-Trump
 </td>
 <td style="text-align:left;">
-NA
+Neutral
 </td>
 <td style="text-align:left;">
-NA
+The text does not explicitly mention climate change or environmental
+issues. It focuses on national pride, economic growth, and political
+change without addressing climate-related topics.
 </td>
 <td style="text-align:left;">
-NA
+<ol style="list-style-type: decimal">
+<li>Emphasis on economic growth and job creation without reference to
+environmental impact.</li>
+</ol>
+<li>Focus on national interests and infrastructure development without
+mentioning sustainability.</li>
+<li>Absence of any direct reference to climate change or environmental
+policies.
+</li>
 </td>
 </tr>
 <tr>
@@ -370,13 +423,24 @@ NA
 2021-Biden
 </td>
 <td style="text-align:left;">
-NA
+Pro
 </td>
 <td style="text-align:left;">
-NA
+The text acknowledges climate change as a critical issue by referring to
+it as a ‘climate in crisis’ and emphasizes the need for bold action to
+address it.
 </td>
 <td style="text-align:left;">
-NA
+<ol style="list-style-type: decimal">
+<li>The speech identifies climate change as one of the major challenges
+facing the nation, alongside other significant issues like the pandemic
+and systemic racism.</li>
+</ol>
+<li>It calls for unity and boldness in addressing these challenges,
+implying a proactive stance on climate action.</li>
+<li>The mention of ‘a cry for survival comes from the planet itself’
+highlights the urgency and importance of addressing climate change.
+</li>
 </td>
 </tr>
 <tr>
@@ -384,13 +448,23 @@ NA
 2025-Trump
 </td>
 <td style="text-align:left;">
-NA
+Contra
 </td>
 <td style="text-align:left;">
-NA
+The text expresses a stance against climate change initiatives,
+specifically mentioning the end of the Green New Deal and the revocation
+of the electric vehicle mandate.
 </td>
 <td style="text-align:left;">
-NA
+<ol style="list-style-type: decimal">
+<li>Declares a national energy emergency to increase drilling and use of
+fossil fuels.</li>
+</ol>
+<li>Ends the Green New Deal and revokes the electric vehicle
+mandate.</li>
+<li>Emphasizes using the country’s oil and gas reserves to boost the
+economy.
+</li>
 </td>
 </tr>
 </tbody>

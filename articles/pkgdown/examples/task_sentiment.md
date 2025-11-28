@@ -31,34 +31,27 @@ texts <- c(
 # Apply predefined sentiment task with task_sentiment() in the annotate() function
 result <- annotate(texts, task = task_sentiment(), 
                    chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0, seed = 42))
+                   api_args = list(temperature = 0),
+                   params = list(seed = 42))
 ```
 
     ## Running task 'Sentiment analysis' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-    ## 
-    ## Attaching package: 'dplyr'
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
 
-    ## The following object is masked from 'package:kableExtra':
-    ## 
-    ##     group_rows
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-|  id | score | explanation |
-|----:|------:|:------------|
-|   1 |    NA | NA          |
-|   2 |    NA | NA          |
-|   3 |    NA | NA          |
-|   4 |    NA | NA          |
+|  id | score | explanation                                                                                                             |
+|----:|------:|:------------------------------------------------------------------------------------------------------------------------|
+|   1 |   0.9 | The word ‘wonderful’ conveys a very positive sentiment, indicating happiness or satisfaction.                           |
+|   2 |  -0.7 | The word ‘dislike’ indicates a negative sentiment towards the approach.                                                 |
+|   3 |  -0.5 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ softens it slightly.                         |
+|   4 |   0.9 | The phrase is highly positive, using strong words like ‘absolutely’ and ‘fantastic’ to express admiration and approval. |
 
 ### Adjusting the sentiment task
 
@@ -84,19 +77,27 @@ custom_sentiment <- task(
 # Apply the custom sentiment task
 custom_result <- annotate(texts, task = custom_sentiment, 
                           chat_fn = chat_openai, model = "gpt-4o",
-                          api_args = list(temperature = 0, seed = 42))
+                          api_args = list(temperature = 0),
+                          params = list(seed = 42))
 ```
 
     ## Running task 'Custom sentiment analysis' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-|  id | score | explanation | confidence |
-|----:|------:|:------------|-----------:|
-|   1 |    NA | NA          |         NA |
-|   2 |    NA | NA          |         NA |
-|   3 |    NA | NA          |         NA |
-|   4 |    NA | NA          |         NA |
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
+
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+
+|  id | score | explanation                                                                                             | confidence |
+|----:|------:|:--------------------------------------------------------------------------------------------------------|-----------:|
+|   1 |   0.9 | The word ‘wonderful’ conveys a strong positive sentiment.                                               |       0.95 |
+|   2 |  -0.8 | The word ‘dislike’ indicates a strong negative sentiment towards the approach.                          |       0.95 |
+|   3 |  -0.5 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ softens the impact slightly. |       0.90 |
+|   4 |   0.9 | The phrase is highly positive, using strong positive adjectives like ‘absolutely’ and ‘fantastic’.      |       0.95 |
 
 Or, you might want to change the scoring scale to a 5-point Likert
 scale.
@@ -114,19 +115,23 @@ likert_sentiment <- task(
 # Apply the Likert scale sentiment task
 likert_result <- annotate(texts, task = likert_sentiment, 
                           chat_fn = chat_openai, model = "gpt-4o",
-                          api_args = list(temperature = 0, seed = 42))
+                          api_args = list(temperature = 0),
+                          params = list(seed = 42))
 ```
 
     ## Running task 'Likert scale sentiment analysis' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-|  id | score | explanation |
-|----:|------:|:------------|
-|   1 |    NA | NA          |
-|   2 |    NA | NA          |
-|   3 |    NA | NA          |
-|   4 |    NA | NA          |
+|  id | score | explanation                                                                                                      |
+|----:|------:|:-----------------------------------------------------------------------------------------------------------------|
+|   1 |     5 | The word ‘wonderful’ conveys a very positive sentiment, indicating delight or admiration.                        |
+|   2 |     2 | The sentiment is negative due to the use of the word ‘dislike,’ indicating dissatisfaction or disapproval.       |
+|   3 |     2 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ suggests it’s not extremely negative. |
+|   4 |     5 | The phrase expresses strong positive sentiment with words like ‘absolutely’ and ‘fantastic.’                     |
 
 In this way, you can easily adapt the sentiment analysis task to fit
 your specific research needs!

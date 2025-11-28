@@ -112,20 +112,15 @@ texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-predefined-
 <code class="sourceCode R"><span><span class="co"># Apply predefined sentiment task with task_sentiment() in the annotate() function</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_sentiment.html">task_sentiment</a></span><span class="op">(</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
-<pre><code><span><span class="co">## The following object is masked from 'package:kableExtra':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     group_rows</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     filter, lag</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:base':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     intersect, setdiff, setequal, union</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -144,10 +139,11 @@ explanation
 1
 </td>
 <td style="text-align:right;">
-NA
+0.9
 </td>
 <td style="text-align:left;">
-NA
+The word ‘wonderful’ conveys a very positive sentiment, indicating
+happiness or satisfaction.
 </td>
 </tr>
 <tr>
@@ -155,10 +151,10 @@ NA
 2
 </td>
 <td style="text-align:right;">
-NA
+-0.7
 </td>
 <td style="text-align:left;">
-NA
+The word ‘dislike’ indicates a negative sentiment towards the approach.
 </td>
 </tr>
 <tr>
@@ -166,10 +162,11 @@ NA
 3
 </td>
 <td style="text-align:right;">
-NA
+-0.5
 </td>
 <td style="text-align:left;">
-NA
+The word ‘disappointing’ indicates a negative sentiment, though
+‘somewhat’ softens it slightly.
 </td>
 </tr>
 <tr>
@@ -177,10 +174,11 @@ NA
 4
 </td>
 <td style="text-align:right;">
-NA
+0.9
 </td>
 <td style="text-align:left;">
-NA
+The phrase is highly positive, using strong words like ‘absolutely’ and
+‘fantastic’ to express admiration and approval.
 </td>
 </tr>
 </tbody>
@@ -194,7 +192,7 @@ task with <code><a href="../../../reference/task.html">task()</a></code> (for a 
 our “Defining custom tasks” tutorial</a>).</p>
 <p>For example, you might want to include an additional field for
 confidence level.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Custom sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive), briefly explain why, and provide a confidence level from 0 to 1."</span>,</span>
@@ -208,9 +206,15 @@ confidence level.</p>
 <span><span class="co"># Apply the custom sentiment task</span></span>
 <span><span class="va">custom_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="va">custom_sentiment</span>, </span>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                          params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -232,13 +236,13 @@ confidence
 1
 </td>
 <td style="text-align:right;">
-NA
+0.9
 </td>
 <td style="text-align:left;">
-NA
+The word ‘wonderful’ conveys a strong positive sentiment.
 </td>
 <td style="text-align:right;">
-NA
+0.95
 </td>
 </tr>
 <tr>
@@ -246,13 +250,14 @@ NA
 2
 </td>
 <td style="text-align:right;">
-NA
+-0.8
 </td>
 <td style="text-align:left;">
-NA
+The word ‘dislike’ indicates a strong negative sentiment towards the
+approach.
 </td>
 <td style="text-align:right;">
-NA
+0.95
 </td>
 </tr>
 <tr>
@@ -260,13 +265,14 @@ NA
 3
 </td>
 <td style="text-align:right;">
-NA
+-0.5
 </td>
 <td style="text-align:left;">
-NA
+The word ‘disappointing’ indicates a negative sentiment, though
+‘somewhat’ softens the impact slightly.
 </td>
 <td style="text-align:right;">
-NA
+0.90
 </td>
 </tr>
 <tr>
@@ -274,13 +280,14 @@ NA
 4
 </td>
 <td style="text-align:right;">
-NA
+0.9
 </td>
 <td style="text-align:left;">
-NA
+The phrase is highly positive, using strong positive adjectives like
+‘absolutely’ and ‘fantastic’.
 </td>
 <td style="text-align:right;">
-NA
+0.95
 </td>
 </tr>
 </tbody>
@@ -300,9 +307,13 @@ scale.</p>
 <span><span class="co"># Apply the Likert scale sentiment task</span></span>
 <span><span class="va">likert_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="va">likert_sentiment</span>, </span>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                          params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Likert scale sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -321,10 +332,11 @@ explanation
 1
 </td>
 <td style="text-align:right;">
-NA
+5
 </td>
 <td style="text-align:left;">
-NA
+The word ‘wonderful’ conveys a very positive sentiment, indicating
+delight or admiration.
 </td>
 </tr>
 <tr>
@@ -332,10 +344,11 @@ NA
 2
 </td>
 <td style="text-align:right;">
-NA
+2
 </td>
 <td style="text-align:left;">
-NA
+The sentiment is negative due to the use of the word ‘dislike,’
+indicating dissatisfaction or disapproval.
 </td>
 </tr>
 <tr>
@@ -343,10 +356,11 @@ NA
 3
 </td>
 <td style="text-align:right;">
-NA
+2
 </td>
 <td style="text-align:left;">
-NA
+The word ‘disappointing’ indicates a negative sentiment, though
+‘somewhat’ suggests it’s not extremely negative.
 </td>
 </tr>
 <tr>
@@ -354,10 +368,11 @@ NA
 4
 </td>
 <td style="text-align:right;">
-NA
+5
 </td>
 <td style="text-align:left;">
-NA
+The phrase expresses strong positive sentiment with words like
+‘absolutely’ and ‘fantastic.’
 </td>
 </tr>
 </tbody>

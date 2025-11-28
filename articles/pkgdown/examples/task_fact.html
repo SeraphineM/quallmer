@@ -119,19 +119,15 @@ texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checki
 <code class="sourceCode R"><span><span class="co"># Apply predefined fact checking task with task_fact() in the annotate() function</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_fact.html">task_fact</a></span><span class="op">(</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Fact-checking' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
-<pre><code><span><span class="co">## The following object is masked from 'package:kableExtra':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     group_rows</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     filter, lag</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:base':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     intersect, setdiff, setequal, union</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -153,12 +149,19 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:right;">
-NA
+9
 </td>
 <td style="text-align:left;">
 </td>
 <td style="text-align:left;">
-NA
+The text is a ceremonial speech, likely an inaugural address, that
+emphasizes American values, historical references, and aspirations. It
+contains general statements about democracy, equality, and national
+goals, which are largely accurate and consistent with historical and
+cultural narratives. The speech does not make specific factual claims
+that are easily verifiable or refutable, thus maintaining a high level
+of truthfulness. The themes are broad and aspirational, reducing the
+likelihood of misleading content.
 </td>
 </tr>
 <tr>
@@ -166,12 +169,23 @@ NA
 2017-Trump
 </td>
 <td style="text-align:right;">
-NA
+5
 </td>
 <td style="text-align:left;">
+Transfer of Power to the People, American Carnage , America First Policy
+, Protectionism Benefits , Eradication of Terrorism
 </td>
 <td style="text-align:left;">
-NA
+The speech contains several broad and ambitious claims that are
+difficult to substantiate or measure. The idea of transferring power
+from Washington to the people is a common political rhetoric but lacks
+specific mechanisms or evidence of implementation. The depiction of
+‘American carnage’ is a dramatic portrayal that may not accurately
+reflect the overall state of the nation. The ‘America First’ policy and
+protectionism are complex issues with mixed economic outcomes, not
+universally beneficial as suggested. The claim to eradicate terrorism is
+overly ambitious and not easily achievable. These elements contribute to
+a lower truthfulness score.
 </td>
 </tr>
 <tr>
@@ -179,12 +193,17 @@ NA
 2021-Biden
 </td>
 <td style="text-align:right;">
-NA
+9
 </td>
 <td style="text-align:left;">
 </td>
 <td style="text-align:left;">
-NA
+The text is a speech that emphasizes themes of unity, democracy, and
+hope. It accurately reflects historical events and current challenges,
+such as the COVID-19 pandemic and political divisions. The speech is
+largely aspirational and rhetorical, with no specific factual
+inaccuracies or misleading claims. The overall message aligns with known
+facts and historical context, resulting in a high truthfulness score.
 </td>
 </tr>
 <tr>
@@ -192,12 +211,19 @@ NA
 2025-Trump
 </td>
 <td style="text-align:right;">
-NA
+3
 </td>
 <td style="text-align:left;">
+Historical Inaccuracies , Policy Claims , Election Results , Panama
+Canal Ownership , Energy and Environmental Policies
 </td>
 <td style="text-align:left;">
-NA
+The text contains numerous factual inaccuracies and misleading claims.
+For instance, the mention of an assassination attempt lacks
+verification, and the claim about the Panama Canal being operated by
+China is false. The speech also includes exaggerated or unverified
+claims about election results and policy impacts. These issues
+significantly reduce the overall truthfulness of the text.
 </td>
 </tr>
 </tbody>
@@ -207,12 +233,19 @@ NA
 <h3 id="using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check">Using <code>annotate()</code> for fact checking with a specific
 number of claims to check<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check"></a>
 </h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply predefined fact checking task with task_fact() in the annotate() function</span></span>
 <span><span class="va">result_claims</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_fact.html">task_fact</a></span><span class="op">(</span>max_topics <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Fact-checking' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -234,12 +267,17 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:right;">
-NA
+9
 </td>
 <td style="text-align:left;">
 </td>
 <td style="text-align:left;">
-NA
+The text is a ceremonial speech, likely an inaugural address, that
+emphasizes American values, historical references, and aspirations. It
+contains broad, aspirational statements rather than specific factual
+claims, which are generally accurate and consistent with historical and
+cultural narratives. There are no obvious misleading claims or
+inaccuracies, hence a high truthfulness score.
 </td>
 </tr>
 <tr>
@@ -247,12 +285,27 @@ NA
 2017-Trump
 </td>
 <td style="text-align:right;">
-NA
+6
 </td>
 <td style="text-align:left;">
+Transfer of Power, Economic Claims , Foreign Policy
 </td>
 <td style="text-align:left;">
-NA
+<p>The text is a political speech, which often includes aspirational and
+rhetorical statements rather than factual claims.</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Transfer of Power</strong>: The claim of transferring
+power from Washington to the people is a common political promise but
+lacks specific mechanisms or evidence of implementation.</p></li>
+<li><p><strong>Economic Claims</strong>: Statements about factories
+closing, wealth redistribution, and economic decline are broad and lack
+nuance or supporting data.</p></li>
+<li><p><strong>Foreign Policy</strong>: Assertions about enriching
+foreign industries at the expense of American ones are oversimplified
+and do not account for complex global trade dynamics.</p></li>
+</ol>
+Overall, while the speech is motivational, it contains generalizations
+and lacks detailed evidence, reducing its factual accuracy.
 </td>
 </tr>
 <tr>
@@ -260,12 +313,17 @@ NA
 2021-Biden
 </td>
 <td style="text-align:right;">
-NA
+9
 </td>
 <td style="text-align:left;">
 </td>
 <td style="text-align:left;">
-NA
+The text is a speech that emphasizes themes of unity, democracy, and
+hope. It accurately reflects historical events and current challenges,
+such as the COVID-19 pandemic and political divisions. The speech is
+largely aspirational and rhetorical, with no significant factual
+inaccuracies or misleading claims. Therefore, it receives a high
+truthfulness score.
 </td>
 </tr>
 <tr>
@@ -273,12 +331,27 @@ NA
 2025-Trump
 </td>
 <td style="text-align:right;">
-NA
+3
 </td>
 <td style="text-align:left;">
+Historical Inaccuracies, Policy Claims , Election Results
 </td>
 <td style="text-align:left;">
-NA
+<p>The speech contains several misleading or inaccurate claims.</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Historical Inaccuracies</strong>: The statement about the
+Panama Canal being ‘given to China’ is incorrect. The canal was
+transferred to Panama, not China, and is operated by the Panama Canal
+Authority.</p></li>
+<li><p><strong>Policy Claims</strong>: Many policy promises, such as
+ending the Green New Deal or declaring a national energy emergency, are
+speculative and lack immediate feasibility or legal backing.</p></li>
+<li><p><strong>Election Results</strong>: Claims of winning the popular
+vote by millions and unifying the nation are not substantiated with
+evidence and are likely exaggerated.</p></li>
+</ol>
+Overall, the speech is highly rhetorical with numerous unverified or
+exaggerated claims, leading to a low truthfulness score.
 </td>
 </tr>
 </tbody>

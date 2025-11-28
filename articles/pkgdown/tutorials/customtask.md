@@ -123,34 +123,27 @@ reliability.
 # Apply the custom task to the inaugural speeches corpus
 result <- annotate(data_corpus_inaugural, task = ideology_scores,
                    chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0, seed = 42))
+                   api_args = list(temperature = 0),
+                   params = list(seed = 42))
 ```
 
     ## Running task 'Score Political Left Alignment' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-    ## 
-    ## Attaching package: 'dplyr'
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
 
-    ## The following object is masked from 'package:kableExtra':
-    ## 
-    ##     group_rows
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-| id         | score | explanation |
-|:-----------|------:|:------------|
-| 2013-Obama |    NA | NA          |
-| 2017-Trump |    NA | NA          |
-| 2021-Biden |    NA | NA          |
-| 2025-Trump |    NA | NA          |
+| id         | score | explanation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|:-----------|------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2013-Obama |     2 | The document aligns very well with the political left, emphasizing social equality, government intervention, and progressive policies. It advocates for collective action, economic equality, environmental responsibility, and social justice, all of which are key tenets of leftist ideology. However, it also acknowledges the importance of personal responsibility and skepticism of central authority, which slightly moderates its alignment.                                              |
+| 2017-Trump |     0 | The document emphasizes nationalism, protectionism, and a focus on American interests, which are not typically aligned with the political left. It lacks advocacy for social equality, government intervention in the economy, or progressive policies, which are key aspects of leftist ideology.                                                                                                                                                                                                 |
+| 2021-Biden |     2 | The document aligns very well with the political left, as it emphasizes themes of social equality, racial justice, and government intervention in addressing economic challenges. It calls for unity, healing, and addressing systemic racism, which are key progressive values. However, it also focuses on unity and bipartisanship, which slightly moderates its alignment with the extreme left.                                                                                               |
+| 2025-Trump |     0 | The document primarily emphasizes nationalism, border security, military strength, and economic independence, which are typically associated with right-wing ideologies. It criticizes government intervention in areas like education and public health, opposes progressive policies like the Green New Deal, and promotes traditional values. These elements do not align with the political left’s focus on social equality, government intervention in the economy, and progressive policies. |
 
 Now you have successfully created and applied a custom annotation task
 using the `quallmer` package! You can further modify the prompt and

@@ -189,20 +189,15 @@ increasing reliability.</p>
 <code class="sourceCode R"><span><span class="co"># Apply the custom task to the inaugural speeches corpus</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">ideology_scores</span>,</span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
-<pre><code><span><span class="co">## The following object is masked from 'package:kableExtra':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     group_rows</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     filter, lag</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:base':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     intersect, setdiff, setequal, union</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -221,10 +216,16 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:right;">
-NA
+2
 </td>
 <td style="text-align:left;">
-NA
+The document aligns very well with the political left, emphasizing
+social equality, government intervention, and progressive policies. It
+advocates for collective action, economic equality, environmental
+responsibility, and social justice, all of which are key tenets of
+leftist ideology. However, it also acknowledges the importance of
+personal responsibility and skepticism of central authority, which
+slightly moderates its alignment.
 </td>
 </tr>
 <tr>
@@ -232,10 +233,14 @@ NA
 2017-Trump
 </td>
 <td style="text-align:right;">
-NA
+0
 </td>
 <td style="text-align:left;">
-NA
+The document emphasizes nationalism, protectionism, and a focus on
+American interests, which are not typically aligned with the political
+left. It lacks advocacy for social equality, government intervention in
+the economy, or progressive policies, which are key aspects of leftist
+ideology.
 </td>
 </tr>
 <tr>
@@ -243,10 +248,15 @@ NA
 2021-Biden
 </td>
 <td style="text-align:right;">
-NA
+2
 </td>
 <td style="text-align:left;">
-NA
+The document aligns very well with the political left, as it emphasizes
+themes of social equality, racial justice, and government intervention
+in addressing economic challenges. It calls for unity, healing, and
+addressing systemic racism, which are key progressive values. However,
+it also focuses on unity and bipartisanship, which slightly moderates
+its alignment with the extreme left.
 </td>
 </tr>
 <tr>
@@ -254,10 +264,16 @@ NA
 2025-Trump
 </td>
 <td style="text-align:right;">
-NA
+0
 </td>
 <td style="text-align:left;">
-NA
+The document primarily emphasizes nationalism, border security, military
+strength, and economic independence, which are typically associated with
+right-wing ideologies. It criticizes government intervention in areas
+like education and public health, opposes progressive policies like the
+Green New Deal, and promotes traditional values. These elements do not
+align with the political left’s focus on social equality, government
+intervention in the economy, and progressive policies.
 </td>
 </tr>
 </tbody>

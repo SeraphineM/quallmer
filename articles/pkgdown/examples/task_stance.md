@@ -49,34 +49,27 @@ topic <- "Climate Change"
 # Apply predefined stance task with task_stance() in the annotate() function
 result <- annotate(data_corpus_inaugural, task = task_stance(topic), 
                    chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0, seed = 42))
+                   api_args = list(temperature = 0),
+                   params = list(seed = 42))
 ```
 
     ## Running task 'Stance detection' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-    ## 
-    ## Attaching package: 'dplyr'
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
 
-    ## The following object is masked from 'package:kableExtra':
-    ## 
-    ##     group_rows
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
-    ## The following objects are masked from 'package:stats':
-    ## 
-    ##     filter, lag
-
-    ## The following objects are masked from 'package:base':
-    ## 
-    ##     intersect, setdiff, setequal, union
-
-| id         | stance | explanation |
-|:-----------|:-------|:------------|
-| 2013-Obama | NA     | NA          |
-| 2017-Trump | NA     | NA          |
-| 2021-Biden | NA     | NA          |
-| 2025-Trump | NA     | NA          |
+| id         | stance  | explanation                                                                                                                                                                                                                                                                                           |
+|:-----------|:--------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2013-Obama | Pro     | The text explicitly acknowledges the threat of climate change and emphasizes the need for collective action to address it. It highlights the importance of transitioning to sustainable energy sources and leading in technology to combat climate change, aligning with a pro-climate action stance. |
+| 2017-Trump | Neutral | The text does not explicitly mention climate change or environmental issues. It focuses on national pride, economic growth, and political change without addressing climate-related topics.                                                                                                           |
+| 2021-Biden | Pro     | The text acknowledges climate change as a crisis, referring to it as a ‘cry for survival from the planet itself’ and a ‘climate in crisis.’ This indicates a recognition of climate change as a significant issue that needs to be addressed, aligning with a pro stance on climate change action.    |
+| 2025-Trump | Contra  | The text expresses a stance against climate change initiatives by stating the intention to end the Green New Deal and revoke the electric vehicle mandate. It emphasizes increasing fossil fuel production and use, which contradicts efforts to combat climate change.                               |
 
 ### Adjusting the stance detection task
 
@@ -105,19 +98,27 @@ custom_stance <- task(
 # Apply the custom stance task
 custom_result <- annotate(data_corpus_inaugural, task = custom_stance, 
                           chat_fn = chat_openai, model = "gpt-4o",
-                          api_args = list(temperature = 0, seed = 42))
+                          api_args = list(temperature = 0),
+                          params = list(seed = 42))
 ```
 
     ## Running task 'Custom stance detection' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-| id         | stance | explanation | confidence |
-|:-----------|:-------|:------------|-----------:|
-| 2013-Obama | NA     | NA          |         NA |
-| 2017-Trump | NA     | NA          |         NA |
-| 2021-Biden | NA     | NA          |         NA |
-| 2025-Trump | NA     | NA          |         NA |
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
+
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+
+| id         | stance  | explanation                                                                                                                                                                                                                                                                                         | confidence |
+|:-----------|:--------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------:|
+| 2013-Obama | Pro     | The text explicitly acknowledges the threat of climate change and emphasizes the need for collective action to address it. It mentions the importance of transitioning to sustainable energy sources and leading in technology to combat climate change, aligning with a pro-climate change stance. |       0.95 |
+| 2017-Trump | Neutral | The text is a political speech focused on national pride, economic revitalization, and unity. It does not explicitly mention climate change or environmental policies, making it neutral on the topic.                                                                                              |       0.90 |
+| 2021-Biden | Pro     | The text acknowledges climate change as a crisis, referring to it as a ‘climate in crisis’ and includes it among the significant challenges facing the nation. This indicates a recognition of climate change as a serious issue that needs to be addressed.                                        |       0.90 |
+| 2025-Trump | Contra  | The text includes statements about ending the Green New Deal and revoking the electric vehicle mandate, which are actions against climate change initiatives. The focus is on increasing fossil fuel production, which is contrary to climate change mitigation efforts.                            |       0.95 |
 
 Or, you might want the LLM to extract specific arguments supporting the
 stance.
@@ -140,19 +141,22 @@ argument_stance <- task(
 # Apply the argument-based stance task
 argument_result <- annotate(data_corpus_inaugural, task = argument_stance, 
                             chat_fn = chat_openai, model = "gpt-4o",
-                            api_args = list(temperature = 0, seed = 42))
+                            api_args = list(temperature = 0),
+                            params = list(seed = 42))
 ```
 
     ## Running task 'Argument-based stance detection' using model: gpt-4o
 
-    ## Warning: 4 requests errored.
+    ## Warning: Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
+    ## Ignoring unsupported parameters: "seed"
 
-| id         | stance | explanation | arguments |
-|:-----------|:-------|:------------|:----------|
-| 2013-Obama | NA     | NA          | NA        |
-| 2017-Trump | NA     | NA          | NA        |
-| 2021-Biden | NA     | NA          | NA        |
-| 2025-Trump | NA     | NA          | NA        |
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
+
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+
+[TABLE]
 
 In this example, we demonstrated how to use the `stance()` task for
 stance detection on texts regarding “Climate Change”. We also showed how

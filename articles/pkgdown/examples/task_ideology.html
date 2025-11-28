@@ -128,20 +128,15 @@ dimension (optional).</p>
 <span><span class="co"># Apply predefined ideology task with task_ideology() in the annotate() function</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_ideology.html">task_ideology</a></span><span class="op">(</span><span class="va">dimension</span>, <span class="va">definition</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Ideological scaling' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
-<pre><code><span><span class="co">## </span></span>
-<span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
-<pre><code><span><span class="co">## The following object is masked from 'package:kableExtra':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     group_rows</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     filter, lag</span></span></code></pre>
-<pre><code><span><span class="co">## The following objects are masked from 'package:base':</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">##     intersect, setdiff, setequal, union</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -160,10 +155,16 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:right;">
-NA
+1
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes inclusivity through repeated references to equality,
+diversity, and collective action. Phrases like “all men are created
+equal,” “diversity and openness,” and “our journey is not complete until
+our gay brothers and sisters are treated like anyone else under the law”
+highlight a commitment to inclusive values. The speech calls for unity
+and equal opportunity for all citizens, regardless of background, which
+aligns closely with the inclusive pole of the dimension.
 </td>
 </tr>
 <tr>
@@ -171,10 +172,17 @@ NA
 2017-Trump
 </td>
 <td style="text-align:right;">
-NA
+7
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes national homogeneity and prioritizes American
+interests with phrases like “America first” and “buy American and hire
+American.” It highlights protectionism and a focus on American workers
+and borders, suggesting an exclusive stance. However, it also includes
+some inclusive elements, such as unity and equality among Americans,
+regardless of race, with statements like “we all bleed the same red
+blood of patriots.” Overall, the emphasis on national exclusivity and
+protectionism places it closer to the exclusive end of the spectrum.
 </td>
 </tr>
 <tr>
@@ -182,10 +190,13 @@ NA
 2021-Biden
 </td>
 <td style="text-align:right;">
-NA
+0
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes unity, inclusion, and addressing systemic issues
+like racial justice and political extremism. It calls for seeing each
+other as neighbors, respecting diversity, and healing divisions, which
+aligns with inclusive language.
 </td>
 </tr>
 <tr>
@@ -193,10 +204,16 @@ NA
 2025-Trump
 </td>
 <td style="text-align:right;">
-NA
+8
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes national sovereignty, exclusion of ‘criminal
+aliens,’ and a focus on American exceptionalism, which aligns with
+exclusive language. Phrases like ‘put America first,’ ‘halt illegal
+entry,’ and ‘returning millions of criminal aliens’ highlight
+exclusionary policies. The mention of ‘only two genders’ and ending
+‘socially engineered race and gender’ policies further supports an
+exclusive stance.
 </td>
 </tr>
 </tbody>
@@ -209,7 +226,7 @@ NA
 task with <code><a href="../../../reference/task.html">task()</a></code> (for a more detailed explanation, <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">see
 our “Defining custom tasks” tutorial</a>). For example, you might like
 to change the scale from 0-10 to -5 to +5.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_ideology</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>    name <span class="op">=</span> <span class="st">"Ideological scaling"</span>,</span>
 <span>    system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
@@ -229,9 +246,15 @@ to change the scale from 0-10 to -5 to +5.</p>
 <span><span class="co"># Apply the custom task</span></span>
 <span><span class="va">custom_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">custom_ideology</span>, </span>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                          params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Ideological scaling' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span>
+<span><span class="co">## Ignoring unsupported parameters: "seed"</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -250,10 +273,16 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:right;">
-NA
+5
 </td>
 <td style="text-align:left;">
-NA
+The text strongly emphasizes inclusive language, focusing on equality,
+diversity, and collective action. It highlights the importance of equal
+rights for all citizens, regardless of background, and stresses the need
+for unity and shared responsibility. References to historical struggles
+for equality and the call for inclusivity in areas like immigration,
+gender equality, and LGBTQ+ rights further reinforce its inclusive
+stance.
 </td>
 </tr>
 <tr>
@@ -261,10 +290,16 @@ NA
 2017-Trump
 </td>
 <td style="text-align:right;">
-NA
+-2
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes national homogeneity and prioritizes American
+interests with phrases like “America first” and “protect our borders.”
+It highlights exclusionary themes by focusing on protecting American
+jobs and industries from foreign influence. While there are inclusive
+elements, such as unity and shared national identity, the overall tone
+leans towards exclusivity by emphasizing national over global or diverse
+interests.
 </td>
 </tr>
 <tr>
@@ -272,10 +307,13 @@ NA
 2021-Biden
 </td>
 <td style="text-align:right;">
-NA
+5
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes unity, inclusion, and the protection of democracy,
+highlighting themes of racial justice, equality, and the rejection of
+division. It calls for collective action and respect for all citizens,
+regardless of differences, aligning strongly with inclusive language.
 </td>
 </tr>
 <tr>
@@ -283,10 +321,16 @@ NA
 2025-Trump
 </td>
 <td style="text-align:right;">
-NA
+-3
 </td>
 <td style="text-align:left;">
-NA
+The text emphasizes national sovereignty, border control, and a strong
+focus on American exceptionalism, which aligns with exclusive language.
+It includes plans to halt illegal entry, return ‘criminal aliens,’ and
+emphasizes a colorblind, merit-based society, which can be seen as
+minimizing diversity and inclusion efforts. The rhetoric around national
+pride and reclaiming American greatness further supports an exclusive
+stance.
 </td>
 </tr>
 </tbody>
