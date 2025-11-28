@@ -36,6 +36,9 @@ result <- annotate(texts, task = task_sentiment(),
 ```{r display_results2, echo = FALSE}
 # sentiment analysis results table
 library(kableExtra)
+library(dplyr)
+result <- result %>%
+  dplyr::select(id, score, explanation)
 result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
@@ -66,6 +69,9 @@ custom_result <- annotate(texts, task = custom_sentiment,
 ```{r display_results_custom, echo = FALSE}
 # sentiment analysis results table
 library(kableExtra)
+library(dplyr)
+custom_result <- custom_result %>%
+  dplyr::select(id, score, explanation, confidence)
 custom_result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
@@ -90,6 +96,9 @@ likert_result <- annotate(texts, task = likert_sentiment,
 ```{r display_results_likert, echo = FALSE}
 # sentiment analysis results table
 library(kableExtra)
+library(dplyr)
+likert_result <- likert_result %>%
+  dplyr::select(id, score, explanation)
 likert_result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
