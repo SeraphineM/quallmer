@@ -34,13 +34,13 @@ task_stance <- function(topic = "the given topic") {
   )
 }
 
-#' Predefined task for ideological scaling (0–10)
+#' Predefined task for ideological scaling on a specified dimension
 #'
-#' Ideological scaling — 0–10 position on a specified dimension, with justification.
+#' Ideological scaling on a specified dimension, with justification.
 #'
 #' @param dimension A character string specifying the ideological dimension,
-#'   ideally naming both poles, e.g., "liberal–illiberal", "left–right",
-#'   or "inclusive–exclusive". The first pole corresponds to 0 and the second to 10.
+#'   ideally naming both poles, e.g., "liberal - illiberal", "left - right",
+#'   or "inclusive - exclusive". The first pole corresponds to 0 and the second to 10.
 #' @param definition Optional detailed explanation of what the dimension means.
 #'   If provided, it will be included in the system prompt to guide annotation.
 #'
@@ -63,11 +63,11 @@ task_ideology <- function(
       "You are an expert political scientist performing ideological text scaling.\n\n",
       "Task:\n",
       "- Read each short text carefully.\n",
-      "- Place the text on a 0–10 scale for the following ideological dimension: ",
+      "- Place the text on a 0 - 10 scale for the following ideological dimension: ",
       dimension, ".\n",
       "- Interpret 0 as representing the FIRST pole mentioned in the dimension label,\n",
       "  and 10 as representing the SECOND pole mentioned.\n",
-      "- Use the full 0–10 range where appropriate and avoid defaulting to middle values.\n",
+      "- Use the full 0 - 10 range where appropriate and avoid defaulting to middle values.\n",
       "- Base your decision only on the information in the text (do not infer external\n",
       "  knowledge about the author, party, or context).",
       definition_text,
@@ -77,7 +77,7 @@ task_ideology <- function(
       "  citing specific phrases or arguments from the text."
     ),
     type_def = ellmer::type_object(
-      score       = ellmer::type_integer("Ideological position on the specified dimension (0–10, where 0 = first pole, 10 = second pole)"),
+      score       = ellmer::type_integer("Ideological position on the specified dimension (0 - 10, where 0 = first pole, 10 = second pole)"),
       explanation = ellmer::type_string("Brief justification for the assigned score, referring to specific elements in the text")
     ),
     input_type = "text"

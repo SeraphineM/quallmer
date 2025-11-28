@@ -9,7 +9,7 @@ test_that("annotate runs a task and returns a data frame", {
     score = ellmer::type_number("Sentiment score")
   )
 
-  mock_task <- define_task(
+  mock_task <- task(
     name = "Mock Sentiment",
     system_prompt = "Return +1 for positive text, -1 for negative text.",
     type_def = type_def

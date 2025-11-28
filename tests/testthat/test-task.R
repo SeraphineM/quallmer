@@ -1,4 +1,4 @@
-test_that("define_task creates a valid task object", {
+test_that("task creates a valid task object", {
   skip_if_not_installed("ellmer")
 
   # Minimal type_object
@@ -7,7 +7,7 @@ test_that("define_task creates a valid task object", {
   )
 
   # Define a simple task
-  task <- define_task(
+  task <- task(
     name = "Test Task",
     system_prompt = "Rate the sentiment of a text between -1 and 1.",
     type_def = type_obj

@@ -2,7 +2,7 @@
 % Please edit documentation in R/predef_tasks.R
 \name{task_ideology}
 \alias{task_ideology}
-\title{Predefined task for ideological scaling (0–10)}
+\title{Predefined task for ideological scaling on a specified dimension}
 \usage{
 task_ideology(
   dimension = "the specified ideological dimension (0 = first pole, 10 = second pole)",
@@ -11,8 +11,8 @@ task_ideology(
 }
 \arguments{
 \item{dimension}{A character string specifying the ideological dimension,
-ideally naming both poles, e.g., "liberal–illiberal", "left–right",
-or "inclusive–exclusive". The first pole corresponds to 0 and the second to 10.}
+ideally naming both poles, e.g., "liberal - illiberal", "left - right",
+or "inclusive - exclusive". The first pole corresponds to 0 and the second to 10.}
 
 \item{definition}{Optional detailed explanation of what the dimension means.
 If provided, it will be included in the system prompt to guide annotation.}
@@ -21,5 +21,5 @@ If provided, it will be included in the system prompt to guide annotation.}
 A task object
 }
 \description{
-Ideological scaling — 0–10 position on a specified dimension, with justification.
+Ideological scaling on a specified dimension, with justification.
 }

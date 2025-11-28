@@ -84,6 +84,9 @@ result <- annotate(data_corpus_inaugural, task = ideology_scores,
 ```{r display_results, echo = FALSE}
 # sentiment analysis results table
 library(kableExtra)
+library(dplyr)
+result <- result %>%
+  dplyr::select(id, score, explanation)
 result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
