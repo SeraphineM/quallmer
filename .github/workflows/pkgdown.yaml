@@ -37,6 +37,14 @@ jobs:
           extra-packages: any::pkgdown, local::.
           needs: website
 
+       - name: Debug OPENAI_API_KEY in R
+        run: |
+          Rscript -e '
+            key <- Sys.getenv("OPENAI_API_KEY");
+            cat("Has key:", nzchar(key), "\n");
+            cat("Length:", nchar(key), "\n");
+          '
+
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
