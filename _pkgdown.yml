@@ -47,6 +47,8 @@ navbar:
         href: articles/pkgdown/examples/task_ideology.html
       - text: Salience of topics
         href: articles/pkgdown/examples/task_salience.html
+      - text: Fact-checking
+        href: articles/pkgdown/examples/task_fact.html
     github:
       icon: fab fa-github
       href: https://github.com/SeraphineM/quallmer

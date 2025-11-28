@@ -26,7 +26,7 @@ data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
 
 ```
 ### Using `annotate()` for salience of ANY topics discussed in texts
-```{r ideology}
+```{r salience}
 
 # Apply predefined salience task with task_salience() in the annotate() function
 result <- annotate(data_corpus_inaugural, task = task_salience(), 
@@ -45,7 +45,7 @@ result %>%
   column_spec(3)
 ```
 ### Using `annotate()` for salience of a SPECIFIED LIST of topics discussed in texts
-```{r ideology}
+```{r salience2}
 
 # Define a list of topics to focus on
 topics <- c("economy", "health", "education", "environment", "foreign policy")
@@ -54,7 +54,7 @@ result <- annotate(data_corpus_inaugural, task = task_salience(topics),
                    chat_fn = chat_openai, model = "gpt-4o",
                    api_args = list(temperature = 0, seed = 42))
 ```
-```{r display_results, echo = FALSE}
+```{r display_results2, echo = FALSE}
 # results table
 library(kableExtra)
 library(dplyr)

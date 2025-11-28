@@ -1,0 +1,66 @@
+---
+title: "Example: Fact checking of claims"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The `annotate()` function with a predefined `task_fact()` can be used to fact-check claims made in texts. In this example, we will demonstrate how to apply this task to a sample corpus of innaugural speeches from US presidents.
+
+### Loading packages and data
+
+```{r getting-started}
+# We will use the quanteda package 
+# for loading a sample corpus of innaugural speeches
+# If you have not yet installed the quanteda package, you can do so by:
+# install.packages("quanteda")
+library(quanteda)
+library(quallmer)
+
+# For educational purposes, 
+# we will use a subset of the inaugural speeches corpus
+# The three most recent speeches in the corpus
+data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
+
+```
+### Using `annotate()` for fact checking of claims in texts
+```{r fact}
+
+# Apply predefined fact checking task with task_fact() in the annotate() function
+result <- annotate(data_corpus_inaugural, task = task_fact(), 
+                   chat_fn = chat_openai, model = "gpt-4o",
+                   api_args = list(temperature = 0, seed = 42))
+```
+
+```{r display_results, echo = FALSE}
+# results table
+library(kableExtra)
+library(dplyr)
+result <- result %>%
+  dplyr::select(id, truth_score, misleading, explanation)
+result %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3)
+```
+### Using `annotate()` for fact checking with a specific number of claims to check
+```{r fact2}
+
+# Apply predefined fact checking task with task_fact() in the annotate() function
+result_claims <- annotate(data_corpus_inaugural, task = task_fact(max_topics = 3), 
+                   chat_fn = chat_openai, model = "gpt-4o",
+                   api_args = list(temperature = 0, seed = 42))
+```
+```{r display_results2, echo = FALSE}
+# results table
+library(kableExtra)
+library(dplyr)
+result_claims <- result_claims %>%
+  dplyr::select(id, truth_score, misleading, explanation)
+result_claims %>%
+  kable("html", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3)
+```

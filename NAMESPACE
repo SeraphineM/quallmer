@@ -3,6 +3,7 @@
 export(agreement_app)
 export(annotate)
 export(task)
+export(task_fact)
 export(task_ideology)
 export(task_salience)
 export(task_sentiment)
