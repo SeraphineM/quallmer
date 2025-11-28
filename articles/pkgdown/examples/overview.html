@@ -50,8 +50,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-predefined-tasks" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Predefined tasks</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/sentiment.html">Sentiment analysis</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/stance.html">Stance detection / position taking</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_sentiment.html">Sentiment analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_stance.html">Stance detection / position taking</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_ideology.html">Ideological scaling</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_salience.html">Salience of topics</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_fact.html">Fact-checking</a></li>
   </ul>
 </li>
       </ul>
@@ -127,6 +130,20 @@ scaling</strong></a></td>
 dimension.</td>
 <td>Ideological score (<code>0</code> to <code>10</code>) and
 explanation</td>
+</tr>
+<tr class="even">
+<td><a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_salience.html"><strong>Topic
+salience</strong></a></td>
+<td><code><a href="../../../reference/task_salience.html">task_salience()</a></code></td>
+<td>Ranks salience of specified topics in text.</td>
+<td>Ranked list of topics and explanation</td>
+</tr>
+<tr class="odd">
+<td><a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_fact.html"><strong>Fact-checking</strong></a></td>
+<td><code>task_fact_check()</code></td>
+<td>Verifies factual claims in text.</td>
+<td>Truthfulness score (0-10, with 10 signalling highest confidence in
+truthfulness), misleading topics (if any) and explanation</td>
 </tr>
 </tbody>
 </table>

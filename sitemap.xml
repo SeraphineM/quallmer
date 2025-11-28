@@ -3,7 +3,9 @@
 <url><loc>https://seraphinem.github.io/quallmer/articles/getting-started.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/articles/index.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html</loc></url>
+<url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_fact.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_ideology.html</loc></url>
+<url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_salience.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_sentiment.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_stance.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/agreement.html</loc></url>
@@ -18,7 +20,9 @@
 <url><loc>https://seraphinem.github.io/quallmer/reference/index.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/reference/quallmer-package.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/reference/task.html</loc></url>
+<url><loc>https://seraphinem.github.io/quallmer/reference/task_fact.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/reference/task_ideology.html</loc></url>
+<url><loc>https://seraphinem.github.io/quallmer/reference/task_salience.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/reference/task_sentiment.html</loc></url>
 <url><loc>https://seraphinem.github.io/quallmer/reference/task_stance.html</loc></url>
 </urlset>

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Example: Stance detection • quallmer</title>
+<title>Example: Salience of topics • quallmer</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../../../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../../../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../../../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../../../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../../../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../../../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Stance detection">
+<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Salience of topics">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -72,24 +72,23 @@
 
 
 
-<script src="task_stance_files/kePrint-0.0.1/kePrint.js"></script><link href="task_stance_files/lightable-0.0.1/lightable.css" rel="stylesheet">
+<script src="task_salience_files/kePrint-0.0.1/kePrint.js"></script><link href="task_salience_files/lightable-0.0.1/lightable.css" rel="stylesheet">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Stance detection</h1>
+      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Salience of topics</h1>
             
       
 
-      <div class="d-none name"><code>task_stance.Rmd</code></div>
+      <div class="d-none name"><code>task_salience.Rmd</code></div>
     </div>
 
     
     
 <p>The <code><a href="../../../reference/annotate.html">annotate()</a></code> function with a predefined
-<code><a href="../../../reference/task_stance.html">task_stance()</a></code> task allows you to perform stance detection
-on texts regarding a specific topic. This position taking analysis
-classifies texts as Pro, Neutral, or Contra towards the given topic,
-along with a brief explanation. In this example, we will analyze a set
-of inaugural speeches to determine their stance on “Climate Change”.</p>
+<code><a href="../../../reference/task_salience.html">task_salience()</a></code> can be used to identify and rank the
+salience of topics discussed in texts. In this example, we will
+demonstrate how to apply this task to a sample corpus of innaugural
+speeches from US presidents.</p>
 <div class="section level3">
 <h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
 </h3>
@@ -114,16 +113,15 @@ of inaugural speeches to determine their stance on “Climate Change”.</p>
 <span><span class="va">data_corpus_inaugural</span> <span class="op">&lt;-</span> <span class="fu">quanteda</span><span class="fu">::</span><span class="va"><a href="https://quanteda.io/reference/data_corpus_inaugural.html" class="external-link">data_corpus_inaugural</a></span><span class="op">[</span><span class="fl">57</span><span class="op">:</span><span class="fl">60</span><span class="op">]</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="using-annotate-for-stance-detection-of-texts">Using <code>annotate()</code> for stance detection of texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-stance-detection-of-texts"></a>
+<h3 id="using-annotate-for-salience-of-any-topics-discussed-in-texts">Using <code>annotate()</code> for salience of ANY topics discussed
+in texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-salience-of-any-topics-discussed-in-texts"></a>
 </h3>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Define topic of interest</span></span>
-<span><span class="va">topic</span> <span class="op">&lt;-</span> <span class="st">"Climate Change"</span></span>
-<span><span class="co"># Apply predefined stance task with task_stance() in the annotate() function</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_stance.html">task_stance</a></span><span class="op">(</span><span class="va">topic</span><span class="op">)</span>, </span>
+<code class="sourceCode R"><span><span class="co"># Apply predefined salience task with task_salience() in the annotate() function</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_salience.html">task_salience</a></span><span class="op">(</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Running task 'Stance detection' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## Running task 'Salience (ranked topics)' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
@@ -142,7 +140,7 @@ of inaugural speeches to determine their stance on “Climate Change”.</p>
 id
 </th>
 <th style="text-align:left;">
-stance
+topics
 </th>
 <th style="text-align:left;">
 explanation
@@ -154,7 +152,6 @@ explanation
 2013-Obama
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -165,7 +162,6 @@ NA
 2017-Trump
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -176,7 +172,6 @@ NA
 2021-Biden
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -187,7 +182,6 @@ NA
 2025-Trump
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -197,32 +191,17 @@ NA
 </table>
 </div>
 <div class="section level3">
-<h3 id="adjusting-the-stance-detection-task">Adjusting the stance detection task<a class="anchor" aria-label="anchor" href="#adjusting-the-stance-detection-task"></a>
+<h3 id="using-annotate-for-salience-of-a-specified-list-of-topics-discussed-in-texts">Using <code>annotate()</code> for salience of a SPECIFIED LIST of
+topics discussed in texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-salience-of-a-specified-list-of-topics-discussed-in-texts"></a>
 </h3>
-<p>You can customize the stance detection task by defining your own task
-with <code><a href="../../../reference/task.html">task()</a></code> (for a more detailed explanation, <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">see
-our “Defining custom tasks” tutorial</a>). For example, you might want
-to include an additional field for confidence level.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">custom_stance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"Custom stance detection"</span>,</span>
-<span>  system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>    <span class="st">"You are an expert annotator. Read each short text carefully and determine its stance towards "</span>,</span>
-<span>    <span class="va">topic</span>,</span>
-<span>    <span class="st">". Classify the stance as Pro, Neutral, or Contra, provide a brief explanation for your classification, and indicate your confidence level from 0 to 1."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  type_def <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    stance <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Stance towards the topic: Pro, Neutral, or Contra"</span><span class="op">)</span>,</span>
-<span>    explanation <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Brief explanation of the classification"</span><span class="op">)</span>,</span>
-<span>    confidence <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="st">"Confidence level from 0 to 1"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  input_type <span class="op">=</span> <span class="st">"text"</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Apply the custom stance task</span></span>
-<span><span class="va">custom_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">custom_stance</span>, </span>
-<span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Running task 'Custom stance detection' using model: gpt-4o</span></span></code></pre>
+<code class="sourceCode R"><span><span class="co"># Define a list of topics to focus on</span></span>
+<span><span class="va">topics</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"economy"</span>, <span class="st">"health"</span>, <span class="st">"education"</span>, <span class="st">"environment"</span>, <span class="st">"foreign policy"</span><span class="op">)</span></span>
+<span><span class="co"># Apply predefined salience task with task_salience() in the annotate() function</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_salience.html">task_salience</a></span><span class="op">(</span><span class="va">topics</span><span class="op">)</span>, </span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Running task 'Salience (ranked topics)' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -230,13 +209,10 @@ to include an additional field for confidence level.</p>
 id
 </th>
 <th style="text-align:left;">
-stance
+topics
 </th>
 <th style="text-align:left;">
 explanation
-</th>
-<th style="text-align:right;">
-confidence
 </th>
 </tr></thead>
 <tbody>
@@ -245,12 +221,8 @@ confidence
 2013-Obama
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
 NA
 </td>
 </tr>
@@ -259,12 +231,8 @@ NA
 2017-Trump
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
 NA
 </td>
 </tr>
@@ -273,12 +241,8 @@ NA
 2021-Biden
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
 NA
 </td>
 </tr>
@@ -287,39 +251,58 @@ NA
 2025-Trump
 </td>
 <td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:right;">
 NA
 </td>
 </tr>
 </tbody>
 </table>
-<p>Or, you might want the LLM to extract specific arguments supporting
-the stance.</p>
+</div>
+<div class="section level3">
+<h3 id="adjusting-the-task_salience-so-it-also-returns-the-stance-for-each-topic">Adjusting the task_salience() so it also returns the stance for each
+topic<a class="anchor" aria-label="anchor" href="#adjusting-the-task_salience-so-it-also-returns-the-stance-for-each-topic"></a>
+</h3>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">argument_stance</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"Argument-based stance detection"</span>,</span>
-<span>  system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>    <span class="st">"You are an expert annotator. Read each short text carefully and determine its stance towards "</span>,</span>
-<span>    <span class="va">topic</span>,</span>
-<span>    <span class="st">". Classify the stance as Pro, Neutral, or Contra, provide a brief explanation for your classification, and list up to three key arguments supporting the stance."</span></span>
+<code class="sourceCode R"><span><span class="co"># Customizing the task to include the stance for each topic</span></span>
+<span><span class="va">custom_task</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Salience and stance of topics"</span>,</span>
+<span>  system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>    <span class="st">"You are an expert analysing the content of texts."</span>,</span>
+<span>    <span class="st">""</span>,</span>
+<span>    <span class="st">"Task:"</span>,</span>
+<span>    <span class="st">"- Read the text carefully."</span>,</span>
+<span>    <span class="st">"- Identify and rank the salience of the following topics: economy, health, education, environment, foreign policy."</span>,</span>
+<span>    <span class="st">"- For each topic mentioned, assign a stance as one of the following:"</span>,</span>
+<span>    <span class="st">"  pro, neutral, or contra."</span>,</span>
+<span>    <span class="st">"- Append the stance directly after each topic name in the form 'topic: stance'."</span>,</span>
+<span>    <span class="st">"- Return all topic:stance entries in descending order of salience."</span>,</span>
+<span>    <span class="st">"- Separate entries with commas when presenting them in a list."</span>,</span>
+<span>    <span class="st">""</span>,</span>
+<span>    <span class="st">"Do not infer information that is not in the text."</span>,</span>
+<span>    <span class="st">"Base all evaluations solely on the language and arguments in the document."</span>,</span>
+<span>    <span class="st">""</span>,</span>
+<span>    <span class="st">"Output:"</span>,</span>
+<span>    <span class="st">"- `topic_stance`: a ranked list of topic labels with stance labels appended (e.g., 'economy: pro', 'health: contra')."</span>,</span>
+<span>    <span class="st">"- `explanation`: a brief justification explaining why the topics were ordered and how stance was determined."</span>,</span>
+<span>    sep <span class="op">=</span> <span class="st">"\n"</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  type_def <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    stance <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Stance towards the topic: Pro, Neutral, or Contra"</span><span class="op">)</span>,</span>
-<span>    explanation <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Brief explanation of the classification"</span><span class="op">)</span>,</span>
-<span>    arguments <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Key arguments supporting the stance"</span><span class="op">)</span></span>
+<span>    topic_stance <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array</a></span><span class="op">(</span></span>
+<span>      <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Topic and stance label combined (e.g., 'economy: pro'), ranked by salience."</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    explanation <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Brief justification for the salience ordering and stance classification."</span></span>
+<span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  input_type <span class="op">=</span> <span class="st">"text"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co"># Apply the argument-based stance task</span></span>
-<span><span class="va">argument_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">argument_stance</span>, </span>
-<span>                            chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                            api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Running task 'Argument-based stance detection' using model: gpt-4o</span></span></code></pre>
+<span></span>
+<span><span class="co"># Apply the customized task in the annotate() function</span></span>
+<span><span class="va">custom_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">custom_task</span>, </span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Running task 'Salience and stance of topics' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -327,13 +310,10 @@ the stance.</p>
 id
 </th>
 <th style="text-align:left;">
-stance
+topic_stance
 </th>
 <th style="text-align:left;">
 explanation
-</th>
-<th style="text-align:left;">
-arguments
 </th>
 </tr></thead>
 <tbody>
@@ -342,10 +322,6 @@ arguments
 2013-Obama
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -356,10 +332,6 @@ NA
 2017-Trump
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -370,10 +342,6 @@ NA
 2021-Biden
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -384,10 +352,6 @@ NA
 2025-Trump
 </td>
 <td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
 </td>
 <td style="text-align:left;">
 NA
@@ -395,12 +359,13 @@ NA
 </tr>
 </tbody>
 </table>
-<p>In this example, we demonstrated how to use the <code>stance()</code>
-task for stance detection on texts regarding “Climate Change”. We also
-showed how to customize the task to include additional fields such as
-confidence level and key arguments supporting the stance. Now it is your
-turn to explore stance detection with your own texts and topics of
-interest!</p>
+<p>In this example, we demonstrated how to use the
+<code><a href="../../../reference/task_salience.html">task_salience()</a></code> for identifying and ranking topics
+discussed in texts, both with and without a predefined list of topics.
+Additionally, we showed how to customize the task to include stance
+classification for each topic. This showcases the flexibility of the
+<code><a href="../../../reference/annotate.html">annotate()</a></code> function and the <code>task</code> framework in
+<code>quallmer</code> for various text analysis tasks.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

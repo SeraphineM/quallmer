@@ -46,12 +46,15 @@
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
-<li class="nav-item dropdown">
+<li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-predefined-tasks" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Predefined tasks</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/sentiment.html">Sentiment analysis</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/stance.html">Stance detection / position taking</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_sentiment.html">Sentiment analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_stance.html">Stance detection / position taking</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_ideology.html">Ideological scaling</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_salience.html">Salience of topics</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/task_fact.html">Fact-checking</a></li>
   </ul>
 </li>
       </ul>
@@ -82,13 +85,13 @@
     
     
 <p>The <code><a href="../../../reference/annotate.html">annotate()</a></code> function with a predefined
-<code><a href="../../../reference/task_ideology.html">task_ideology()</a></code> task allows you to perform ideological
-scaling (0-10) on texts regarding a specified ideological dimension. In
-this example, we will demonstrate how to use the
-<code><a href="../../../reference/task_ideology.html">task_ideology()</a></code> for ideology detection on a sample corpus
-of innaugural speeches from U.S. presidents. We will use the dimension
-“inclusive–exclusive” as an example. To refine the task, we will also
-provide a definition of the dimension (optional).</p>
+<code><a href="../../../reference/task_ideology.html">task_ideology()</a></code> allows you to perform ideological scaling
+(0-10) on texts regarding a specified ideological dimension. In this
+example, we will demonstrate how to use the <code><a href="../../../reference/task_ideology.html">task_ideology()</a></code>
+for ideology detection on a sample corpus of innaugural speeches from
+U.S. presidents. We will use the dimension “inclusive–exclusive” as an
+example. To refine the task, we will also provide a definition of the
+dimension (optional).</p>
 <div class="section level3">
 <h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
 </h3>
@@ -223,7 +226,7 @@ to change the scale from 0-10 to -5 to +5.</p>
 <span>    <span class="op">)</span>,</span>
 <span>    input_type <span class="op">=</span> <span class="st">"text"</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="co"># Apply the custom stance task</span></span>
+<span><span class="co"># Apply the custom task</span></span>
 <span><span class="va">custom_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">custom_ideology</span>, </span>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>

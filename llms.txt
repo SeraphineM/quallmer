@@ -102,8 +102,12 @@ tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.
   : Apply an annotation task to input data
 - [`task()`](https://seraphinem.github.io/quallmer/reference/task.md) :
   Define an annotation task
+- [`task_fact()`](https://seraphinem.github.io/quallmer/reference/task_fact.md)
+  : Predefined task for overall truthfulness assessment
 - [`task_ideology()`](https://seraphinem.github.io/quallmer/reference/task_ideology.md)
   : Predefined task for ideological scaling on a specified dimension
+- [`task_salience()`](https://seraphinem.github.io/quallmer/reference/task_salience.md)
+  : Predefined task for salience of topics discussed (ranked topics)
 - [`task_sentiment()`](https://seraphinem.github.io/quallmer/reference/task_sentiment.md)
   : Predefined task for sentiment analysis
 - [`task_stance()`](https://seraphinem.github.io/quallmer/reference/task_stance.md)
@@ -127,8 +131,12 @@ tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.
   tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.md):
 - [Using predefined
   tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/predefined.md):
+- [Example: Fact checking of
+  claims](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_fact.md):
 - [Example: Ideology
   detection](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_ideology.md):
+- [Example: Salience of
+  topics](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_salience.md):
 - [Example: Sentiment
   analysis](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_sentiment.md):
 - [Example: Stance

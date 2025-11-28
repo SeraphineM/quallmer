@@ -4,8 +4,8 @@ The
 [`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
 function with a predefined
 [`task_ideology()`](https://seraphinem.github.io/quallmer/reference/task_ideology.md)
-task allows you to perform ideological scaling (0-10) on texts regarding
-a specified ideological dimension. In this example, we will demonstrate
+allows you to perform ideological scaling (0-10) on texts regarding a
+specified ideological dimension. In this example, we will demonstrate
 how to use the
 [`task_ideology()`](https://seraphinem.github.io/quallmer/reference/task_ideology.md)
 for ideology detection on a sample corpus of innaugural speeches from
@@ -110,7 +110,7 @@ custom_ideology <- task(
     ),
     input_type = "text"
   )
-# Apply the custom stance task
+# Apply the custom task
 custom_result <- annotate(data_corpus_inaugural, task = custom_ideology, 
                           chat_fn = chat_openai, model = "gpt-4o",
                           api_args = list(temperature = 0, seed = 42))

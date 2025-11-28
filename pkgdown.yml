@@ -9,10 +9,12 @@ articles:
   pkgdown/tutorials/openai: pkgdown/tutorials/openai.html
   pkgdown/examples/overview: pkgdown/examples/overview.html
   pkgdown/tutorials/predefined: pkgdown/tutorials/predefined.html
+  pkgdown/examples/task_fact: pkgdown/examples/task_fact.html
   pkgdown/examples/task_ideology: pkgdown/examples/task_ideology.html
+  pkgdown/examples/task_salience: pkgdown/examples/task_salience.html
   pkgdown/examples/task_sentiment: pkgdown/examples/task_sentiment.html
   pkgdown/examples/task_stance: pkgdown/examples/task_stance.html
-last_built: 2025-11-28T00:39Z
+last_built: 2025-11-28T02:15Z
 urls:
   reference: https://seraphinem.github.io/quallmer/reference
   article: https://seraphinem.github.io/quallmer/articles

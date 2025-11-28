@@ -16,8 +16,12 @@
   tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.md):
 - [Using predefined
   tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/predefined.md):
+- [Example: Fact checking of
+  claims](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_fact.md):
 - [Example: Ideology
   detection](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_ideology.md):
+- [Example: Salience of
+  topics](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_salience.md):
 - [Example: Sentiment
   analysis](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/task_sentiment.md):
 - [Example: Stance

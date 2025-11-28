@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Defining custom tasks • quallmer</title>
+<title>Example: Fact checking of claims • quallmer</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../../../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../../../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../../../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../../../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../../../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../../../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Defining custom tasks">
+<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Fact checking of claims">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -34,7 +34,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="active nav-item dropdown">
+<li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
 <li><a class="dropdown-item" href="../../../articles/getting-started.html">Quick start guide</a></li>
@@ -46,7 +46,7 @@
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
-<li class="nav-item dropdown">
+<li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-predefined-tasks" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Predefined tasks</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-predefined-tasks">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/overview.html">Overview of predefined tasks</a></li>
@@ -72,31 +72,22 @@
 
 
 
-<script src="customtask_files/kePrint-0.0.1/kePrint.js"></script><link href="customtask_files/lightable-0.0.1/lightable.css" rel="stylesheet">
+<script src="task_fact_files/kePrint-0.0.1/kePrint.js"></script><link href="task_fact_files/lightable-0.0.1/lightable.css" rel="stylesheet">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../../../logo.png" class="logo" alt=""><h1>Defining custom tasks</h1>
+      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Fact checking of claims</h1>
             
       
 
-      <div class="d-none name"><code>customtask.Rmd</code></div>
+      <div class="d-none name"><code>task_fact.Rmd</code></div>
     </div>
 
     
     
-<p>In this tutorial, we will explore how to create custom annotation
-tasks using the <code>quallmer</code> package. Custom tasks allow you to
-tailor the LLM’s output to your specific research questions and data
-types using the <code><a href="../../../reference/task.html">task()</a></code> function, providing greater
-flexibility and control over the annotation process.</p>
-<p>In the following example, we will demonstrate how to define a custom
-task for scoring documents based on their alignment with political left
-ideologies. For this, we formulate a prompt that asks the LLM to score
-documents on a scale of political left alignment. We then define the
-expected response structure using the <code><a href="../../../reference/task.html">task()</a></code> function.
-Finally, we will use the <code><a href="../../../reference/annotate.html">annotate()</a></code> function to apply this
-custom task to a sample corpus of inaugural speeches from US
-presidents.</p>
+<p>The <code><a href="../../../reference/annotate.html">annotate()</a></code> function with a predefined
+<code><a href="../../../reference/task_fact.html">task_fact()</a></code> can be used to fact-check claims made in texts.
+In this example, we will demonstrate how to apply this task to a sample
+corpus of innaugural speeches from US presidents.</p>
 <div class="section level3">
 <h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
 </h3>
@@ -121,76 +112,15 @@ presidents.</p>
 <span><span class="va">data_corpus_inaugural</span> <span class="op">&lt;-</span> <span class="fu">quanteda</span><span class="fu">::</span><span class="va"><a href="https://quanteda.io/reference/data_corpus_inaugural.html" class="external-link">data_corpus_inaugural</a></span><span class="op">[</span><span class="fl">57</span><span class="op">:</span><span class="fl">60</span><span class="op">]</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="defining-a-custom-prompt">Defining a custom prompt<a class="anchor" aria-label="anchor" href="#defining-a-custom-prompt"></a>
+<h3 id="using-annotate-for-fact-checking-of-claims-in-texts">Using <code>annotate()</code> for fact checking of claims in
+texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checking-of-claims-in-texts"></a>
 </h3>
-<p>Defining prompts is a crucial step in creating custom tasks. The
-prompt guides the LLM on how to interpret the input data and what kind
-of output to generate. In this example, we will create a prompt that
-instructs the LLM to score documents based on their alignment with
-political left ideologies. Prompts can be much longer and more complex
-depending on the task at hand. Prompts should be clear and specific to
-ensure that the LLM understands the task requirements.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prompt</span> <span class="op">&lt;-</span> <span class="st">"Score the following document on a scale of how much it aligns</span></span>
-<span><span class="st">with the political left. The political left is defined as groups which</span></span>
-<span><span class="st">advocate for social equality, government intervention in the economy,</span></span>
-<span><span class="st">and progressive policies. Use the following metrics:</span></span>
-<span><span class="st">SCORING METRIC:</span></span>
-<span><span class="st">3 : extremely left</span></span>
-<span><span class="st">2 : very left</span></span>
-<span><span class="st">1 : slightly left</span></span>
-<span><span class="st">0 : not at all left"</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="defining-the-structure-of-the-response-with-define_task">Defining the structure of the response with define_task()<a class="anchor" aria-label="anchor" href="#defining-the-structure-of-the-response-with-define_task"></a>
-</h3>
-<p>The <code><a href="../../../reference/task.html">task()</a></code> function allows us to specify the expected
-structure of the LLM’s response. It has the following important
-arguments which users need to specify:</p>
-<ul>
-<li>
-<code>name</code>: A descriptive name for the task.</li>
-<li>
-<code>system_prompt</code>: The prompt that guides the LLM on how to
-perform the task.</li>
-<li>
-<code>type_def</code>: Defines the expected structure of the
-response using <a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">ellmers
-type specifications</a> such as <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code>,
-<code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code>, etc.</li>
-</ul>
-<p>For more information on how to use ellmer’s type specifications,
-please refer to the <a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">ellmer
-documentation on type specifications</a>.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Define the custom task using task()</span></span>
-<span><span class="va">ideology_scores</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"Score Political Left Alignment"</span>,</span>
-<span>  system_prompt <span class="op">=</span> <span class="va">prompt</span>,</span>
-<span>  type_def <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    score <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_number</a></span><span class="op">(</span><span class="st">"Score"</span><span class="op">)</span>,</span>
-<span>    explanation <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Explanation"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  input_type <span class="op">=</span> <span class="st">"text"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="applying-the-custom-task-to-the-corpus">Applying the custom task to the corpus<a class="anchor" aria-label="anchor" href="#applying-the-custom-task-to-the-corpus"></a>
-</h3>
-<p>This step is similar to applying predefined tasks using the
-<code><a href="../../../reference/annotate.html">annotate()</a></code> function. Here, we will use the
-<code><a href="../../../reference/annotate.html">annotate()</a></code> function to apply our custom task to the sample
-corpus of inaugural speeches. We will specify the LLM to use (in this
-case, openai’s gpt-4o model) and any additional API arguments as needed.
-For example, we set the temperature to 0 for more deterministic outputs,
-improving consistency in scoring across multiple runs and therefore
-increasing reliability.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Apply the custom task to the inaugural speeches corpus</span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="va">ideology_scores</span>,</span>
+<code class="sourceCode R"><span><span class="co"># Apply predefined fact checking task with task_fact() in the annotate() function</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_fact.html">task_fact</a></span><span class="op">(</span><span class="op">)</span>, </span>
 <span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## Running task 'Overall truthfulness assessment' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Attaching package: 'dplyr'</span></span></code></pre>
@@ -209,7 +139,10 @@ increasing reliability.</p>
 id
 </th>
 <th style="text-align:right;">
-score
+truth_score
+</th>
+<th style="text-align:left;">
+misleading
 </th>
 <th style="text-align:left;">
 explanation
@@ -224,6 +157,8 @@ explanation
 NA
 </td>
 <td style="text-align:left;">
+</td>
+<td style="text-align:left;">
 NA
 </td>
 </tr>
@@ -233,6 +168,8 @@ NA
 </td>
 <td style="text-align:right;">
 NA
+</td>
+<td style="text-align:left;">
 </td>
 <td style="text-align:left;">
 NA
@@ -246,6 +183,8 @@ NA
 NA
 </td>
 <td style="text-align:left;">
+</td>
+<td style="text-align:left;">
 NA
 </td>
 </tr>
@@ -257,14 +196,95 @@ NA
 NA
 </td>
 <td style="text-align:left;">
+</td>
+<td style="text-align:left;">
 NA
 </td>
 </tr>
 </tbody>
 </table>
-<p>Now you have successfully created and applied a custom annotation
-task using the <code>quallmer</code> package! You can further modify the
-prompt and response structure to suit your specific research needs.</p>
+</div>
+<div class="section level3">
+<h3 id="using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check">Using <code>annotate()</code> for fact checking with a specific
+number of claims to check<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check"></a>
+</h3>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Apply predefined fact checking task with task_fact() in the annotate() function</span></span>
+<span><span class="va">result_claims</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_fact.html">task_fact</a></span><span class="op">(</span>max_topics <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, </span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span>, seed <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Running task 'Overall truthfulness assessment' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: 4 requests errored.</span></span></code></pre>
+<table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
+<thead><tr>
+<th style="text-align:left;">
+id
+</th>
+<th style="text-align:right;">
+truth_score
+</th>
+<th style="text-align:left;">
+misleading
+</th>
+<th style="text-align:left;">
+explanation
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2013-Obama
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2017-Trump
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2021-Biden
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2025-Trump
+</td>
+<td style="text-align:right;">
+NA
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+NA
+</td>
+</tr>
+</tbody>
+</table>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
