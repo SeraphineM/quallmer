@@ -34,12 +34,12 @@ result <- annotate(data_corpus_inaugural, task = task_fact(),
                    api_args = list(temperature = 0, seed = 42))
 ```
 
-```{r display_results, echo = FALSE}
+```{r display_results, echo = FALSE, warning=FALSE}
 # results table
 library(kableExtra)
 library(dplyr)
 result <- result %>%
-  dplyr::select(id, truth_score, misleading, explanation)
+  dplyr::select(id, truth_score, misleading_topic, explanation)
 result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
@@ -53,14 +53,16 @@ result_claims <- annotate(data_corpus_inaugural, task = task_fact(max_topics = 3
                    chat_fn = chat_openai, model = "gpt-4o",
                    api_args = list(temperature = 0, seed = 42))
 ```
-```{r display_results2, echo = FALSE}
+```{r display_results2, echo = FALSE, warning=FALSE}
 # results table
 library(kableExtra)
 library(dplyr)
 result_claims <- result_claims %>%
-  dplyr::select(id, truth_score, misleading, explanation)
+  dplyr::select(id, truth_score, misleading_topic, explanation)
 result_claims %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
   column_spec(3)
 ```
+
+In this example, we demonstrated how to use the `annotate()` function with the `task_fact()` to fact-check claims in a corpus of innaugural speeches. The results include a truth score, identified misleading topics, and explanations for each claim evaluated. The amount of claims to check can be adjusted using the `max_topics` parameter in the `task_fact()` function. Now you can apply this approach to your own texts for fact-checking purposes!

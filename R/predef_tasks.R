@@ -193,7 +193,7 @@ task_fact <- function(max_topics = 5) {
     truth_score = ellmer::type_integer(
       "Overall truthfulness and accuracy score from 0 (almost completely false or highly misleading) to 10 (highly accurate and truthful)."
     ),
-    misleading = ellmer::type_array(
+    misleading_topic = ellmer::type_array(
       ellmer::type_string(
         paste0(
           "Topics, issues, or themes that reduce confidence in the truthfulness of the text (up to ",
@@ -207,7 +207,7 @@ task_fact <- function(max_topics = 5) {
   )
 
   task(
-    name = "Overall truthfulness assessment",
+    name = "Fact-checking",
     system_prompt = paste0(system_prompt, topics_text),
     type_def = type_def,
     input_type = "text"
