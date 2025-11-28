@@ -41,9 +41,6 @@ result <- annotate(data_corpus_inaugural, task = task_ideology(dimension, defini
 ```{r display_results, echo = FALSE}
 # results table
 library(kableExtra)
-library(dplyr)
-result <- result %>%
-  dplyr::select(id, score, explanation)
 result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
@@ -77,9 +74,6 @@ custom_result <- annotate(data_corpus_inaugural, task = custom_ideology,
 ```{r display_results_custom, echo = FALSE}
 # custom results table
 library(kableExtra)
-library(dplyr)
-custom_result <- custom_result %>%
-  dplyr::select(id, score, explanation)
 custom_result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%

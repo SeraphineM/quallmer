@@ -37,9 +37,6 @@ result <- annotate(data_corpus_inaugural, task = task_stance(topic),
 ```{r display_results, echo = FALSE}
 # stance detection results table
 library(kableExtra)
-library(dplyr)
-result <- result %>%
-  dplyr::select(id, stance, explanation)
 result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
@@ -71,9 +68,6 @@ custom_result <- annotate(data_corpus_inaugural, task = custom_stance,
 ```{r display_results_custom, echo = FALSE}
 # custom stance detection results table
 library(kableExtra)
-library(dplyr)
-custom_result <- custom_result %>%
-  dplyr::select(id, stance, explanation, confidence)
 custom_result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
@@ -103,9 +97,6 @@ argument_result <- annotate(data_corpus_inaugural, task = argument_stance,
 ```{r display_results_argument, echo = FALSE}
 # argument-based stance detection results table
 library(kableExtra)
-library(dplyr)
-argument_result <- argument_result %>%
-  dplyr::select(id, stance, explanation, arguments)
 argument_result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
