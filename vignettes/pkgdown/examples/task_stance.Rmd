@@ -39,7 +39,7 @@ result <- annotate(data_corpus_inaugural, task = task_stance(topic),
 library(kableExtra)
 library(dplyr)
 result <- result %>%
-  dplyr::select(id, score, explanation)
+  dplyr::select(id, stance, explanation)
 result %>%
   kable("html", escape = FALSE) %>%
   kable_styling(bootstrap_options = c("striped", "hover")) %>%
