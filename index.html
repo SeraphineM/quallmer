@@ -82,7 +82,7 @@
 <!-- badges: start -->
 
 <p>The <code>quallmer</code> package is an <strong>easy-to-use toolbox for qualitative researchers to quickly apply AI-assisted annotation to texts, images, pdfs, tabular data and other structured data.</strong></p>
-<p>Using <code><a href="reference/annotate.html">annotate()</a></code>, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html">predefined tasks for common qualitative coding needs</a>, such as sentiment analysis, thematic coding, and stance detection. It also allows users to <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">create their own custom annotation tasks tailored to their specific research questions and data types</a> using <code><a href="reference/task.html">task()</a></code>. To ensure quality and reliability of AI-generated annotations, <code>quallmer</code> offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With <code>agreement()</code>, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.</p>
+<p>Using <code><a href="reference/annotate.html">annotate()</a></code>, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html">predefined tasks for common qualitative coding needs</a>, such as sentiment analysis, thematic coding, and stance detection. It also allows users to <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">create their own custom annotation tasks tailored to their specific research questions and data types</a> using <code><a href="reference/task.html">task()</a></code>. To ensure quality and reliability of AI-generated annotations, <code>quallmer</code> offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With <code><a href="reference/agreement.html">agreement()</a></code>, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.</p>
 <p><strong>The <code>quallmer</code> package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.</strong></p>
 </div>
 <div class="section level1">
@@ -121,9 +121,18 @@
 <ul>
 <li>Manually code data</li>
 <li>Review and validate LLM-generated annotations</li>
-<li>Compare human-coded data with LLM-generated annotations to evaluate agreement and inter-coder reliability.</li>
+<li>Compare human-coded data with LLM-generated annotations to evaluate agreement and inter-coder reliability with various metrics (e.g., Krippendorff’s alpha, Cohen’s or Fleiss’ kappa).</li>
 </ul>
 </li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="agreement">
+<code>agreement()</code><a class="anchor" aria-label="anchor" href="#agreement"></a>
+</h3>
+<ul>
+<li>Calculates intercoder reliability scores (e.g., Krippendorff’s alpha and Cohen’s or Fleiss’ kappa) between multiple human coders or between human coders and LLM-generated annotations.</li>
+<li>Works similar to the Agreement App but can be used programmatically without launching the app.</li>
 </ul>
 </div>
 </div>

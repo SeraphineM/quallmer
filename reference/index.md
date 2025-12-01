@@ -2,6 +2,8 @@
 
 ## All functions
 
+- [`agreement()`](https://seraphinem.github.io/quallmer/reference/agreement.md)
+  : Compute intercoder reliability statistics
 - [`agreement_app()`](https://seraphinem.github.io/quallmer/reference/agreement_app.md)
   : Launch the Agreement App
 - [`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
