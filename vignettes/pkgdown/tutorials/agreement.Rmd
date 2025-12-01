@@ -3,7 +3,7 @@ title: "Using the Agreement App"
 output: html_document
 ---
 
-Our `quallmer` package includes the Agreement App, a user-friendly interface that allows researchers to manually code data, review LLM-generated annotations, and calculate intercoder reliability scores such as Krippendorff's alpha and Fleiss' kappa. This tutorial will guide you through the steps of using the Agreement App effectively.
+Our `quallmer` package includes the Agreement App, a user-friendly interface that allows researchers to manually code data, review LLM-generated annotations, and calculate intercoder reliability scores such as Krippendorff's alpha and Fleiss' kappa. This tutorial will guide you through the steps of using the Agreement App effectively. If you prefer to work programmatically, we also provide instructions on how to calculate agreement scores by simply using the `agreement()` function at the end of this tutorial.
 
 ## Launching the Agreement App
 To launch the Agreement App, you can use the `agreement_app()` function from the `quallmer` package. Make sure you have the package loaded in your R environment. Then, simply call the `agreement_app()` function. This will open the Agreement App in a new window or tab in your web browser.
@@ -20,11 +20,28 @@ If you have previously used the `quallmer` package to generate annotations using
 
 ![](pics/llm.png)
 
-## Calculating agreement scores such as Krippendorff's alpha or Fleiss' kappa
 
-After completing the manual coding and reviewing the LLM-generated annotations, the Agreement App provides functionality to calculate intercoder reliability scores. You can choose from various metrics, such as Krippendorff's alpha or Fleiss' kappa, to assess the agreement between different coders or between your manual codes and the LLM annotations or, as shown below, between multiple LLM runs.
-
-![](pics/reliab.png){width=40%}
-
+## Saving your coding decisions
 
 The app provides an intuitive interface for navigating through the data and making coding decisions. **All your coding decisions will be saved automatically, you find it in a newly created folder named "agreement" in your working directory.**
+
+
+## Calculating agreement scores
+
+After completing the manual coding and reviewing the LLM-generated annotations, the Agreement App provides functionality to calculate intercoder reliability scores. You can choose from various metrics, such as Krippendorff's alpha, Cohen's or Fleiss' kappa, to assess the agreement between different coders or between your manual codes and the LLM annotations or, as shown below, between multiple LLM runs. The app also provides some interpretation guidelines to help you understand the results.
+
+![](pics/reliab.png){width=70%}
+
+## Calculating agreement scores without the App
+
+In addition to using the Agreement App, you can also calculate agreement scores programmatically using the `agreement()` function from the `quallmer` package. This function allows you to specify your dataset, the column containing unit IDs, and the columns containing coder annotations. Here's an example of how to use the `agreement()` function:
+
+```.r
+results <- agreement(
+  data        = your_data,
+  unit_id_col = "doc_id",
+  coder_cols  = c("coder1", "coder2", "llm_run1", "llm_run2")
+)
+results
+```
+This will return the calculated agreement scores based on the specified coders or LLM runs.

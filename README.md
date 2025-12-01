@@ -69,7 +69,16 @@ The package provides the following core functions:
   - Manually code data
   - Review and validate LLM-generated annotations
   - Compare human-coded data with LLM-generated annotations to evaluate
-    agreement and inter-coder reliability.
+    agreement and inter-coder reliability with various metrics (e.g.,
+    Krippendorff’s alpha, Cohen’s or Fleiss’ kappa).
+
+### `agreement()`
+
+- Calculates intercoder reliability scores (e.g., Krippendorff’s alpha
+  and Cohen’s or Fleiss’ kappa) between multiple human coders or between
+  human coders and LLM-generated annotations.
+- Works similar to the Agreement App but can be used programmatically
+  without launching the app.
 
 # Supported LLMs
 
