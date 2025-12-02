@@ -138,8 +138,8 @@ explanation
 0.9
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a very positive sentiment, indicating
-happiness or satisfaction.
+The sentiment is very positive due to the use of the word ‘wonderful,’
+which expresses strong approval and delight.
 </td>
 </tr>
 <tr>
@@ -163,7 +163,7 @@ approach.
 </td>
 <td style="text-align:left;">
 The word ‘disappointing’ indicates a negative sentiment, though
-‘somewhat’ suggests it’s not extremely negative.
+‘somewhat’ softens it slightly.
 </td>
 </tr>
 <tr>
@@ -174,8 +174,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 0.9
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using strong words like ‘absolutely’ and
-‘fantastic’ to express admiration and approval.
+The phrase is highly positive, using strong words like “absolutely” and
+“fantastic” to express admiration and approval.
 </td>
 </tr>
 </tbody>
@@ -205,6 +205,8 @@ confidence level.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Custom sentiment analysis' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -259,7 +261,7 @@ approach.
 </td>
 <td style="text-align:left;">
 The word ‘disappointing’ indicates a negative sentiment, though
-‘somewhat’ softens it slightly.
+‘somewhat’ suggests it’s not extremely negative.
 </td>
 <td style="text-align:right;">
 0.90
@@ -273,8 +275,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 0.9
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using strong positive adjectives like
-‘absolutely fantastic.’
+The phrase “Absolutely fantastic work!” is highly positive, expressing
+strong approval and admiration.
 </td>
 <td style="text-align:right;">
 0.95
@@ -284,7 +286,7 @@ The phrase is highly positive, using strong positive adjectives like
 </table>
 <p>Or, you might want to change the scoring scale to a 5-point Likert
 scale.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">likert_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Likert scale sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text on a scale from 1 (very negative) to 5 (very positive) and briefly explain why."</span>,</span>
@@ -299,8 +301,6 @@ scale.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Likert scale sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -323,7 +323,7 @@ explanation
 </td>
 <td style="text-align:left;">
 The word ‘wonderful’ conveys a very positive sentiment, indicating
-delight or admiration.
+happiness or satisfaction.
 </td>
 </tr>
 <tr>
@@ -358,8 +358,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 5
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using words like ‘absolutely’ and
-‘fantastic’ to express strong approval and admiration.
+The phrase “Absolutely fantastic work!” is highly positive, expressing
+strong approval and admiration.
 </td>
 </tr>
 </tbody>

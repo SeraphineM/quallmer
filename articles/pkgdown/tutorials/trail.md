@@ -214,7 +214,7 @@ meta_df %>%
 
 | Field        | Value                                                  |
 |:-------------|:-------------------------------------------------------|
-| timestamp    | 2025-12-02 00:38:40.891699                             |
+| timestamp    | 2025-12-02 00:42:03.678869                             |
 | n_rows       | 4                                                      |
 | provider     | openai                                                 |
 | model        | gpt-4.1-mini                                           |
@@ -266,8 +266,6 @@ id_col = "doc_id"
     ## Running task 'Score Political Left Alignment' using model: gpt-4o
 
     ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
-
-    ## [working] (0 + 0) -> 1 -> 3 | ■■■■■■■■■■■■■■■■■■■■■■■           75%
 
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 

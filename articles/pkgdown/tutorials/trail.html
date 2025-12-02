@@ -282,7 +282,7 @@ Value
 timestamp
 </td>
 <td style="text-align:left;">
-2025-12-02 00:38:40.891699
+2025-12-02 00:42:03.678869
 </td>
 </tr>
 <tr>
@@ -411,7 +411,6 @@ to see how different configurations impact the LLM’s outputs.</p>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 </div>
 <div class="section level2">
@@ -420,7 +419,7 @@ to see how different configurations impact the LLM’s outputs.</p>
 <p>This step combines the outputs from the different trails into a
 matrix format, where each row represents a document and each column
 represents the output from a specific trail.</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">trail_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/trail_matrix.html">trail_matrix</a></span><span class="op">(</span></span>
 <span>x <span class="op">=</span> <span class="va">left_trails</span>,</span>
 <span>id_col <span class="op">=</span> <span class="st">"doc_id"</span>,</span>
@@ -443,7 +442,7 @@ represents the output from a specific trail.</p>
 <p>This step assesses the stability and reliability of the LLM-generated
 annotations across the different trails using intercoder reliability
 metrics.</p>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">trail_icr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/trail_agreement.html">trail_agreement</a></span><span class="op">(</span></span>
 <span>x <span class="op">=</span> <span class="va">left_trails</span>,</span>
 <span>id_col <span class="op">=</span> <span class="st">"doc_id"</span>,</span>
