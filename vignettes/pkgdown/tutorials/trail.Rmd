@@ -121,7 +121,7 @@ rec_T0 <- trail_record(
 data = data_corpus_inaugural,
 text_col = "text",
 task = ideology_scores,
-setting = setting_T0,
+setting = setting_gptmini0,
 id_col = "doc_id"
 )
 

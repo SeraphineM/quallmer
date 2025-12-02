@@ -53,7 +53,7 @@ The package provides the following core functions:
 - Calculates intercoder reliability scores (e.g., Krippendorff's alpha and Cohen's or Fleiss' kappa) between multiple human coders or between human coders and LLM-generated annotations.
 - Works similar to the Agreement App but can be used programmatically without launching the app.
 
-# EXTRA: The `quallmer` trail
+# EXTRA: The `quallmer` trail <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><img src="man/figures/paw.png" align="center" height="100" alt="quallmer website" /></a>
 
 Apart from the core functions above, the `quallmer` package also provides a set of functions to ensure reproducibility and reliability of LLM-generated annotations through **systematic comparisons across multiple LLM runs with different settings.** This "trail" functionality adds a reproducibility layer on top of `annotate()` with the following workflow:
 
