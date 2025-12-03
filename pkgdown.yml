@@ -15,7 +15,7 @@ articles:
   pkgdown/examples/task_sentiment: pkgdown/examples/task_sentiment.html
   pkgdown/examples/task_stance: pkgdown/examples/task_stance.html
   pkgdown/tutorials/trail: pkgdown/tutorials/trail.html
-last_built: 2025-12-02T00:40Z
+last_built: 2025-12-03T06:02Z
 urls:
   reference: https://seraphinem.github.io/quallmer/reference
   article: https://seraphinem.github.io/quallmer/articles

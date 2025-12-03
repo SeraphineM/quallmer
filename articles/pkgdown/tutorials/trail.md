@@ -134,19 +134,20 @@ temperature = 0.7
 )
 ```
 
-## Run a single trail with a specific setting
+## Record a single trail with a specific setting
 
 We can use the
 [`trail_record()`](https://seraphinem.github.io/quallmer/reference/trail_record.md)
-function to run a single trail with a specific setting. This is useful
-for ensuring reproducibility of results with a given configuration. The
-example below shows how to run a trail using the `setting_T0` defined
-earlier. The result of this function is a data frame containing the
-LLM-generated annotations for each document in the dataset as well as
-the associated metadata such as the setting used, the task, the data,
-timestamp, etc. You can save this output for future reference to ensure
-that you can reproduce the results later. You can also share this output
-with others to allow them to verify your findings.
+function to record a single trail with a specific setting. This is
+useful for ensuring reproducibility of results with a given
+configuration. The example below shows how to record metadata for a
+trail using the `setting_T0` defined earlier. The result of this
+function is a data frame containing the LLM-generated annotations for
+each document in the dataset as well as the associated metadata such as
+the setting used, the task, the data, timestamp, etc. You can save this
+output for future reference to ensure that you can reproduce the results
+later. You can also share this output with others to allow them to
+verify your findings.
 
 ``` r
 rec_T0 <- trail_record(
@@ -214,7 +215,7 @@ meta_df %>%
 
 | Field        | Value                                                  |
 |:-------------|:-------------------------------------------------------|
-| timestamp    | 2025-12-02 00:42:03.678869                             |
+| timestamp    | 2025-12-03 06:03:42.213851                             |
 | n_rows       | 4                                                      |
 | provider     | openai                                                 |
 | model        | gpt-4.1-mini                                           |
@@ -327,8 +328,9 @@ reliability and stability of the annotations.
 
 Overall, the trail functionality in the `quallmer` package provides a
 systematic way to assess the reproducibility and reliability of
-LLM-generated annotations by comparing results across multiple runs with
-different configurations. This is particularly useful for researchers
-who want to ensure that their findings are robust and not overly
-dependent on specific LLM settings. It also helps with the decision of
-which model and settings to use for a given annotation task.
+LLM-generated annotations by **recording metadata for single LLM runs
+and and comparing results across multiple runs with different
+configurations.** This is particularly useful for researchers who want
+to ensure that their findings are robust and not overly dependent on
+specific LLM settings. It also helps with the decision of which model
+and settings to use for a given annotation task.

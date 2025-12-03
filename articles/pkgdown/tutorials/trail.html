@@ -207,18 +207,19 @@ responses.</p>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="run-a-single-trail-with-a-specific-setting">Run a single trail with a specific setting<a class="anchor" aria-label="anchor" href="#run-a-single-trail-with-a-specific-setting"></a>
+<h2 id="record-a-single-trail-with-a-specific-setting">Record a single trail with a specific setting<a class="anchor" aria-label="anchor" href="#record-a-single-trail-with-a-specific-setting"></a>
 </h2>
-<p>We can use the <code><a href="../../../reference/trail_record.html">trail_record()</a></code> function to run a single
-trail with a specific setting. This is useful for ensuring
+<p>We can use the <code><a href="../../../reference/trail_record.html">trail_record()</a></code> function to record a
+single trail with a specific setting. This is useful for ensuring
 reproducibility of results with a given configuration. The example below
-shows how to run a trail using the <code>setting_T0</code> defined
-earlier. The result of this function is a data frame containing the
-LLM-generated annotations for each document in the dataset as well as
-the associated metadata such as the setting used, the task, the data,
-timestamp, etc. You can save this output for future reference to ensure
-that you can reproduce the results later. You can also share this output
-with others to allow them to verify your findings.</p>
+shows how to record metadata for a trail using the
+<code>setting_T0</code> defined earlier. The result of this function is
+a data frame containing the LLM-generated annotations for each document
+in the dataset as well as the associated metadata such as the setting
+used, the task, the data, timestamp, etc. You can save this output for
+future reference to ensure that you can reproduce the results later. You
+can also share this output with others to allow them to verify your
+findings.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rec_T0</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/trail_record.html">trail_record</a></span><span class="op">(</span></span>
 <span>data <span class="op">=</span> <span class="va">data_corpus_inaugural</span>,</span>
@@ -282,7 +283,7 @@ Value
 timestamp
 </td>
 <td style="text-align:left;">
-2025-12-02 00:42:03.678869
+2025-12-03 06:03:42.213851
 </td>
 </tr>
 <tr>
@@ -465,12 +466,12 @@ annotations are across various settings. Higher values suggest greater
 reliability and stability of the annotations.</p>
 <p>Overall, the trail functionality in the <code>quallmer</code> package
 provides a systematic way to assess the reproducibility and reliability
-of LLM-generated annotations by comparing results across multiple runs
-with different configurations. This is particularly useful for
-researchers who want to ensure that their findings are robust and not
-overly dependent on specific LLM settings. It also helps with the
-decision of which model and settings to use for a given annotation
-task.</p>
+of LLM-generated annotations by <strong>recording metadata for single
+LLM runs and and comparing results across multiple runs with different
+configurations.</strong> This is particularly useful for researchers who
+want to ensure that their findings are robust and not overly dependent
+on specific LLM settings. It also helps with the decision of which model
+and settings to use for a given annotation task.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

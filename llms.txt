@@ -83,8 +83,8 @@ adds a reproducibility layer on top of
 [`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
 with the following workflow:
 
-1.  **Define different trail settings**  
-    Describe each trail, i.e., how LLMs should be called (e.g., model,
+1.  **Define trail settings**  
+    Describe LLM trail, i.e., how LLMs should be called (e.g., model,
     temperature).
 
     [`trail_setting()`](https://seraphinem.github.io/quallmer/reference/trail_setting.md)  
