@@ -105,9 +105,9 @@ temperature = 0.7
 
 ```
 
-## Run a single trail with a specific setting
+## Record a single trail with a specific setting
 
-We can use the `trail_record()` function to run a single trail with a specific setting. This is useful for ensuring reproducibility of results with a given configuration. The example below shows how to run a trail using the `setting_T0` defined earlier. The result of this function is a data frame containing the LLM-generated annotations for each document in the dataset as well as the associated metadata such as the setting used, the task, the data, timestamp, etc. You can save this output for future reference to ensure that you can reproduce the results later. You can also share this output with others to allow them to verify your findings.
+We can use the `trail_record()` function to record a single trail with a specific setting. This is useful for ensuring reproducibility of results with a given configuration. The example below shows how to record metadata for a trail using the `setting_T0` defined earlier. The result of this function is a data frame containing the LLM-generated annotations for each document in the dataset as well as the associated metadata such as the setting used, the task, the data, timestamp, etc. You can save this output for future reference to ensure that you can reproduce the results later. You can also share this output with others to allow them to verify your findings.
 
 ```{r run-single-trail}
 rec_T0 <- trail_record(
@@ -195,4 +195,4 @@ trail_icr
 ```
 This output shows the intercoder reliability metrics across the different trails, indicating how consistent the LLM-generated annotations are across various settings. Higher values suggest greater reliability and stability of the annotations. 
 
-Overall, the trail functionality in the `quallmer` package provides a systematic way to assess the reproducibility and reliability of LLM-generated annotations by comparing results across multiple runs with different configurations. This is particularly useful for researchers who want to ensure that their findings are robust and not overly dependent on specific LLM settings. It also helps with the decision of which model and settings to use for a given annotation task.
+Overall, the trail functionality in the `quallmer` package provides a systematic way to assess the reproducibility and reliability of LLM-generated annotations by **recording metadata for single LLM runs and and comparing results across multiple runs with different configurations.** This is particularly useful for researchers who want to ensure that their findings are robust and not overly dependent on specific LLM settings. It also helps with the decision of which model and settings to use for a given annotation task.

@@ -80,7 +80,7 @@ The package provides the following core functions:
 - Works similar to the Agreement App but can be used programmatically
   without launching the app.
 
-# The quallmer trail <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><img src="man/figures/paw.png" align="center" height="180" alt="quallmer website" /></a>
+# The quallmer trail <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><img src="man/figures/paw.png" align="center" height="100" alt="quallmer website" /></a>
 
 Apart from the core functions above, the `quallmer` package also
 provides a set of functions to ensure reproducibility and reliability of
@@ -89,8 +89,8 @@ multiple LLM runs with different settings.** This “trail” functionality
 adds a reproducibility layer on top of `annotate()` with the following
 workflow:
 
-1.  **Define different trail settings**  
-    Describe each trail, i.e., how LLMs should be called (e.g., model,
+1.  **Define trail settings**  
+    Describe LLM trail, i.e., how LLMs should be called (e.g., model,
     temperature).
 
     `trail_setting()`  
