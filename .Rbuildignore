@@ -11,3 +11,4 @@
 ^\.app_state\.rds$
 ^\.last_file\.txt$
 ^agreement$
+^data_creation$
