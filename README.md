@@ -15,7 +15,7 @@ coverage](https://codecov.io/gh/SeraphineM/quallmer/graph/badge.svg)](https://ap
 [![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://SeraphineM.github.io/quallmer/)
 <!-- badges: end -->
 
-The `quallmer` package is an **easy-to-use toolbox for qualitative
+The **quallmer** package is an **easy-to-use toolbox for qualitative
 researchers to quickly apply AI-assisted annotation to texts, images,
 pdfs, tabular data and other structured data.**
 
@@ -28,15 +28,15 @@ also allows users to [create their own custom annotation tasks tailored
 to their specific research questions and data
 types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)
 using `task()`. To ensure quality and reliability of AI-generated
-annotations, `quallmer` offers tools for comparing LLM outputs with
+annotations, **quallmer** offers tools for comparing LLM outputs with
 human-coded data and assessing inter-coder reliability. With
 `agreement()`, users can launch an interactive app to manually code
 data, review AI annotations, and evaluate intercoder reliability between
 coders and agreement with LLM-generated scores.
 
-**The `quallmer` package makes AI-assisted qualitative coding accessible
-without requiring deep expertise in R, programming or machine
-learning.**
+**The** quallmer\*\* package makes AI-assisted qualitative coding
+accessible without requiring deep expertise in R, programming or machine
+learning.\*\*
 
 # Core functions
 
@@ -82,7 +82,7 @@ The package provides the following core functions:
 
 # The quallmer trail <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><img src="man/figures/paw.png" align="center" height="100" alt="quallmer website" /></a>
 
-Apart from the core functions above, the `quallmer` package also
+Apart from the core functions above, the **quallmer** package also
 provides a set of functions to ensure reproducibility and reliability of
 LLM-generated annotations through **systematic comparisons across
 multiple LLM runs with different settings.** This “trail” functionality
@@ -135,7 +135,7 @@ model](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/ollama.h
 
 ## Installation
 
-You can install the development version of `quallmer` from
+You can install the development version of **quallmer** from
 <https://github.com/SeraphineM/quallmer> with:
 
 ``` r

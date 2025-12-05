@@ -23,11 +23,11 @@ knitr::opts_chunk$set(
 [![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://SeraphineM.github.io/quallmer/)
 <!-- badges: end -->
 
-The `quallmer` package is an **easy-to-use toolbox for qualitative researchers to quickly apply AI-assisted annotation to texts, images, pdfs, tabular data and other structured data.** 
+The **quallmer** package is an **easy-to-use toolbox for qualitative researchers to quickly apply AI-assisted annotation to texts, images, pdfs, tabular data and other structured data.** 
 
-Using `annotate()`, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of [predefined tasks for common qualitative coding needs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html), such as sentiment analysis, thematic coding, and stance detection. It also allows users to [create their own custom annotation tasks tailored to their specific research questions and data types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html) using `task()`. To ensure quality and reliability of AI-generated annotations, `quallmer` offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With `agreement()`, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.
+Using `annotate()`, users can generate structured, interpretable outputs powered by large language models (LLMs). The package includes a library of [predefined tasks for common qualitative coding needs](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html), such as sentiment analysis, thematic coding, and stance detection. It also allows users to [create their own custom annotation tasks tailored to their specific research questions and data types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html) using `task()`. To ensure quality and reliability of AI-generated annotations, **quallmer** offers tools for comparing LLM outputs with human-coded data and assessing inter-coder reliability. With `agreement()`, users can launch an interactive app to manually code data, review AI annotations, and evaluate intercoder reliability between coders and agreement with LLM-generated scores.
 
-**The `quallmer` package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.**
+**The **quallmer** package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.**
 
 # Core functions
 
@@ -56,7 +56,7 @@ The package provides the following core functions:
 
 # The quallmer trail <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><img src="man/figures/paw.png" align="center" height="100" alt="quallmer website" /></a>
 
-Apart from the core functions above, the `quallmer` package also provides a set of functions to ensure reproducibility and reliability of LLM-generated annotations through **systematic comparisons across multiple LLM runs with different settings.** This "trail" functionality adds a reproducibility layer on top of `annotate()` with the following workflow:
+Apart from the core functions above, the **quallmer** package also provides a set of functions to ensure reproducibility and reliability of LLM-generated annotations through **systematic comparisons across multiple LLM runs with different settings.** This "trail" functionality adds a reproducibility layer on top of `annotate()` with the following workflow:
 
 1. **Define trail settings**  
    Describe LLM trail, i.e., how LLMs should be called (e.g., model, temperature).
@@ -95,7 +95,7 @@ respective [ellmer](https://ellmer.tidyverse.org/reference/index.html) documenta
 
 ## Installation
 
-You can install the development version of `quallmer` from
+You can install the development version of **quallmer** from
 <https://github.com/SeraphineM/quallmer> with:
 
 ```{r, eval = FALSE}
