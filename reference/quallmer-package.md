@@ -1,7 +1,7 @@
-# quallmer: Qualitative analysis with large language models
+# quallmer: Qualitative Analysis with Large Language Models
 
-Provides userfriendly support for qualitative analysis with large
-language models (LLMs).
+Provides user-friendly support for qualitative analysis with large
+language models.
 
 ## See also
 
