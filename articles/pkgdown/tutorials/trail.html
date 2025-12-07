@@ -283,7 +283,7 @@ Value
 timestamp
 </td>
 <td style="text-align:left;">
-2025-12-07 03:02:05.460207
+2025-12-07 03:08:09.749964
 </td>
 </tr>
 <tr>
@@ -422,7 +422,7 @@ to see how different configurations impact the LLM’s outputs.</p>
 <span><span class="co">##   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">1</span> 2013-Obama     2     2     2     2</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">2</span> 2017-Trump     0     0     0     0</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">3</span> 2021-Biden     1     1     2     2</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;">3</span> 2021-Biden     1     1     2     1</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">4</span> 2025-Trump     0     0     0     0</span></span></code></pre>
 <div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display the intercoder reliability results</span></span>
@@ -440,16 +440,16 @@ to see how different configurations impact the LLM’s outputs.</p>
 <span><span class="co">## [1] 0.75</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $mean_pairwise_percent_agreement</span></span>
-<span><span class="co">## [1] 0.8333</span></span>
+<span><span class="co">## [1] 0.875</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $mean_pairwise_cohens_kappa</span></span>
-<span><span class="co">## [1] 0.7333</span></span>
+<span><span class="co">## [1] 0.8</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $kripp_alpha_nominal</span></span>
-<span><span class="co">## [1] 0.7251</span></span>
+<span><span class="co">## [1] 0.8017</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## $fleiss_kappa</span></span>
-<span><span class="co">## [1] 0.7193</span></span></code></pre>
+<span><span class="co">## [1] 0.7975</span></span></code></pre>
 <p>The output above shows the annotation matrix where each row
 corresponds to a document and each column corresponds to a different
 trail setting. The values in the matrix represent the scores assigned by

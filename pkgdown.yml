@@ -15,7 +15,7 @@ articles:
   pkgdown/examples/task_stance: pkgdown/examples/task_stance.html
   pkgdown/tutorials/trail: pkgdown/tutorials/trail.html
   pkgdown/tutorials/validate: pkgdown/tutorials/validate.html
-last_built: 2025-12-07T03:00Z
+last_built: 2025-12-07T03:06Z
 urls:
   reference: https://seraphinem.github.io/quallmer/reference
   article: https://seraphinem.github.io/quallmer/articles
