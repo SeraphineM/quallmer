@@ -80,7 +80,7 @@ The package provides the following core functions:
       against a human-coded gold standard to assess accuracy (e.g.,
       accuracy, precision, recall, F1-score).
 
-# The quallmer trail [![quallmer website](reference/figures/paw.png)](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html)
+# The quallmer trail
 
 Apart from the core functions above, the **quallmer** package also
 provides a set of functions to ensure reproducibility and reliability of
@@ -89,6 +89,8 @@ multiple LLM runs with different settings.** This “trail” functionality
 adds a reproducibility layer on top of
 [`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
 with the following workflow:
+
+![](reference/figures/paw.png)
 
 1.  **Define trail settings**  
     Describe the LLM trail, i.e., how LLMs should be called (e.g.,
@@ -101,8 +103,7 @@ with the following workflow:
     Record all information needed for reproducing LLM runs on a given
     task with a specific setting.
 
-    `trail_record(data, text_col, task, setting)`  
-    ↓
+    `trail_record(data, text_col, task, setting, id_col)` ↓
 
 3.  **Run multiple trails with different settings and assess
     sensitivity**  
@@ -111,7 +112,7 @@ with the following workflow:
     trails to illustrate reliability and replication sensitivity of LLM
     annotations.
 
-    `trail_compare(data, text_col, task, settings = list(...))`
+    `trail_compare(data, text_col, task, settings = list(...), id_col, lablel_col)`
 
 # Supported LLMs
 

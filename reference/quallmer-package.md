@@ -7,8 +7,6 @@ language models (LLMs).
 
 Useful links:
 
-- <https://SeraphineM.github.io/quallmer>
-
 - <https://seraphinem.github.io/quallmer/>
 
 ## Author

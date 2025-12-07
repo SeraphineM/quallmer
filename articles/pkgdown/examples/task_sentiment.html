@@ -94,7 +94,7 @@ the response with a numeric sentiment score from -1 (very negative) to 1
 <h3 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
 </h3>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://SeraphineM.github.io/quallmer" class="external-link">quallmer</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://seraphinem.github.io/quallmer/">quallmer</a></span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Loading required package: ellmer</span></span></code></pre>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#Example texts</span></span>
@@ -173,8 +173,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 0.9
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using words like ‘absolutely’ and
-‘fantastic’ to express strong approval and admiration.
+The phrase is highly positive, using strong words like ‘absolutely’ and
+‘fantastic’ to express admiration and approval.
 </td>
 </tr>
 </tbody>
@@ -230,7 +230,7 @@ confidence
 0.9
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a strong positive sentiment.
+The word ‘wonderful’ conveys a very positive sentiment.
 </td>
 <td style="text-align:right;">
 0.95
@@ -260,7 +260,7 @@ approach.
 </td>
 <td style="text-align:left;">
 The word ‘disappointing’ indicates a negative sentiment, though
-‘somewhat’ softens it slightly.
+‘somewhat’ suggests it’s not extremely negative.
 </td>
 <td style="text-align:right;">
 0.90
@@ -300,8 +300,6 @@ scale.</p>
 <span>                          chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
 <span>                          api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Likert scale sentiment analysis' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -323,8 +321,7 @@ explanation
 5
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a very positive sentiment, indicating
-delight or admiration.
+The word ‘wonderful’ conveys a very positive sentiment.
 </td>
 </tr>
 <tr>
@@ -347,8 +344,8 @@ indicating dissatisfaction or disapproval.
 2
 </td>
 <td style="text-align:left;">
-The word ‘disappointing’ indicates a negative sentiment, though
-‘somewhat’ suggests it’s not extremely negative.
+The sentiment is negative due to the use of the word ‘disappointing,’
+which indicates dissatisfaction.
 </td>
 </tr>
 <tr>
@@ -359,8 +356,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 5
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using strong words like ‘absolutely’ and
-‘fantastic’ to express admiration and satisfaction.
+The phrase expresses strong positive sentiment with words like
+‘absolutely’ and ‘fantastic.’
 </td>
 </tr>
 </tbody>
