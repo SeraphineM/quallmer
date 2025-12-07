@@ -30,13 +30,16 @@ types](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customta
 using `task()`. To ensure quality and reliability of AI-generated
 annotations, **quallmer** offers tools for comparing LLM outputs with
 human-coded data and assessing inter-coder reliability. With
-`agreement()`, users can launch an interactive app to manually code
-data, review AI annotations, and evaluate intercoder reliability between
-coders and agreement with LLM-generated scores.
+`validation_app()`, users can launch an interactive app to manually code
+data, review AI annotations, and evaluate agreement between human and AI
+codings. The package also includes a `trail_` functionality that enables
+systematic comparisons across multiple LLM runs (“trails”) with
+different settings to ensure reproducibility and reliability of
+AI-assisted coding.
 
-**The** quallmer\*\* package makes AI-assisted qualitative coding
-accessible without requiring deep expertise in R, programming or machine
-learning.\*\*
+**The quallmer package makes AI-assisted qualitative coding accessible
+without requiring deep expertise in R, programming or machine
+learning.**
 
 # Core functions
 
@@ -63,22 +66,28 @@ The package provides the following core functions:
 - This allows users to tailor the annotation process to their specific
   data types and makes our package extensible for future use cases.
 
-### `agreement_app()`
+### `validate_app()`
 
 - Launches an interactive app to
   - Manually code data
   - Review and validate LLM-generated annotations
   - Compare human-coded data with LLM-generated annotations to evaluate
-    agreement and inter-coder reliability with various metrics (e.g.,
-    Krippendorff’s alpha, Cohen’s or Fleiss’ kappa).
+    inter-coder reliability (e.g., Krippendorff’s alpha, Cohen’s or
+    Fleiss’ kappa) or, if a gold standard is available, accuracy (e.g.,
+    accuracy, precision, recall, F1-score).
 
-### `agreement()`
+### `validate()`
 
-- Calculates intercoder reliability scores (e.g., Krippendorff’s alpha
-  and Cohen’s or Fleiss’ kappa) between multiple human coders or between
-  human coders and LLM-generated annotations.
-- Works similar to the Agreement App but can be used programmatically
-  without launching the app.
+- Works similar to our validation app but can be used programmatically
+  without launching the app if data has been already manually coded by
+  humans.
+- Has two modes:
+  1.  **No gold standard available**: Compare LLM-generated annotations
+      with multiple human coders to assess inter-coder reliability
+      (e.g., Krippendorff’s alpha, Cohen’s or Fleiss’ kappa).
+  2.  **Gold standard available**: Compare LLM-generated annotations
+      against a human-coded gold standard to assess accuracy (e.g.,
+      accuracy, precision, recall, F1-score).
 
 # The quallmer trail <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><img src="man/figures/paw.png" align="center" height="100" alt="quallmer website" /></a>
 
