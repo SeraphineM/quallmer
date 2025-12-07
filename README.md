@@ -50,7 +50,7 @@ The package provides the following core functions:
 - A generic function that works with any LLM supported by
   [ellmer](https://ellmer.tidyverse.org/index.html).  
 - Generates structured responses based on
-  [predefined](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.htmll)
+  [predefined](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html)
   or [user-defined
   tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).
 

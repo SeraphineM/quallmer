@@ -35,7 +35,7 @@ The package provides the following core functions:
 
 ### `annotate()`
 - A generic function that works with any LLM supported by [ellmer](https://ellmer.tidyverse.org/index.html).  
-- Generates structured responses based on [predefined](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.htmll) or [user-defined tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).  
+- Generates structured responses based on [predefined](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/overview.html) or [user-defined tasks](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html).  
 
 ### `task()`
 - Creates custom annotation tasks tailored to specific research questions and data types.
