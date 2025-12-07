@@ -1,6 +1,6 @@
 Package: quallmer
 Type: Package
-Title: Qualitative analysis with large language models
+Title: Qualitative Analysis with Large Language Models
 Version: 0.1.0
 Authors@R: c(
     person(
@@ -14,9 +14,9 @@ Authors@R: c(
       role = c("aut"), comment = c(ORCID = "0000-0002-0797-564X")
     )
   )
-Description: Provides userfriendly support for qualitative analysis with large language models (LLMs).
+Description: Provides user-friendly support for qualitative analysis with large language models.
 License: GPL-3
-URL: https://SeraphineM.github.io/quallmer, https://seraphinem.github.io/quallmer/
+URL: https://seraphinem.github.io/quallmer/
 Depends:
     R (>= 3.5.0),
     ellmer (>= 0.4.0)

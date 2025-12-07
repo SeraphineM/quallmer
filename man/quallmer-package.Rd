@@ -13,7 +13,6 @@ Provides userfriendly support for qualitative analysis with large language model
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://SeraphineM.github.io/quallmer}
   \item \url{https://seraphinem.github.io/quallmer/}
 }
 
