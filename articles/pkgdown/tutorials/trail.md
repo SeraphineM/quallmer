@@ -215,17 +215,17 @@ meta_df %>%
 
 | Field        | Value                                                  |
 |:-------------|:-------------------------------------------------------|
-| timestamp    | 2025-12-07 03:52:22.771862                             |
+| timestamp    | 2025-12-09 01:13:50.54866                              |
 | n_rows       | 4                                                      |
 | provider     | openai                                                 |
 | model        | gpt-4.1-mini                                           |
 | temperature  | 0                                                      |
 | cache_dir    | trail_cache                                            |
-| cache_path   | trail_cache/trail_5df823d002ab66df499c11f5e037a179.rds |
+| cache_path   | trail_cache/trail_910bae335878bd984ee5e95973de53dc.rds |
 | id_col       | doc_id                                                 |
 | text_col     | text                                                   |
 | task_class   | task                                                   |
-| quallmer_ver | 0.1.0                                                  |
+| quallmer_ver | 0.1.1                                                  |
 | ellmer_ver   | 0.4.0                                                  |
 | R_ver        | 4.5.2                                                  |
 

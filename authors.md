@@ -10,13 +10,13 @@
 ## Citation
 
 Maerz S, Benoit K (2025). *quallmer: Qualitative Analysis with Large
-Language Models*. R package version 0.1.0,
+Language Models*. R package version 0.1.1,
 <https://seraphinem.github.io/quallmer/>.
 
     @Manual{,
       title = {quallmer: Qualitative Analysis with Large Language Models},
       author = {Seraphine F. Maerz and Kenneth Benoit},
       year = {2025},
-      note = {R package version 0.1.0},
+      note = {R package version 0.1.1},
       url = {https://seraphinem.github.io/quallmer/},
     }
