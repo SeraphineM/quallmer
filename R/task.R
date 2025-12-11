@@ -1,71 +1,50 @@
 #' Define an annotation task
 #'
-#' @description
-#' A flexible task definition wrapper for ellmer.
-#' Supports any structured output type, including `type_object()`, `type_array()`,
-#' `type_enum()`, `type_boolean()`, and others.
+#' Creates a task definition for use with [annotate()]. A task specifies
+#' what information to extract from input data, including the system prompt
+#' that guides the LLM and the structured output definition.
 #'
-#' @param name Name of the task.
-#' @param system_prompt System prompt to guide the model (as required by ellmer's `chat_fn`).
-#' @param type_def Structured output definition, e.g., created by `ellmer::type_object()`,
-#'   `ellmer::type_array()`, or `ellmer::type_enum()`.
+#' @param name Name of the task (character).
+#' @param system_prompt System prompt to guide the model.
+#' @param type_def Structured output definition, e.g., created by
+#'   [ellmer::type_object()], [ellmer::type_array()], or [ellmer::type_enum()].
 #' @param input_type Type of input data: `"text"` or `"image"`.
-#' @return A task object with a `run()` method.
+#'
+#' @return A task object (a list with class `"task"`) containing the task
+#'
+#'   definition. Use with [annotate()] to apply the task to data.
+#'
+#' @seealso [annotate()] for applying tasks to data, [task_sentiment()],
+#'   [task_stance()], [task_ideology()], [task_salience()], [task_fact()]
+#'   for predefined tasks.
+#'
+#' @examples
+#' \dontrun{
+#' # Define a custom task
+#' my_task <- task(
+#'   name = "Sentiment",
+#'   system_prompt = "Rate the sentiment from -1 (negative) to 1 (positive).",
+#'   type_def = ellmer::type_object(
+#'     score = ellmer::type_number("Sentiment score from -1 to 1"),
+#'     explanation = ellmer::type_string("Brief explanation")
+#'   )
+#' )
+#'
+#' # Use with annotate()
+#' texts <- c("I love this!", "This is terrible.")
+#' annotate(texts, my_task, model_name = "openai/gpt-4o-mini")
+#' }
+#'
 #' @export
 task <- function(name, system_prompt, type_def, input_type = c("text", "image")) {
   input_type <- match.arg(input_type)
 
-  run <- function(.data, chat_fn = NULL, model = NULL, verbose = TRUE, ...) {
-    # Basic input validation
-    if (input_type == "text" && !is.character(.data)) {
-      stop("This task expects text input (a character vector).")
-    }
-
-    # Default fallbacks
-    chat_fn <- chat_fn %||% ellmer::chat_openai
-    model   <- model %||% "gpt-4o"
-
-    if (verbose) message("Running task '", name, "' using model: ", model)
-
-    chat <- chat_fn(
-      model = model,
-      system_prompt = system_prompt,
-      ...
-    )
-
-    # Prepare prompts based on input type
-    if (input_type == "image") {
-      prompts <- lapply(.data, ellmer::content_image_file)
-    } else {
-      prompts <- as.list(.data)
-    }
-
-    # Core execution
-    results <- ellmer::parallel_chat_structured(
-      chat,
-      prompts = prompts,
-      type = type_def,
-      convert = TRUE,
-      include_tokens = FALSE,
-      include_cost = FALSE,
-      max_active = 10
-    )
-
-    # Add ID and reorder columns
-    results$id <- names(.data) %||% seq_along(.data)
-    results <- results[, c("id", setdiff(names(results), "id"))]
-
-    return(results)
-  }
-
-  # Return as a structured task object
   structure(
     list(
       name = name,
       system_prompt = system_prompt,
       type_def = type_def,
-      input_type = input_type,
-      run = run
+      input_type = input_type
     ),
     class = "task"
   )

@@ -7,20 +7,45 @@
 task(name, system_prompt, type_def, input_type = c("text", "image"))
 }
 \arguments{
-\item{name}{Name of the task.}
+\item{name}{Name of the task (character).}
 
-\item{system_prompt}{System prompt to guide the model (as required by ellmer's \code{chat_fn}).}
+\item{system_prompt}{System prompt to guide the model.}
 
-\item{type_def}{Structured output definition, e.g., created by \code{ellmer::type_object()},
-\code{ellmer::type_array()}, or \code{ellmer::type_enum()}.}
+\item{type_def}{Structured output definition, e.g., created by
+\code{\link[ellmer:type_boolean]{ellmer::type_object()}}, \code{\link[ellmer:type_boolean]{ellmer::type_array()}}, or \code{\link[ellmer:type_boolean]{ellmer::type_enum()}}.}
 
 \item{input_type}{Type of input data: \code{"text"} or \code{"image"}.}
 }
 \value{
-A task object with a \code{run()} method.
+A task object (a list with class \code{"task"}) containing the task
+
+definition. Use with \code{\link[=annotate]{annotate()}} to apply the task to data.
 }
 \description{
-A flexible task definition wrapper for ellmer.
-Supports any structured output type, including \code{type_object()}, \code{type_array()},
-\code{type_enum()}, \code{type_boolean()}, and others.
+Creates a task definition for use with \code{\link[=annotate]{annotate()}}. A task specifies
+what information to extract from input data, including the system prompt
+that guides the LLM and the structured output definition.
+}
+\examples{
+\dontrun{
+# Define a custom task
+my_task <- task(
+  name = "Sentiment",
+  system_prompt = "Rate the sentiment from -1 (negative) to 1 (positive).",
+  type_def = ellmer::type_object(
+    score = ellmer::type_number("Sentiment score from -1 to 1"),
+    explanation = ellmer::type_string("Brief explanation")
+  )
+)
+
+# Use with annotate()
+texts <- c("I love this!", "This is terrible.")
+annotate(texts, my_task, model_name = "openai/gpt-4o-mini")
+}
+
+}
+\seealso{
+\code{\link[=annotate]{annotate()}} for applying tasks to data, \code{\link[=task_sentiment]{task_sentiment()}},
+\code{\link[=task_stance]{task_stance()}}, \code{\link[=task_ideology]{task_ideology()}}, \code{\link[=task_salience]{task_salience()}}, \code{\link[=task_fact]{task_fact()}}
+for predefined tasks.
 }

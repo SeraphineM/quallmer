@@ -72,13 +72,13 @@ ideology_scores <- task(
 
 ### Applying the custom task to the corpus
 
-This step is similar to applying predefined tasks using the `annotate()` function. Here, we will use the `annotate()` function to apply our custom task to the sample corpus of inaugural speeches. We will specify the LLM to use (in this case, openai's gpt-4o model) and any additional API arguments as needed. For example, we set the temperature to 0 for more deterministic outputs, improving consistency in scoring across multiple runs and therefore increasing reliability.
+This step is similar to applying predefined tasks using the `annotate()` function. Here, we will use the `annotate()` function to apply our custom task to the sample corpus of inaugural speeches. We will specify the model to use via `model_name` (in this case, `"openai/gpt-4o"`) and any additional parameters as needed. For example, we set the temperature to 0 via the `params` argument for more deterministic outputs, improving consistency in scoring across multiple runs and therefore increasing reliability.
 
 ```{r apply-task}
 # Apply the custom task to the inaugural speeches corpus
 result <- annotate(data_corpus_inaugural, task = ideology_scores,
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 
 ```{r display_results, echo = FALSE}

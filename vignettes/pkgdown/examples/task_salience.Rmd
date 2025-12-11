@@ -29,9 +29,9 @@ data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
 ```{r salience}
 
 # Apply predefined salience task with task_salience() in the annotate() function
-result <- annotate(data_corpus_inaugural, task = task_salience(), 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+result <- annotate(data_corpus_inaugural, task = task_salience(),
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 ```{r display_results, echo = FALSE}
 # results table
@@ -47,9 +47,9 @@ result %>%
 # Define a list of topics to focus on
 topics <- c("economy", "health", "education", "environment", "foreign policy")
 # Apply predefined salience task with task_salience() in the annotate() function
-result <- annotate(data_corpus_inaugural, task = task_salience(topics), 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+result <- annotate(data_corpus_inaugural, task = task_salience(topics),
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 ```{r display_results2, echo = FALSE}
 # results table
@@ -97,9 +97,9 @@ custom_task <- task(
 )
 
 # Apply the customized task in the annotate() function
-custom_result <- annotate(data_corpus_inaugural, task = custom_task, 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+custom_result <- annotate(data_corpus_inaugural, task = custom_task,
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 ```{r display_custom_results, echo = FALSE}
 # custom results table

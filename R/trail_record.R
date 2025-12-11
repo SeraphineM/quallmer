@@ -59,35 +59,27 @@ trail_record <- function(
     if (inherits(cached, "trail_record")) return(cached)
   }
 
-  # ---- resolve backend chat function from provider ----
+  # ---- annotation call: task expects text input (character) ----
   if (!requireNamespace("ellmer", quietly = TRUE)) {
     stop("Package 'ellmer' is required for trail_record().")
   }
 
-  chat_fn <- switch(
-    setting$provider,
-    "openai" = ellmer::chat_openai,
-    "ollama" = ellmer::chat_ollama,
-    # extend here if you use other providers:
-    # "azure"  = ellmer::chat_azure,
-    stop("Unsupported provider in trail_setting: '", setting$provider, "'")
-  )
-
-  # ---- annotation call: task expects text input (character) ----
   text_vec <- as.character(data[[text_col]])
 
-  # Build api_args: temperature + extras (extras can override)
-  api_args <- c(
+  # Construct model_name from provider and model
+  model_name <- paste0(setting$provider, "/", setting$model)
+
+  # Build params: temperature + extras (extras can override)
+  params <- c(
     list(temperature = setting$temperature),
     setting$extra
   )
 
   args <- list(
-    .data    = text_vec,
-    task     = task,
-    chat_fn  = chat_fn,
-    model    = setting$model,
-    api_args = api_args
+    .data      = text_vec,
+    task       = task,
+    model_name = model_name,
+    params     = params
   )
 
   annotations <- do.call(annotate_fun, args)
