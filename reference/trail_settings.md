@@ -1,8 +1,6 @@
 # Trail settings specification
 
-Define a reproducible specification of an LLM setting for use with
-quallmer Trail. This object captures the provider, model name,
-temperature, and any optional extra arguments.
+Simple description of an LLM configuration for use with quallmer Trails.
 
 ## Usage
 
@@ -19,12 +17,13 @@ trail_settings(
 
 - provider:
 
-  Character. Backend provider, e.g. "openai", "ollama", "azure".
+  Character. Backend provider identifier, e.g. "openai", "ollama",
+  "azure", etc.
 
 - model:
 
   Character. Model identifier, e.g. "gpt-4.1-mini", "gpt-4o-mini",
-  "llama3.1:8b".
+  "llama3.2:1b".
 
 - temperature:
 
@@ -32,8 +31,7 @@ trail_settings(
 
 - extra:
 
-  Named list of additional model arguments passed to \`annotate()\` via
-  \`api_args\` if needed (e.g. penalties or safety flags).
+  Named list of extra arguments merged into \`api_args\`.
 
 ## Value
 

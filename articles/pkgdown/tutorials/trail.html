@@ -185,7 +185,6 @@ responses.</p>
 <code class="sourceCode R"><span><span class="va">setting_gptmini0</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/trail_settings.html">trail_settings</a></span><span class="op">(</span></span>
 <span>provider <span class="op">=</span> <span class="st">"openai"</span>,</span>
 <span>model <span class="op">=</span> <span class="st">"gpt-4.1-mini"</span>,</span>
-<span>temperature <span class="op">=</span> <span class="fl">0</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">setting_gptmini7</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/trail_settings.html">trail_settings</a></span><span class="op">(</span></span>
@@ -283,7 +282,7 @@ Value
 timestamp
 </td>
 <td style="text-align:left;">
-2025-12-09 01:13:50.54866
+2025-12-11 03:24:33.981549
 </td>
 </tr>
 <tr>
@@ -316,6 +315,14 @@ temperature
 </td>
 <td style="text-align:left;">
 0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;font-weight: bold;">
+api_extra
+</td>
+<td style="text-align:left;">
+list()
 </td>
 </tr>
 <tr>
@@ -408,13 +415,12 @@ to see how different configurations impact the LLM’s outputs.</p>
 <pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4.1-mini</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span>
+<span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<pre><code><span><span class="co">## Running task 'Score Political Left Alignment' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display the annotation matrix</span></span>
 <span><span class="va">left_trails</span><span class="op">$</span><span class="va">matrix</span></span></code></pre></div>
 <pre><code><span><span class="co">## <span style="color: #949494;"># A tibble: 4 × 5</span></span></span>
@@ -424,7 +430,7 @@ to see how different configurations impact the LLM’s outputs.</p>
 <span><span class="co">## <span style="color: #BCBCBC;">2</span> 2017-Trump     0     0     0     0</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">3</span> 2021-Biden     1     1     2     2</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">4</span> 2025-Trump     0     0     0     0</span></span></code></pre>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display the intercoder reliability results</span></span>
 <span><span class="va">left_trails</span><span class="op">$</span><span class="va">icr</span></span></code></pre></div>
 <pre><code><span><span class="co">## $units_included</span></span>

@@ -58,12 +58,12 @@ result <- annotate(data_corpus_inaugural, task = task_stance(topic),
 
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
-| id         | stance  | explanation                                                                                                                                                                                                                                                                          |
-|:-----------|:--------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 2013-Obama | Pro     | The text explicitly acknowledges the threat of climate change and emphasizes the need for collective action to address it. It highlights the importance of transitioning to sustainable energy sources and leading in technology to preserve the environment for future generations. |
-| 2017-Trump | Neutral | The text is an inaugural speech focused on national pride, economic revitalization, and political change. It does not mention climate change or environmental issues, so it cannot be classified as Pro or Contra regarding climate change.                                          |
-| 2021-Biden | Pro     | The text acknowledges climate change as a crisis by referring to ‘a cry for survival comes from the planet itself’ and ‘a climate in crisis.’ This indicates a recognition of climate change as a significant issue that needs to be addressed.                                      |
-| 2025-Trump | Contra  | The text expresses a stance against climate change initiatives by stating the intention to end the Green New Deal and revoke the electric vehicle mandate. It emphasizes increasing fossil fuel production and use, which contradicts efforts to combat climate change.              |
+| id         | stance  | explanation                                                                                                                                                                                                                                                                                           |
+|:-----------|:--------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2013-Obama | Pro     | The text explicitly acknowledges the threat of climate change and emphasizes the need for collective action to address it. It highlights the importance of transitioning to sustainable energy sources and leading in technology to combat climate change, aligning with a pro-climate action stance. |
+| 2017-Trump | Neutral | The text is an inaugural speech focused on national pride, economic revitalization, and political change. It does not mention climate change or environmental issues, so it cannot be classified as Pro or Contra regarding climate change.                                                           |
+| 2021-Biden | Pro     | The text acknowledges climate change as a crisis, referring to it as a ‘cry for survival from the planet itself.’ This indicates a recognition of the issue and a stance in favor of addressing it.                                                                                                   |
+| 2025-Trump | Contra  | The text expresses a stance against climate change initiatives by declaring an end to the Green New Deal and revoking the electric vehicle mandate. It emphasizes increased drilling and fossil fuel use, which are contrary to climate change mitigation efforts.                                    |
 
 ### Adjusting the stance detection task
 
@@ -101,12 +101,12 @@ custom_result <- annotate(data_corpus_inaugural, task = custom_stance,
 
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
-| id         | stance  | explanation                                                                                                                                                                                                                                                  | confidence |
-|:-----------|:--------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------:|
-| 2013-Obama | Pro     | The text explicitly acknowledges the threat of climate change and emphasizes the need for collective action to address it. It mentions the importance of transitioning to sustainable energy sources and leading in technology to combat climate change.     |       0.95 |
-| 2017-Trump | Neutral | The text is a political speech focused on national pride, economic revitalization, and unity. It does not explicitly mention climate change or environmental policies, making it neutral on the topic.                                                       |       0.90 |
-| 2021-Biden | Pro     | The text acknowledges climate change as a crisis, referring to it as “a climate in crisis” and includes it among the significant challenges facing the nation. This indicates a recognition of climate change as a serious issue that needs to be addressed. |       0.95 |
-| 2025-Trump | Contra  | The text emphasizes a focus on traditional energy sources like oil and gas, explicitly stating the end of the Green New Deal and revoking the electric vehicle mandate. This suggests a stance against climate change initiatives.                           |       0.95 |
+| id         | stance  | explanation                                                                                                                                                                                                                                                                                | confidence |
+|:-----------|:--------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------:|
+| 2013-Obama | Pro     | The text explicitly acknowledges the threat of climate change and emphasizes the need for collective action to address it. It mentions the importance of transitioning to sustainable energy sources and leading in technology to combat climate change, aligning with a proactive stance. |       0.95 |
+| 2017-Trump | Neutral | The text is an inaugural speech focused on national pride, economic revitalization, and political change. It does not explicitly mention climate change or environmental policies, making it neutral on the topic.                                                                         |       0.90 |
+| 2021-Biden | Pro     | The text acknowledges climate change as a crisis, referring to it as a ‘climate in crisis’ and a ‘cry for survival from the planet itself.’ This indicates a recognition of climate change as a significant issue that needs to be addressed.                                              |       0.95 |
+| 2025-Trump | Contra  | The text emphasizes ending the Green New Deal and revoking the electric vehicle mandate, which are measures typically associated with climate change mitigation. This suggests a stance against climate change initiatives.                                                                |       0.95 |
 
 Or, you might want the LLM to extract specific arguments supporting the
 stance.
@@ -135,6 +135,8 @@ argument_result <- annotate(data_corpus_inaugural, task = argument_stance,
     ## Running task 'Argument-based stance detection' using model: gpt-4o
 
     ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
+
+    ## [working] (0 + 0) -> 1 -> 3 | ■■■■■■■■■■■■■■■■■■■■■■■           75%
 
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 

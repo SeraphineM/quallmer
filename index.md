@@ -103,7 +103,9 @@ with the following workflow:
     Record all information needed for reproducing LLM runs on a given
     task with a specific setting.
 
-    `trail_record(data, text_col, task, setting, id_col)` ↓
+    `trail_record(data, text_col, task, setting, id_col)`
+
+    ↓
 
 3.  **Run multiple trails with different settings and assess
     sensitivity**  

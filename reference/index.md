@@ -9,8 +9,6 @@
 - [`data_corpus_manifsentsUK2010sample`](https://seraphinem.github.io/quallmer/reference/data_corpus_manifsentsUK2010sample.md)
   : Sample of UK manifesto sentences 2010 crowd-annotated for
   immigration
-- [`print(`*`<trail_settings>`*`)`](https://seraphinem.github.io/quallmer/reference/print.trail_settings.md)
-  : Print method for trail_setting
 - [`task()`](https://seraphinem.github.io/quallmer/reference/task.md) :
   Define an annotation task
 - [`task_fact()`](https://seraphinem.github.io/quallmer/reference/task_fact.md)
