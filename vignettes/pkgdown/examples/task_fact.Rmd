@@ -29,9 +29,9 @@ data_corpus_inaugural <- quanteda::data_corpus_inaugural[57:60]
 ```{r fact}
 
 # Apply predefined fact checking task with task_fact() in the annotate() function
-result <- annotate(data_corpus_inaugural, task = task_fact(), 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+result <- annotate(data_corpus_inaugural, task = task_fact(),
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 
 ```{r display_results, echo = FALSE}
@@ -46,9 +46,9 @@ result %>%
 ```{r fact2}
 
 # Apply predefined fact checking task with task_fact() in the annotate() function
-result_claims <- annotate(data_corpus_inaugural, task = task_fact(max_topics = 3), 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+result_claims <- annotate(data_corpus_inaugural, task = task_fact(max_topics = 3),
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 ```{r display_results2, echo = FALSE}
 # results table

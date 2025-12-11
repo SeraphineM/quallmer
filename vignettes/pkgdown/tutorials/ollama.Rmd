@@ -41,4 +41,4 @@ query("What is the capital of Australia.", model = "llama3.2:1b")
 
 ```
 
-Now that we have set up the Ollama model, we can use it with the `quallmer` package for qualitative coding tasks. The `quallmer` package uses openai's `gpt-4o` model by default, but we can easily switch to the Ollama model by specifying the `chat_fn` and `model` parameters in the `annotate()` function. For example, for Ollama models we would use `chat_ollama` as the `chat_fn` and specify the model name (e.g., `llama3.2:1b`) in the `model` parameter.
+Now that we have set up the Ollama model, we can use it with the `quallmer` package for qualitative coding tasks. To use an Ollama model, simply specify the `model_name` parameter in the `annotate()` function using the format `"ollama/model"`. For example, to use the `llama3.2:1b` model, you would set `model_name = "ollama/llama3.2:1b"`.

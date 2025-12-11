@@ -34,9 +34,9 @@ definition <- "Inclusive language emphasizes equal rights, diversity, pluralism,
 and protection of minorities, whereas exclusive language emphasizes exclusion 
 of groups, national homogeneity, and restricting rights."
 # Apply predefined ideology task with task_ideology() in the annotate() function
-result <- annotate(data_corpus_inaugural, task = task_ideology(dimension, definition), 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+result <- annotate(data_corpus_inaugural, task = task_ideology(dimension, definition),
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 ```{r display_results, echo = FALSE}
 # results table
@@ -67,9 +67,9 @@ custom_ideology <- task(
     input_type = "text"
   )
 # Apply the custom task
-custom_result <- annotate(data_corpus_inaugural, task = custom_ideology, 
-                          chat_fn = chat_openai, model = "gpt-4o",
-                          api_args = list(temperature = 0))
+custom_result <- annotate(data_corpus_inaugural, task = custom_ideology,
+                          model_name = "openai/gpt-4o",
+                          params = list(temperature = 0))
 ```
 ```{r display_results_custom, echo = FALSE}
 # custom results table

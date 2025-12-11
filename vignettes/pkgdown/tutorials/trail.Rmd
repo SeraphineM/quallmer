@@ -56,7 +56,7 @@ The `task()` function allows us to specify the expected structure of the LLM's r
 
 - `name`: A descriptive name for the task.
 - `system_prompt`: The prompt that guides the LLM on how to perform the task.
-- `type_def`: Defines the expected structure of the response using [ellmers type specifications](https://ellmer.tidyverse.org/reference/type_boolean.html) such as `type_object()`, `type_array()`, etc.
+- `type_def`: Defines the expected structure of the response using [ellmer's type specifications](https://ellmer.tidyverse.org/reference/type_boolean.html) such as `type_object()`, `type_array()`, etc.
 
 For more information on how to use ellmer's type specifications, please refer to the [ellmer documentation on type specifications](https://ellmer.tidyverse.org/reference/type_boolean.html).
 
@@ -81,12 +81,12 @@ After having defined our task, we can now set up different trail settings to com
 
 setting_gptmini0 <- trail_settings(
 provider = "openai",
-model = "gpt-4.1-mini",
+model = "gpt-4o-mini",
 )
 
 setting_gptmini7 <- trail_settings(
 provider = "openai",
-model = "gpt-4.1-mini",
+model = "gpt-4o-mini",
 temperature = 0.7
 )
 

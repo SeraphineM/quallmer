@@ -27,9 +27,9 @@ texts <- c(
 
 ```{r sentiment}
 # Apply predefined sentiment task with task_sentiment() in the annotate() function
-result <- annotate(texts, task = task_sentiment(), 
-                   chat_fn = chat_openai, model = "gpt-4o",
-                   api_args = list(temperature = 0))
+result <- annotate(texts, task = task_sentiment(),
+                   model_name = "openai/gpt-4o",
+                   params = list(temperature = 0))
 ```
 
 
@@ -59,9 +59,9 @@ custom_sentiment <- task(
   input_type = "text"
 )
 # Apply the custom sentiment task
-custom_result <- annotate(texts, task = custom_sentiment, 
-                          chat_fn = chat_openai, model = "gpt-4o",
-                          api_args = list(temperature = 0))
+custom_result <- annotate(texts, task = custom_sentiment,
+                          model_name = "openai/gpt-4o",
+                          params = list(temperature = 0))
 ```
 ```{r display_results_custom, echo = FALSE}
 # sentiment analysis results table
@@ -83,9 +83,9 @@ likert_sentiment <- task(
   input_type = "text"
 )
 # Apply the Likert scale sentiment task
-likert_result <- annotate(texts, task = likert_sentiment, 
-                          chat_fn = chat_openai, model = "gpt-4o",
-                          api_args = list(temperature = 0))
+likert_result <- annotate(texts, task = likert_sentiment,
+                          model_name = "openai/gpt-4o",
+                          params = list(temperature = 0))
 ```
 ```{r display_results_likert, echo = FALSE}
 # sentiment analysis results table
