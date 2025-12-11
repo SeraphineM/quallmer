@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Provides user-friendly support for qualitative analysis with large language models.
+Tools for AI-assisted qualitative data annotation using large language models (LLMs). Provides predefined tasks for sentiment analysis, stance detection, ideological scaling, topic salience, and fact-checking, as well as custom task definitions. Includes functions for computing intercoder reliability and gold-standard validation metrics, reproducible annotation trails across multiple LLM configurations, and an interactive 'shiny' application for manual coding and LLM output validation.
 }
 \seealso{
 Useful links:
