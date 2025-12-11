@@ -5,15 +5,9 @@
 #' @importFrom stats na.omit
 NULL
 
-# Declare global variables for dplyr NSE
-utils::globalVariables(c("unit_id", "coder_id", "code"))
-
 # -------------------------------
 # Internals for validate()
 # -------------------------------
-
-#' @noRd
-`%||%` <- function(x, y) if (length(x) == 0) y else x
 
 #' @noRd
 make_long_icr <- function(df, id, coder_cols) {
@@ -403,6 +397,14 @@ validate <- function(data,
                      output = c("list", "data.frame")) {
   mode   <- match.arg(mode)
   output <- match.arg(output)
+
+  # Validate min_coders
+
+  if (!is.numeric(min_coders) || length(min_coders) != 1L ||
+      is.na(min_coders) || min_coders < 2L || min_coders != as.integer(min_coders)) {
+    stop("`min_coders` must be an integer >= 2.")
+  }
+  min_coders <- as.integer(min_coders)
 
   stopifnot(is.data.frame(data))
   if (!id %in% names(data)) {

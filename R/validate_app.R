@@ -6,9 +6,6 @@
 #' @importFrom irr kripp.alpha kappam.fleiss kappa2
 #' @importFrom stats na.omit
 
-# Declare global variables for dplyr NSE
-utils::globalVariables(c("unit_id", "coder_id", "code"))
-
 # -------------------------------
 # Helpers
 # -------------------------------
@@ -19,9 +16,6 @@ na_to_empty <- function(x) {
   x[is.na(x)] <- ""
   x
 }
-
-#' @noRd
-`%||%` <- function(x, y) if (length(x) == 0) y else x
 
 #' @noRd
 read_data_file <- function(path, name) {
