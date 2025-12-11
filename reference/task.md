@@ -7,7 +7,7 @@ output type, including \`type_object()\`, \`type_array()\`,
 ## Usage
 
 ``` r
-task(name, system_prompt, type_def, input_type = "text")
+task(name, system_prompt, type_def, input_type = c("text", "image"))
 ```
 
 ## Arguments
@@ -29,7 +29,7 @@ task(name, system_prompt, type_def, input_type = "text")
 
 - input_type:
 
-  Type of input data: \`"text"\`, \`"image"\`, \`"audio"\`, etc.
+  Type of input data: \`"text"\` or \`"image"\`.
 
 ## Value
 

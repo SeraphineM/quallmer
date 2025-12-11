@@ -214,14 +214,14 @@ meta_df %>%
 
 | Field        | Value                                                  |
 |:-------------|:-------------------------------------------------------|
-| timestamp    | 2025-12-11 03:24:33.981549                             |
+| timestamp    | 2025-12-11 03:31:59.976342                             |
 | n_rows       | 4                                                      |
 | provider     | openai                                                 |
 | model        | gpt-4.1-mini                                           |
 | temperature  | 0                                                      |
 | api_extra    | list()                                                 |
 | cache_dir    | trail_cache                                            |
-| cache_path   | trail_cache/trail_910bae335878bd984ee5e95973de53dc.rds |
+| cache_path   | trail_cache/trail_b64a3ba2ad7ef62e3c5ddb6d9e4c8200.rds |
 | id_col       | doc_id                                                 |
 | text_col     | text                                                   |
 | task_class   | task                                                   |
@@ -260,13 +260,12 @@ label_col = "score"
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
     ## Running task 'Score Political Left Alignment' using model: gpt-4o
-    ## Running task 'Score Political Left Alignment' using model: gpt-4o
 
     ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
 
-    ## [working] (0 + 0) -> 1 -> 3 | ■■■■■■■■■■■■■■■■■■■■■■■           75%
-
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+
+    ## Running task 'Score Political Left Alignment' using model: gpt-4o
 
 ``` r
 # Display the annotation matrix
