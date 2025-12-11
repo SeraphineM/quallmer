@@ -41,11 +41,17 @@ trail_record <- function(
   }
 
   # Cache directory initialization
-  if (!is.null(cache_dir)) dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+  if (!is.null(cache_dir)) {
+    dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+  }
 
   # Cache key
   cache_key <- digest::digest(list(data[[id_col]], data[[text_col]], task, setting))
-  cache_path <- if (!is.null(cache_dir)) file.path(cache_dir, paste0("trail_", cache_key, ".rds")) else NA_character_
+  cache_path <- if (!is.null(cache_dir)) {
+    file.path(cache_dir, paste0("trail_", cache_key, ".rds"))
+  } else {
+    NA_character_
+  }
 
   # Read cache if exists
   if (!is.null(cache_dir) && file.exists(cache_path) && !overwrite) {
@@ -53,18 +59,40 @@ trail_record <- function(
     if (inherits(cached, "trail_record")) return(cached)
   }
 
-  # annotation call
+  # ---- resolve backend chat function from provider ----
+  if (!requireNamespace("ellmer", quietly = TRUE)) {
+    stop("Package 'ellmer' is required for trail_record().")
+  }
+
+  chat_fn <- switch(
+    setting$provider,
+    "openai" = ellmer::chat_openai,
+    "ollama" = ellmer::chat_ollama,
+    # extend here if you use other providers:
+    # "azure"  = ellmer::chat_azure,
+    stop("Unsupported provider in trail_setting: '", setting$provider, "'")
+  )
+
+  # ---- annotation call: task expects text input (character) ----
   text_vec <- as.character(data[[text_col]])
+
+  # Build api_args: temperature + extras (extras can override)
+  api_args <- c(
+    list(temperature = setting$temperature),
+    setting$extra
+  )
 
   args <- list(
     .data    = text_vec,
     task     = task,
+    chat_fn  = chat_fn,
     model    = setting$model,
-    api_args = list(temperature = setting$temperature)
+    api_args = api_args
   )
 
   annotations <- do.call(annotate_fun, args)
 
+  # Attach ID if not present; align by row position
   if (!id_col %in% names(annotations)) {
     annotations[[id_col]] <- data[[id_col]]
   }
@@ -75,6 +103,7 @@ trail_record <- function(
     provider     = setting$provider,
     model        = setting$model,
     temperature  = setting$temperature,
+    api_extra    = setting$extra,
     cache_dir    = cache_dir,
     cache_path   = cache_path,
     id_col       = id_col,
