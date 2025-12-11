@@ -4,7 +4,7 @@
 \alias{task}
 \title{Define an annotation task}
 \usage{
-task(name, system_prompt, type_def, input_type = "text")
+task(name, system_prompt, type_def, input_type = c("text", "image"))
 }
 \arguments{
 \item{name}{Name of the task.}
@@ -14,7 +14,7 @@ task(name, system_prompt, type_def, input_type = "text")
 \item{type_def}{Structured output definition, e.g., created by `ellmer::type_object()`,
 `ellmer::type_array()`, or `ellmer::type_enum()`.}
 
-\item{input_type}{Type of input data: `"text"`, `"image"`, `"audio"`, etc.}
+\item{input_type}{Type of input data: `"text"` or `"image"`.}
 }
 \value{
 A task object with a `run()` method.

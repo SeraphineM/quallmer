@@ -19,8 +19,8 @@ annotate <- function(.data, task, ...) {
   if (input_type == "text" && !is.character(.data)) {
     stop("This task expects text input.")
   }
-  if (input_type == "image" && !inherits(.data, "magick-image")) {
-    stop("This task expects image input.")
+  if (input_type == "image" && !is.character(.data)) {
+    stop("This task expects image file paths (a character vector).")
   }
 
   task$run(.data, ...)

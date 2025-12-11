@@ -9,10 +9,11 @@
 #' @param system_prompt System prompt to guide the model (as required by ellmer's `chat_fn`).
 #' @param type_def Structured output definition, e.g., created by `ellmer::type_object()`,
 #'   `ellmer::type_array()`, or `ellmer::type_enum()`.
-#' @param input_type Type of input data: `"text"`, `"image"`, `"audio"`, etc.
+#' @param input_type Type of input data: `"text"` or `"image"`.
 #' @return A task object with a `run()` method.
 #' @export
-task <- function(name, system_prompt, type_def, input_type = "text") {
+task <- function(name, system_prompt, type_def, input_type = c("text", "image")) {
+  input_type <- match.arg(input_type)
 
   run <- function(.data, chat_fn = NULL, model = NULL, verbose = TRUE, ...) {
     # Basic input validation
@@ -32,10 +33,17 @@ task <- function(name, system_prompt, type_def, input_type = "text") {
       ...
     )
 
+    # Prepare prompts based on input type
+    if (input_type == "image") {
+      prompts <- lapply(.data, ellmer::content_image_file)
+    } else {
+      prompts <- as.list(.data)
+    }
+
     # Core execution
     results <- ellmer::parallel_chat_structured(
       chat,
-      prompts = as.list(.data),
+      prompts = prompts,
       type = type_def,
       convert = TRUE,
       include_tokens = FALSE,
