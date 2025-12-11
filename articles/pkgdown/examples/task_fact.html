@@ -128,7 +128,119 @@ texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checki
 <span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Running task 'Fact-checking' using model: gpt-4o</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
+<table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
+<thead><tr>
+<th style="text-align:left;">
+id
+</th>
+<th style="text-align:right;">
+truth_score
+</th>
+<th style="text-align:left;">
+misleading_topic
+</th>
+<th style="text-align:left;">
+explanation
+</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2013-Obama
+</td>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+The text is a ceremonial speech, likely an inaugural address, that
+emphasizes American values, historical references, and aspirations. It
+contains broad, aspirational statements rather than specific factual
+claims, which are generally accurate and consistent with historical and
+cultural narratives. There are no obvious false or misleading claims,
+hence a high truthfulness score.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2017-Trump
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:left;">
+Transfer of power to the people, American carnage , Redistribution of
+wealth , Protectionism benefits , Eradication of terrorism
+</td>
+<td style="text-align:left;">
+The speech contains several claims that are either exaggerated or lack
+nuance. The idea of transferring power from Washington to the people is
+a common rhetorical device but lacks specific mechanisms. The term
+‘American carnage’ is a dramatic portrayal that may not accurately
+reflect the state of the nation. Claims about wealth redistribution and
+protectionism ignore complex economic factors. The promise to eradicate
+terrorism is overly simplistic given the global nature of the issue.
+These elements reduce the overall truthfulness score.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2021-Biden
+</td>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:left;">
+</td>
+<td style="text-align:left;">
+The text is a speech that emphasizes themes of unity, democracy, and
+hope. It accurately reflects historical events and current challenges,
+such as the COVID-19 pandemic and political divisions. The speech is
+largely aspirational and rhetorical, with no specific factual
+inaccuracies or misleading claims. Therefore, it receives a high
+truthfulness score.
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2025-Trump
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:left;">
+Historical inaccuracies, Policy claims , Election results , Panama Canal
+ownership , Energy resources
+</td>
+<td style="text-align:left;">
+The text contains numerous factual inaccuracies and misleading claims.
+For instance, the assertion about the Panama Canal being ‘taken back’ is
+misleading, as the canal is under Panama’s control per treaty
+agreements. Claims about election results and support from various
+demographics lack evidence. The statement about the U.S. having the
+largest oil and gas reserves is also misleading, as it depends on how
+reserves are measured. Additionally, the narrative of historical events
+and policy impacts is often exaggerated or inaccurate, reducing the
+overall truthfulness of the text.
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section level3">
+<h3 id="using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check">Using <code>annotate()</code> for fact checking with a specific
+number of claims to check<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check"></a>
+</h3>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Apply predefined fact checking task with task_fact() in the annotate() function</span></span>
+<span><span class="va">result_claims</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_fact.html">task_fact</a></span><span class="op">(</span>max_topics <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, </span>
+<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
+<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Running task 'Fact-checking' using model: gpt-4o</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -173,140 +285,17 @@ misleading topics or inaccuracies present.
 6
 </td>
 <td style="text-align:left;">
-Transfer of power to the people, American carnage , Economic claims ,
-Protectionism benefits , Eradication of terrorism
-</td>
-<td style="text-align:left;">
-The speech contains several broad and ambitious claims that are
-difficult to verify or are potentially misleading. The idea of
-transferring power from Washington to the people is a common political
-rhetoric but lacks specific mechanisms or evidence of implementation.
-The term ‘American carnage’ paints a bleak picture that may not
-accurately reflect the overall state of the nation. Economic claims
-about jobs and factories are complex and influenced by global factors,
-not solely domestic policy. The benefits of protectionism are debated
-among economists, and the claim to eradicate terrorism is an ambitious
-goal that oversimplifies a complex issue. These topics reduce confidence
-in the overall truthfulness of the text.
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2021-Biden
-</td>
-<td style="text-align:right;">
-9
-</td>
-<td style="text-align:left;">
-</td>
-<td style="text-align:left;">
-The text is a speech that emphasizes themes of unity, democracy, and
-hope. It accurately reflects historical and current events, such as the
-peaceful transfer of power, the challenges posed by the pandemic, and
-the importance of racial justice. The speech is largely aspirational and
-rhetorical, with no specific factual inaccuracies or misleading claims.
-Therefore, it receives a high truthfulness score.
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2025-Trump
-</td>
-<td style="text-align:right;">
-3
-</td>
-<td style="text-align:left;">
-Historical inaccuracies, Exaggerated claims , Unverified events , Policy
-implications , Inflammatory rhetoric
-</td>
-<td style="text-align:left;">
-The text contains numerous exaggerated claims and unverified events,
-such as the alleged assassination attempt and the assertion of a
-‘mandate’ from an election. Historical inaccuracies, like the claim
-about the Panama Canal and the Gulf of Mexico, further reduce
-confidence. The speech also includes inflammatory rhetoric and policy
-implications that are not grounded in current reality, contributing to a
-lower truthfulness score.
-</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section level3">
-<h3 id="using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check">Using <code>annotate()</code> for fact checking with a specific
-number of claims to check<a class="anchor" aria-label="anchor" href="#using-annotate-for-fact-checking-with-a-specific-number-of-claims-to-check"></a>
-</h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Apply predefined fact checking task with task_fact() in the annotate() function</span></span>
-<span><span class="va">result_claims</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">data_corpus_inaugural</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_fact.html">task_fact</a></span><span class="op">(</span>max_topics <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, </span>
-<span>                   chat_fn <span class="op">=</span> <span class="va">chat_openai</span>, model <span class="op">=</span> <span class="st">"gpt-4o"</span>,</span>
-<span>                   api_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Running task 'Fact-checking' using model: gpt-4o</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 1 -&gt; 3 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  75%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
-<thead><tr>
-<th style="text-align:left;">
-id
-</th>
-<th style="text-align:right;">
-truth_score
-</th>
-<th style="text-align:left;">
-misleading_topic
-</th>
-<th style="text-align:left;">
-explanation
-</th>
-</tr></thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-2013-Obama
-</td>
-<td style="text-align:right;">
-9
-</td>
-<td style="text-align:left;">
-</td>
-<td style="text-align:left;">
-The text is a ceremonial speech, likely an inaugural address, that
-emphasizes American values, historical references, and aspirations. It
-contains broad, aspirational statements rather than specific factual
-claims, which are generally accurate and consistent with historical and
-cultural narratives. There are no obvious misleading or false claims,
-hence a high truthfulness score.
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-2017-Trump
-</td>
-<td style="text-align:right;">
-6
-</td>
-<td style="text-align:left;">
 Transfer of Power to the People, American Carnage , America First Policy
 </td>
 <td style="text-align:left;">
-<p>The text is a political speech, which often includes aspirational and
-rhetorical statements rather than factual claims.</p>
-<ol style="list-style-type: decimal">
-<li><p><strong>Transfer of Power to the People</strong>: The claim that
-power is being transferred from Washington to the people is more
-rhetorical than factual, as systemic changes in governance are complex
-and not solely determined by a change in administration.</p></li>
-<li><p><strong>American Carnage</strong>: The depiction of the U.S. as
-suffering from widespread ‘carnage’ is an exaggerated portrayal that may
-not accurately reflect the overall state of the nation.</p></li>
-<li><p><strong>America First Policy</strong>: While the policy is a
-stated goal, its implications and effectiveness are subject to debate
-and not guaranteed outcomes.</p></li>
-</ol>
-Overall, the speech contains a mix of factual statements, political
-promises, and rhetorical flourishes, leading to a moderate truthfulness
-score.
+The speech contains several broad and sweeping claims that are difficult
+to substantiate. The idea of transferring power from Washington to the
+people is a common political rhetoric but lacks specific mechanisms or
+evidence of implementation. The term ‘American carnage’ paints a bleak
+picture of the U.S. that may not align with all perspectives or data.
+The ‘America First’ policy is presented as universally beneficial, but
+it can have complex implications in global trade and diplomacy. These
+elements reduce confidence in the overall truthfulness of the text.
 </td>
 </tr>
 <tr>
@@ -323,8 +312,8 @@ The text is a speech that emphasizes themes of unity, democracy, and
 hope. It accurately reflects historical events and current challenges,
 such as the COVID-19 pandemic and political divisions. The speech is
 largely aspirational and rhetorical, which is typical for such
-addresses, and does not contain specific factual inaccuracies.
-Therefore, it receives a high truthfulness score.
+addresses. There are no specific factual inaccuracies or misleading
+claims, hence a high truthfulness score is appropriate.
 </td>
 </tr>
 <tr>
@@ -335,21 +324,24 @@ Therefore, it receives a high truthfulness score.
 3
 </td>
 <td style="text-align:left;">
-Historical Inaccuracies, Policy Claims , Election Claims
+Historical Inaccuracies, Policy Claims , Election Results
 </td>
 <td style="text-align:left;">
-<p>The text contains several misleading or inaccurate claims.</p>
+<p>The text contains several claims that are either exaggerated or
+factually incorrect.</p>
 <ol style="list-style-type: decimal">
-<li><p><strong>Historical Inaccuracies</strong>: The statement about the
-Panama Canal and its management by China is misleading. The canal is
-operated by the Panama Canal Authority, not China.</p></li>
+<li><p><strong>Historical Inaccuracies</strong>: The claim about the
+Panama Canal being ‘given’ to Panama and ‘taken back’ is misleading. The
+Panama Canal was transferred to Panama under the Torrijos-Carter
+Treaties, and there is no current legal basis for the U.S. to ‘take it
+back.’</p></li>
 <li><p><strong>Policy Claims</strong>: Many policy claims, such as
 ending the Green New Deal or declaring a national energy emergency, are
-speculative and lack context or feasibility.</p></li>
-<li><p><strong>Election Claims</strong>: The claim of winning the
-popular vote by millions and unifying the nation lacks evidence and
-context, especially given the divisive nature of recent
-elections.</p></li>
+speculative and lack immediate feasibility or legal backing.</p></li>
+<li><p><strong>Election Results</strong>: The assertion of winning ‘all
+seven swing states’ and the popular vote by ‘millions’ lacks evidence
+and context, as it is not clear which election is being referenced or if
+these results are accurate.</p></li>
 </ol>
 Overall, the text is filled with hyperbolic and speculative statements
 that reduce its truthfulness.
