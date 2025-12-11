@@ -114,6 +114,13 @@ trail_icr <- function(
     icr_fun    = validate,
     ...) {
 
+  # Validate min_coders
+  if (!is.numeric(min_coders) || length(min_coders) != 1L ||
+      is.na(min_coders) || min_coders < 2L || min_coders != as.integer(min_coders)) {
+    stop("`min_coders` must be an integer >= 2.")
+  }
+  min_coders <- as.integer(min_coders)
+
   wide <- trail_matrix(x, id_col = id_col, label_col = label_col)
   coder_cols <- setdiff(names(wide), id_col)
 
@@ -198,6 +205,13 @@ trail_compare <- function(
     annotate_fun = annotate,
     min_coders   = 2L
 ) {
+  # Validate min_coders
+  if (!is.numeric(min_coders) || length(min_coders) != 1L ||
+      is.na(min_coders) || min_coders < 2L || min_coders != as.integer(min_coders)) {
+    stop("`min_coders` must be an integer >= 2.")
+  }
+  min_coders <- as.integer(min_coders)
+
   stopifnot(is.list(settings), length(settings) > 0L)
   if (is.null(names(settings)) || any(!nzchar(names(settings)))) {
     stop("settings must be a named list; names will be used as setting IDs.")
