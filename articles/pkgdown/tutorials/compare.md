@@ -83,8 +83,6 @@ coded1 <- qlm_code(data_corpus_inaugural,
 
     ## [working] (0 + 0) -> 10 -> 1 | ■■■■                               9%
 
-    ## [working] (0 + 0) -> 1 -> 10 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■      91%
-
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
 ``` r
@@ -111,7 +109,7 @@ coded1
     ##  8 2013-Obama       3 The text emphasizes equality, collective action, and soci…
     ##  9 2017-Trump       8 The text emphasizes nationalism, protectionism, and a foc…
     ## 10 2021-Biden       3 The text emphasizes unity, democracy, and addressing soci…
-    ## 11 2025-Trump       8 The text emphasizes strong nationalist and protectionist …
+    ## 11 2025-Trump       8 The text emphasizes nationalism, strong border control, m…
 
 ## Replicating with different settings
 
@@ -131,7 +129,7 @@ coded2 <- qlm_replicate(coded1,
                         name = "mini_run")
 ```
 
-    ## [working] (0 + 0) -> 9 -> 2 | ■■■■■■                            18%
+    ## [working] (0 + 0) -> 5 -> 6 | ■■■■■■■■■■■■■■■■■                 55%
 
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
@@ -144,7 +142,9 @@ coded3 <- qlm_replicate(coded1,
                         name = "gpt4o_temp07")
 ```
 
-    ## [working] (0 + 0) -> 10 -> 1 | ■■■■                               9%
+    ## [working] (0 + 0) -> 9 -> 2 | ■■■■■■                            18%
+
+    ## [working] (0 + 0) -> 3 -> 8 | ■■■■■■■■■■■■■■■■■■■■■■■           73%
 
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
@@ -173,10 +173,10 @@ comparison
     ## # Raters:   3 
     ## # Level:    ordinal 
     ## 
-    ## Krippendorff's alpha: 0.7236
-    ## Kendall's W:          0.8177
-    ## Spearman's rho:       0.7804
-    ## Percent agreement:    0.0000
+    ## Krippendorff's alpha: 0.8679
+    ## Kendall's W:          0.8662
+    ## Spearman's rho:       0.8962
+    ## Percent agreement:    0.2727
 
 The output shows:
 
@@ -204,10 +204,10 @@ qlm_compare(coded1, coded2, coded3,
     ## # Raters:   3 
     ## # Level:    ordinal 
     ## 
-    ## Krippendorff's alpha: 0.7236
-    ## Kendall's W:          0.8177
-    ## Spearman's rho:       0.7804
-    ## Percent agreement:    0.7273
+    ## Krippendorff's alpha: 0.8679
+    ## Kendall's W:          0.8662
+    ## Spearman's rho:       0.8962
+    ## Percent agreement:    0.9091
 
 ## Validating against a gold standard
 

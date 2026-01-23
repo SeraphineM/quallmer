@@ -108,7 +108,7 @@ learning.**
 For an interactive Shiny application to perform manual coding, review
 AI-generated annotations, and compute agreement metrics, see the
 companion package
-[quallmer.app](https://github.com/SeraphineM/quallmer.app).
+[quallmer.app](https://github.com/quallmer/quallmer.app).
 
 ## Supported LLMs
 
@@ -124,11 +124,11 @@ model](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.htm
 ## Installation
 
 You can install the development version of **quallmer** from
-<https://github.com/SeraphineM/quallmer> with:
+<https://github.com/quallmer/quallmer> with:
 
 ``` r
 # install.packages("pak")
-pak::pak("SeraphineM/quallmer")
+pak::pak("quallmer/quallmer")
 ```
 
 ## Example use and tutorials
