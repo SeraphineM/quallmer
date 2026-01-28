@@ -28,7 +28,7 @@
 #'   [ellmer::parallel_chat_structured()] take priority when there are overlaps.
 #'   Batch-specific arguments (`path`, `wait`, `ignore_hash`) are only used when
 #'   `batch = TRUE`. Arguments not recognized by any function will generate a warning.
-#' @param name Character string identifying this coding run. Default is `"original"`.
+#' @param name Character string identifying this coding run. Default is `NULL`.
 #'
 #' @details
 #' Progress indicators and error handling are provided by the underlying
@@ -93,7 +93,7 @@
 #' }
 #'
 #' @export
-qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = "original") {
+qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL) {
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
     codebook <- as_qlm_codebook(codebook)
@@ -312,6 +312,11 @@ print.qlm_coded <- function(x, ...) {
   } else {
     cat("# Codebook: ", run$codebook$name, "\n", sep = "")
     cat("# Model:    ", run$chat_args$name %||% "unknown", "\n", sep = "")
+  }
+
+  # Show if this is a gold standard
+  if (!is.null(run$metadata$is_gold) && isTRUE(run$metadata$is_gold)) {
+    cat("# Gold:     Yes\n")
   }
 
   cat("# Units:    ", run$metadata$n_units, "\n", sep = "")

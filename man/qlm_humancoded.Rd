@@ -2,11 +2,11 @@
 % Please edit documentation in R/qlm_humancoded.R
 \name{qlm_humancoded}
 \alias{qlm_humancoded}
-\title{Convert human-coded data to qlm_coded format}
+\title{Convert human-coded data to qlm_coded format (deprecated)}
 \usage{
 qlm_humancoded(
   data,
-  name = "human_coder",
+  name = NULL,
   codebook = NULL,
   texts = NULL,
   metadata = list()
@@ -17,87 +17,23 @@ qlm_humancoded(
 column for unit identifiers and one or more coded variables.}
 
 \item{name}{Character string identifying this coding run (e.g., "Coder_A",
-"expert_rater"). Default is "human_coder".}
+"expert_rater"). Default is \code{NULL}.}
 
-\item{codebook}{Optional list containing coding instructions. Can include:
-\describe{
-\item{\code{name}}{Name of the coding scheme}
-\item{\code{instructions}}{Text describing coding instructions}
-\item{\code{schema}}{NULL (not used for human coding)}
-}
-If \code{NULL} (default), a minimal placeholder codebook is created.}
+\item{codebook}{Optional list containing coding instructions.}
 
-\item{texts}{Optional vector of original texts or data that were coded.
-Should correspond to the \code{.id} values in \code{data}. If provided, enables
-more complete provenance tracking.}
+\item{texts}{Optional vector of original texts or data that were coded.}
 
-\item{metadata}{Optional list of metadata about the coding process. Can
-include any relevant information such as:
-\describe{
-\item{\code{coder_name}}{Name of the human coder}
-\item{\code{coder_id}}{Identifier for the coder}
-\item{\code{training}}{Description of coder training}
-\item{\code{date}}{Date of coding}
-\item{\code{notes}}{Any additional notes}
-}
-The function automatically adds \code{timestamp}, \code{n_units}, and
-\code{source = "human"}.}
+\item{metadata}{Optional list of metadata about the coding process.}
 }
 \value{
-A \code{qlm_humancoded} object (inherits from \code{qlm_coded}), which is a
-tibble with additional class and attributes for provenance tracking.
+A \code{qlm_humancoded} object (inherits from \code{qlm_coded}).
 }
 \description{
-Converts a data frame of human-coded data into a \code{qlm_humancoded} object,
-which inherits from \code{qlm_coded}. This enables provenance tracking and
-integration with \code{qlm_compare()}, \code{qlm_validate()}, and \code{qlm_trail()} for
-human-coded data alongside LLM-coded results.
-}
-\details{
-The resulting object has dual inheritance: \code{c("qlm_humancoded", "qlm_coded", ...)}
-This allows it to work seamlessly with all quallmer functions while
-maintaining a distinct identity in provenance trails.
-
-When printed, the object displays "Source: Human coder" instead of model
-information, clearly distinguishing human from LLM coding in workflows.
-}
-\examples{
-# Basic usage with minimal metadata
-human_data <- data.frame(
-  .id = 1:10,
-  sentiment = sample(c("pos", "neg"), 10, replace = TRUE)
-)
-
-human_coded <- qlm_humancoded(human_data, name = "Coder_A")
-human_coded
-
-# With complete metadata
-human_coded <- qlm_humancoded(
-  human_data,
-  name = "expert_rater",
-  codebook = list(
-    name = "Sentiment Analysis",
-    instructions = "Code overall sentiment as positive or negative"
-  ),
-  metadata = list(
-    coder_name = "Dr. Smith",
-    coder_id = "EXP001",
-    training = "5 years experience",
-    date = "2024-01-15"
-  )
-)
-
-# Compare two human coders
-human_coded_2 <- qlm_humancoded(
-  data.frame(.id = 1:10, sentiment = sample(c("pos", "neg"), 10, replace = TRUE)),
-  name = "Coder_B"
-)
-
-qlm_compare(human_coded, human_coded_2, by = sentiment, level = "nominal")
-
+This function is retained for backwards compatibility. New code should use
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} instead, which provides the same functionality with an
+additional \code{is_gold} parameter for marking gold standards.
 }
 \seealso{
-\code{\link[=qlm_code]{qlm_code()}} for LLM coding, \code{\link[=qlm_compare]{qlm_compare()}} for inter-rater reliability,
-\code{\link[=qlm_validate]{qlm_validate()}} for validation against gold standards, \code{\link[=qlm_trail]{qlm_trail()}} for
-provenance tracking.
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} for the current recommended function.
 }
+\keyword{internal}

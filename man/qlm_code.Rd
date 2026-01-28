@@ -4,7 +4,7 @@
 \alias{qlm_code}
 \title{Code qualitative data with an LLM}
 \usage{
-qlm_code(x, codebook, model, ..., batch = FALSE, name = "original")
+qlm_code(x, codebook, model, ..., batch = FALSE, name = NULL)
 }
 \arguments{
 \item{x}{Input data: a character vector of texts (for text codebooks) or
@@ -32,7 +32,7 @@ instead of \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}
 cost-effective for large jobs but may have longer turnaround times.
 Default is \code{FALSE}. See \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}} for details.}
 
-\item{name}{Character string identifying this coding run. Default is \code{"original"}.}
+\item{name}{Character string identifying this coding run. Default is \code{NULL}.}
 }
 \value{
 A \code{qlm_coded} object (a tibble with additional attributes):
