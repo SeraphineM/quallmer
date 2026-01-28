@@ -9,7 +9,8 @@ qlm_codebook(
   instructions,
   schema,
   role = NULL,
-  input_type = c("text", "image")
+  input_type = c("text", "image"),
+  levels = NULL
 )
 }
 \arguments{
@@ -25,6 +26,13 @@ annotator"). If provided, this will be prepended to the instructions when
 creating the system prompt.}
 
 \item{input_type}{Type of input data: \code{"text"} (default) or \code{"image"}.}
+
+\item{levels}{Optional named list specifying measurement levels for each
+variable in the schema. Names should match schema property names. Values
+should be one of \code{"nominal"}, \code{"ordinal"}, \code{"interval"}, or \code{"ratio"}.
+If \code{NULL} (default), levels are auto-detected from schema types using the
+following mapping: \code{type_boolean} and \code{type_enum} = nominal, \code{type_string}
+= nominal, \code{type_integer} = ordinal, \code{type_number} = interval.}
 }
 \value{
 A codebook object (a list with class \code{c("qlm_codebook", "task")})
@@ -62,6 +70,17 @@ my_codebook <- qlm_codebook(
     explanation = type_string("Brief explanation")
   ),
   role = "You are an expert sentiment analyst."
+)
+
+# With explicit measurement levels
+my_codebook_levels <- qlm_codebook(
+  name = "Sentiment",
+  instructions = "Rate the sentiment from -1 (negative) to 1 (positive).",
+  schema = type_object(
+    score = type_number("Sentiment score from -1 to 1"),
+    explanation = type_string("Brief explanation")
+  ),
+  levels = list(score = "interval", explanation = "nominal")
 )
 
 # Use with qlm_code()
