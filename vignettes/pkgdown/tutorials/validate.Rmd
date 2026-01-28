@@ -3,7 +3,7 @@ title: "Using the quallmer app"
 output: html_document
 ---
 
-The quallmer app is a user-friendly interface that allows researchers to manually code data, review LLM-generated annotations, and calculate inter-rater reliability scores such as Krippendorff's alpha and Fleiss' kappa or compare LLM-annotations against a gold standard for accuracy scores. This tutorial will guide you through the steps of using the quallmer app effectively. If you prefer to work programmatically, the quallmer package also provides functions to perform these tasks without the app, which are described in [other tutorials](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/compare.html).
+The quallmer app is a user-friendly interface that allows researchers to manually code data, review LLM-generated annotations, and calculate inter-rater reliability scores such as Krippendorff's alpha and Fleiss' kappa or compare LLM-annotations against a gold standard for accuracy scores. This tutorial will guide you through the steps of using the quallmer app effectively. If you prefer to work programmatically, the quallmer package also provides functions to perform these tasks without the app, which are described in [other tutorials](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/compare.html).
 
 ## Installation
 

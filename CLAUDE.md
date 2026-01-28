@@ -211,7 +211,7 @@ Follow tidyverse style:
 - [testthat documentation](https://testthat.r-lib.org/): Testing framework
 - [pkgdown documentation](https://pkgdown.r-lib.org/): Website generation
 - [ellmer documentation](https://ellmer.tidyverse.org/): LLM integration framework
-- [quallmer documentation](https://seraphinem.github.io/quallmer/index.html)
+- [quallmer documentation](https://quallmer.github.io/quallmer/index.html)
 
 ## General attitude
 If I suggest a change, think about it critically, don't just tell me that it is a great or brilliant improvement and start trying to implement it. Not all of my suggestions will be great.

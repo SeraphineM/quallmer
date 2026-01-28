@@ -22,7 +22,7 @@ Description: Tools for AI-assisted qualitative data coding using large language
     models and settings, computing inter-coder reliability and gold-standard
     validation metrics.
 License: GPL-3
-URL: https://seraphinem.github.io/quallmer/
+URL: https://quallmer.github.io/quallmer/
 Depends:
     R (>= 3.5.0),
     ellmer (>= 0.4.0)

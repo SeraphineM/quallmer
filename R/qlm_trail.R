@@ -40,8 +40,14 @@
 #' @examples
 #' \dontrun{
 #' # Code movie reviews with sentiment codebook
+#'
+#' library(quanteda)
+#'
+#' test_corpus <- data_corpus_LMRDsample %>%
+#'   corpus_sample(size = 10, by = polarity)
+#'
 #' coded1 <- qlm_code(
-#'   data_corpus_LMRDsample,
+#'   test_corpus,
 #'   data_codebook_sentiment,
 #'   model = "openai/gpt-4o",
 #'   name = "gpt4o_run"

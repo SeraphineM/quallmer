@@ -30,7 +30,7 @@ with Large Language Models}. R package. \url{https://github.com/tidyverse/ellmer
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://seraphinem.github.io/quallmer/}
+  \item \url{https://quallmer.github.io/quallmer/}
 }
 
 }

@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# quallmer <a href="https://SeraphineM.github.io/quallmer/"><img src="man/figures/logo.png" align="right" height="138" alt="quallmer website" /></a>
+# quallmer <a href="https://quallmer.github.io/quallmer/"><img src="man/figures/logo.png" align="right" height="138" alt="quallmer website" /></a>
 
 <!-- badges: start -->
 
@@ -9,10 +9,10 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/quallmer)](https://CRAN.R-project.org/package=quallmer)
-[![R-CMD-check](https://github.com/SeraphineM/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/SeraphineM/quallmer/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/SeraphineM/quallmer/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/SeraphineM/quallmer/graph/badge.svg)](https://app.codecov.io/gh/SeraphineM/quallmer)
-[![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://SeraphineM.github.io/quallmer/)
+[![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://quallmer.github.io/quallmer/)
 <!-- badges: end -->
 
 The **quallmer** package is an **easy-to-use toolbox to quickly apply
@@ -113,7 +113,7 @@ learning.**
 For an interactive Shiny application to perform manual coding, review
 AI-generated annotations, and compute agreement metrics, see the
 companion package
-[quallmer.app](https://github.com/SeraphineM/quallmer.app).
+[quallmer.app](https://github.com/quallmer/quallmer.app).
 
 ## Supported LLMs
 
@@ -122,25 +122,25 @@ package. For authentication and usage of each of these LLMs, please
 refer to the respective
 [ellmer](https://ellmer.tidyverse.org/reference/index.html)
 documentation and see our [tutorial for setting up an OpenAI API
-key](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/openai.html)
+key](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.html)
 or [getting started with an open-source Ollama
-model](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/ollama.html).
+model](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.html).
 
 ## Installation
 
 You can install the development version of **quallmer** from
-<https://github.com/SeraphineM/quallmer> with:
+<https://github.com/quallmer/quallmer> with:
 
 ``` r
 # install.packages("pak")
-pak::pak("SeraphineM/quallmer")
+pak::pak("quallmer/quallmer")
 ```
 
 ## Example use and tutorials
 
 To learn more about how to use the package, please refer to our
 [step-by-step
-tutorials](https://seraphinem.github.io/quallmer/articles/getting-started.html).
+tutorials](https://quallmer.github.io/quallmer/articles/getting-started.html).
 
 ## Acknowledgments
 

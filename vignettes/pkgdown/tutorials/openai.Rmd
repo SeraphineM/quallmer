@@ -47,4 +47,4 @@ Add the following line to .Renviron, replacing "APIKEY" with your actual API key
 
 **Caution:** If you're using version control systems like GitHub or GitLab, remember to include .Renviron in your .gitignore file to prevent exposing your API key! To maintain the privacy of your data when using gptstudio, do not highlight, include in a prompt, or otherwise upload any sensitive data, code, or text that should remain confidential.
 
-Now you are ready to use openai models with the `quallmer` package! For example, you can [test the setup by running the example on sentiment analysis.](https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
+Now you are ready to use openai models with the `quallmer` package! For example, you can [test the setup by running the example on sentiment analysis.](https://quallmer.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
