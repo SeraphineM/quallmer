@@ -175,22 +175,27 @@ polarity_validation <- qlm_validate(
 )
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
 
 ``` r
 print(polarity_validation)
 ```
 
-    ## # quallmer validation
-    ## # n: 200 | classes: 2 | average: macro
     ## 
-    ## accuracy:      0.9500
-    ## precision:     0.9500
-    ## recall:        0.9500
-    ## f1:            0.9500
+    ## ── quallmer validation ──
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## ── polarity (nominal) 
+    ## By class:
+    ## <macro>:
+    ## accuracy: 0.9500
+    ## precision: 0.9500
+    ## recall: 0.9500
+    ## F1: 0.9500
     ## Cohen's kappa: 0.9000
-    ## Pearson's r:   0.9500
 
 ``` r
 # Validate rating predictions (ordinal data)
@@ -202,20 +207,23 @@ rating_validation <- qlm_validate(
 )
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
 
 ``` r
 print(rating_validation)
 ```
 
-    ## # quallmer validation
-    ## # n: 200 | levels: 10
     ## 
-    ## Spearman's rho:0.5570
+    ## ── quallmer validation ──
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## ── rating (ordinal) 
+    ## Spearman's rho: 0.5570
     ## Kendall's tau: 0.4851
-    ## Pearson's r:   0.5570
-    ## MAE:           1.8000
+    ## MAE: 1.8000
 
 If we were to treat the `rating` variable as interval, then we get these
 validation metrics:
@@ -229,16 +237,29 @@ qlm_validate(
 )
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 200
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## Pearson's r:   0.9368
-    ## ICC:           0.9350
-    ## MAE:           0.7600
-    ## RMSE:          1.2845
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── rating (interval) 
+    ## 
+    ## Pearson's r: 0.9368
+    ## 
+    ## MAE: 0.7600
+    ## 
+    ## RMSE: 1.2845
+    ## 
+    ## ICC: 0.9350
 
 ## Comparing to a second LLM coding from GPT-5.1
 
@@ -268,14 +289,27 @@ polarity:
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "polarity", level = "nominal")
 ```
 
-    ## # Inter-rater reliability
-    ## # Subjects: 200 
-    ## # Raters:   2 
-    ## # Level:    nominal 
     ## 
+
+    ## ── Inter-rater reliability ──
+
+    ## 
+
+    ## Subjects: 200
+
+    ## Raters: 2
+
+    ## 
+
+    ## ── polarity (nominal)
+
+    ## Percent agreement: 0.9750
+
     ## Krippendorff's alpha: 0.9501
-    ## Cohen's kappa:        0.9500
-    ## Percent agreement:    0.9750
+
+    ## Kappa: 0.9500
+
+    ## 
 
 For the numerical (1-10) variable for rating, we can specify the level
 as ordinal:
@@ -284,16 +318,31 @@ as ordinal:
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "ordinal")
 ```
 
-    ## # Inter-rater reliability
-    ## # Subjects: 200 
-    ## # Raters:   2 
-    ## # Level:    ordinal 
     ## 
+
+    ## ── Inter-rater reliability ──
+
+    ## 
+
+    ## Subjects: 200
+
+    ## Raters: 2
+
+    ## 
+
+    ## ── rating (ordinal)
+
+    ## Percent agreement: 0.5900
+
     ## Krippendorff's alpha: 0.9443
-    ## Weighted kappa:       0.7525
-    ## Kendall's W:          0.9538
-    ## Spearman's rho:       0.9609
-    ## Percent agreement:    0.5900
+
+    ## Weighted kappa: 0.7525
+
+    ## Kendall's W: 0.9538
+
+    ## Spearman's rho: 0.9609
+
+    ## 
 
 If we change the tolerance for agreement, we see that agreement changes
 but that no other measures do:
@@ -303,16 +352,31 @@ qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "ordinal",
             tolerance = 1)
 ```
 
-    ## # Inter-rater reliability
-    ## # Subjects: 200 
-    ## # Raters:   2 
-    ## # Level:    ordinal 
     ## 
+
+    ## ── Inter-rater reliability ──
+
+    ## 
+
+    ## Subjects: 200
+
+    ## Raters: 2
+
+    ## 
+
+    ## ── rating (ordinal)
+
+    ## Percent agreement: 0.9700
+
     ## Krippendorff's alpha: 0.9443
-    ## Weighted kappa:       0.7525
-    ## Kendall's W:          0.9538
-    ## Spearman's rho:       0.9609
-    ## Percent agreement:    0.9700
+
+    ## Weighted kappa: 0.7525
+
+    ## Kendall's W: 0.9538
+
+    ## Spearman's rho: 0.9609
+
+    ## 
 
 If we treat the 1-10 ratings as interval, then we see:
 
@@ -320,15 +384,29 @@ If we treat the 1-10 ratings as interval, then we see:
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "interval")
 ```
 
-    ## # Inter-rater reliability
-    ## # Subjects: 200 
-    ## # Raters:   2 
-    ## # Level:    interval 
     ## 
+
+    ## ── Inter-rater reliability ──
+
+    ## 
+
+    ## Subjects: 200
+
+    ## Raters: 2
+
+    ## 
+
+    ## ── rating (interval)
+
+    ## Percent agreement: 0.5900
+
     ## Krippendorff's alpha: 0.9743
-    ## ICC:                  0.9744
-    ## Pearson's r:          0.9793
-    ## Percent agreement:    0.5900
+
+    ## ICC: 0.9744
+
+    ## Pearson's r: 0.9793
+
+    ## 
 
 ### GPT-5.1 versus the “gold standard”
 
@@ -344,33 +422,67 @@ qlm_validate(
 )
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 200 | classes: 2 | average: macro
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## accuracy:      0.9550
-    ## precision:     0.9561
-    ## recall:        0.9550
-    ## f1:            0.9550
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── polarity (nominal) 
+    ## 
+    ## By class:
+    ## 
+    ## <macro>:
+    ## 
+    ## accuracy: 0.9550
+    ## 
+    ## precision: 0.9561
+    ## 
+    ## recall: 0.9550
+    ## 
+    ## F1: 0.9550
+    ## 
     ## Cohen's kappa: 0.9100
-    ## Pearson's r:   0.9550
 
 Compare this to the previous values from Gemini 2.5 Flash:
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 200 | classes: 2 | average: macro
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## accuracy:      0.9500
-    ## precision:     0.9500
-    ## recall:        0.9500
-    ## f1:            0.9500
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── polarity (nominal) 
+    ## 
+    ## By class:
+    ## 
+    ## <macro>:
+    ## 
+    ## accuracy: 0.9500
+    ## 
+    ## precision: 0.9500
+    ## 
+    ## recall: 0.9500
+    ## 
+    ## F1: 0.9500
+    ## 
     ## Cohen's kappa: 0.9000
-    ## Pearson's r:   0.9500
 
 That’s only a tiny improvement.
 
@@ -385,28 +497,54 @@ qlm_validate(
 )
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 200
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## Pearson's r:   0.9355
-    ## ICC:           0.9346
-    ## MAE:           0.7600
-    ## RMSE:          1.2329
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── rating (interval) 
+    ## 
+    ## Pearson's r: 0.9355
+    ## 
+    ## MAE: 0.7600
+    ## 
+    ## RMSE: 1.2329
+    ## 
+    ## ICC: 0.9346
 
 Compared to Gemini 2.5 Flash:
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 200
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## Pearson's r:   0.9368
-    ## ICC:           0.9350
-    ## MAE:           0.7600
-    ## RMSE:          1.2845
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 200
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── rating (interval) 
+    ## 
+    ## Pearson's r: 0.9368
+    ## 
+    ## MAE: 0.7600
+    ## 
+    ## RMSE: 1.2845
+    ## 
+    ## ICC: 0.9350
 
 Call it a draw!

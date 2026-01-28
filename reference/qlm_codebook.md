@@ -14,7 +14,8 @@ qlm_codebook(
   instructions,
   schema,
   role = NULL,
-  input_type = c("text", "image")
+  input_type = c("text", "image"),
+  levels = NULL
 )
 ```
 
@@ -45,6 +46,16 @@ qlm_codebook(
 - input_type:
 
   Type of input data: `"text"` (default) or `"image"`.
+
+- levels:
+
+  Optional named list specifying measurement levels for each variable in
+  the schema. Names should match schema property names. Values should be
+  one of `"nominal"`, `"ordinal"`, `"interval"`, or `"ratio"`. If `NULL`
+  (default), levels are auto-detected from schema types using the
+  following mapping: `type_boolean` and `type_enum` = nominal,
+  `type_string` = nominal, `type_integer` = ordinal, `type_number` =
+  interval.
 
 ## Value
 
@@ -98,6 +109,17 @@ my_codebook <- qlm_codebook(
     explanation = type_string("Brief explanation")
   ),
   role = "You are an expert sentiment analyst."
+)
+
+# With explicit measurement levels
+my_codebook_levels <- qlm_codebook(
+  name = "Sentiment",
+  instructions = "Rate the sentiment from -1 (negative) to 1 (positive).",
+  schema = type_object(
+    score = type_number("Sentiment score from -1 to 1"),
+    explanation = type_string("Brief explanation")
+  ),
+  levels = list(score = "interval", explanation = "nominal")
 )
 
 # Use with qlm_code()

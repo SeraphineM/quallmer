@@ -1,51 +1,65 @@
 # Validate coded results against a gold standard
 
-Validates LLM-coded results from a `qlm_coded` object against a gold
-standard (typically human annotations) using appropriate metrics based
-on measurement level. For nominal data, computes accuracy, precision,
-recall, F1-score, and Cohen's kappa. For ordinal data, computes accuracy
-and weighted kappa (linear weighting), which accounts for the ordering
-and distance between categories.
+Validates LLM-coded results from one or more `qlm_coded` objects against
+a gold standard (typically human annotations) using appropriate metrics
+based on measurement level. For nominal data, computes accuracy,
+precision, recall, F1-score, and Cohen's kappa. For ordinal data,
+computes accuracy and weighted kappa (linear weighting), which accounts
+for the ordering and distance between categories.
 
 ## Usage
 
 ``` r
 qlm_validate(
-  x,
+  ...,
   gold,
   by,
-  level = c("nominal", "ordinal", "interval"),
-  average = c("macro", "micro", "weighted", "none")
+  level = NULL,
+  average = c("macro", "micro", "weighted", "none"),
+  ci = c("none", "analytic", "bootstrap"),
+  bootstrap_n = 1000
 )
 ```
 
 ## Arguments
 
-- x:
+- ...:
 
-  A data frame, `qlm_coded`, or `qlm_humancoded` object containing
-  predictions to validate. Must include a `.id` column and the variable
-  specified in `by`. Plain data frames are automatically converted to
-  `qlm_humancoded` objects.
+  One or more data frames, `qlm_coded`, or `as_qlm_coded` objects
+  containing predictions to validate. Must include a `.id` column and
+  the variable(s) specified in `by`. Plain data frames are automatically
+  converted to `as_qlm_coded` objects. Multiple objects will be
+  validated separately against the same gold standard, and results
+  combined with a `rater` column to distinguish them.
 
 - gold:
 
-  A data frame, `qlm_coded`, or `qlm_humancoded` object containing gold
-  standard annotations. Must include a `.id` column for joining with `x`
-  and the variable specified in `by`. Plain data frames are
-  automatically converted to `qlm_humancoded` objects.
+  A data frame, `qlm_coded`, or object created with
+  [`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md)
+  containing gold standard annotations. Must include a `.id` column for
+  joining with objects in `...` and the variable(s) specified in `by`.
+  Plain data frames are automatically converted. **Optional** when using
+  objects marked with `as_qlm_coded(data, is_gold = TRUE)` - these are
+  auto-detected.
 
 - by:
 
-  Name of the variable to validate (supports both quoted and unquoted).
-  Must be present in both `x` and `gold`. Can be specified as
-  `by = sentiment` or `by = "sentiment"`.
+  Optional. Name of the variable(s) to validate (supports both quoted
+  and unquoted). If `NULL` (default), all coded variables are validated.
+  Can be a single variable (`by = sentiment`), a character vector
+  (`by = c("sentiment", "rating")`), or NULL to process all variables.
 
 - level:
 
-  Character scalar. Measurement level of the variable: `"nominal"`,
-  `"ordinal"`, or `"interval"`. Default is `"nominal"`. Determines which
-  validation metrics are computed.
+  Optional. Measurement level(s) for the variable(s). Can be:
+
+  - `NULL` (default): Auto-detect from codebook
+
+  - Character scalar: Use same level for all variables
+
+  - Named list: Specify level for each variable
+
+  Valid levels are `"nominal"`, `"ordinal"`, or `"interval"`.
 
 - average:
 
@@ -68,85 +82,84 @@ qlm_validate(
 
   :   Return per-class metrics in addition to global metrics
 
+- ci:
+
+  Confidence interval method:
+
+  `"none"`
+
+  :   No confidence intervals (default)
+
+  `"analytic"`
+
+  :   Analytic CIs where available (ICC, Pearson's r)
+
+  `"bootstrap"`
+
+  :   Bootstrap CIs for all metrics via resampling
+
+- bootstrap_n:
+
+  Number of bootstrap resamples when `ci = "bootstrap"`. Default
+  is 1000. Ignored when `ci` is `"none"` or `"analytic"`.
+
 ## Value
 
-A `qlm_validation` object containing:
-
-- `accuracy`:
-
-  Overall accuracy (nominal only)
-
-- `precision`:
-
-  Precision (nominal only)
-
-- `recall`:
-
-  Recall (nominal only)
-
-- `f1`:
-
-  F1-score (nominal only)
-
-- `kappa`:
-
-  Cohen's kappa (nominal only)
-
-- `rho`:
-
-  Spearman's rho rank correlation (ordinal only)
-
-- `tau`:
-
-  Kendall's tau rank correlation (ordinal only)
-
-- `r`:
-
-  Pearson's r correlation (interval only)
-
-- `icc`:
-
-  Intraclass correlation coefficient (interval only)
-
-- `mae`:
-
-  Mean absolute error (ordinal/interval)
-
-- `rmse`:
-
-  Root mean squared error (interval only)
-
-- `by_class`:
-
-  Per-class metrics (nominal with `average = "none"` only)
-
-- `confusion`:
-
-  Confusion matrix (nominal only)
-
-- `n`:
-
-  Number of units compared
-
-- `classes`:
-
-  Class/level labels
-
-- `average`:
-
-  Averaging method used
-
-- `level`:
-
-  Measurement level
+A `qlm_validation` object (a tibble/data frame) with the following
+columns:
 
 - `variable`:
 
-  Variable name validated
+  Name of the validated variable
 
-- `call`:
+- `level`:
 
-  Function call
+  Measurement level used
+
+- `measure`:
+
+  Name of the validation metric
+
+- `value`:
+
+  Computed value of the metric
+
+- `class`:
+
+  For nominal data: averaging method used (e.g., "", "", "") or class
+  label (when `average = "none"`). For ordinal/interval data: NA
+  (averaging not applicable).
+
+- `rater`:
+
+  Name of the object being validated (from input names)
+
+- `ci_lower`:
+
+  Lower bound of confidence interval (only if `ci != "none"`)
+
+- `ci_upper`:
+
+  Upper bound of confidence interval (only if `ci != "none"`)
+
+The object has class
+`c("qlm_validation", "tbl_df", "tbl", "data.frame")` and attributes
+containing metadata (`n`, `call`).
+
+**Metrics computed by measurement level:**
+
+- **Nominal:** accuracy, precision, recall, f1, kappa
+
+- **Ordinal:** rho (Spearman's), tau (Kendall's), mae
+
+- **Interval:** icc, r (Pearson's), mae, rmse
+
+**Confidence intervals:**
+
+- `ci = "analytic"`: Provides analytic CIs for ICC and Pearson's r only
+
+- `ci = "bootstrap"`: Provides bootstrap CIs for all metrics via
+  resampling
 
 ## Details
 
@@ -198,8 +211,8 @@ nominal data. For ordinal data, these metrics are not computed.
 for inter-rater reliability between coded objects,
 [`qlm_code()`](https://quallmer.github.io/quallmer/reference/qlm_code.md)
 for LLM coding,
-[`qlm_humancoded()`](https://quallmer.github.io/quallmer/reference/qlm_humancoded.md)
-for human coding,
+[`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md)
+for converting human-coded data,
 [`yardstick::accuracy()`](https://yardstick.tidymodels.org/reference/accuracy.html),
 [`yardstick::precision()`](https://yardstick.tidymodels.org/reference/precision.html),
 [`yardstick::recall()`](https://yardstick.tidymodels.org/reference/recall.html),
@@ -224,22 +237,40 @@ coded <- qlm_code(
 )
 
 # Create gold standard from corpus metadata
-gold <- data.frame(
+gold_data <- data.frame(
   .id = coded$.id,
   sentiment = quanteda::docvars(reviews, "polarity"),
   rating = quanteda::docvars(reviews, "rating")
 )
 
-# Validate polarity (nominal data) - supports unquoted variable names
-validation <- qlm_validate(coded, gold, by = sentiment, level = "nominal")
+# Method 1: Mark as gold standard with as_qlm_coded() - auto-detected
+gold <- as_qlm_coded(gold_data, name = "Expert", is_gold = TRUE)
+validation <- qlm_validate(coded, gold)  # gold parameter auto-detected!
 print(validation)
+
+# Method 2: Explicit gold parameter (backward compatible)
+gold <- as_qlm_coded(gold_data, name = "Expert")
+validation <- qlm_validate(coded, gold = gold)  # explicit gold =
+print(validation)
+
+# Validate specific variables
+validation <- qlm_validate(coded, gold, by = c("sentiment", "rating"))
+
+# Validate single variable with explicit level (backward compatible)
+validation <- qlm_validate(coded, gold, by = sentiment, level = "nominal")
 
 # Can also use quoted names
 validation <- qlm_validate(coded, gold, by = "sentiment", level = "nominal")
 
-# Validate ratings (ordinal data)
-validation_ordinal <- qlm_validate(coded, gold_ratings, by = rating, level = "ordinal")
-print(validation_ordinal)
+# Validate with different levels per variable
+validation <- qlm_validate(coded, gold, by = c("sentiment", "rating"),
+                           level = list(sentiment = "nominal", rating = "ordinal"))
+
+# Get confidence intervals
+validation <- qlm_validate(coded, gold, ci = "analytic")
+
+# Get bootstrap confidence intervals
+validation <- qlm_validate(coded, gold, ci = "bootstrap", bootstrap_n = 1000)
 
 # Use micro-averaging (nominal level only)
 qlm_validate(coded, gold, by = sentiment, level = "nominal", average = "micro")
@@ -248,7 +279,5 @@ qlm_validate(coded, gold, by = sentiment, level = "nominal", average = "micro")
 validation_detailed <- qlm_validate(coded, gold, by = sentiment,
                                     level = "nominal", average = "none")
 print(validation_detailed)
-validation_detailed$by_class
-validation_detailed$confusion
 } # }
 ```

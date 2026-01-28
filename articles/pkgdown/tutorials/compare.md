@@ -61,6 +61,9 @@ data_codebook_ideology
     ##   Role:         You are an expert political scientist specializing in ideolo...
     ##   Instructions: Rate the ideological position of this text on a scale from 0...
     ##   Output schema:ellmer::TypeObject
+    ##   Levels:
+    ##     score: ordinal
+    ##     explanation: nominal
 
 **Note**: The built-in codebooks are provided as examples and starting
 points. For actual research projects, you should create custom codebooks
@@ -83,6 +86,8 @@ coded1 <- qlm_code(data_corpus_inaugural,
 
     ## [working] (0 + 0) -> 10 -> 1 | ■■■■                               9%
 
+    ## [working] (0 + 0) -> 4 -> 7 | ■■■■■■■■■■■■■■■■■■■■              64%
+
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
 ``` r
@@ -102,14 +107,14 @@ coded1
     ##  1 1985-Reagan      8 The text emphasizes limited government, reduced taxes, an…
     ##  2 1989-Bush        7 The text emphasizes free markets, limited government inte…
     ##  3 1993-Clinton     4 The text emphasizes themes of renewal, change, and respon…
-    ##  4 1997-Clinton     4 The text emphasizes themes of equality, community, and op…
-    ##  5 2001-Bush        6 The text reflects a centrist to moderately right-leaning …
-    ##  6 2005-Bush        7 The text emphasizes a strong commitment to spreading demo…
+    ##  4 1997-Clinton     5 The text presents a centrist ideological position. It emp…
+    ##  5 2001-Bush        6 The text reflects a moderate to right-leaning ideological…
+    ##  6 2005-Bush        8 The text emphasizes a strong commitment to spreading demo…
     ##  7 2009-Obama       3 The text emphasizes themes of unity, responsibility, and …
     ##  8 2013-Obama       3 The text emphasizes equality, collective action, and soci…
     ##  9 2017-Trump       8 The text emphasizes nationalism, protectionism, and a foc…
     ## 10 2021-Biden       3 The text emphasizes unity, democracy, and addressing soci…
-    ## 11 2025-Trump       8 The text emphasizes nationalism, strong border control, m…
+    ## 11 2025-Trump       8 The text emphasizes strong nationalist and protectionist …
 
 ## Replicating with different settings
 
@@ -129,7 +134,7 @@ coded2 <- qlm_replicate(coded1,
                         name = "mini_run")
 ```
 
-    ## [working] (0 + 0) -> 5 -> 6 | ■■■■■■■■■■■■■■■■■                 55%
+    ## [working] (0 + 0) -> 9 -> 2 | ■■■■■■                            18%
 
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
@@ -142,9 +147,7 @@ coded3 <- qlm_replicate(coded1,
                         name = "gpt4o_temp07")
 ```
 
-    ## [working] (0 + 0) -> 9 -> 2 | ■■■■■■                            18%
-
-    ## [working] (0 + 0) -> 3 -> 8 | ■■■■■■■■■■■■■■■■■■■■■■■           73%
+    ## [working] (0 + 0) -> 10 -> 1 | ■■■■                               9%
 
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
@@ -168,15 +171,29 @@ comparison <- qlm_compare(coded1, coded2, coded3,
 comparison
 ```
 
-    ## # Inter-rater reliability
-    ## # Subjects: 11 
-    ## # Raters:   3 
-    ## # Level:    ordinal 
     ## 
-    ## Krippendorff's alpha: 0.8679
-    ## Kendall's W:          0.8662
-    ## Spearman's rho:       0.8962
-    ## Percent agreement:    0.2727
+
+    ## ── Inter-rater reliability ──
+
+    ## 
+
+    ## Subjects: 11
+
+    ## Raters: 3
+
+    ## 
+
+    ## ── score (ordinal)
+
+    ## Percent agreement: 0.3636
+
+    ## Krippendorff's alpha: 0.9237
+
+    ## Kendall's W: 0.9162
+
+    ## Spearman's rho: 0.9447
+
+    ## 
 
 The output shows:
 
@@ -199,15 +216,29 @@ qlm_compare(coded1, coded2, coded3,
             tolerance = 1)
 ```
 
-    ## # Inter-rater reliability
-    ## # Subjects: 11 
-    ## # Raters:   3 
-    ## # Level:    ordinal 
     ## 
-    ## Krippendorff's alpha: 0.8679
-    ## Kendall's W:          0.8662
-    ## Spearman's rho:       0.8962
-    ## Percent agreement:    0.9091
+
+    ## ── Inter-rater reliability ──
+
+    ## 
+
+    ## Subjects: 11
+
+    ## Raters: 3
+
+    ## 
+
+    ## ── score (ordinal)
+
+    ## Percent agreement: 0.9091
+
+    ## Krippendorff's alpha: 0.9237
+
+    ## Kendall's W: 0.9162
+
+    ## Spearman's rho: 0.9447
+
+    ## 
 
 ## Validating against a gold standard
 
@@ -238,38 +269,24 @@ validation <- qlm_validate(coded1,
                            by = "score")
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## Warning: While computing multiclass `precision()`, some levels had no predicted events
-    ## (i.e. `true_positive + false_positive = 0`).
-    ## Precision is undefined in this case, and those levels will be removed from the
-    ## averaged result.
-    ## Note that the following number of true events actually occurred for each
-    ## problematic event level:
-    ## '5': 1
-    ## While computing multiclass `precision()`, some levels had no predicted events
-    ## (i.e. `true_positive + false_positive = 0`).
-    ## Precision is undefined in this case, and those levels will be removed from the
-    ## averaged result.
-    ## Note that the following number of true events actually occurred for each
-    ## problematic event level:
-    ## '5': 1
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
 
 ``` r
 # View validation results
 validation
 ```
 
-    ## # quallmer validation
-    ## # n: 11 | classes: 6 | average: macro
     ## 
-    ## accuracy:      0.7273
-    ## precision:     0.7667
-    ## recall:        0.6944
-    ## f1:            0.7267
-    ## Cohen's kappa: 0.6667
-    ## Pearson's r:   0.6944
+    ## ── quallmer validation ──
+    ## 
+    ## n: 11
+    ## 
+    ## 
+    ## ── score (ordinal) 
+    ## Spearman's rho: 0.8778
+    ## Kendall's tau: 0.7661
+    ## MAE: 0.7273
 
 The output shows:
 
@@ -287,31 +304,55 @@ or even interval:
 qlm_validate(coded1, gold = gold_standard, by = "score", level = "ordinal")
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 11 | levels: 6
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## Spearman's rho:0.8884
-    ## Kendall's tau: 0.8000
-    ## Pearson's r:   0.8884
-    ## MAE:           0.7273
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 11
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── score (ordinal) 
+    ## 
+    ## Spearman's rho: 0.8778
+    ## 
+    ## Kendall's tau: 0.7661
+    ## 
+    ## MAE: 0.7273
 
 ``` r
 qlm_validate(coded1, gold = gold_standard, by = "score", level = "interval")
 ```
 
-    ## ℹ Converting `gold` to <qlm_humancoded> object.
-    ## ℹ Use `qlm_humancoded()` directly to provide coder names and metadata.
-
-    ## # quallmer validation
-    ## # n: 11
+    ## ℹ Converting `gold` to <as_qlm_coded> object.
+    ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
     ## 
-    ## Pearson's r:   0.8092
-    ## ICC:           0.7460
-    ## MAE:           0.7273
-    ## RMSE:          1.4142
+    ## 
+    ## ── quallmer validation ──
+    ## 
+    ## 
+    ## 
+    ## n: 11
+    ## 
+    ## 
+    ## 
+    ## 
+    ## 
+    ## ── score (interval) 
+    ## 
+    ## Pearson's r: 0.8363
+    ## 
+    ## MAE: 0.7273
+    ## 
+    ## RMSE: 1.2792
+    ## 
+    ## ICC: 0.7902
 
 ## Best practices for reliability and validation
 

@@ -2,6 +2,8 @@
 
 ## All functions
 
+- [`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md)
+  : Convert coded data to qlm_coded format
 - [`data_codebook_fact`](https://quallmer.github.io/quallmer/reference/data_codebook_fact.md)
   : Fact-checking codebook
 - [`data_codebook_ideology`](https://quallmer.github.io/quallmer/reference/data_codebook_ideology.md)
@@ -25,8 +27,6 @@
   : Define a qualitative codebook
 - [`qlm_compare()`](https://quallmer.github.io/quallmer/reference/qlm_compare.md)
   : Compare coded results for inter-rater reliability
-- [`qlm_humancoded()`](https://quallmer.github.io/quallmer/reference/qlm_humancoded.md)
-  : Convert human-coded data to qlm_coded format
 - [`qlm_replicate()`](https://quallmer.github.io/quallmer/reference/qlm_replicate.md)
   : Replicate a coding task
 - [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md)

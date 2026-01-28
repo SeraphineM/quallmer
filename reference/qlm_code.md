@@ -7,7 +7,7 @@ and metadata for reproducibility.
 ## Usage
 
 ``` r
-qlm_code(x, codebook, model, ..., batch = FALSE, name = "original")
+qlm_code(x, codebook, model, ..., batch = FALSE, name = NULL)
 ```
 
 ## Arguments
@@ -63,7 +63,7 @@ qlm_code(x, codebook, model, ..., batch = FALSE, name = "original")
 
 - name:
 
-  Character string identifying this coding run. Default is `"original"`.
+  Character string identifying this coding run. Default is `NULL`.
 
 ## Value
 

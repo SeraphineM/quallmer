@@ -2,6 +2,80 @@
 
 ## quallmer (development version)
 
+### Gold standard handling and validation improvements
+
+- New
+  [`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md)
+  function replaces
+  [`qlm_humancoded()`](https://quallmer.github.io/quallmer/reference/qlm_humancoded.md)
+  as the primary function for converting human-coded or external data to
+  `qlm_coded` objects. The new function includes an `is_gold` parameter
+  to mark gold standard objects for automatic detection.
+- [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
+  now auto-detects gold standards marked with
+  `as_qlm_coded(data, is_gold = TRUE)`, making the `gold =` parameter
+  optional when using marked objects. Explicit `gold =` still works for
+  backward compatibility.
+- [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
+  signature changed to `qlm_validate(..., gold, by, ...)` to support
+  validating multiple coded objects against a single gold standard in
+  one call. Results include a `rater` column identifying each object.
+- [`qlm_humancoded()`](https://quallmer.github.io/quallmer/reference/qlm_humancoded.md)
+  is now marked `@keywords internal` but remains exported for backward
+  compatibility. New code should use
+  [`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md).
+- Gold standard objects display `# Gold: Yes` in their print output for
+  easy identification.
+- Improved error messages in
+  [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
+  detect common mistakes like forgetting `gold =` or misspelling
+  parameter names, with helpful suggestions for correction.
+
+### Confidence intervals and reliability metrics
+
+- `ci` parameter added to
+  [`qlm_compare()`](https://quallmer.github.io/quallmer/reference/qlm_compare.md)
+  and
+  [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
+  with options `"none"` (default), `"analytic"`, or `"bootstrap"`.
+- Bootstrap confidence intervals now work for all metrics in both
+  functions via percentile method with configurable `bootstrap_n`
+  parameter (default 1000).
+- Analytic confidence intervals available for ICC (via psych package)
+  and Pearson’s r (via cor.test).
+- Results include `ci_lower` and `ci_upper` columns when `ci != "none"`.
+
+### Rater identification and combinability
+
+- [`qlm_compare()`](https://quallmer.github.io/quallmer/reference/qlm_compare.md)
+  results now include `rater1`, `rater2`, `rater3`, etc. columns
+  containing the names of compared objects (from `name` attribute),
+  enabling easy identification when combining multiple comparisons with
+  [`dplyr::bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html).
+- [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
+  results now include a `rater` column identifying which object is being
+  validated, enabling easy combining of multiple validations.
+- Both functions return data frames (class `qlm_comparison` and
+  `qlm_validation`) instead of lists, making them easier to filter,
+  combine, and analyze.
+- Results from multiple
+  [`qlm_compare()`](https://quallmer.github.io/quallmer/reference/qlm_compare.md)
+  or
+  [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
+  calls can be combined with
+  [`bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html)
+  for analysis across multiple coders or conditions.
+
+### API refinements
+
+- [`qlm_code()`](https://quallmer.github.io/quallmer/reference/qlm_code.md)
+  default `name` parameter changed from `"original"` to `NULL` for
+  cleaner output when names aren’t specified.
+- Auto-conversion messages now recommend
+  [`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md)
+  instead of
+  [`qlm_humancoded()`](https://quallmer.github.io/quallmer/reference/qlm_humancoded.md).
+
 ### The quallmer audit trail
 
 - The trail API has been refactored to better align with Lincoln and

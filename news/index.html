@@ -47,6 +47,41 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="quallmer-development-version">quallmer (development version)<a class="anchor" aria-label="anchor" href="#quallmer-development-version"></a></h2>
 <div class="section level3">
+<h3 id="gold-standard-handling-and-validation-improvements-development-version">Gold standard handling and validation improvements<a class="anchor" aria-label="anchor" href="#gold-standard-handling-and-validation-improvements-development-version"></a></h3>
+<ul><li>New <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> function replaces <code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code> as the primary function for converting human-coded or external data to <code>qlm_coded</code> objects. The new function includes an <code>is_gold</code> parameter to mark gold standard objects for automatic detection.</li>
+<li>
+<code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> now auto-detects gold standards marked with <code>as_qlm_coded(data, is_gold = TRUE)</code>, making the <code>gold =</code> parameter optional when using marked objects. Explicit <code>gold =</code> still works for backward compatibility.</li>
+<li>
+<code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> signature changed to <code>qlm_validate(..., gold, by, ...)</code> to support validating multiple coded objects against a single gold standard in one call. Results include a <code>rater</code> column identifying each object.</li>
+<li>
+<code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code> is now marked <code>@keywords internal</code> but remains exported for backward compatibility. New code should use <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code>.</li>
+<li>Gold standard objects display <code># Gold:     Yes</code> in their print output for easy identification.</li>
+<li>Improved error messages in <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> detect common mistakes like forgetting <code>gold =</code> or misspelling parameter names, with helpful suggestions for correction.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="confidence-intervals-and-reliability-metrics-development-version">Confidence intervals and reliability metrics<a class="anchor" aria-label="anchor" href="#confidence-intervals-and-reliability-metrics-development-version"></a></h3>
+<ul><li>
+<code>ci</code> parameter added to <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> and <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> with options <code>"none"</code> (default), <code>"analytic"</code>, or <code>"bootstrap"</code>.</li>
+<li>Bootstrap confidence intervals now work for all metrics in both functions via percentile method with configurable <code>bootstrap_n</code> parameter (default 1000).</li>
+<li>Analytic confidence intervals available for ICC (via psych package) and Pearson’s r (via cor.test).</li>
+<li>Results include <code>ci_lower</code> and <code>ci_upper</code> columns when <code>ci != "none"</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="rater-identification-and-combinability-development-version">Rater identification and combinability<a class="anchor" aria-label="anchor" href="#rater-identification-and-combinability-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> results now include <code>rater1</code>, <code>rater2</code>, <code>rater3</code>, etc. columns containing the names of compared objects (from <code>name</code> attribute), enabling easy identification when combining multiple comparisons with <code><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">dplyr::bind_rows()</a></code>.</li>
+<li>
+<code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> results now include a <code>rater</code> column identifying which object is being validated, enabling easy combining of multiple validations.</li>
+<li>Both functions return data frames (class <code>qlm_comparison</code> and <code>qlm_validation</code>) instead of lists, making them easier to filter, combine, and analyze.</li>
+<li>Results from multiple <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> or <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> calls can be combined with <code><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows()</a></code> for analysis across multiple coders or conditions.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="api-refinements-development-version">API refinements<a class="anchor" aria-label="anchor" href="#api-refinements-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/qlm_code.html">qlm_code()</a></code> default <code>name</code> parameter changed from <code>"original"</code> to <code>NULL</code> for cleaner output when names aren’t specified.</li>
+<li>Auto-conversion messages now recommend <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> instead of <code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code>.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="the-quallmer-audit-trail-development-version">The quallmer audit trail<a class="anchor" aria-label="anchor" href="#the-quallmer-audit-trail-development-version"></a></h3>
 <ul><li>The trail API has been refactored to better align with Lincoln and Guba’s (1985) audit trail concept for establishing trustworthiness in qualitative research.</li>
 <li>

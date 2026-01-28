@@ -214,19 +214,24 @@ can use <code><a href="../../../reference/qlm_validate.html">qlm_validate()</a><
 <span>  by <span class="op">=</span> <span class="st">"polarity"</span>,</span>
 <span>  level <span class="op">=</span> <span class="st">"nominal"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span></code></pre>
 <div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">polarity_validation</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200 | classes: 2 | average: macro</span></span>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## accuracy:      0.9500</span></span>
-<span><span class="co">## precision:     0.9500</span></span>
-<span><span class="co">## recall:        0.9500</span></span>
-<span><span class="co">## f1:            0.9500</span></span>
-<span><span class="co">## Cohen's kappa: 0.9000</span></span>
-<span><span class="co">## Pearson's r:   0.9500</span></span></code></pre>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── polarity (nominal) </span></span>
+<span><span class="co">## By class:</span></span>
+<span><span class="co">## &lt;macro&gt;:</span></span>
+<span><span class="co">## accuracy: 0.9500</span></span>
+<span><span class="co">## precision: 0.9500</span></span>
+<span><span class="co">## recall: 0.9500</span></span>
+<span><span class="co">## F1: 0.9500</span></span>
+<span><span class="co">## Cohen's kappa: 0.9000</span></span></code></pre>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Validate rating predictions (ordinal data)</span></span>
 <span><span class="va">rating_validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_validate.html">qlm_validate</a></span><span class="op">(</span></span>
@@ -235,17 +240,20 @@ can use <code><a href="../../../reference/qlm_validate.html">qlm_validate()</a><
 <span>  by <span class="op">=</span> <span class="st">"rating"</span>,</span>
 <span>  level <span class="op">=</span> <span class="st">"ordinal"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span></code></pre>
 <div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">rating_validation</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200 | levels: 10</span></span>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Spearman's rho:0.5570</span></span>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── rating (ordinal) </span></span>
+<span><span class="co">## Spearman's rho: 0.5570</span></span>
 <span><span class="co">## Kendall's tau: 0.4851</span></span>
-<span><span class="co">## Pearson's r:   0.5570</span></span>
-<span><span class="co">## MAE:           1.8000</span></span></code></pre>
+<span><span class="co">## MAE: 1.8000</span></span></code></pre>
 <p>If we were to treat the <code>rating</code> variable as interval,
 then we get these validation metrics:</p>
 <div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
@@ -255,15 +263,29 @@ then we get these validation metrics:</p>
 <span>  by <span class="op">=</span> <span class="st">"rating"</span>,</span>
 <span>  level <span class="op">=</span> <span class="st">"interval"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Pearson's r:   0.9368</span></span>
-<span><span class="co">## ICC:           0.9350</span></span>
-<span><span class="co">## MAE:           0.7600</span></span>
-<span><span class="co">## RMSE:          1.2845</span></span></code></pre>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── rating (interval) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Pearson's r: 0.9368</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## MAE: 0.7600</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## RMSE: 1.2845</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ICC: 0.9350</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="comparing-to-a-second-llm-coding-from-gpt-5-1">Comparing to a second LLM coding from GPT-5.1<a class="anchor" aria-label="anchor" href="#comparing-to-a-second-llm-coding-from-gpt-5-1"></a>
@@ -274,7 +296,7 @@ then we get these validation metrics:</p>
 <p>We can use <code><a href="../../../reference/qlm_compare.html">qlm_compare()</a></code> to try a more advanced model,
 to see how this changes things, comparing its performance to the
 previous model, and also to the gold standard.</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply sentiment analysis using qlm_code()</span></span>
 <span><span class="va">coded_gpt5.1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
 <span>  <span class="va">data_corpus_LMRDsample</span>,</span>
@@ -286,121 +308,197 @@ previous model, and also to the gold standard.</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Now we can compare the agreement between the two LLM codings, for
 polarity:</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded_g2.5_flash</span>, <span class="va">coded_gpt5.1</span>, by <span class="op">=</span> <span class="st">"polarity"</span>, level <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # Inter-rater reliability</span></span>
-<span><span class="co">## # Subjects: 200 </span></span>
-<span><span class="co">## # Raters:   2 </span></span>
-<span><span class="co">## # Level:    nominal </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Krippendorff's alpha: 0.9501</span></span>
-<span><span class="co">## Cohen's kappa:        0.9500</span></span>
-<span><span class="co">## Percent agreement:    0.9750</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 200</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 2</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── polarity (nominal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement: 0.9750</span></span></code></pre>
+<pre><code><span><span class="co">## Krippendorff's alpha: 0.9501</span></span></code></pre>
+<pre><code><span><span class="co">## Kappa: 0.9500</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
 <p>For the numerical (1-10) variable for rating, we can specify the
 level as ordinal:</p>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded_g2.5_flash</span>, <span class="va">coded_gpt5.1</span>, by <span class="op">=</span> <span class="st">"rating"</span>, level <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # Inter-rater reliability</span></span>
-<span><span class="co">## # Subjects: 200 </span></span>
-<span><span class="co">## # Raters:   2 </span></span>
-<span><span class="co">## # Level:    ordinal </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Krippendorff's alpha: 0.9443</span></span>
-<span><span class="co">## Weighted kappa:       0.7525</span></span>
-<span><span class="co">## Kendall's W:          0.9538</span></span>
-<span><span class="co">## Spearman's rho:       0.9609</span></span>
-<span><span class="co">## Percent agreement:    0.5900</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 200</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 2</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── rating (ordinal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement: 0.5900</span></span></code></pre>
+<pre><code><span><span class="co">## Krippendorff's alpha: 0.9443</span></span></code></pre>
+<pre><code><span><span class="co">## Weighted kappa: 0.7525</span></span></code></pre>
+<pre><code><span><span class="co">## Kendall's W: 0.9538</span></span></code></pre>
+<pre><code><span><span class="co">## Spearman's rho: 0.9609</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
 <p>If we change the tolerance for agreement, we see that agreement
 changes but that no other measures do:</p>
-<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb67"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded_g2.5_flash</span>, <span class="va">coded_gpt5.1</span>, by <span class="op">=</span> <span class="st">"rating"</span>, level <span class="op">=</span> <span class="st">"ordinal"</span>,</span>
 <span>            tolerance <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # Inter-rater reliability</span></span>
-<span><span class="co">## # Subjects: 200 </span></span>
-<span><span class="co">## # Raters:   2 </span></span>
-<span><span class="co">## # Level:    ordinal </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Krippendorff's alpha: 0.9443</span></span>
-<span><span class="co">## Weighted kappa:       0.7525</span></span>
-<span><span class="co">## Kendall's W:          0.9538</span></span>
-<span><span class="co">## Spearman's rho:       0.9609</span></span>
-<span><span class="co">## Percent agreement:    0.9700</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 200</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 2</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── rating (ordinal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement: 0.9700</span></span></code></pre>
+<pre><code><span><span class="co">## Krippendorff's alpha: 0.9443</span></span></code></pre>
+<pre><code><span><span class="co">## Weighted kappa: 0.7525</span></span></code></pre>
+<pre><code><span><span class="co">## Kendall's W: 0.9538</span></span></code></pre>
+<pre><code><span><span class="co">## Spearman's rho: 0.9609</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
 <p>If we treat the 1-10 ratings as interval, then we see:</p>
-<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb81"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded_g2.5_flash</span>, <span class="va">coded_gpt5.1</span>, by <span class="op">=</span> <span class="st">"rating"</span>, level <span class="op">=</span> <span class="st">"interval"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # Inter-rater reliability</span></span>
-<span><span class="co">## # Subjects: 200 </span></span>
-<span><span class="co">## # Raters:   2 </span></span>
-<span><span class="co">## # Level:    interval </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Krippendorff's alpha: 0.9743</span></span>
-<span><span class="co">## ICC:                  0.9744</span></span>
-<span><span class="co">## Pearson's r:          0.9793</span></span>
-<span><span class="co">## Percent agreement:    0.5900</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 200</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 2</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── rating (interval)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement: 0.5900</span></span></code></pre>
+<pre><code><span><span class="co">## Krippendorff's alpha: 0.9743</span></span></code></pre>
+<pre><code><span><span class="co">## ICC: 0.9744</span></span></code></pre>
+<pre><code><span><span class="co">## Pearson's r: 0.9793</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
 </div>
 <div class="section level3">
 <h3 id="gpt-5-1-versus-the-gold-standard">GPT-5.1 versus the “gold standard”<a class="anchor" aria-label="anchor" href="#gpt-5-1-versus-the-gold-standard"></a>
 </h3>
 <p>Finally, we can compare the new LLM scoring to the gold standard, for
 polarity:</p>
-<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb94"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_validate.html">qlm_validate</a></span><span class="op">(</span></span>
 <span>  <span class="va">coded_gpt5.1</span>,</span>
 <span>  gold <span class="op">=</span> <span class="va">gold_standard</span>,</span>
 <span>  by <span class="op">=</span> <span class="st">"polarity"</span>,</span>
 <span>  level <span class="op">=</span> <span class="st">"nominal"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200 | classes: 2 | average: macro</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## accuracy:      0.9550</span></span>
-<span><span class="co">## precision:     0.9561</span></span>
-<span><span class="co">## recall:        0.9550</span></span>
-<span><span class="co">## f1:            0.9550</span></span>
-<span><span class="co">## Cohen's kappa: 0.9100</span></span>
-<span><span class="co">## Pearson's r:   0.9550</span></span></code></pre>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── polarity (nominal) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## By class:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## &lt;macro&gt;:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## accuracy: 0.9550</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## precision: 0.9561</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## recall: 0.9550</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## F1: 0.9550</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Cohen's kappa: 0.9100</span></span></code></pre>
 <p>Compare this to the previous values from Gemini 2.5 Flash:</p>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200 | classes: 2 | average: macro</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## accuracy:      0.9500</span></span>
-<span><span class="co">## precision:     0.9500</span></span>
-<span><span class="co">## recall:        0.9500</span></span>
-<span><span class="co">## f1:            0.9500</span></span>
-<span><span class="co">## Cohen's kappa: 0.9000</span></span>
-<span><span class="co">## Pearson's r:   0.9500</span></span></code></pre>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── polarity (nominal) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## By class:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## &lt;macro&gt;:</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## accuracy: 0.9500</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## precision: 0.9500</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## recall: 0.9500</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## F1: 0.9500</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Cohen's kappa: 0.9000</span></span></code></pre>
 <p>That’s only a tiny improvement.</p>
 <p>For the interval rating:</p>
-<div class="sourceCode" id="cb55"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb97"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_validate.html">qlm_validate</a></span><span class="op">(</span></span>
 <span>  <span class="va">coded_gpt5.1</span>,</span>
 <span>  gold <span class="op">=</span> <span class="va">gold_standard</span>,</span>
 <span>  by <span class="op">=</span> <span class="st">"rating"</span>,</span>
 <span>  level <span class="op">=</span> <span class="st">"interval"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Pearson's r:   0.9355</span></span>
-<span><span class="co">## ICC:           0.9346</span></span>
-<span><span class="co">## MAE:           0.7600</span></span>
-<span><span class="co">## RMSE:          1.2329</span></span></code></pre>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── rating (interval) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Pearson's r: 0.9355</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## MAE: 0.7600</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## RMSE: 1.2329</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ICC: 0.9346</span></span></code></pre>
 <p>Compared to Gemini 2.5 Flash:</p>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 200</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Pearson's r:   0.9368</span></span>
-<span><span class="co">## ICC:           0.9350</span></span>
-<span><span class="co">## MAE:           0.7600</span></span>
-<span><span class="co">## RMSE:          1.2845</span></span></code></pre>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 200</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── rating (interval) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Pearson's r: 0.9368</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## MAE: 0.7600</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## RMSE: 1.2845</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ICC: 0.9350</span></span></code></pre>
 <p>Call it a draw!</p>
 </div>
 </div>

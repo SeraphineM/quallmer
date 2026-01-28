@@ -133,7 +133,10 @@ design.</p>
 <span><span class="co">##   Input type:   text</span></span>
 <span><span class="co">##   Role:         You are an expert political scientist specializing in ideolo...</span></span>
 <span><span class="co">##   Instructions: Rate the ideological position of this text on a scale from 0...</span></span>
-<span><span class="co">##   Output schema:ellmer::TypeObject</span></span></code></pre>
+<span><span class="co">##   Output schema:ellmer::TypeObject</span></span>
+<span><span class="co">##   Levels:</span></span>
+<span><span class="co">##     score: ordinal</span></span>
+<span><span class="co">##     explanation: nominal</span></span></code></pre>
 <p><strong>Note</strong>: The built-in codebooks are provided as
 examples and starting points. For actual research projects, you should
 create custom codebooks specific to your research questions (see the
@@ -152,8 +155,9 @@ settings:</p>
 <span>                   params <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
 <span>                   name <span class="op">=</span> <span class="st">"gpt4o_run"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 10 -&gt; 1 | <span style="color: #00BB00;">■■■■                            </span>   9%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 4 -&gt; 7 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■            </span>  64%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 11 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># View the results</span></span>
 <span><span class="va">coded1</span></span></code></pre></div>
 <pre><code><span><span class="co">## # quallmer coded object</span></span>
@@ -168,14 +172,14 @@ settings:</p>
 <span><span class="co">## <span style="color: #BCBCBC;"> 1</span> 1985-Reagan      8 The text emphasizes limited government, reduced taxes, an…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 2</span> 1989-Bush        7 The text emphasizes free markets, limited government inte…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 3</span> 1993-Clinton     4 The text emphasizes themes of renewal, change, and respon…</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 4</span> 1997-Clinton     4 The text emphasizes themes of equality, community, and op…</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 5</span> 2001-Bush        6 The text reflects a centrist to moderately right-leaning …</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 6</span> 2005-Bush        7 The text emphasizes a strong commitment to spreading demo…</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 4</span> 1997-Clinton     5 The text presents a centrist ideological position. It emp…</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 5</span> 2001-Bush        6 The text reflects a moderate to right-leaning ideological…</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 6</span> 2005-Bush        8 The text emphasizes a strong commitment to spreading demo…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 7</span> 2009-Obama       3 The text emphasizes themes of unity, responsibility, and …</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 8</span> 2013-Obama       3 The text emphasizes equality, collective action, and soci…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 9</span> 2017-Trump       8 The text emphasizes nationalism, protectionism, and a foc…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">10</span> 2021-Biden       3 The text emphasizes unity, democracy, and addressing soci…</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">11</span> 2025-Trump       8 The text emphasizes nationalism, strong border control, m…</span></span></code></pre>
+<span><span class="co">## <span style="color: #BCBCBC;">11</span> 2025-Trump       8 The text emphasizes strong nationalist and protectionist …</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="replicating-with-different-settings">Replicating with different settings<a class="anchor" aria-label="anchor" href="#replicating-with-different-settings"></a>
@@ -187,24 +191,23 @@ results to different settings.</p>
 <div class="section level3">
 <h3 id="replicating-with-a-different-model">Replicating with a different model<a class="anchor" aria-label="anchor" href="#replicating-with-a-different-model"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Replicate the coding with openai/gpt-4o-mini</span></span>
 <span><span class="va">coded2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_replicate.html">qlm_replicate</a></span><span class="op">(</span><span class="va">coded1</span>,</span>
 <span>                        model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span>,</span>
 <span>                        name <span class="op">=</span> <span class="st">"mini_run"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 5 -&gt; 6 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■               </span>  55%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 9 -&gt; 2 | <span style="color: #00BB00;">■■■■■■                          </span>  18%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 11 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 </div>
 <div class="section level3">
 <h3 id="replicating-with-different-temperature">Replicating with different temperature<a class="anchor" aria-label="anchor" href="#replicating-with-different-temperature"></a>
 </h3>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Replicate with higher temperature for more variability</span></span>
 <span><span class="va">coded3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_replicate.html">qlm_replicate</a></span><span class="op">(</span><span class="va">coded1</span>,</span>
 <span>                        params <span class="op">=</span> <span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span>,</span>
 <span>                        name <span class="op">=</span> <span class="st">"gpt4o_temp07"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 9 -&gt; 2 | <span style="color: #00BB00;">■■■■■■                          </span>  18%</span></span></code></pre>
-<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 8 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■         </span>  73%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 10 -&gt; 1 | <span style="color: #00BB00;">■■■■                            </span>   9%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 11 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 </div>
 </div>
@@ -226,15 +229,18 @@ runs.</p>
 <span></span>
 <span><span class="co"># View the comparison results</span></span>
 <span><span class="va">comparison</span></span></code></pre></div>
-<pre><code><span><span class="co">## # Inter-rater reliability</span></span>
-<span><span class="co">## # Subjects: 11 </span></span>
-<span><span class="co">## # Raters:   3 </span></span>
-<span><span class="co">## # Level:    ordinal </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Krippendorff's alpha: 0.8679</span></span>
-<span><span class="co">## Kendall's W:          0.8662</span></span>
-<span><span class="co">## Spearman's rho:       0.8962</span></span>
-<span><span class="co">## Percent agreement:    0.2727</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 11</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 3</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── score (ordinal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement: 0.3636</span></span></code></pre>
+<pre><code><span><span class="co">## Krippendorff's alpha: 0.9237</span></span></code></pre>
+<pre><code><span><span class="co">## Kendall's W: 0.9162</span></span></code></pre>
+<pre><code><span><span class="co">## Spearman's rho: 0.9447</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
 <p>The output shows:</p>
 <ul>
 <li>The reliability measures and their values, appropriate to ordinal
@@ -252,20 +258,23 @@ runs).<br>
 agreement to +/-1 of the values to be compared, then we can get a
 different definition of agreement, thus changing the score. “Percent
 agreement” then rises substantially.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, <span class="va">coded3</span>, </span>
 <span>            by <span class="op">=</span> <span class="st">"score"</span>,</span>
 <span>            level <span class="op">=</span> <span class="st">"ordinal"</span>,</span>
 <span>            tolerance <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## # Inter-rater reliability</span></span>
-<span><span class="co">## # Subjects: 11 </span></span>
-<span><span class="co">## # Raters:   3 </span></span>
-<span><span class="co">## # Level:    ordinal </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## Krippendorff's alpha: 0.8679</span></span>
-<span><span class="co">## Kendall's W:          0.8662</span></span>
-<span><span class="co">## Spearman's rho:       0.8962</span></span>
-<span><span class="co">## Percent agreement:    0.9091</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 11</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 3</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── score (ordinal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement: 0.9091</span></span></code></pre>
+<pre><code><span><span class="co">## Krippendorff's alpha: 0.9237</span></span></code></pre>
+<pre><code><span><span class="co">## Kendall's W: 0.9162</span></span></code></pre>
+<pre><code><span><span class="co">## Spearman's rho: 0.9447</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
@@ -280,7 +289,7 @@ and F1-score.</p>
 </h3>
 <p>For this example, let’s simulate having human-coded sentiment
 data:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># In practice, this would be your human-coded reference data</span></span>
 <span><span class="va">gold_standard</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  .id <span class="op">=</span> <span class="va">coded1</span><span class="op">$</span><span class="va">.id</span>,</span>
@@ -290,39 +299,26 @@ data:</p>
 <div class="section level3">
 <h3 id="computing-validation-metrics">Computing validation metrics<a class="anchor" aria-label="anchor" href="#computing-validation-metrics"></a>
 </h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Validate the LLM coding against the gold standard</span></span>
 <span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_validate.html">qlm_validate</a></span><span class="op">(</span><span class="va">coded1</span>,</span>
 <span>                           gold <span class="op">=</span> <span class="va">gold_standard</span>,</span>
 <span>                           by <span class="op">=</span> <span class="st">"score"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## Warning: While computing multiclass `precision()`, some levels had no predicted events</span></span>
-<span><span class="co">## (i.e. `true_positive + false_positive = 0`).</span></span>
-<span><span class="co">## Precision is undefined in this case, and those levels will be removed from the</span></span>
-<span><span class="co">## averaged result.</span></span>
-<span><span class="co">## Note that the following number of true events actually occurred for each</span></span>
-<span><span class="co">## problematic event level:</span></span>
-<span><span class="co">## '5': 1</span></span>
-<span><span class="co">## While computing multiclass `precision()`, some levels had no predicted events</span></span>
-<span><span class="co">## (i.e. `true_positive + false_positive = 0`).</span></span>
-<span><span class="co">## Precision is undefined in this case, and those levels will be removed from the</span></span>
-<span><span class="co">## averaged result.</span></span>
-<span><span class="co">## Note that the following number of true events actually occurred for each</span></span>
-<span><span class="co">## problematic event level:</span></span>
-<span><span class="co">## '5': 1</span></span></code></pre>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span></code></pre>
+<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># View validation results</span></span>
 <span><span class="va">validation</span></span></code></pre></div>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 11 | classes: 6 | average: macro</span></span>
+<pre><code><span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## accuracy:      0.7273</span></span>
-<span><span class="co">## precision:     0.7667</span></span>
-<span><span class="co">## recall:        0.6944</span></span>
-<span><span class="co">## f1:            0.7267</span></span>
-<span><span class="co">## Cohen's kappa: 0.6667</span></span>
-<span><span class="co">## Pearson's r:   0.6944</span></span></code></pre>
+<span><span class="co">## n: 11</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── score (ordinal) </span></span>
+<span><span class="co">## Spearman's rho: 0.8778</span></span>
+<span><span class="co">## Kendall's tau: 0.7661</span></span>
+<span><span class="co">## MAE: 0.7273</span></span></code></pre>
 <p>The output shows:</p>
 <ul>
 <li>Overall accuracy: proportion of correct classifications</li>
@@ -335,28 +331,54 @@ correctly</li>
 </ul>
 <p>Of course, we can also perform validation treating this data as
 ordinal or even interval:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_validate.html">qlm_validate</a></span><span class="op">(</span><span class="va">coded1</span>, gold <span class="op">=</span> <span class="va">gold_standard</span>, by <span class="op">=</span> <span class="st">"score"</span>, level <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 11 | levels: 6</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Spearman's rho:0.8884</span></span>
-<span><span class="co">## Kendall's tau: 0.8000</span></span>
-<span><span class="co">## Pearson's r:   0.8884</span></span>
-<span><span class="co">## MAE:           0.7273</span></span></code></pre>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 11</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── score (ordinal) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Spearman's rho: 0.8778</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Kendall's tau: 0.7661</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## MAE: 0.7273</span></span></code></pre>
+<div class="sourceCode" id="cb55"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_validate.html">qlm_validate</a></span><span class="op">(</span><span class="va">coded1</span>, gold <span class="op">=</span> <span class="va">gold_standard</span>, by <span class="op">=</span> <span class="st">"score"</span>, level <span class="op">=</span> <span class="st">"interval"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;qlm_humancoded&gt;</span> object.</span></span>
-<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `qlm_humancoded()` directly to provide coder names and metadata.</span></span></code></pre>
-<pre><code><span><span class="co">## # quallmer validation</span></span>
-<span><span class="co">## # n: 11</span></span>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Converting `gold` to <span style="color: #0000BB;">&lt;as_qlm_coded&gt;</span> object.</span></span>
+<span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Use `as_qlm_coded()` directly to provide coder names and metadata.</span></span>
 <span><span class="co">## </span></span>
-<span><span class="co">## Pearson's r:   0.8092</span></span>
-<span><span class="co">## ICC:           0.7460</span></span>
-<span><span class="co">## MAE:           0.7273</span></span>
-<span><span class="co">## RMSE:          1.4142</span></span></code></pre>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── <span style="font-weight: bold;">quallmer validation</span> ──</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## n: 11</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── score (interval) </span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Pearson's r: 0.8363</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## MAE: 0.7273</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## RMSE: 1.2792</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ICC: 0.7902</span></span></code></pre>
 </div>
 </div>
 <div class="section level2">

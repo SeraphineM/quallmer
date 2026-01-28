@@ -60,8 +60,10 @@ each object and computes reliability statistics using the irr package.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">qlm_compare</span><span class="op">(</span></span>
 <span>  <span class="va">...</span>,</span>
 <span>  <span class="va">by</span>,</span>
-<span>  level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"nominal"</span>, <span class="st">"ordinal"</span>, <span class="st">"interval"</span>, <span class="st">"ratio"</span><span class="op">)</span>,</span>
-<span>  tolerance <span class="op">=</span> <span class="fl">0</span></span>
+<span>  level <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  tolerance <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  ci <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"analytic"</span>, <span class="st">"bootstrap"</span><span class="op">)</span>,</span>
+<span>  bootstrap_n <span class="op">=</span> <span class="fl">1000</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -70,81 +72,86 @@ each object and computes reliability statistics using the irr package.</p>
 
 
 <dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Two or more data frames, <code>qlm_coded</code>, or <code>qlm_humancoded</code> objects
+<dd><p>Two or more data frames, <code>qlm_coded</code>, or <code>as_qlm_coded</code> objects
 to compare. These represent different "raters" (e.g., different LLM runs,
 different models, human coders, or human vs. LLM coding). Each object must
 have a <code>.id</code> column and the variable specified in <code>by</code>. Objects should have
 the same units (matching <code>.id</code> values). Plain data frames are automatically
-converted to <code>qlm_humancoded</code> objects.</p></dd>
+converted to <code>as_qlm_coded</code> objects.</p></dd>
 
 
 <dt id="arg-by">by<a class="anchor" aria-label="anchor" href="#arg-by"></a></dt>
-<dd><p>Name of the variable to compare across raters (supports both quoted
-and unquoted). Must be present in all objects. Can be specified as
-<code>by = sentiment</code> or <code>by = "sentiment"</code>.</p></dd>
+<dd><p>Optional. Name of the variable(s) to compare across raters (supports
+both quoted and unquoted). If <code>NULL</code> (default), all coded variables are
+compared. Can be a single variable (<code>by = sentiment</code>), a character vector
+(<code>by = c("sentiment", "rating")</code>), or NULL to process all variables.</p></dd>
 
 
 <dt id="arg-level">level<a class="anchor" aria-label="anchor" href="#arg-level"></a></dt>
-<dd><p>Character scalar. Measurement level of the variable:
-<code>"nominal"</code>, <code>"ordinal"</code>, <code>"interval"</code>, or <code>"ratio"</code>. Default is <code>"nominal"</code>.
-Different sets of agreement statistics are computed for each level.</p></dd>
+<dd><p>Optional. Measurement level(s) for the variable(s). Can be:</p><ul><li><p><code>NULL</code> (default): Auto-detect from codebook</p></li>
+<li><p>Character scalar: Use same level for all variables</p></li>
+<li><p>Named list: Specify level for each variable</p></li>
+</ul><p>Valid levels are <code>"nominal"</code>, <code>"ordinal"</code>, <code>"interval"</code>, or <code>"ratio"</code>.</p></dd>
 
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>
 <dd><p>Numeric. Tolerance for agreement with numeric data.
 Default is 0 (exact agreement required). Used for percent agreement calculation.</p></dd>
 
+
+<dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
+<dd><p>Confidence interval method:</p><dl><dt><code>"none"</code></dt>
+<dd><p>No confidence intervals (default)</p></dd>
+
+<dt><code>"analytic"</code></dt>
+<dd><p>Analytic CIs where available (ICC, Pearson's r)</p></dd>
+
+<dt><code>"bootstrap"</code></dt>
+<dd><p>Bootstrap CIs for all metrics via resampling</p></dd>
+
+
+</dl></dd>
+
+
+<dt id="arg-bootstrap-n">bootstrap_n<a class="anchor" aria-label="anchor" href="#arg-bootstrap-n"></a></dt>
+<dd><p>Number of bootstrap resamples when <code>ci = "bootstrap"</code>.
+Default is 1000. Ignored when <code>ci</code> is <code>"none"</code> or <code>"analytic"</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>qlm_comparison</code> object containing agreement statistics appropriate
-for the measurement level:</p><dl><dt><strong>Nominal level:</strong></dt>
-<dd>
-<ul><li><p><code>alpha_nominal</code>: Krippendorff's alpha</p></li>
-<li><p><code>kappa</code>: Cohen's kappa (2 raters) or Fleiss' kappa (3+ raters)</p></li>
-<li><p><code>kappa_type</code>: Character indicating "Cohen's" or "Fleiss'"</p></li>
-<li><p><code>percent_agreement</code>: Simple percent agreement</p></li>
-</ul></dd>
-
-<dt><strong>Ordinal level:</strong></dt>
-<dd>
-<ul><li><p><code>alpha_ordinal</code>: Krippendorff's alpha (ordinal)</p></li>
-<li><p><code>kappa_weighted</code>: Weighted kappa (2 raters only)</p></li>
-<li><p><code>w</code>: Kendall's W coefficient of concordance</p></li>
-<li><p><code>rho</code>: Spearman's rho</p></li>
-<li><p><code>percent_agreement</code>: Simple percent agreement</p></li>
-</ul></dd>
-
-<dt><strong>Interval level:</strong></dt>
-<dd>
-<ul><li><p><code>alpha_interval</code>: Krippendorff's alpha (interval)</p></li>
-<li><p><code>icc</code>: Intraclass correlation coefficient</p></li>
-<li><p><code>r</code>: Pearson's r</p></li>
-<li><p><code>percent_agreement</code>: Simple percent agreement</p></li>
-</ul></dd>
-
-<dt><strong>Ratio level:</strong></dt>
-<dd><p>Measures are the same as for interval level, but Krippendorff's alpha
-is computed using the ratio-level formula.</p><ul><li><p><code>alpha_ratio</code>: Krippendorff's alpha (ratio)</p></li>
-<li><p><code>icc</code>: Intraclass correlation coefficient</p></li>
-<li><p><code>r</code>: Pearson's r</p></li>
-<li><p><code>percent_agreement</code>: Simple percent agreement</p></li>
-</ul></dd>
-
-<dt><code>subjects</code></dt>
-<dd><p>Number of units compared</p></dd>
-
-<dt><code>raters</code></dt>
-<dd><p>Number of raters</p></dd>
+    <p>A <code>qlm_comparison</code> object (a tibble/data frame) with the following columns:</p><dl><dt><code>variable</code></dt>
+<dd><p>Name of the compared variable</p></dd>
 
 <dt><code>level</code></dt>
-<dd><p>Measurement level</p></dd>
+<dd><p>Measurement level used</p></dd>
 
-<dt><code>call</code></dt>
-<dd><p>The function call</p></dd>
+<dt><code>measure</code></dt>
+<dd><p>Name of the reliability metric</p></dd>
+
+<dt><code>value</code></dt>
+<dd><p>Computed value of the metric</p></dd>
+
+<dt><code>rater1</code>, <code>rater2</code>, ...</dt>
+<dd><p>Names of the compared objects (one column per rater)</p></dd>
+
+<dt><code>ci_lower</code></dt>
+<dd><p>Lower bound of confidence interval (only if <code>ci != "none"</code>)</p></dd>
+
+<dt><code>ci_upper</code></dt>
+<dd><p>Upper bound of confidence interval (only if <code>ci != "none"</code>)</p></dd>
 
 
-</dl></div>
+</dl><p>The object has class <code>c("qlm_comparison", "tbl_df", "tbl", "data.frame")</code> and
+attributes containing metadata (<code>raters</code>, <code>n</code>, <code>call</code>).</p>
+<p><strong>Metrics computed by measurement level:</strong></p><ul><li><p><strong>Nominal:</strong> alpha_nominal, kappa (Cohen's/Fleiss'), percent_agreement</p></li>
+<li><p><strong>Ordinal:</strong> alpha_ordinal, kappa_weighted (2 raters only), w (Kendall's W),
+rho (Spearman's), percent_agreement</p></li>
+<li><p><strong>Interval/Ratio:</strong> alpha_interval/alpha_ratio, icc, r (Pearson's),
+percent_agreement</p></li>
+</ul><p><strong>Confidence intervals:</strong></p><ul><li><p><code>ci = "analytic"</code>: Provides analytic CIs for ICC and Pearson's r only</p></li>
+<li><p><code>ci = "bootstrap"</code>: Provides bootstrap CIs for all metrics via resampling</p></li>
+</ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The function merges the coded objects by their <code>.id</code> column and only includes
@@ -167,7 +174,7 @@ computed as the mean of all pairwise correlations between raters.</p>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="qlm_validate.html">qlm_validate()</a></code> for validation of coding against gold standards,
-<code><a href="qlm_code.html">qlm_code()</a></code> for LLM coding, <code><a href="qlm_humancoded.html">qlm_humancoded()</a></code> for human coding.</p></div>
+<code><a href="qlm_code.html">qlm_code()</a></code> for LLM coding, <code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> for human coding.</p></div>
     </div>
 
     <div class="section level2">
@@ -179,18 +186,31 @@ computed as the mean of all pairwise correlations between raters.</p>
 <span class="r-in"><span><span class="va">coded1</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">reviews</span>, <span class="va">data_codebook_sentiment</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">coded2</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">reviews</span>, <span class="va">data_codebook_sentiment</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Compare nominal data (polarity: neg/pos) - supports unquoted variable names</span></span></span>
+<span class="r-in"><span><span class="co"># Compare all variables (auto-detect levels from codebook)</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Compare specific variables</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sentiment"</span>, <span class="st">"rating"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Compare single variable with explicit level (backward compatible)</span></span></span>
 <span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, by <span class="op">=</span> <span class="va">sentiment</span>, level <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Can also use quoted names</span></span></span>
 <span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, by <span class="op">=</span> <span class="st">"sentiment"</span>, level <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Compare ordinal data (rating: 1-10)</span></span></span>
-<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, by <span class="op">=</span> <span class="va">rating</span>, level <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Compare with different levels per variable</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sentiment"</span>, <span class="st">"rating"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>            level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"nominal"</span>, rating <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Compare three raters using Fleiss' kappa on polarity</span></span></span>
+<span class="r-in"><span><span class="co"># Get confidence intervals</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, ci <span class="op">=</span> <span class="st">"analytic"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Get bootstrap confidence intervals</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, ci <span class="op">=</span> <span class="st">"bootstrap"</span>, bootstrap_n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Compare three raters</span></span></span>
 <span class="r-in"><span><span class="va">coded3</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_replicate.html">qlm_replicate</a></span><span class="op">(</span><span class="va">coded1</span>, params <span class="op">=</span> <span class="fu">params</span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, <span class="va">coded3</span>, by <span class="op">=</span> <span class="va">sentiment</span>, level <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_compare</span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, <span class="va">coded3</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

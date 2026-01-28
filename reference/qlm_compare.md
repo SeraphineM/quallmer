@@ -11,8 +11,10 @@ irr package.
 qlm_compare(
   ...,
   by,
-  level = c("nominal", "ordinal", "interval", "ratio"),
-  tolerance = 0
+  level = NULL,
+  tolerance = 0,
+  ci = c("none", "analytic", "bootstrap"),
+  bootstrap_n = 1000
 )
 ```
 
@@ -20,95 +22,112 @@ qlm_compare(
 
 - ...:
 
-  Two or more data frames, `qlm_coded`, or `qlm_humancoded` objects to
+  Two or more data frames, `qlm_coded`, or `as_qlm_coded` objects to
   compare. These represent different "raters" (e.g., different LLM runs,
   different models, human coders, or human vs. LLM coding). Each object
   must have a `.id` column and the variable specified in `by`. Objects
   should have the same units (matching `.id` values). Plain data frames
-  are automatically converted to `qlm_humancoded` objects.
+  are automatically converted to `as_qlm_coded` objects.
 
 - by:
 
-  Name of the variable to compare across raters (supports both quoted
-  and unquoted). Must be present in all objects. Can be specified as
-  `by = sentiment` or `by = "sentiment"`.
+  Optional. Name of the variable(s) to compare across raters (supports
+  both quoted and unquoted). If `NULL` (default), all coded variables
+  are compared. Can be a single variable (`by = sentiment`), a character
+  vector (`by = c("sentiment", "rating")`), or NULL to process all
+  variables.
 
 - level:
 
-  Character scalar. Measurement level of the variable: `"nominal"`,
-  `"ordinal"`, `"interval"`, or `"ratio"`. Default is `"nominal"`.
-  Different sets of agreement statistics are computed for each level.
+  Optional. Measurement level(s) for the variable(s). Can be:
+
+  - `NULL` (default): Auto-detect from codebook
+
+  - Character scalar: Use same level for all variables
+
+  - Named list: Specify level for each variable
+
+  Valid levels are `"nominal"`, `"ordinal"`, `"interval"`, or `"ratio"`.
 
 - tolerance:
 
   Numeric. Tolerance for agreement with numeric data. Default is 0
   (exact agreement required). Used for percent agreement calculation.
 
+- ci:
+
+  Confidence interval method:
+
+  `"none"`
+
+  :   No confidence intervals (default)
+
+  `"analytic"`
+
+  :   Analytic CIs where available (ICC, Pearson's r)
+
+  `"bootstrap"`
+
+  :   Bootstrap CIs for all metrics via resampling
+
+- bootstrap_n:
+
+  Number of bootstrap resamples when `ci = "bootstrap"`. Default
+  is 1000. Ignored when `ci` is `"none"` or `"analytic"`.
+
 ## Value
 
-A `qlm_comparison` object containing agreement statistics appropriate
-for the measurement level:
+A `qlm_comparison` object (a tibble/data frame) with the following
+columns:
 
-- **Nominal level:**:
+- `variable`:
 
-  - `alpha_nominal`: Krippendorff's alpha
-
-  - `kappa`: Cohen's kappa (2 raters) or Fleiss' kappa (3+ raters)
-
-  - `kappa_type`: Character indicating "Cohen's" or "Fleiss'"
-
-  - `percent_agreement`: Simple percent agreement
-
-- **Ordinal level:**:
-
-  - `alpha_ordinal`: Krippendorff's alpha (ordinal)
-
-  - `kappa_weighted`: Weighted kappa (2 raters only)
-
-  - `w`: Kendall's W coefficient of concordance
-
-  - `rho`: Spearman's rho
-
-  - `percent_agreement`: Simple percent agreement
-
-- **Interval level:**:
-
-  - `alpha_interval`: Krippendorff's alpha (interval)
-
-  - `icc`: Intraclass correlation coefficient
-
-  - `r`: Pearson's r
-
-  - `percent_agreement`: Simple percent agreement
-
-- **Ratio level:**:
-
-  Measures are the same as for interval level, but Krippendorff's alpha
-  is computed using the ratio-level formula.
-
-  - `alpha_ratio`: Krippendorff's alpha (ratio)
-
-  - `icc`: Intraclass correlation coefficient
-
-  - `r`: Pearson's r
-
-  - `percent_agreement`: Simple percent agreement
-
-- `subjects`:
-
-  Number of units compared
-
-- `raters`:
-
-  Number of raters
+  Name of the compared variable
 
 - `level`:
 
-  Measurement level
+  Measurement level used
 
-- `call`:
+- `measure`:
 
-  The function call
+  Name of the reliability metric
+
+- `value`:
+
+  Computed value of the metric
+
+- `rater1`, `rater2`, ...:
+
+  Names of the compared objects (one column per rater)
+
+- `ci_lower`:
+
+  Lower bound of confidence interval (only if `ci != "none"`)
+
+- `ci_upper`:
+
+  Upper bound of confidence interval (only if `ci != "none"`)
+
+The object has class
+`c("qlm_comparison", "tbl_df", "tbl", "data.frame")` and attributes
+containing metadata (`raters`, `n`, `call`).
+
+**Metrics computed by measurement level:**
+
+- **Nominal:** alpha_nominal, kappa (Cohen's/Fleiss'), percent_agreement
+
+- **Ordinal:** alpha_ordinal, kappa_weighted (2 raters only), w
+  (Kendall's W), rho (Spearman's), percent_agreement
+
+- **Interval/Ratio:** alpha_interval/alpha_ratio, icc, r (Pearson's),
+  percent_agreement
+
+**Confidence intervals:**
+
+- `ci = "analytic"`: Provides analytic CIs for ICC and Pearson's r only
+
+- `ci = "bootstrap"`: Provides bootstrap CIs for all metrics via
+  resampling
 
 ## Details
 
@@ -143,7 +162,7 @@ computed as the mean of all pairwise correlations between raters.
 for validation of coding against gold standards,
 [`qlm_code()`](https://quallmer.github.io/quallmer/reference/qlm_code.md)
 for LLM coding,
-[`qlm_humancoded()`](https://quallmer.github.io/quallmer/reference/qlm_humancoded.md)
+[`as_qlm_coded()`](https://quallmer.github.io/quallmer/reference/as_qlm_coded.md)
 for human coding.
 
 ## Examples
@@ -156,17 +175,30 @@ reviews <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 
 coded1 <- qlm_code(reviews, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 coded2 <- qlm_code(reviews, data_codebook_sentiment, model = "openai/gpt-4o")
 
-# Compare nominal data (polarity: neg/pos) - supports unquoted variable names
+# Compare all variables (auto-detect levels from codebook)
+qlm_compare(coded1, coded2)
+
+# Compare specific variables
+qlm_compare(coded1, coded2, by = c("sentiment", "rating"))
+
+# Compare single variable with explicit level (backward compatible)
 qlm_compare(coded1, coded2, by = sentiment, level = "nominal")
 
 # Can also use quoted names
 qlm_compare(coded1, coded2, by = "sentiment", level = "nominal")
 
-# Compare ordinal data (rating: 1-10)
-qlm_compare(coded1, coded2, by = rating, level = "ordinal")
+# Compare with different levels per variable
+qlm_compare(coded1, coded2, by = c("sentiment", "rating"),
+            level = list(sentiment = "nominal", rating = "ordinal"))
 
-# Compare three raters using Fleiss' kappa on polarity
+# Get confidence intervals
+qlm_compare(coded1, coded2, ci = "analytic")
+
+# Get bootstrap confidence intervals
+qlm_compare(coded1, coded2, ci = "bootstrap", bootstrap_n = 1000)
+
+# Compare three raters
 coded3 <- qlm_replicate(coded1, params = params(temperature = 0.5))
-qlm_compare(coded1, coded2, coded3, by = sentiment, level = "nominal")
+qlm_compare(coded1, coded2, coded3)
 } # }
 ```
