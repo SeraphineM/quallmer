@@ -1,5 +1,33 @@
 # quallmer (development version)
 
+## Gold standard handling and validation improvements
+
+* New `as_qlm_coded()` function replaces `qlm_humancoded()` as the primary function for converting human-coded or external data to `qlm_coded` objects. The new function includes an `is_gold` parameter to mark gold standard objects for automatic detection.
+* `qlm_validate()` now auto-detects gold standards marked with `as_qlm_coded(data, is_gold = TRUE)`, making the `gold =` parameter optional when using marked objects. Explicit `gold =` still works for backward compatibility.
+* `qlm_validate()` signature changed to `qlm_validate(..., gold, by, ...)` to support validating multiple coded objects against a single gold standard in one call. Results include a `rater` column identifying each object.
+* `qlm_humancoded()` is now marked `@keywords internal` but remains exported for backward compatibility. New code should use `as_qlm_coded()`.
+* Gold standard objects display `# Gold:     Yes` in their print output for easy identification.
+* Improved error messages in `qlm_validate()` detect common mistakes like forgetting `gold =` or misspelling parameter names, with helpful suggestions for correction.
+
+## Confidence intervals and reliability metrics
+
+* `ci` parameter added to `qlm_compare()` and `qlm_validate()` with options `"none"` (default), `"analytic"`, or `"bootstrap"`.
+* Bootstrap confidence intervals now work for all metrics in both functions via percentile method with configurable `bootstrap_n` parameter (default 1000).
+* Analytic confidence intervals available for ICC (via psych package) and Pearson's r (via cor.test).
+* Results include `ci_lower` and `ci_upper` columns when `ci != "none"`.
+
+## Rater identification and combinability
+
+* `qlm_compare()` results now include `rater1`, `rater2`, `rater3`, etc. columns containing the names of compared objects (from `name` attribute), enabling easy identification when combining multiple comparisons with `dplyr::bind_rows()`.
+* `qlm_validate()` results now include a `rater` column identifying which object is being validated, enabling easy combining of multiple validations.
+* Both functions return data frames (class `qlm_comparison` and `qlm_validation`) instead of lists, making them easier to filter, combine, and analyze.
+* Results from multiple `qlm_compare()` or `qlm_validate()` calls can be combined with `bind_rows()` for analysis across multiple coders or conditions.
+
+## API refinements
+
+* `qlm_code()` default `name` parameter changed from `"original"` to `NULL` for cleaner output when names aren't specified.
+* Auto-conversion messages now recommend `as_qlm_coded()` instead of `qlm_humancoded()`.
+
 ## The quallmer audit trail
 
 * The trail API has been refactored to better align with Lincoln and Guba's (1985) audit trail concept for establishing trustworthiness in qualitative research.
