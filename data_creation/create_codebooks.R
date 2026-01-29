@@ -19,6 +19,7 @@ data_codebook_sentiment <- qlm_codebook(
   ),
   role = "You are a political communication analyst evaluating public statements.",
   input_type = "text"
+  # levels will be auto-detected: sentiment = "nominal", rating = "ordinal"
 )
 
 # Stance detection codebook

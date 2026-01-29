@@ -81,7 +81,11 @@ test_that("qlm_humancoded works with qlm_compare", {
   comparison <- qlm_compare(human1, human2, by = category, level = "nominal")
 
   expect_true(inherits(comparison, "qlm_comparison"))
-  expect_equal(comparison$percent_agreement, 1.0)
+  expect_true(is.data.frame(comparison))
+
+  # Extract percent agreement from data frame
+  pa_row <- comparison[comparison$measure == "percent_agreement", ]
+  expect_equal(pa_row$value, 1.0)
 })
 
 test_that("qlm_humancoded works with qlm_validate", {
@@ -93,10 +97,15 @@ test_that("qlm_humancoded works with qlm_validate", {
   human1 <- qlm_humancoded(data1, name = "Coder_A")
   human2 <- qlm_humancoded(data2, name = "Coder_B")
 
-  validation <- qlm_validate(human1, human2, by = category)
+  # qlm_humancoded objects don't have codebook, so level must be explicit
+  validation <- qlm_validate(human1, gold = human2, by = category, level = "nominal")
 
   expect_true(inherits(validation, "qlm_validation"))
-  expect_equal(validation$accuracy, 1.0)
+  expect_true(is.data.frame(validation))
+
+  # Extract accuracy from data frame
+  acc_row <- validation[validation$measure == "accuracy", ]
+  expect_equal(acc_row$value, 1.0)
 })
 
 test_that("print.qlm_coded distinguishes human vs LLM coding", {
