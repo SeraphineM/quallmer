@@ -13,25 +13,27 @@ data_codebook_salience
 
 A `qlm_codebook` object containing:
 
-name
+- name:
 
-:   Task name: "Salience (ranked topics)"
+  Task name: "Salience (ranked topics)"
 
-instructions
+- instructions:
 
-:   Coding instructions for topic salience ranking
+  Coding instructions for topic salience ranking
 
-schema
+- schema:
 
-:   Response schema with two fields:
+  Response schema with two fields: `topics` (Array of strings listing
+  topics by salience, up to 5) and `explanation` (Brief explanation of
+  topic selection and ordering)
 
-role
+- role:
 
-:   Expert content analyst persona
+  Expert content analyst persona
 
-input_type
+- input_type:
 
-:   "text"
+  "text"
 
 ## See also
 

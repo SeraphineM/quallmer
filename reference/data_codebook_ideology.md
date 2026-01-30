@@ -13,25 +13,27 @@ data_codebook_ideology
 
 A `qlm_codebook` object containing:
 
-name
+- name:
 
-:   Task name: "Ideological scaling"
+  Task name: "Ideological scaling"
 
-instructions
+- instructions:
 
-:   Coding instructions for ideological scaling
+  Coding instructions for ideological scaling
 
-schema
+- schema:
 
-:   Response schema with two fields:
+  Response schema with two fields: `score` (Integer from 0 (left) to 10
+  (right)) and `explanation` (Brief justification for the assigned
+  score)
 
-role
+- role:
 
-:   Expert political scientist persona
+  Expert political scientist persona
 
-input_type
+- input_type:
 
-:   "text"
+  "text"
 
 ## See also
 

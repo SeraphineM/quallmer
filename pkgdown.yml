@@ -10,7 +10,7 @@ articles:
   pkgdown/tutorials/openai: pkgdown/tutorials/openai.html
   pkgdown/tutorials/trace: pkgdown/tutorials/trace.html
   pkgdown/tutorials/validate: pkgdown/tutorials/validate.html
-last_built: 2026-01-28T23:35Z
+last_built: 2026-01-30T04:59Z
 urls:
   reference: https://quallmer.github.io/quallmer/reference
   article: https://quallmer.github.io/quallmer/articles

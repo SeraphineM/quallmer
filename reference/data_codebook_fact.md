@@ -13,25 +13,28 @@ data_codebook_fact
 
 A `qlm_codebook` object containing:
 
-name
+- name:
 
-:   Task name: "Fact-checking"
+  Task name: "Fact-checking"
 
-instructions
+- instructions:
 
-:   Coding instructions for truthfulness assessment
+  Coding instructions for truthfulness assessment
 
-schema
+- schema:
 
-:   Response schema with three fields:
+  Response schema with three fields: `truth_score` (Integer from 0
+  (false/misleading) to 10 (accurate)), `misleading_topic` (Array of
+  topics that reduce confidence, up to 5), and `explanation` (Brief
+  explanation of the truthfulness score)
 
-role
+- role:
 
-:   Expert fact-checker persona
+  Expert fact-checker persona
 
-input_type
+- input_type:
 
-:   "text"
+  "text"
 
 ## See also
 

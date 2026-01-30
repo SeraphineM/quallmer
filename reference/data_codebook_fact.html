@@ -66,12 +66,7 @@ and accuracy of texts.</p>
 <dd><p>Coding instructions for truthfulness assessment</p></dd>
 
 <dt>schema</dt>
-<dd><p>Response schema with three fields:</p></dd>
-
-
- <code>truth_score</code>: Integer from 0 (false/misleading) to 10 (accurate)
- <code>misleading_topic</code>: Array of topics that reduce confidence (up to 5)
- <code>explanation</code>: Brief explanation of the truthfulness score
+<dd><p>Response schema with three fields: <code>truth_score</code> (Integer from 0 (false/misleading) to 10 (accurate)), <code>misleading_topic</code> (Array of topics that reduce confidence, up to 5), and <code>explanation</code> (Brief explanation of the truthfulness score)</p></dd>
 
 <dt>role</dt>
 <dd><p>Expert fact-checker persona</p></dd>

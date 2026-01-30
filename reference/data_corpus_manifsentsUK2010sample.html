@@ -119,7 +119,95 @@ mean score <code>crowd_immigration_mean</code>.</p></dd>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quanteda.io" class="external-link">quanteda</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">immigration_instructions</span> <span class="op">&lt;-</span> <span class="st">"This task involves reading sentences from</span></span></span>
+<span class="r-in"><span><span class="st">political texts from the 2010 UK general election, and judging whether</span></span></span>
+<span class="r-in"><span><span class="st">these statements deal with immigration policy. Each sentence may or may</span></span></span>
+<span class="r-in"><span><span class="st">not be related to immigration policy.</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">First, you will read a short section from a party manifesto. For the</span></span></span>
+<span class="r-in"><span><span class="st">sentence highlighted in red, enter your best judgment about whether it</span></span></span>
+<span class="r-in"><span><span class="st">refers to some aspect of immigration policy, or not. Most sentences will</span></span></span>
+<span class="r-in"><span><span class="st">not relate to immigration policy - it is your job to find and rate those</span></span></span>
+<span class="r-in"><span><span class="st">that do. If the sentence does not refer to immigration policy, you should</span></span></span>
+<span class="r-in"><span><span class="st">select 'Not immigration policy' and proceed directly to the next sentence.</span></span></span>
+<span class="r-in"><span><span class="st">If the sentence does refer to immigration policy, you should indicate this</span></span></span>
+<span class="r-in"><span><span class="st">by checking this option.</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">If you indicate that the sentence is immigration policy, you will be asked</span></span></span>
+<span class="r-in"><span><span class="st">to give your best judgment of the policy position on immigration being</span></span></span>
+<span class="r-in"><span><span class="st">expressed in the sentence. This will range from a very open and favourable</span></span></span>
+<span class="r-in"><span><span class="st">position on immigration, to a very closed and negative stance on</span></span></span>
+<span class="r-in"><span><span class="st">immigration. These are coded on a five-point scale, with a neutral position</span></span></span>
+<span class="r-in"><span><span class="st">(neither favouring nor opposing) immigration lying in the middle."</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">immigration_description</span> <span class="op">&lt;-</span> <span class="st">"What is 'immigration policy'?</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">Immigration policy relates to all government policies, laws, regulations,</span></span></span>
+<span class="r-in"><span><span class="st">and practices that deal with the free travel of foreign persons across the</span></span></span>
+<span class="r-in"><span><span class="st">country's borders, especially those that intend to live, work, or seek</span></span></span>
+<span class="r-in"><span><span class="st">legal protection (asylum) in that country. Examples of specific policies</span></span></span>
+<span class="r-in"><span><span class="st">that pertain to immigration include the regulation of: work permits for</span></span></span>
+<span class="r-in"><span><span class="st">foreign nationals; residency permits for foreign nationals; asylum seekers</span></span></span>
+<span class="r-in"><span><span class="st">and their treatment; requirements for acquiring citizenship; illegal</span></span></span>
+<span class="r-in"><span><span class="st">immigrants and migrant workers (and their families) living or working</span></span></span>
+<span class="r-in"><span><span class="st">illegally in the country.</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">It also includes favorable or unfavorable general statements about</span></span></span>
+<span class="r-in"><span><span class="st">immigrants or immigration policy, such as statements indicating that</span></span></span>
+<span class="r-in"><span><span class="st">immigration has been good for a country, or that immigrants have forced</span></span></span>
+<span class="r-in"><span><span class="st">local people out of jobs, etc."</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">immigration_scale</span> <span class="op">&lt;-</span> <span class="st">"Pro-immigration policies (a value of -1)</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">Examples of 'pro' immigration positions include: Positive statements about</span></span></span>
+<span class="r-in"><span><span class="st">the benefits of immigration, such as economic or cultural benefits;</span></span></span>
+<span class="r-in"><span><span class="st">Statements about the moral obligation to welcome asylum seekers; Policies</span></span></span>
+<span class="r-in"><span><span class="st">that would improve conditions for asylum seekers and their families; Urging</span></span></span>
+<span class="r-in"><span><span class="st">an increase the number of work permits for foreign nationals; Making it</span></span></span>
+<span class="r-in"><span><span class="st">possible for illegal immigrants to obtain a legal status or even</span></span></span>
+<span class="r-in"><span><span class="st">citizenship; Reducing barriers to immigration generally.</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">Anti-immigration policies (a value of 1)</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">Examples of 'anti' immigration positions include: Negative statements about</span></span></span>
+<span class="r-in"><span><span class="st">consequences of immigration, such as job losses, increased crime, or</span></span></span>
+<span class="r-in"><span><span class="st">destruction of national culture; Arguments about asylum seekers abusing the</span></span></span>
+<span class="r-in"><span><span class="st">system; Policies to deport asylum seekers and their families; Urging</span></span></span>
+<span class="r-in"><span><span class="st">restrictions on the number of work permits for foreign nationals, including</span></span></span>
+<span class="r-in"><span><span class="st">points systems; Deporting illegal immigrants and their families; Increasing</span></span></span>
+<span class="r-in"><span><span class="st">barriers to immigration generally.</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">Neutral immigration policy statements (a value of 0)</span></span></span>
+<span class="r-in"><span><span class="st"></span></span></span>
+<span class="r-in"><span><span class="st">Examples of neutral statements about immigration policy: Advocating a</span></span></span>
+<span class="r-in"><span><span class="st">balanced approach to the problem; Statements about administrative capacity</span></span></span>
+<span class="r-in"><span><span class="st">for handling immigration or asylum seekers; Statements that do not take a</span></span></span>
+<span class="r-in"><span><span class="st">pro- or anti-immigration stance generally, despite making some statement</span></span></span>
+<span class="r-in"><span><span class="st">about immigration."</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># define a codebook</span></span></span>
+<span class="r-in"><span><span class="va">codebook_immigration</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  name <span class="op">=</span> <span class="st">"Immigration policy"</span>,</span></span>
+<span class="r-in"><span>  instructions <span class="op">=</span> <span class="va">immigration_instructions</span>,</span></span>
+<span class="r-in"><span>  schema <span class="op">=</span> <span class="fu">type_object</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    immigration_label <span class="op">=</span> <span class="fu">type_enum</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Immigration"</span>, <span class="st">"Not immmigration"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    immigration_scale <span class="op">=</span> <span class="fu">type_integer</span><span class="op">(</span><span class="va">immigration_scale</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">data_corpus_manifsentsUK2010sample</span>,</span></span>
+<span class="r-in"><span>                   <span class="va">codebook_immigration</span>,</span></span>
+<span class="r-in"><span>                   model <span class="op">=</span> <span class="st">"openai/gpt-4o"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">gold</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>.id <span class="op">=</span> <span class="fu"><a href="https://quanteda.io/reference/docnames.html" class="external-link">docnames</a></span><span class="op">(</span><span class="va">data_corpus_manifsentsUK2010sample</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                   immigration_label <span class="op">=</span> <span class="va">data_corpus_manifsentsUK2010sample</span><span class="op">$</span><span class="va">crowd_immigration_label</span>,</span></span>
+<span class="r-in"><span>                   immigration_scale <span class="op">=</span> <span class="va">data_corpus_manifsentsUK2010sample</span><span class="op">$</span><span class="va">crowd_immigration_mean</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="qlm_validate.html">qlm_validate</a></span><span class="op">(</span><span class="va">result</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="st">"immigration_label"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="qlm_validate.html">qlm_validate</a></span><span class="op">(</span><span class="va">result</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="st">"immigration_scale"</span>, level <span class="op">=</span> <span class="st">"interval"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+</code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

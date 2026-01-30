@@ -104,12 +104,12 @@ coded1
     ## # A tibble: 11 × 3
     ##    .id          score explanation                                               
     ##  * <chr>        <int> <chr>                                                     
-    ##  1 1985-Reagan      8 The text emphasizes limited government, reduced taxes, an…
+    ##  1 1985-Reagan      8 The text emphasizes reducing government intervention, low…
     ##  2 1989-Bush        7 The text emphasizes free markets, limited government inte…
     ##  3 1993-Clinton     4 The text emphasizes themes of renewal, change, and respon…
-    ##  4 1997-Clinton     5 The text presents a centrist ideological position. It emp…
-    ##  5 2001-Bush        6 The text reflects a moderate to right-leaning ideological…
-    ##  6 2005-Bush        8 The text emphasizes a strong commitment to spreading demo…
+    ##  4 1997-Clinton     4 The text emphasizes themes of equality, community, and op…
+    ##  5 2001-Bush        6 The text reflects a centrist to moderately right-leaning …
+    ##  6 2005-Bush        7 The text emphasizes a strong commitment to spreading demo…
     ##  7 2009-Obama       3 The text emphasizes themes of unity, responsibility, and …
     ##  8 2013-Obama       3 The text emphasizes equality, collective action, and soci…
     ##  9 2017-Trump       8 The text emphasizes nationalism, protectionism, and a foc…
@@ -134,7 +134,7 @@ coded2 <- qlm_replicate(coded1,
                         name = "mini_run")
 ```
 
-    ## [working] (0 + 0) -> 9 -> 2 | ■■■■■■                            18%
+    ## [working] (0 + 0) -> 7 -> 4 | ■■■■■■■■■■■■                      36%
 
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
@@ -185,13 +185,13 @@ comparison
 
     ## ── score (ordinal)
 
-    ## Percent agreement: 0.3636
+    ## Percent agreement: 0.4545
 
-    ## Krippendorff's alpha: 0.9237
+    ## Krippendorff's alpha: 0.8683
 
-    ## Kendall's W: 0.9162
+    ## Kendall's W: 0.8707
 
-    ## Spearman's rho: 0.9447
+    ## Spearman's rho: 0.8859
 
     ## 
 
@@ -232,11 +232,11 @@ qlm_compare(coded1, coded2, coded3,
 
     ## Percent agreement: 0.9091
 
-    ## Krippendorff's alpha: 0.9237
+    ## Krippendorff's alpha: 0.8683
 
-    ## Kendall's W: 0.9162
+    ## Kendall's W: 0.8707
 
-    ## Spearman's rho: 0.9447
+    ## Spearman's rho: 0.8859
 
     ## 
 
@@ -284,8 +284,8 @@ validation
     ## 
     ## 
     ## ── score (ordinal) 
-    ## Spearman's rho: 0.8778
-    ## Kendall's tau: 0.7661
+    ## Spearman's rho: 0.8884
+    ## Kendall's tau: 0.8000
     ## MAE: 0.7273
 
 The output shows:
@@ -320,9 +320,9 @@ qlm_validate(coded1, gold = gold_standard, by = "score", level = "ordinal")
     ## 
     ## ── score (ordinal) 
     ## 
-    ## Spearman's rho: 0.8778
+    ## Spearman's rho: 0.8884
     ## 
-    ## Kendall's tau: 0.7661
+    ## Kendall's tau: 0.8000
     ## 
     ## MAE: 0.7273
 
@@ -346,13 +346,13 @@ qlm_validate(coded1, gold = gold_standard, by = "score", level = "interval")
     ## 
     ## ── score (interval) 
     ## 
-    ## Pearson's r: 0.8363
+    ## Pearson's r: 0.8092
     ## 
     ## MAE: 0.7273
     ## 
-    ## RMSE: 1.2792
+    ## RMSE: 1.4142
     ## 
-    ## ICC: 0.7902
+    ## ICC: 0.7460
 
 ## Best practices for reliability and validation
 

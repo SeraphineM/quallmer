@@ -13,25 +13,27 @@ data_codebook_stance
 
 A `qlm_codebook` object containing:
 
-name
+- name:
 
-:   Task name: "Stance detection"
+  Task name: "Stance detection"
 
-instructions
+- instructions:
 
-:   Coding instructions for classifying stance
+  Coding instructions for classifying stance
 
-schema
+- schema:
 
-:   Response schema with two fields:
+  Response schema with two fields: `stance` (String indicating "Pro",
+  "Neutral", or "Contra") and `explanation` (Brief explanation of the
+  classification)
 
-role
+- role:
 
-:   Expert annotator persona
+  Expert annotator persona
 
-input_type
+- input_type:
 
-:   "text"
+  "text"
 
 ## See also
 

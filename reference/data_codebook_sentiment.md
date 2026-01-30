@@ -15,25 +15,26 @@ data_codebook_sentiment
 
 A `qlm_codebook` object containing:
 
-name
+- name:
 
-:   Task name: "Movie Review Sentiment"
+  Task name: "Movie Review Sentiment"
 
-instructions
+- instructions:
 
-:   Coding instructions for analyzing movie review sentiment
+  Coding instructions for analyzing movie review sentiment
 
-schema
+- schema:
 
-:   Response schema with two fields:
+  Response schema with two fields: `polarity` (Enum of "neg", "mixed",
+  or "pos") and `rating` (Integer from 1 to 10)
 
-role
+- role:
 
-:   Expert film critic persona
+  Expert film critic persona
 
-input_type
+- input_type:
 
-:   "text"
+  "text"
 
 ## See also
 
