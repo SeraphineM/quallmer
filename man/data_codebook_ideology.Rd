@@ -9,11 +9,7 @@ A \code{qlm_codebook} object containing:
 \describe{
 \item{name}{Task name: "Ideological scaling"}
 \item{instructions}{Coding instructions for ideological scaling}
-\item{schema}{Response schema with two fields:}
-\itemize{
-\item \code{score}: Integer from 0 (left) to 10 (right)
-\item \code{explanation}: Brief justification for the assigned score
-}
+\item{schema}{Response schema with two fields: \code{score} (Integer from 0 (left) to 10 (right)) and \code{explanation} (Brief justification for the assigned score)}
 \item{role}{Expert political scientist persona}
 \item{input_type}{"text"}
 }

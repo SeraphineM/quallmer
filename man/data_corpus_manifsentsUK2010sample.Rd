@@ -129,9 +129,6 @@ gold <- data.frame(.id = docnames(data_corpus_manifsentsUK2010sample),
                    immigration_scale = data_corpus_manifsentsUK2010sample$crowd_immigration_mean)
 qlm_validate(result, gold, by = "immigration_label")
 qlm_validate(result, gold, by = "immigration_scale", level = "interval")
-
-)
-
 }
 }
 \references{

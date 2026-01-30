@@ -9,11 +9,7 @@ A \code{qlm_codebook} object containing:
 \describe{
 \item{name}{Task name: "Stance detection"}
 \item{instructions}{Coding instructions for classifying stance}
-\item{schema}{Response schema with two fields:}
-\itemize{
-\item \code{stance}: String indicating "Pro", "Neutral", or "Contra"
-\item \code{explanation}: Brief explanation of the classification
-}
+\item{schema}{Response schema with two fields: \code{stance} (String indicating "Pro", "Neutral", or "Contra") and \code{explanation} (Brief explanation of the classification)}
 \item{role}{Expert annotator persona}
 \item{input_type}{"text"}
 }

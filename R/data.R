@@ -124,9 +124,6 @@
 #'                    immigration_scale = data_corpus_manifsentsUK2010sample$crowd_immigration_mean)
 #' qlm_validate(result, gold, by = "immigration_label")
 #' qlm_validate(result, gold, by = "immigration_scale", level = "interval")
-#'
-#' )
-#'
 #' }
 "data_corpus_manifsentsUK2010sample"
 
@@ -189,11 +186,7 @@
 #'   \describe{
 #'     \item{name}{Task name: "Movie Review Sentiment"}
 #'     \item{instructions}{Coding instructions for analyzing movie review sentiment}
-#'     \item{schema}{Response schema with two fields:}
-#'       \itemize{
-#'         \item `polarity`: Enum of "neg" (negative), "mixed", or "pos" (positive)
-#'         \item `rating`: Integer from 1 (most negative) to 10 (most positive)
-#'       }
+#'     \item{schema}{Response schema with two fields: `polarity` (Enum of "neg", "mixed", or "pos") and `rating` (Integer from 1 to 10)}
 #'     \item{role}{Expert film critic persona}
 #'     \item{input_type}{"text"}
 #'   }
@@ -234,11 +227,7 @@
 #'   \describe{
 #'     \item{name}{Task name: "Stance detection"}
 #'     \item{instructions}{Coding instructions for classifying stance}
-#'     \item{schema}{Response schema with two fields:}
-#'       \itemize{
-#'         \item `stance`: String indicating "Pro", "Neutral", or "Contra"
-#'         \item `explanation`: Brief explanation of the classification
-#'       }
+#'     \item{schema}{Response schema with two fields: `stance` (String indicating "Pro", "Neutral", or "Contra") and `explanation` (Brief explanation of the classification)}
 #'     \item{role}{Expert annotator persona}
 #'     \item{input_type}{"text"}
 #'   }
@@ -268,11 +257,7 @@
 #'   \describe{
 #'     \item{name}{Task name: "Ideological scaling"}
 #'     \item{instructions}{Coding instructions for ideological scaling}
-#'     \item{schema}{Response schema with two fields:}
-#'       \itemize{
-#'         \item `score`: Integer from 0 (left) to 10 (right)
-#'         \item `explanation`: Brief justification for the assigned score
-#'       }
+#'     \item{schema}{Response schema with two fields: `score` (Integer from 0 (left) to 10 (right)) and `explanation` (Brief justification for the assigned score)}
 #'     \item{role}{Expert political scientist persona}
 #'     \item{input_type}{"text"}
 #'   }
@@ -302,11 +287,7 @@
 #'   \describe{
 #'     \item{name}{Task name: "Salience (ranked topics)"}
 #'     \item{instructions}{Coding instructions for topic salience ranking}
-#'     \item{schema}{Response schema with two fields:}
-#'       \itemize{
-#'         \item `topics`: Array of strings listing topics by salience (up to 5)
-#'         \item `explanation`: Brief explanation of topic selection and ordering
-#'       }
+#'     \item{schema}{Response schema with two fields: `topics` (Array of strings listing topics by salience, up to 5) and `explanation` (Brief explanation of topic selection and ordering)}
 #'     \item{role}{Expert content analyst persona}
 #'     \item{input_type}{"text"}
 #'   }
@@ -336,12 +317,7 @@
 #'   \describe{
 #'     \item{name}{Task name: "Fact-checking"}
 #'     \item{instructions}{Coding instructions for truthfulness assessment}
-#'     \item{schema}{Response schema with three fields:}
-#'       \itemize{
-#'         \item `truth_score`: Integer from 0 (false/misleading) to 10 (accurate)
-#'         \item `misleading_topic`: Array of topics that reduce confidence (up to 5)
-#'         \item `explanation`: Brief explanation of the truthfulness score
-#'       }
+#'     \item{schema}{Response schema with three fields: `truth_score` (Integer from 0 (false/misleading) to 10 (accurate)), `misleading_topic` (Array of topics that reduce confidence, up to 5), and `explanation` (Brief explanation of the truthfulness score)}
 #'     \item{role}{Expert fact-checker persona}
 #'     \item{input_type}{"text"}
 #'   }
