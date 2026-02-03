@@ -2,14 +2,18 @@
 % Please edit documentation in R/qlm_trail.R
 \name{qlm_trail}
 \alias{qlm_trail}
-\title{Extract audit trail from quallmer objects}
+\title{Create an audit trail from quallmer objects}
 \usage{
-qlm_trail(...)
+qlm_trail(..., path = NULL)
 }
 \arguments{
 \item{...}{One or more quallmer objects (\code{qlm_coded}, \code{qlm_comparison}, or
 \code{qlm_validation}). When multiple objects are provided, they will be used
 to reconstruct the complete workflow chain.}
+
+\item{path}{Optional base path for saving the audit trail. When provided,
+creates \verb{\{path\}.rds} (complete archive) and \verb{\{path\}.qmd} (human-readable
+report). If \code{NULL} (default), the trail is only returned without saving.}
 }
 \value{
 A \code{qlm_trail} object containing:
@@ -26,36 +30,30 @@ establishing trustworthiness in qualitative research, this function captures
 the full decision history of your AI-assisted coding process.
 }
 \details{
-The audit trail captures the complete history of your coding workflow:
-\itemize{
-\item Run names and parent-child relationships
-\item Models and parameters used at each step
-\item Timestamps documenting when each step occurred
-\item The actual coded results from each run
-\item Comparison and validation metrics (when applicable)
+Lincoln and Guba (1985, pp. 319-320) describe six categories of audit trail
+materials for establishing trustworthiness in qualitative research.
+The quallmer package operationalizes these for LLM-assisted text analysis:
+
+\describe{
+\item{Raw data}{Original texts stored in coded objects}
+\item{Data reduction products}{Coded results from each run}
+\item{Data reconstruction products}{Comparisons and validations}
+\item{Process notes}{Model parameters, timestamps, decision history}
+\item{Materials relating to intentions}{Function calls documenting intent}
+\item{Instrument development information}{Codebook with instructions and schema}
 }
 
-This supports the confirmability and dependability criteria described by
-Lincoln and Guba, allowing others to trace the logic of your analytical
-decisions and verify the consistency of your coding process.
-
-When a single object is provided, only its immediate information is shown.
-To see the full chain, provide all ancestor objects.
-
-For branching workflows (e.g., when multiple coded objects are compared),
-the trail captures all input runs as parents of the comparison.
+When \code{path} is provided, the function creates:
+\itemize{
+\item \verb{\{path\}.rds}: Complete trail object for R (reloadable with \code{readRDS()})
+\item \verb{\{path\}.qmd}: Quarto document with full audit trail documentation
+}
 }
 \examples{
 \dontrun{
-# Code movie reviews with sentiment codebook
-
-library(quanteda)
-
-test_corpus <- data_corpus_LMRDsample \%>\%
-  corpus_sample(size = 10, by = polarity)
-
+# Code texts with sentiment codebook
 coded1 <- qlm_code(
-  test_corpus,
+  texts,
   data_codebook_sentiment,
   model = "openai/gpt-4o",
   name = "gpt4o_run"
@@ -64,17 +62,13 @@ coded1 <- qlm_code(
 # Replicate with different model
 coded2 <- qlm_replicate(coded1, model = "openai/gpt-4o-mini", name = "mini_run")
 
-# Extract and view the audit trail
+# View the audit trail
 trail <- qlm_trail(coded1, coded2)
 print(trail)
 
-# Use helper functions for saving/exporting
-qlm_trail_save(trail, "trail.rds")
-qlm_trail_export(trail, "trail.json")
-qlm_trail_report(trail, "trail.qmd")
-
-# Or use qlm_archive() for one-call documentation
-qlm_archive(coded1, coded2, path = "workflow")
+# Save the complete audit trail
+qlm_trail(coded1, coded2, path = "my_analysis")
+# Creates: my_analysis.rds, my_analysis.qmd
 }
 
 }
@@ -82,6 +76,5 @@ qlm_archive(coded1, coded2, path = "workflow")
 Lincoln, Y. S., & Guba, E. G. (1985). \emph{Naturalistic Inquiry}. Sage.
 }
 \seealso{
-\code{\link[=qlm_replicate]{qlm_replicate()}}, \code{\link[=qlm_code]{qlm_code()}}, \code{\link[=qlm_compare]{qlm_compare()}}, \code{\link[=qlm_validate]{qlm_validate()}},
-\code{\link[=qlm_trail_save]{qlm_trail_save()}}, \code{\link[=qlm_trail_export]{qlm_trail_export()}}, \code{\link[=qlm_trail_report]{qlm_trail_report()}}, \code{\link[=qlm_archive]{qlm_archive()}}
+\code{\link[=qlm_code]{qlm_code()}}, \code{\link[=qlm_replicate]{qlm_replicate()}}, \code{\link[=qlm_compare]{qlm_compare()}}, \code{\link[=qlm_validate]{qlm_validate()}}
 }
