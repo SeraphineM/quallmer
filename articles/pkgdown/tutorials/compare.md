@@ -86,8 +86,6 @@ coded1 <- qlm_code(data_corpus_inaugural,
 
     ## [working] (0 + 0) -> 10 -> 1 | ■■■■                               9%
 
-    ## [working] (0 + 0) -> 4 -> 7 | ■■■■■■■■■■■■■■■■■■■■              64%
-
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
 ``` r
@@ -104,17 +102,17 @@ coded1
     ## # A tibble: 11 × 3
     ##    .id          score explanation                                               
     ##  * <chr>        <int> <chr>                                                     
-    ##  1 1985-Reagan      8 The text emphasizes reducing government intervention, low…
-    ##  2 1989-Bush        7 The text emphasizes free markets, limited government inte…
+    ##  1 1985-Reagan      8 The text emphasizes limited government, reduced taxes, an…
+    ##  2 1989-Bush        7 The text reflects a center-right ideological position. It…
     ##  3 1993-Clinton     4 The text emphasizes themes of renewal, change, and respon…
     ##  4 1997-Clinton     4 The text emphasizes themes of equality, community, and op…
     ##  5 2001-Bush        6 The text reflects a centrist to moderately right-leaning …
     ##  6 2005-Bush        7 The text emphasizes a strong commitment to spreading demo…
-    ##  7 2009-Obama       3 The text emphasizes themes of unity, responsibility, and …
+    ##  7 2009-Obama       3 The text emphasizes unity, social responsibility, and gov…
     ##  8 2013-Obama       3 The text emphasizes equality, collective action, and soci…
     ##  9 2017-Trump       8 The text emphasizes nationalism, protectionism, and a foc…
     ## 10 2021-Biden       3 The text emphasizes unity, democracy, and addressing soci…
-    ## 11 2025-Trump       8 The text emphasizes strong nationalist and protectionist …
+    ## 11 2025-Trump       8 The text emphasizes nationalism, strong border control, m…
 
 ## Replicating with different settings
 
@@ -134,7 +132,7 @@ coded2 <- qlm_replicate(coded1,
                         name = "mini_run")
 ```
 
-    ## [working] (0 + 0) -> 7 -> 4 | ■■■■■■■■■■■■                      36%
+    ## [working] (0 + 0) -> 6 -> 5 | ■■■■■■■■■■■■■■■                   45%
 
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
@@ -185,13 +183,13 @@ comparison
 
     ## ── score (ordinal)
 
-    ## Percent agreement: 0.4545
+    ## Percent agreement: 0.3636
 
-    ## Krippendorff's alpha: 0.8683
+    ## Krippendorff's alpha: 0.8593
 
-    ## Kendall's W: 0.8707
+    ## Kendall's W: 0.8657
 
-    ## Spearman's rho: 0.8859
+    ## Spearman's rho: 0.8707
 
     ## 
 
@@ -230,13 +228,13 @@ qlm_compare(coded1, coded2, coded3,
 
     ## ── score (ordinal)
 
-    ## Percent agreement: 0.9091
+    ## Percent agreement: 0.8182
 
-    ## Krippendorff's alpha: 0.8683
+    ## Krippendorff's alpha: 0.8593
 
-    ## Kendall's W: 0.8707
+    ## Kendall's W: 0.8657
 
-    ## Spearman's rho: 0.8859
+    ## Spearman's rho: 0.8707
 
     ## 
 
