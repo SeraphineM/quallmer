@@ -9,11 +9,7 @@ A \code{qlm_codebook} object containing:
 \describe{
 \item{name}{Task name: "Salience (ranked topics)"}
 \item{instructions}{Coding instructions for topic salience ranking}
-\item{schema}{Response schema with two fields:}
-\itemize{
-\item \code{topics}: Array of strings listing topics by salience (up to 5)
-\item \code{explanation}: Brief explanation of topic selection and ordering
-}
+\item{schema}{Response schema with two fields: \code{topics} (Array of strings listing topics by salience, up to 5) and \code{explanation} (Brief explanation of topic selection and ordering)}
 \item{role}{Expert content analyst persona}
 \item{input_type}{"text"}
 }

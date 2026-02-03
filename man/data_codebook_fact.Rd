@@ -9,12 +9,7 @@ A \code{qlm_codebook} object containing:
 \describe{
 \item{name}{Task name: "Fact-checking"}
 \item{instructions}{Coding instructions for truthfulness assessment}
-\item{schema}{Response schema with three fields:}
-\itemize{
-\item \code{truth_score}: Integer from 0 (false/misleading) to 10 (accurate)
-\item \code{misleading_topic}: Array of topics that reduce confidence (up to 5)
-\item \code{explanation}: Brief explanation of the truthfulness score
-}
+\item{schema}{Response schema with three fields: \code{truth_score} (Integer from 0 (false/misleading) to 10 (accurate)), \code{misleading_topic} (Array of topics that reduce confidence, up to 5), and \code{explanation} (Brief explanation of the truthfulness score)}
 \item{role}{Expert fact-checker persona}
 \item{input_type}{"text"}
 }

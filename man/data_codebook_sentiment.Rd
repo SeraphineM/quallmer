@@ -9,11 +9,7 @@ A \code{qlm_codebook} object containing:
 \describe{
 \item{name}{Task name: "Movie Review Sentiment"}
 \item{instructions}{Coding instructions for analyzing movie review sentiment}
-\item{schema}{Response schema with two fields:}
-\itemize{
-\item \code{polarity}: Enum of "neg" (negative), "mixed", or "pos" (positive)
-\item \code{rating}: Integer from 1 (most negative) to 10 (most positive)
-}
+\item{schema}{Response schema with two fields: \code{polarity} (Enum of "neg", "mixed", or "pos") and \code{rating} (Integer from 1 to 10)}
 \item{role}{Expert film critic persona}
 \item{input_type}{"text"}
 }
