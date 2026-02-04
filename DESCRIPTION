@@ -32,7 +32,6 @@ Imports:
     tidyr,
     digest,
     irr,
-    jsonlite,
     lifecycle,
     rlang,
     stats,
