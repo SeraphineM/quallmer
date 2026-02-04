@@ -1,17 +1,16 @@
 # The quallmer audit trail
 
 The quallmer trail system creates complete audit trails following
-Lincoln and Guba’s (1985, pp. 319-320) concept for establishing
-trustworthiness in qualitative research. It automatically captures the
-full decision history of your coding workflow, supporting the
-confirmability and dependability criteria that allow others to trace the
-logic of your analytical decisions.
+Lincoln and Guba’s (1985) concept for establishing trustworthiness in
+qualitative research. It automatically captures the full decision
+history of your coding workflow, supporting the confirmability and
+dependability criteria that allow others to trace the logic of your
+analytical decisions.
 
 ## Lincoln and Guba’s audit trail framework
 
-[Lincoln and Guba (1985,
-p. 319-320)](https://ethnographyworkshop.wordpress.com/wp-content/uploads/2014/11/lincoln-guba-1985-establishing-trustworthiness-naturalistic-inquiry.pdf)
-describe six categories of audit trail materials:
+Lincoln and Guba (1985, p. 319-320) describe six categories of audit
+trail materials:
 
 1.  **Raw data:** Original texts, recordings, notes
 2.  **Data reduction products:** Summaries, condensed notes
@@ -175,9 +174,9 @@ To create a permanent record, provide a `path` argument:
 # Save to a temporary directory for this example
 temp_path <- file.path(tempdir(), "my_analysis")
 qlm_trail(coded1, coded2, path = temp_path)
-#> ✔ Trail saved to /tmp/RtmpDRphHd/my_analysis.rds
-#> ✔ Report saved to /tmp/RtmpDRphHd/my_analysis.qmd
-#> ℹ Render with `quarto::quarto_render("/tmp/RtmpDRphHd/my_analysis.qmd")`
+#> ✔ Trail saved to /tmp/Rtmp8ujCFD/my_analysis.rds
+#> ✔ Report saved to /tmp/Rtmp8ujCFD/my_analysis.qmd
+#> ℹ Render with `quarto::quarto_render("/tmp/Rtmp8ujCFD/my_analysis.qmd")`
 ```
 
 This creates two files:

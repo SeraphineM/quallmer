@@ -29,7 +29,9 @@ function creates complete audit trails following Lincoln and Guba’s
 without requiring deep expertise in R, programming or machine
 learning.**
 
-## Coding and validation workflow
+# The quallmer workflow
+
+## 1. Define codebook
 
 #### `qlm_codebook()`
 
@@ -44,6 +46,8 @@ learning.**
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
 
+## 2. Code data
+
 #### `qlm_code()`
 
 - Applies LLM-based coding to qualitative data using a `qlm_codebook`.
@@ -51,6 +55,19 @@ learning.**
   [ellmer](https://ellmer.tidyverse.org/index.html).
 - Returns a `qlm_coded` object containing the coded results and metadata
   for reproducibility.
+
+## 3. Replicate with different settings
+
+#### `qlm_replicate()`
+
+- Re-executes coding with optional overrides (different models,
+  codebooks, or parameters).
+- Tracks provenance chain for comparing results across different
+  configurations.
+- Enables systematic assessment of coding reliability and sensitivity to
+  model choices.
+
+## 4. Compare and validate results
 
 #### `qlm_compare()`
 
@@ -69,18 +86,7 @@ learning.**
 - Supports multiple averaging methods (macro, micro, weighted) and
   per-class breakdowns.
 
-## Replication
-
-#### `qlm_replicate()`
-
-- Re-executes coding with optional overrides (different models,
-  codebooks, or parameters).
-- Tracks provenance chain for comparing results across different
-  configurations.
-- Enables systematic assessment of coding reliability and sensitivity to
-  model choices.
-
-## Audit trail and replication material
+## 5. Document audit trail
 
 #### `qlm_trail()`
 
@@ -110,9 +116,9 @@ package. For authentication and usage of each of these LLMs, please
 refer to the respective
 [ellmer](https://ellmer.tidyverse.org/reference/index.html)
 documentation and see our [tutorial for setting up an OpenAI API
-key](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.html)
+key](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/openai.html)
 or [getting started with an open-source Ollama
-model](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.html).
+model](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/ollama.html).
 
 ## Installation
 
@@ -175,19 +181,17 @@ restructuring.
 
 ### All vignettes
 
-- [Comparing and replicating coded
-  results](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/compare.md):
-- [Creating
-  codebooks](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/custom-codebook.md):
 - [Example: Sentiment
   analysis](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_sentiment.md):
 - [Getting started with
   quallmer](https://quallmer.github.io/quallmer/articles/getting-started.md):
 - [Working with an open-source Ollama
-  model](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.md):
+  model](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/ollama.md):
 - [Signing up for an openai API
-  key](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.md):
+  key](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/openai.md):
 - [The quallmer audit
   trail](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trail.md):
 - [Using the quallmer
   app](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.md):
+- [The quallmer
+  workflow](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.md):

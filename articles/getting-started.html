@@ -38,14 +38,15 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-getting-started" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Getting started</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-getting-started">
 <li><a class="dropdown-item" href="../articles/getting-started.html">Quick start guide</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/getting-started/workflow.html">The quallmer workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/getting-started/openai.html">Signing up for an OpenAI API key</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/getting-started/ollama.html">Working with an open-source Ollama model</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><a class="dropdown-item" href="../articles/pkgdown/tutorials/openai.html">Signing up for an OpenAI API key</a></li>
-    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
-    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
+<li><a class="dropdown-item" href="../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
@@ -107,79 +108,57 @@ the package from GitHub.</p>
 <code class="sourceCode R"><span><span class="co"># If you don't have pak installed yet, uncomment and run the following line:</span></span>
 <span><span class="co"># install.packages("pak")</span></span>
 <span><span class="co"># Then, install quallmer using pak:</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"SeraphineM/quallmer"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"quallmer/quallmer"</span><span class="op">)</span></span></code></pre></div>
 <p>Then, you can load the package and begin using its functions.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quallmer.github.io/quallmer/">quallmer</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: ellmer</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="overview-of-tutorials">Overview of tutorials<a class="anchor" aria-label="anchor" href="#overview-of-tutorials"></a>
+<h2 id="the-quallmer-workflow">The quallmer workflow<a class="anchor" aria-label="anchor" href="#the-quallmer-workflow"></a>
 </h2>
-<p>Before using large language models, most users will need to sign up
-for an API key from an LLM provider, such as OpenAI, or download an
-open-source model like those from Ollama. The <code>quallmer</code>
-package supports multiple LLM providers through the <code>ellmer</code>
-package, allowing users to choose the one that best fits their
-needs.</p>
-<p>Using <code><a href="../reference/qlm_code.html">qlm_code()</a></code>, users can generate structured,
-interpretable outputs powered by large language models (LLMs). The
-package allows users to <a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/custom-codebook.html">create
-their own custom codebooks tailored to their specific research questions
-and data types</a> using <code><a href="../reference/qlm_codebook.html">qlm_codebook()</a></code>.</p>
-<p>The package provides functions for validating and comparing coded
-results:</p>
-<ul>
-<li>
-<code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> compares multiple coded results to assess
-inter-rater reliability</li>
-<li>
-<code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> validates coded results against a gold
-standard (human-coded reference data)</li>
-<li>
-<code><a href="../reference/qlm_replicate.html">qlm_replicate()</a></code> re-executes coding with different
-settings to test reliability</li>
-</ul>
-<p>Our tutorials will guide you through the following topics:</p>
+<p>The typical quallmer workflow consists of five steps:</p>
 <ol style="list-style-type: decimal">
-<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.html"><strong>Signing
-up for an OpenAI API key</strong></a>: This tutorial will guide you
-through the process of obtaining an API key from OpenAI, which is
-necessary for using OpenAI’s LLMs with the <code>quallmer</code>
-package.</p></li>
-<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.html"><strong>Working
-with an open-source Ollama model</strong></a>: This tutorial will
-demonstrate how to use the <code>quallmer</code> package with an
-open-source Ollama model for qualitative coding tasks.</p></li>
-<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/custom-codebook.html"><strong>Creating
-codebooks</strong></a>: This tutorial will walk you through the process
-of defining your own custom codebooks using the
-<code><a href="../reference/qlm_codebook.html">qlm_codebook()</a></code> function, allowing you to tailor the LLM’s
-output to your specific research needs.</p></li>
-<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/compare.html"><strong>Comparing
-and replicating coded results</strong></a>: This tutorial will guide you
-through the process of using the <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> function to
-assess inter-rater reliability between multiple coded results generated
-by different models or coding runs or assess accuracy and precision
-against a human-coded gold standard using <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code>.
-It will also cover how to use the <code><a href="../reference/qlm_replicate.html">qlm_replicate()</a></code> function
-to re-execute coding with different settings for reliability
-testing.</p></li>
-<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trail.html"><strong>The
-quallmer audit trail</strong></a>: This tutorial will introduce you to
-the quallmer trail system, which automatically captures provenance
-metadata for full workflow traceability using <code><a href="../reference/qlm_trail.html">qlm_trail()</a></code>
-and related functions.</p></li>
-<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.html"><strong>Using
-the quallmer app</strong></a>: This tutorial will introduce you to the
-quallmer app (provided by the <code>quallmer.app</code> package), which
-allows you to manually code data, check LLM annotations, and calculate
-inter-rater reliability in a user-friendly and intuitive
-interface.</p></li>
+<li>
+<strong>Define</strong> your codebook with
+<code><a href="../reference/qlm_codebook.html">qlm_codebook()</a></code>
+</li>
+<li>
+<strong>Code</strong> your data with <code><a href="../reference/qlm_code.html">qlm_code()</a></code>
+</li>
+<li>
+<strong>Replicate</strong> with different settings using
+<code><a href="../reference/qlm_replicate.html">qlm_replicate()</a></code>
+</li>
+<li>
+<strong>Compare</strong> results with
+<code><a href="../reference/qlm_compare.html">qlm_compare()</a></code>
+</li>
+<li>
+<strong>Document</strong> everything with
+<code><a href="../reference/qlm_trail.html">qlm_trail()</a></code>
+</li>
 </ol>
-<p>We hope these tutorials will help you get started with the
-<code>quallmer</code> package and empower you to leverage large language
-models for your qualitative research projects!</p>
+<p>For a hands-on introduction with code examples, see <a href="https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.html"><strong>The
+quallmer workflow</strong></a>.</p>
+</div>
+<div class="section level2">
+<h2 id="setting-up-llm-access">Setting up LLM access<a class="anchor" aria-label="anchor" href="#setting-up-llm-access"></a>
+</h2>
+<p>Before using large language models, you need to set up access to an
+LLM provider:</p>
+<ol style="list-style-type: decimal">
+<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/openai.html"><strong>Signing
+up for an OpenAI API key</strong></a>: Obtain an API key from OpenAI to
+use models like GPT-4o.</p></li>
+<li><p><a href="https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/ollama.html"><strong>Working
+with an open-source Ollama model</strong></a>: Use open-source models
+locally with Ollama.</p></li>
+</ol>
+<p>The <code>quallmer</code> package supports multiple LLM providers
+through the <code>ellmer</code> package. For more information, see the
+<a href="https://ellmer.tidyverse.org/index.html" class="external-link">ellmer
+documentation</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

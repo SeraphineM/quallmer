@@ -2,15 +2,14 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  pkgdown/tutorials/compare: pkgdown/tutorials/compare.html
-  pkgdown/tutorials/custom-codebook: pkgdown/tutorials/custom-codebook.html
   pkgdown/examples/example_sentiment: pkgdown/examples/example_sentiment.html
   getting-started: getting-started.html
-  pkgdown/tutorials/ollama: pkgdown/tutorials/ollama.html
-  pkgdown/tutorials/openai: pkgdown/tutorials/openai.html
+  pkgdown/getting-started/ollama: pkgdown/getting-started/ollama.html
+  pkgdown/getting-started/openai: pkgdown/getting-started/openai.html
   pkgdown/tutorials/trail: pkgdown/tutorials/trail.html
   pkgdown/tutorials/validate: pkgdown/tutorials/validate.html
-last_built: 2026-02-04T07:56Z
+  pkgdown/getting-started/workflow: pkgdown/getting-started/workflow.html
+last_built: 2026-02-04T10:47Z
 urls:
   reference: https://quallmer.github.io/quallmer/reference
   article: https://quallmer.github.io/quallmer/articles

@@ -41,14 +41,15 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-getting-started" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Getting started</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-getting-started">
 <li><a class="dropdown-item" href="articles/getting-started.html">Quick start guide</a></li>
+    <li><a class="dropdown-item" href="articles/pkgdown/getting-started/workflow.html">The quallmer workflow</a></li>
+    <li><a class="dropdown-item" href="articles/pkgdown/getting-started/openai.html">Signing up for an OpenAI API key</a></li>
+    <li><a class="dropdown-item" href="articles/pkgdown/getting-started/ollama.html">Working with an open-source Ollama model</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><a class="dropdown-item" href="articles/pkgdown/tutorials/openai.html">Signing up for an OpenAI API key</a></li>
-    <li><a class="dropdown-item" href="articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
-    <li><a class="dropdown-item" href="articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
+<li><a class="dropdown-item" href="articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
@@ -80,8 +81,12 @@
 <p>The <strong>quallmer</strong> package is an <strong>easy-to-use toolbox to quickly apply AI-assisted qualitative coding to large amounts of texts, images, pdfs, tabular data and other structured data.</strong></p>
 <p>Using <code><a href="reference/qlm_code.html">qlm_code()</a></code>, users can apply codebook-based qualitative coding powered by large language models (LLMs) to generate structured, interpretable outputs. The package includes built-in codebooks for common applications and allows researchers to create custom codebooks tailored to their specific research questions using <code><a href="reference/qlm_codebook.html">qlm_codebook()</a></code>. To ensure quality and reliability of AI-generated coding, <strong>quallmer</strong> provides <code><a href="reference/qlm_compare.html">qlm_compare()</a></code> for evaluating inter-rater reliability and <code><a href="reference/qlm_validate.html">qlm_validate()</a></code> for assessing accuracy against gold standards. With <code><a href="reference/qlm_replicate.html">qlm_replicate()</a></code>, researchers can systematically compare results across different models and settings to assess sensitivity and reproducibility. The <code><a href="reference/qlm_trail.html">qlm_trail()</a></code> function creates complete audit trails following Lincoln and Guba’s (1985) concept for establishing trustworthiness in qualitative research.</p>
 <p><strong>The quallmer package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.</strong></p>
+</div>
+<div class="section level1">
+<h1 id="the-quallmer-workflow">The quallmer workflow<a class="anchor" aria-label="anchor" href="#the-quallmer-workflow"></a>
+</h1>
 <div class="section level2">
-<h2 id="coding-and-validation-workflow">Coding and validation workflow<a class="anchor" aria-label="anchor" href="#coding-and-validation-workflow"></a>
+<h2 id="id_1-define-codebook">1. Define codebook<a class="anchor" aria-label="anchor" href="#id_1-define-codebook"></a>
 </h2>
 <div class="section level4">
 <h4 id="qlm_codebook">
@@ -94,6 +99,10 @@
 <li>Extensible framework allows researchers to define domain-specific coding schemes.</li>
 </ul>
 </div>
+</div>
+<div class="section level2">
+<h2 id="id_2-code-data">2. Code data<a class="anchor" aria-label="anchor" href="#id_2-code-data"></a>
+</h2>
 <div class="section level4">
 <h4 id="qlm_code">
 <code>qlm_code()</code><a class="anchor" aria-label="anchor" href="#qlm_code"></a>
@@ -104,6 +113,24 @@
 <li>Returns a <code>qlm_coded</code> object containing the coded results and metadata for reproducibility.</li>
 </ul>
 </div>
+</div>
+<div class="section level2">
+<h2 id="id_3-replicate-with-different-settings">3. Replicate with different settings<a class="anchor" aria-label="anchor" href="#id_3-replicate-with-different-settings"></a>
+</h2>
+<div class="section level4">
+<h4 id="qlm_replicate">
+<code>qlm_replicate()</code><a class="anchor" aria-label="anchor" href="#qlm_replicate"></a>
+</h4>
+<ul>
+<li>Re-executes coding with optional overrides (different models, codebooks, or parameters).</li>
+<li>Tracks provenance chain for comparing results across different configurations.</li>
+<li>Enables systematic assessment of coding reliability and sensitivity to model choices.</li>
+</ul>
+</div>
+</div>
+<div class="section level2">
+<h2 id="id_4-compare-and-validate-results">4. Compare and validate results<a class="anchor" aria-label="anchor" href="#id_4-compare-and-validate-results"></a>
+</h2>
 <div class="section level4">
 <h4 id="qlm_compare">
 <code>qlm_compare()</code><a class="anchor" aria-label="anchor" href="#qlm_compare"></a>
@@ -126,21 +153,7 @@
 </div>
 </div>
 <div class="section level2">
-<h2 id="replication">Replication<a class="anchor" aria-label="anchor" href="#replication"></a>
-</h2>
-<div class="section level4">
-<h4 id="qlm_replicate">
-<code>qlm_replicate()</code><a class="anchor" aria-label="anchor" href="#qlm_replicate"></a>
-</h4>
-<ul>
-<li>Re-executes coding with optional overrides (different models, codebooks, or parameters).</li>
-<li>Tracks provenance chain for comparing results across different configurations.</li>
-<li>Enables systematic assessment of coding reliability and sensitivity to model choices.</li>
-</ul>
-</div>
-</div>
-<div class="section level2">
-<h2 id="audit-trail-and-replication-material">Audit trail and replication material<a class="anchor" aria-label="anchor" href="#audit-trail-and-replication-material"></a>
+<h2 id="id_5-document-audit-trail">5. Document audit trail<a class="anchor" aria-label="anchor" href="#id_5-document-audit-trail"></a>
 </h2>
 <div class="section level4">
 <h4 id="qlm_trail">
@@ -164,7 +177,7 @@
 <div class="section level2">
 <h2 id="supported-llms">Supported LLMs<a class="anchor" aria-label="anchor" href="#supported-llms"></a>
 </h2>
-<p>The package supports all LLMs currently available with the <code>ellmer</code> package. For authentication and usage of each of these LLMs, please refer to the respective <a href="https://ellmer.tidyverse.org/reference/index.html" class="external-link">ellmer</a> documentation and see our <a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.html">tutorial for setting up an OpenAI API key</a> or <a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.html">getting started with an open-source Ollama model</a>.</p>
+<p>The package supports all LLMs currently available with the <code>ellmer</code> package. For authentication and usage of each of these LLMs, please refer to the respective <a href="https://ellmer.tidyverse.org/reference/index.html" class="external-link">ellmer</a> documentation and see our <a href="https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/openai.html">tutorial for setting up an OpenAI API key</a> or <a href="https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/ollama.html">getting started with an open-source Ollama model</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -185,6 +198,7 @@
 <p>Development of this package was assisted by <a href="https://claude.com/claude-code" class="external-link">Claude Code</a>, an AI coding assistant by Anthropic, for code refactoring, documentation updates, and package restructuring.</p>
 </div>
 </div>
+
   </main><aside class="col-md-3"><div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">

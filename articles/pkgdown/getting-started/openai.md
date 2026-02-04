@@ -1,0 +1,82 @@
+# Signing up for an openai API key
+
+In this tutorial, we will guide you through the process of obtaining an
+API key from openai, which is necessary for using openai’s large
+language models (LLMs) such as `gpt-4o` or `gpt-5` with the `quallmer`
+package. We will also cover how to configure your R environment to use
+the openai API key securely.
+
+## Precautions
+
+**Closed LLMs such as OpenAI’s GPT-4o are not free to use and require a
+subscription. They also come with ethical concerns and risks, especially
+when it comes to data privacy and security. Therefore, always be aware
+of the data you use and the potential consequences of your analysis and
+make sure to enable the necessary safeguards to protect privacy and
+security. In addition, be aware that the license to use [OpenAI
+models](https://openai.com/policies/row-terms-of-use/) comes along with
+adhering to specific regulations to avoid misuse. Therefore, always be
+aware of the data you use and the potential consequences of your
+analysis and make sure to enable the necessary safeguards to protect
+privacy and security.**
+
+## Setting up an API key for openai models
+
+The openai API provides access to various so called closed models
+(fee-based, not open-source). There are other services available (for
+example, Claude or Google Gemini, etc.) which require slightly different
+set-ups. You can find more information on pricing of openai
+[here](https://platform.openai.com/pricing%3E).
+
+#### To use the openai API, please follow these steps:
+
+1.  Go to the openai playground:
+    [https://platform.openai.com/playground\>](https://platform.openai.com/playground)
+2.  Click on `Sign up` in the top right corner
+3.  Fill in your details and confirm `Sign up`
+4.  Click now on the `Settings` icon in the top right corner
+5.  Go to `Billing` and **provide your billing information** (otherwise
+    it won’t work!)
+6.  Once your billing information is complete, you can create a
+    `new project` (top left corner, click on `Default Project`)
+7.  Click on `Dashboard` in the top right corner
+8.  Click on `API keys` in the left side panel at the bottom
+9.  Click on `Create new secret key`
+10. **Copy** the key before you close the window
+
+Once you copied the key, you should **save it somewhere safe and
+accessible.** For security reasons, you won’t be able to view it again
+through your openai account. If you lose it, you will need to regenerate
+it. Keep your API key safe and do not share it with others. If you
+suspect that your key has been compromised, you can regenerate it in the
+dashboard. **Be aware that you will be charged for any usage of the API
+via your key.**
+
+#### Configuring your openai API key in RStudio
+
+To interact with the openai API, it’s required to have a valid
+`OPENAI_API_KEY` environment variable in R. You can establish this
+environment variable globally by including it in the so-called .Renviron
+file. This approach ensures that the environment variable persists
+across all your R sessions as the Shiny app runs in the background. Here
+is a set of commands to open the .Renviron file for modification:
+
+``` r
+require(usethis)
+edit_r_environ()
+```
+
+Add the following line to .Renviron, replacing “APIKEY” with your actual
+API key: OPENAI_API_KEY=“APIKEY”. You need to restart your R session for
+the changes to take effect. You can do this by clicking on the `Session`
+menu in RStudio and selecting `Restart R`.
+
+**Caution:** If you’re using version control systems like GitHub or
+GitLab, remember to include .Renviron in your .gitignore file to prevent
+exposing your API key! To maintain the privacy of your data when using
+gptstudio, do not highlight, include in a prompt, or otherwise upload
+any sensitive data, code, or text that should remain confidential.
+
+Now you are ready to use openai models with the `quallmer` package! For
+example, you can [test the setup by running the example on sentiment
+analysis.](https://quallmer.github.io/quallmer/articles/pkgdown/examples/sentiment.html)
