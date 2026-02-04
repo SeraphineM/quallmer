@@ -22,13 +22,15 @@ navbar:
       menu:
       - text: Quick start guide
         href: articles/getting-started.html
+      - text: The quallmer workflow
+        href: articles/pkgdown/getting-started/workflow.html
+      - text: Signing up for an OpenAI API key
+        href: articles/pkgdown/getting-started/openai.html
+      - text: Working with an open-source Ollama model
+        href: articles/pkgdown/getting-started/ollama.html
     examples:
       text: Tutorials
       menu:
-      - text: Signing up for an OpenAI API key
-        href: articles/pkgdown/tutorials/openai.html
-      - text: Working with an open-source Ollama model
-        href: articles/pkgdown/tutorials/ollama.html
       - text: Creating codebooks
         href: articles/pkgdown/tutorials/custom-codebook.html
       - text: Comparing and replicating coded results
