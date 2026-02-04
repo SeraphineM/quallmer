@@ -486,7 +486,7 @@ generate_trail_report <- function(trail, file) {
     if (!is.null(run$call)) {
       lines <- c(lines, "**Call:**")
       lines <- c(lines, "")
-      lines <- c(lines, "```r")
+      lines <- c(lines, "```{r eval=FALSE}")
       lines <- c(lines, deparse(run$call))
       lines <- c(lines, "```")
       lines <- c(lines, "")
