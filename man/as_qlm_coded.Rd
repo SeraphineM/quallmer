@@ -10,6 +10,7 @@ as_qlm_coded(
   is_gold = FALSE,
   codebook = NULL,
   texts = NULL,
+  notes = NULL,
   metadata = list()
 )
 }
@@ -37,6 +38,10 @@ If \code{NULL} (default), a minimal placeholder codebook is created.}
 Should correspond to the \code{.id} values in \code{data}. If provided, enables
 more complete provenance tracking.}
 
+\item{notes}{Optional character string with descriptive notes about this
+coding. Useful for documenting details when viewing results in
+\code{\link[=qlm_trail]{qlm_trail()}}. Default is \code{NULL}.}
+
 \item{metadata}{Optional list of metadata about the coding process. Can
 include any relevant information such as:
 \describe{
@@ -44,9 +49,8 @@ include any relevant information such as:
 \item{\code{coder_id}}{Identifier for the coder}
 \item{\code{training}}{Description of coder training}
 \item{\code{date}}{Date of coding}
-\item{\code{notes}}{Any additional notes}
 }
-The function automatically adds \code{timestamp}, \code{n_units}, and
+The function automatically adds \code{timestamp}, \code{n_units}, \code{notes}, and
 \code{source = "human"}.}
 }
 \value{

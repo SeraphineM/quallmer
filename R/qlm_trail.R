@@ -251,6 +251,9 @@ print.qlm_trail <- function(x, ...) {
     if (!is.null(run$chat_args$name)) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
     }
+    if (!is.null(run$metadata$notes)) {
+      cat("Notes:   ", run$metadata$notes, "\n", sep = "")
+    }
 
     # Show comparison info if available
     if (!is.null(run$comparison_data)) {
@@ -308,6 +311,10 @@ print.qlm_trail <- function(x, ...) {
 
       if (!is.null(run$codebook$name)) {
         cat("   Codebook: ", run$codebook$name, "\n", sep = "")
+      }
+
+      if (!is.null(run$metadata$notes)) {
+        cat("   Notes: ", run$metadata$notes, "\n", sep = "")
       }
 
       if (!is.null(run$comparison_data)) {

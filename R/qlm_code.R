@@ -29,6 +29,9 @@
 #'   Batch-specific arguments (`path`, `wait`, `ignore_hash`) are only used when
 #'   `batch = TRUE`. Arguments not recognized by any function will generate a warning.
 #' @param name Character string identifying this coding run. Default is `NULL`.
+#' @param notes Optional character string with descriptive notes about this
+#'   coding run. Useful for documenting the purpose or rationale when viewing
+#'   results in [qlm_trail()]. Default is `NULL`.
 #'
 #' @details
 #' Progress indicators and error handling are provided by the underlying
@@ -93,7 +96,7 @@
 #' }
 #'
 #' @export
-qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL) {
+qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes = NULL) {
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
     codebook <- as_qlm_codebook(codebook)
@@ -196,6 +199,7 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL) {
   metadata <- list(
     timestamp = Sys.time(),
     n_units = length(x),
+    notes = notes,
     ellmer_version = tryCatch(
       as.character(utils::packageVersion("ellmer")),
       error = function(e) NA_character_
@@ -323,6 +327,11 @@ print.qlm_coded <- function(x, ...) {
 
   if (!is.null(run$parent)) {
     cat("# Parent:   ", run$parent, "\n", sep = "")
+  }
+
+  # Show notes if present
+  if (!is.null(run$metadata$notes)) {
+    cat("# Notes:    ", run$metadata$notes, "\n", sep = "")
   }
 
   cat("\n")

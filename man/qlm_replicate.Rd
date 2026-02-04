@@ -4,7 +4,15 @@
 \alias{qlm_replicate}
 \title{Replicate a coding task}
 \usage{
-qlm_replicate(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL)
+qlm_replicate(
+  x,
+  ...,
+  codebook = NULL,
+  model = NULL,
+  batch = NULL,
+  name = NULL,
+  notes = NULL
+)
 }
 \arguments{
 \item{x}{A \code{qlm_coded} object.}
@@ -25,6 +33,10 @@ original setting.}
 
 \item{name}{Optional name for this run. If \code{NULL}, defaults to the model
 name (if changed) or \code{"replication_N"} where N is the replication count.}
+
+\item{notes}{Optional character string with descriptive notes about this
+replication. Useful for documenting why this replication was run or what
+differs from the original. Default is \code{NULL}.}
 }
 \value{
 A \code{qlm_coded} object with \code{run$parent} set to the parent's run name.
