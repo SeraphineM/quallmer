@@ -5,7 +5,7 @@
 #' with `qlm_compare()`, `qlm_validate()`, and `qlm_trail()` for coded data
 #' alongside LLM-coded results.
 #'
-#' @param data A data frame containing coded data. Must include a `.id`
+#' @param x A data frame containing coded data. Must include a `.id`
 #'   column for unit identifiers and one or more coded variables.
 #' @param name Character string identifying this coding run (e.g., "Coder_A",
 #'   "expert_rater", "Gold_Standard"). Default is `NULL`.
@@ -111,7 +111,7 @@
 #'
 #' @export
 as_qlm_coded <- function(
-  data,
+  x,
   name = NULL,
   is_gold = FALSE,
   codebook = NULL,
@@ -120,16 +120,16 @@ as_qlm_coded <- function(
   metadata = list()
 ) {
   # Validate inputs
-  if (!is.data.frame(data)) {
+  if (!is.data.frame(x)) {
     cli::cli_abort(c(
-      "{.arg data} must be a data frame.",
+      "{.arg x} must be a data frame.",
       "i" = "Provide a data frame with a {.var .id} column and coded variables."
     ))
   }
 
-  if (!".id" %in% names(data)) {
+  if (!".id" %in% names(x)) {
     cli::cli_abort(c(
-      "{.arg data} must contain a {.var .id} column.",
+      "{.arg x} must contain a {.var .id} column.",
       "i" = "Add a {.var .id} column with unique identifiers for each unit."
     ))
   }
@@ -162,7 +162,7 @@ as_qlm_coded <- function(
   full_metadata <- c(
     list(
       timestamp = Sys.time(),
-      n_units = nrow(data),
+      n_units = nrow(x),
       notes = notes,
       source = "human",
       is_gold = is_gold
@@ -172,7 +172,7 @@ as_qlm_coded <- function(
 
   # Create qlm_coded object using the internal constructor
   result <- new_qlm_coded(
-    results = data,
+    results = x,
     codebook = codebook,
     data = texts,
     input_type = "human",

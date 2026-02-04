@@ -5,7 +5,7 @@
 \title{Convert coded data to qlm_coded format}
 \usage{
 as_qlm_coded(
-  data,
+  x,
   name = NULL,
   is_gold = FALSE,
   codebook = NULL,
@@ -15,7 +15,7 @@ as_qlm_coded(
 )
 }
 \arguments{
-\item{data}{A data frame containing coded data. Must include a \code{.id}
+\item{x}{A data frame containing coded data. Must include a \code{.id}
 column for unit identifiers and one or more coded variables.}
 
 \item{name}{Character string identifying this coding run (e.g., "Coder_A",
