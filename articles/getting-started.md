@@ -102,11 +102,13 @@ Our tutorials will guide you through the following topics:
     function to re-execute coding with different settings for
     reliability testing.
 
-5.  [**The quallmer
-    trace**](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trace.html):
-    This tutorial will introduce you to the quallmer trace system, which
+5.  [**The quallmer audit
+    trail**](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trail.html):
+    This tutorial will introduce you to the quallmer trail system, which
     automatically captures provenance metadata for full workflow
-    traceability using `qlm_trace()` and related functions.
+    traceability using
+    [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md)
+    and related functions.
 
 6.  [**Using the quallmer
     app**](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.html):

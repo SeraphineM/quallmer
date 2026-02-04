@@ -25,7 +25,7 @@
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
-    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trace.html">The quallmer audit trail</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
@@ -83,13 +83,14 @@
 </ul></div>
 <div class="section level3">
 <h3 id="the-quallmer-audit-trail-development-version">The quallmer audit trail<a class="anchor" aria-label="anchor" href="#the-quallmer-audit-trail-development-version"></a></h3>
-<ul><li>The trail API has been refactored to better align with Lincoln and Guba’s (1985) audit trail concept for establishing trustworthiness in qualitative research.</li>
+<ul><li>The trail API has been simplified to a single function following Lincoln and Guba’s (1985) audit trail concept for establishing trustworthiness in qualitative research.</li>
 <li>
-<code><a href="../reference/qlm_trail.html">qlm_trail()</a></code> now always includes coded data (no <code>include_data</code> parameter). The audit trail captures the complete decision history for confirmability and dependability.</li>
-<li>New <code><a href="../reference/qlm_archive.html">qlm_archive()</a></code> convenience function saves, exports, and generates reports in one call. Accepts coded objects directly or a piped <code>qlm_trail</code> object.</li>
+<code><a href="../reference/qlm_trail.html">qlm_trail()</a></code> now accepts an optional <code>path</code> argument. When provided, saves RDS archive and generates Quarto report with full audit trail documentation.</li>
+<li>The Quarto report includes all Lincoln and Guba audit trail components: instrument development (codebooks), process notes (run parameters and timeline), data reconstruction (comparisons and validations), and raw data summary.</li>
+<li>New replication section in generated reports provides environment setup instructions, API credential configuration, and executable R code to replicate each coding run.</li>
+<li>Removed helper functions: <code>qlm_trail_save()</code>, <code>qlm_trail_export()</code>, <code>qlm_trail_report()</code>, and <code>qlm_archive()</code>. Use <code>qlm_trail(..., path = "filename")</code> instead.</li>
 <li>
-<code>qlm_trace_robustness()</code> has been removed from this release. Sensitivity analysis will be addressed in a separate PR.</li>
-<li>Helper functions renamed: <code>qlm_trace_save()</code> → <code><a href="../reference/qlm_trail_save.html">qlm_trail_save()</a></code>, <code>qlm_trace_export()</code> → <code><a href="../reference/qlm_trail_export.html">qlm_trail_export()</a></code>, <code>qlm_trace_report()</code> → <code><a href="../reference/qlm_trail_report.html">qlm_trail_report()</a></code>.</li>
+<code><a href="../reference/qlm_trail.html">qlm_trail()</a></code> now generates fallback names for objects with missing <code>name</code> attribute.</li>
 </ul></div>
 </div>
     <div class="section level2">
@@ -97,9 +98,7 @@
 <div class="section level3">
 <h3 id="the-quallmer-audit-trail-0-2-0">The quallmer audit trail<a class="anchor" aria-label="anchor" href="#the-quallmer-audit-trail-0-2-0"></a></h3>
 <ul><li>New <code><a href="../reference/qlm_trail.html">qlm_trail()</a></code> function creates complete audit trails following Lincoln and Guba’s (1985) concept for establishing trustworthiness in qualitative research.</li>
-<li>Export functions: <code><a href="../reference/qlm_trail_save.html">qlm_trail_save()</a></code> for RDS archival, <code><a href="../reference/qlm_trail_export.html">qlm_trail_export()</a></code> for JSON format, and <code><a href="../reference/qlm_trail_report.html">qlm_trail_report()</a></code> for human-readable Quarto/RMarkdown documents.</li>
-<li>
-<code><a href="../reference/qlm_trail_report.html">qlm_trail_report()</a></code> displays all comparison and validation metrics when <code>include_comparisons = TRUE</code> or <code>include_validations = TRUE</code>.</li>
+<li>Use <code>qlm_trail(..., path = "filename")</code> to save RDS archive and generate Quarto report.</li>
 <li>Trail print output shows summaries of comparisons and validations (level, subjects, raters, etc.) for better visibility into workflow assessment steps.</li>
 <li>All <code>qlm_comparison</code> and <code>qlm_validation</code> objects include run attributes capturing parent relationships, enabling full workflow traceability.</li>
 <li>Audit trail automatically captures branching workflows when multiple coded objects are compared or validated.</li>

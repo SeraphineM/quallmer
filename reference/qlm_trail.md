@@ -1,4 +1,4 @@
-# Extract audit trail from quallmer objects
+# Create an audit trail from quallmer objects
 
 Creates a complete audit trail documenting your qualitative coding
 workflow. Following Lincoln and Guba's (1985) concept of the audit trail
@@ -8,7 +8,7 @@ captures the full decision history of your AI-assisted coding process.
 ## Usage
 
 ``` r
-qlm_trail(...)
+qlm_trail(..., path = NULL)
 ```
 
 ## Arguments
@@ -18,6 +18,13 @@ qlm_trail(...)
   One or more quallmer objects (`qlm_coded`, `qlm_comparison`, or
   `qlm_validation`). When multiple objects are provided, they will be
   used to reconstruct the complete workflow chain.
+
+- path:
+
+  Optional base path for saving the audit trail. When provided, creates
+  `{path}.rds` (complete archive) and `{path}.qmd` (human-readable
+  report). If `NULL` (default), the trail is only returned without
+  saving.
 
 ## Value
 
@@ -33,28 +40,41 @@ A `qlm_trail` object containing:
 
 ## Details
 
-The audit trail captures the complete history of your coding workflow:
+Lincoln and Guba (1985, pp. 319-320) describe six categories of audit
+trail materials for establishing trustworthiness in qualitative
+research. The quallmer package operationalizes these for LLM-assisted
+text analysis:
 
-- Run names and parent-child relationships
+- Raw data:
 
-- Models and parameters used at each step
+  Original texts stored in coded objects
 
-- Timestamps documenting when each step occurred
+- Data reduction products:
 
-- The actual coded results from each run
+  Coded results from each run
 
-- Comparison and validation metrics (when applicable)
+- Data reconstruction products:
 
-This supports the confirmability and dependability criteria described by
-Lincoln and Guba, allowing others to trace the logic of your analytical
-decisions and verify the consistency of your coding process.
+  Comparisons and validations
 
-When a single object is provided, only its immediate information is
-shown. To see the full chain, provide all ancestor objects.
+- Process notes:
 
-For branching workflows (e.g., when multiple coded objects are
-compared), the trail captures all input runs as parents of the
-comparison.
+  Model parameters, timestamps, decision history
+
+- Materials relating to intentions:
+
+  Function calls documenting intent
+
+- Instrument development information:
+
+  Codebook with instructions and schema
+
+When `path` is provided, the function creates:
+
+- `{path}.rds`: Complete trail object for R (reloadable with
+  [`readRDS()`](https://rdrr.io/r/base/readRDS.html))
+
+- `{path}.qmd`: Quarto document with full audit trail documentation
 
 ## References
 
@@ -62,28 +82,18 @@ Lincoln, Y. S., & Guba, E. G. (1985). *Naturalistic Inquiry*. Sage.
 
 ## See also
 
-[`qlm_replicate()`](https://quallmer.github.io/quallmer/reference/qlm_replicate.md),
 [`qlm_code()`](https://quallmer.github.io/quallmer/reference/qlm_code.md),
+[`qlm_replicate()`](https://quallmer.github.io/quallmer/reference/qlm_replicate.md),
 [`qlm_compare()`](https://quallmer.github.io/quallmer/reference/qlm_compare.md),
-[`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md),
-[`qlm_trail_save()`](https://quallmer.github.io/quallmer/reference/qlm_trail_save.md),
-[`qlm_trail_export()`](https://quallmer.github.io/quallmer/reference/qlm_trail_export.md),
-[`qlm_trail_report()`](https://quallmer.github.io/quallmer/reference/qlm_trail_report.md),
-[`qlm_archive()`](https://quallmer.github.io/quallmer/reference/qlm_archive.md)
+[`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
 
 ## Examples
 
 ``` r
 if (FALSE) { # \dontrun{
-# Code movie reviews with sentiment codebook
-
-library(quanteda)
-
-test_corpus <- data_corpus_LMRDsample %>%
-  corpus_sample(size = 10, by = polarity)
-
+# Code texts with sentiment codebook
 coded1 <- qlm_code(
-  test_corpus,
+  texts,
   data_codebook_sentiment,
   model = "openai/gpt-4o",
   name = "gpt4o_run"
@@ -92,16 +102,12 @@ coded1 <- qlm_code(
 # Replicate with different model
 coded2 <- qlm_replicate(coded1, model = "openai/gpt-4o-mini", name = "mini_run")
 
-# Extract and view the audit trail
+# View the audit trail
 trail <- qlm_trail(coded1, coded2)
 print(trail)
 
-# Use helper functions for saving/exporting
-qlm_trail_save(trail, "trail.rds")
-qlm_trail_export(trail, "trail.json")
-qlm_trail_report(trail, "trail.qmd")
-
-# Or use qlm_archive() for one-call documentation
-qlm_archive(coded1, coded2, path = "workflow")
+# Save the complete audit trail
+qlm_trail(coded1, coded2, path = "my_analysis")
+# Creates: my_analysis.rds, my_analysis.qmd
 } # }
 ```

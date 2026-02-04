@@ -9,7 +9,7 @@
 <url><loc>https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/custom-codebook.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.html</loc></url>
-<url><loc>https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trace.html</loc></url>
+<url><loc>https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trail.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/authors.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/index.html</loc></url>
@@ -35,16 +35,12 @@
 <url><loc>https://quallmer.github.io/quallmer/reference/print.trail_compare.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/print.trail_record.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/print.trail_setting.html</loc></url>
-<url><loc>https://quallmer.github.io/quallmer/reference/qlm_archive.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_code.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_codebook.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_compare.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_humancoded.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_replicate.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_trail.html</loc></url>
-<url><loc>https://quallmer.github.io/quallmer/reference/qlm_trail_export.html</loc></url>
-<url><loc>https://quallmer.github.io/quallmer/reference/qlm_trail_report.html</loc></url>
-<url><loc>https://quallmer.github.io/quallmer/reference/qlm_trail_save.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/qlm_validate.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/quallmer-package.html</loc></url>
 <url><loc>https://quallmer.github.io/quallmer/reference/sub-.corpus.html</loc></url>

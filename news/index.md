@@ -78,25 +78,26 @@
 
 ### The quallmer audit trail
 
-- The trail API has been refactored to better align with Lincoln and
-  Guba’s (1985) audit trail concept for establishing trustworthiness in
-  qualitative research.
+- The trail API has been simplified to a single function following
+  Lincoln and Guba’s (1985) audit trail concept for establishing
+  trustworthiness in qualitative research.
 - [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md)
-  now always includes coded data (no `include_data` parameter). The
-  audit trail captures the complete decision history for confirmability
-  and dependability.
-- New
-  [`qlm_archive()`](https://quallmer.github.io/quallmer/reference/qlm_archive.md)
-  convenience function saves, exports, and generates reports in one
-  call. Accepts coded objects directly or a piped `qlm_trail` object.
-- `qlm_trace_robustness()` has been removed from this release.
-  Sensitivity analysis will be addressed in a separate PR.
-- Helper functions renamed: `qlm_trace_save()` →
-  [`qlm_trail_save()`](https://quallmer.github.io/quallmer/reference/qlm_trail_save.md),
-  `qlm_trace_export()` →
-  [`qlm_trail_export()`](https://quallmer.github.io/quallmer/reference/qlm_trail_export.md),
-  `qlm_trace_report()` →
-  [`qlm_trail_report()`](https://quallmer.github.io/quallmer/reference/qlm_trail_report.md).
+  now accepts an optional `path` argument. When provided, saves RDS
+  archive and generates Quarto report with full audit trail
+  documentation.
+- The Quarto report includes all Lincoln and Guba audit trail
+  components: instrument development (codebooks), process notes (run
+  parameters and timeline), data reconstruction (comparisons and
+  validations), and raw data summary.
+- New replication section in generated reports provides environment
+  setup instructions, API credential configuration, and executable R
+  code to replicate each coding run.
+- Removed helper functions: `qlm_trail_save()`, `qlm_trail_export()`,
+  `qlm_trail_report()`, and `qlm_archive()`. Use
+  `qlm_trail(..., path = "filename")` instead.
+- [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md)
+  now generates fallback names for objects with missing `name`
+  attribute.
 
 ## quallmer 0.2.0
 
@@ -107,16 +108,8 @@
   function creates complete audit trails following Lincoln and
   Guba’s (1985) concept for establishing trustworthiness in qualitative
   research.
-- Export functions:
-  [`qlm_trail_save()`](https://quallmer.github.io/quallmer/reference/qlm_trail_save.md)
-  for RDS archival,
-  [`qlm_trail_export()`](https://quallmer.github.io/quallmer/reference/qlm_trail_export.md)
-  for JSON format, and
-  [`qlm_trail_report()`](https://quallmer.github.io/quallmer/reference/qlm_trail_report.md)
-  for human-readable Quarto/RMarkdown documents.
-- [`qlm_trail_report()`](https://quallmer.github.io/quallmer/reference/qlm_trail_report.md)
-  displays all comparison and validation metrics when
-  `include_comparisons = TRUE` or `include_validations = TRUE`.
+- Use `qlm_trail(..., path = "filename")` to save RDS archive and
+  generate Quarto report.
 - Trail print output shows summaries of comparisons and validations
   (level, subjects, raters, etc.) for better visibility into workflow
   assessment steps.

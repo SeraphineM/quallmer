@@ -15,6 +15,6 @@
 - [Signing up for an openai API
   key](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.md):
 - [The quallmer audit
-  trail](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trace.md):
+  trail](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/trail.md):
 - [Using the quallmer
   app](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.md):

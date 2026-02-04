@@ -19,8 +19,6 @@
 - [`data_corpus_manifsentsUK2010sample`](https://quallmer.github.io/quallmer/reference/data_corpus_manifsentsUK2010sample.md)
   : Sample of UK manifesto sentences 2010 crowd-annotated for
   immigration
-- [`qlm_archive()`](https://quallmer.github.io/quallmer/reference/qlm_archive.md)
-  : Archive quallmer workflow
 - [`qlm_code()`](https://quallmer.github.io/quallmer/reference/qlm_code.md)
   : Code qualitative data with an LLM
 - [`qlm_codebook()`](https://quallmer.github.io/quallmer/reference/qlm_codebook.md)
@@ -30,12 +28,6 @@
 - [`qlm_replicate()`](https://quallmer.github.io/quallmer/reference/qlm_replicate.md)
   : Replicate a coding task
 - [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md)
-  : Extract audit trail from quallmer objects
-- [`qlm_trail_export()`](https://quallmer.github.io/quallmer/reference/qlm_trail_export.md)
-  : Export trail to JSON
-- [`qlm_trail_report()`](https://quallmer.github.io/quallmer/reference/qlm_trail_report.md)
-  : Generate trail report
-- [`qlm_trail_save()`](https://quallmer.github.io/quallmer/reference/qlm_trail_save.md)
-  : Save trail to RDS file
+  : Create an audit trail from quallmer objects
 - [`qlm_validate()`](https://quallmer.github.io/quallmer/reference/qlm_validate.md)
   : Validate coded results against a gold standard

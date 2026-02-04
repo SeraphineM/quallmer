@@ -50,7 +50,7 @@
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
-    <li><a class="dropdown-item" href="articles/pkgdown/tutorials/trace.html">The quallmer audit trail</a></li>
+    <li><a class="dropdown-item" href="articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul>
 </li>
@@ -78,7 +78,7 @@
 <!-- badges: start -->
 
 <p>The <strong>quallmer</strong> package is an <strong>easy-to-use toolbox to quickly apply AI-assisted qualitative coding to large amounts of texts, images, pdfs, tabular data and other structured data.</strong></p>
-<p>Using <code><a href="reference/qlm_code.html">qlm_code()</a></code>, users can apply codebook-based qualitative coding powered by large language models (LLMs) to generate structured, interpretable outputs. The package includes built-in codebooks for common applications and allows researchers to create custom codebooks tailored to their specific research questions using <code><a href="reference/qlm_codebook.html">qlm_codebook()</a></code>. To ensure quality and reliability of AI-generated coding, <strong>quallmer</strong> provides <code><a href="reference/qlm_compare.html">qlm_compare()</a></code> for evaluating inter-rater reliability and <code><a href="reference/qlm_validate.html">qlm_validate()</a></code> for assessing accuracy against gold standards. With <code><a href="reference/qlm_replicate.html">qlm_replicate()</a></code>, researchers can systematically compare results across different models and settings to assess sensitivity and reproducibility. The quallmer trail system captures complete audit trails following Lincoln and Guba’s (1985) concept for establishing trustworthiness in qualitative research, using <code><a href="reference/qlm_trail.html">qlm_trail()</a></code> and <code><a href="reference/qlm_archive.html">qlm_archive()</a></code>.</p>
+<p>Using <code><a href="reference/qlm_code.html">qlm_code()</a></code>, users can apply codebook-based qualitative coding powered by large language models (LLMs) to generate structured, interpretable outputs. The package includes built-in codebooks for common applications and allows researchers to create custom codebooks tailored to their specific research questions using <code><a href="reference/qlm_codebook.html">qlm_codebook()</a></code>. To ensure quality and reliability of AI-generated coding, <strong>quallmer</strong> provides <code><a href="reference/qlm_compare.html">qlm_compare()</a></code> for evaluating inter-rater reliability and <code><a href="reference/qlm_validate.html">qlm_validate()</a></code> for assessing accuracy against gold standards. With <code><a href="reference/qlm_replicate.html">qlm_replicate()</a></code>, researchers can systematically compare results across different models and settings to assess sensitivity and reproducibility. The <code><a href="reference/qlm_trail.html">qlm_trail()</a></code> function creates complete audit trails following Lincoln and Guba’s (1985) concept for establishing trustworthiness in qualitative research.</p>
 <p><strong>The quallmer package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.</strong></p>
 <div class="section level2">
 <h2 id="coding-and-validation-workflow">Coding and validation workflow<a class="anchor" aria-label="anchor" href="#coding-and-validation-workflow"></a>
@@ -140,7 +140,7 @@
 </div>
 </div>
 <div class="section level2">
-<h2 id="audit-trail">Audit trail<a class="anchor" aria-label="anchor" href="#audit-trail"></a>
+<h2 id="audit-trail-and-replication-material">Audit trail and replication material<a class="anchor" aria-label="anchor" href="#audit-trail-and-replication-material"></a>
 </h2>
 <div class="section level4">
 <h4 id="qlm_trail">
@@ -151,16 +151,8 @@
 <li>Captures the full decision history: models, parameters, timestamps, and parent-child relationships.</li>
 <li>Stores all coded results for confirmability and dependability.</li>
 <li>Reconstructs branching workflows when multiple coded objects are compared or validated.</li>
-</ul>
-</div>
-<div class="section level4">
-<h4 id="qlm_archive">
-<code>qlm_archive()</code><a class="anchor" aria-label="anchor" href="#qlm_archive"></a>
-</h4>
-<ul>
-<li>One-call convenience function to document your entire workflow.</li>
-<li>Creates RDS (complete archive), JSON (portable metadata), and Quarto reports.</li>
-<li>Works with coded objects directly or with a pre-built <code>qlm_trail</code> object.</li>
+<li>Generates replication materials: environment setup, API configuration, and executable R code.</li>
+<li>Use <code>qlm_trail(..., path = "filename")</code> to save RDS archive and Quarto report.</li>
 </ul>
 </div>
 </div>

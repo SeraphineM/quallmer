@@ -20,13 +20,10 @@ for evaluating inter-rater reliability and
 for assessing accuracy against gold standards. With
 [`qlm_replicate()`](https://quallmer.github.io/quallmer/reference/qlm_replicate.md),
 researchers can systematically compare results across different models
-and settings to assess sensitivity and reproducibility. The quallmer
-trail system captures complete audit trails following Lincoln and Guba’s
-(1985) concept for establishing trustworthiness in qualitative research,
-using
+and settings to assess sensitivity and reproducibility. The
 [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md)
-and
-[`qlm_archive()`](https://quallmer.github.io/quallmer/reference/qlm_archive.md).
+function creates complete audit trails following Lincoln and Guba’s
+(1985) concept for establishing trustworthiness in qualitative research.
 
 **The quallmer package makes AI-assisted qualitative coding accessible
 without requiring deep expertise in R, programming or machine
@@ -83,7 +80,7 @@ learning.**
 - Enables systematic assessment of coding reliability and sensitivity to
   model choices.
 
-## Audit trail
+## Audit trail and replication material
 
 #### `qlm_trail()`
 
@@ -94,14 +91,10 @@ learning.**
 - Stores all coded results for confirmability and dependability.
 - Reconstructs branching workflows when multiple coded objects are
   compared or validated.
-
-#### `qlm_archive()`
-
-- One-call convenience function to document your entire workflow.
-- Creates RDS (complete archive), JSON (portable metadata), and Quarto
-  reports.
-- Works with coded objects directly or with a pre-built `qlm_trail`
-  object.
+- Generates replication materials: environment setup, API configuration,
+  and executable R code.
+- Use `qlm_trail(..., path = "filename")` to save RDS archive and Quarto
+  report.
 
 ## Interactive quallmer app
 

@@ -47,7 +47,7 @@
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trace.html">The quallmer audit trail</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul>
 </li>
@@ -252,7 +252,7 @@ used directly in data manipulation workflows.</p>
 <span><span class="co">## <span style="color: #949494;"># A tibble: 11 × 3</span></span></span>
 <span><span class="co">##    .id          score explanation                                               </span></span>
 <span><span class="co">##  <span style="color: #BCBCBC;">*</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                     </span></span>
-<span><span class="co">## <span style="color: #BCBCBC;"> 1</span> 1985-Reagan      0 <span style="color: #949494;">"</span>The document emphasizes limited government, reducing tax…</span></span>
+<span><span class="co">## <span style="color: #BCBCBC;"> 1</span> 1985-Reagan      0 <span style="color: #949494;">"</span>The document emphasizes reducing government intervention…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 2</span> 1989-Bush        0 <span style="color: #949494;">"</span>The document emphasizes themes such as free markets, lim…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 3</span> 1993-Clinton     1 <span style="color: #949494;">"</span>The document contains elements that align slightly with …</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 4</span> 1997-Clinton     1 <span style="color: #949494;">"</span>The document contains elements that align slightly with …</span></span>
@@ -262,7 +262,7 @@ used directly in data manipulation workflows.</p>
 <span><span class="co">## <span style="color: #BCBCBC;"> 8</span> 2013-Obama       2 <span style="color: #949494;">"</span>The document aligns very well with the political left, e…</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;"> 9</span> 2017-Trump       0 <span style="color: #949494;">"</span>The document emphasizes nationalism, protectionism, and …</span></span>
 <span><span class="co">## <span style="color: #BCBCBC;">10</span> 2021-Biden       2 <span style="color: #949494;">"</span>The document aligns very well with the political left, s…</span></span>
-<span><span class="co">## <span style="color: #BCBCBC;">11</span> 2025-Trump       0 <span style="color: #949494;">"</span>The document aligns with right-wing political themes, em…</span></span></code></pre>
+<span><span class="co">## <span style="color: #BCBCBC;">11</span> 2025-Trump       0 <span style="color: #949494;">"</span>The document emphasizes nationalism, border security, mi…</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:left;">
@@ -284,14 +284,14 @@ explanation
 0
 </td>
 <td style="text-align:left;">
-The document emphasizes limited government, reducing taxes, and
-individual freedom, which align more with conservative or right-wing
-ideologies. It advocates for reducing government intervention in the
-economy and emphasizes personal responsibility and free enterprise.
-While it mentions social compassion and equality, the focus is on
-reducing dependency and government spending, which does not align with
-the political left’s emphasis on government intervention for social
-equality and economic regulation.
+The document emphasizes reducing government intervention, lowering
+taxes, and promoting free enterprise, which align with conservative
+principles rather than the political left. It advocates for limiting the
+size and power of the federal government, which contrasts with the
+left’s preference for government intervention in the economy and social
+equality. The focus on individual freedom, reducing dependency, and
+economic growth through free market principles further aligns with
+right-leaning ideologies.
 </td>
 </tr>
 <tr>
@@ -307,7 +307,7 @@ intervention, and individual responsibility, which align more with
 conservative or right-leaning ideologies. It critiques reliance on
 public money to solve social issues and promotes private initiative and
 community involvement. These elements do not align with the political
-left’s advocacy for government intervention and social equality.
+left’s focus on government intervention and social equality.
 </td>
 </tr>
 <tr>
@@ -320,11 +320,11 @@ left’s advocacy for government intervention and social equality.
 <td style="text-align:left;">
 The document contains elements that align slightly with the political
 left, such as advocating for investment in people, addressing economic
-inequality, and revitalizing democracy. However, it also emphasizes
-personal responsibility, reducing government debt, and a strong national
-defense, which are not typically leftist positions. The overall tone is
-more centrist, with a focus on unity and renewal rather than explicitly
-progressive policies.
+inequality, and reforming politics to reduce the influence of power and
+privilege. However, it also emphasizes personal responsibility,
+competition, and a strong national defense, which are not typically
+left-leaning positions. The overall tone is more centrist, with a focus
+on unity and renewal rather than explicitly progressive policies.
 </td>
 </tr>
 <tr>
@@ -336,13 +336,11 @@ progressive policies.
 </td>
 <td style="text-align:left;">
 The document contains elements that align slightly with the political
-left, such as advocating for civil rights, social equality, and
-educational opportunities for all. However, it also emphasizes personal
-responsibility, a smaller government, and free enterprise, which are not
-typically associated with the political left. The focus on balancing the
-budget and reducing government intervention further suggests a centrist
-or slightly left position rather than a strong alignment with the
-political left.
+left, such as references to social equality, civil rights, and the
+importance of community and education. However, it also emphasizes
+personal responsibility, a smaller government, and free enterprise,
+which are not typically associated with leftist ideology. The balance
+between these elements suggests a slightly left alignment.
 </td>
 </tr>
 <tr>
@@ -359,8 +357,7 @@ reforming social programs like Social Security and Medicare. However, it
 also emphasizes personal responsibility, private character, and reducing
 taxes, which are more centrist or right-leaning positions. The focus on
 national defense and a strong military presence further moderates its
-alignment with the left. Overall, the speech reflects a balanced
-approach with some left-leaning elements, scoring it as slightly left.
+alignment with the left.
 </td>
 </tr>
 <tr>
@@ -377,8 +374,7 @@ neoconservative ideologies. It focuses on spreading democracy globally,
 national security, and individual character, rather than advocating for
 social equality or government intervention in the economy, which are key
 aspects of the political left. The mention of an ‘ownership society’ and
-economic independence also aligns more with right-leaning economic
-policies.
+economic independence further aligns with right-leaning principles.
 </td>
 </tr>
 <tr>
@@ -393,10 +389,10 @@ The document aligns very well with the political left, emphasizing
 themes of social equality, government intervention, and progressive
 policies. It advocates for addressing economic inequality, reforming
 healthcare, investing in infrastructure, and promoting renewable energy.
-It also calls for international cooperation and a new era of
-responsibility, reflecting progressive values. However, it balances
-these with appeals to traditional values and national unity, which
-slightly moderates its alignment with the extreme left.
+The speech also calls for international cooperation and a focus on
+common humanity, which are consistent with leftist ideals. However, it
+balances these with appeals to traditional values and national unity,
+which slightly moderates its alignment.
 </td>
 </tr>
 <tr>
@@ -413,7 +409,7 @@ advocates for collective action, economic equality, environmental
 responsibility, and social justice, all of which are key tenets of
 leftist ideology. However, it also acknowledges the importance of
 personal responsibility and skepticism of central authority, which
-slightly moderates its alignment.
+tempers its alignment slightly.
 </td>
 </tr>
 <tr>
@@ -425,11 +421,11 @@ slightly moderates its alignment.
 </td>
 <td style="text-align:left;">
 The document emphasizes nationalism, protectionism, and a focus on
-“America first,” which are not typically aligned with the political
-left. It lacks advocacy for social equality, government intervention in
-the economy, or progressive policies, which are key characteristics of
-the political left. Instead, it focuses on reducing government influence
-and prioritizing national interests.
+“America first” policies, which are not aligned with the political left.
+It lacks advocacy for social equality, government intervention in the
+economy, or progressive policies typically associated with the left.
+Instead, it focuses on reducing government power in favor of populist
+rhetoric and national pride.
 </td>
 </tr>
 <tr>
@@ -440,24 +436,13 @@ and prioritizing national interests.
 2
 </td>
 <td style="text-align:left;">
-<p>The document aligns very well with the political left, scoring a 2
-for the following reasons:</p>
-<ol style="list-style-type: decimal">
-<li><p><strong>Social Equality:</strong> The speech emphasizes racial
-justice, unity, and overcoming systemic racism, which are key concerns
-of the political left.</p></li>
-<li><p><strong>Government Intervention:</strong> It discusses rebuilding
-the middle class, securing healthcare for all, and addressing economic
-challenges, suggesting a role for government intervention in the
-economy.</p></li>
-<li><p><strong>Progressive Policies:</strong> The focus on climate
-change, racial justice, and healthcare aligns with progressive
-priorities.</p></li>
-</ol>
-While the speech calls for unity and bipartisanship, which is not
-exclusively leftist, the emphasis on social justice and government
-action in economic and social issues reflects a strong alignment with
-leftist values.
+The document aligns very well with the political left, scoring a 2 on
+the scale. It emphasizes themes of social equality, racial justice, and
+government intervention in addressing economic challenges and the
+pandemic. The call for unity, healing, and addressing systemic racism
+aligns with progressive policies. However, the focus on unity and
+bipartisanship tempers the extremity of left alignment, preventing a
+score of 3.
 </td>
 </tr>
 <tr>
@@ -468,12 +453,13 @@ leftist values.
 0
 </td>
 <td style="text-align:left;">
-The document aligns with right-wing political themes, emphasizing
-nationalism, border security, military strength, and economic
-independence. It criticizes government intervention and progressive
-policies, such as the Green New Deal, and promotes traditional values.
-There is no advocacy for social equality or government intervention in
-the economy in a manner consistent with left-wing ideologies.
+The document emphasizes nationalism, border security, military strength,
+and economic independence, which are typically associated with
+right-wing ideologies. It criticizes government intervention and
+promotes deregulation, particularly in energy and trade, which contrasts
+with leftist advocacy for government intervention in the economy and
+progressive policies. The focus on national sovereignty and traditional
+values further aligns with right-wing perspectives.
 </td>
 </tr>
 </tbody>
