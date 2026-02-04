@@ -607,8 +607,8 @@ generate_trail_report <- function(trail, file) {
   lines <- c(lines, "")
   lines <- c(lines, "```r")
   lines <- c(lines, "trail <- readRDS(\"path/to/trail.rds\")")
-  lines <- c(lines, "trail$runs$run_name$data
-# Coded results for a specific run")
+  lines <- c(lines, "trail$runs$run_name$data")
+  lines <- c(lines, "# Coded results for a specific run")
   lines <- c(lines, "```")
   lines <- c(lines, "")
 
