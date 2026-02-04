@@ -25,7 +25,7 @@ knitr::opts_chunk$set(
 
 The **quallmer** package is an **easy-to-use toolbox to quickly apply AI-assisted qualitative coding to large amounts of texts, images, pdfs, tabular data and other structured data.**
 
-Using `qlm_code()`, users can apply codebook-based qualitative coding powered by large language models (LLMs) to generate structured, interpretable outputs. The package includes built-in codebooks for common applications and allows researchers to create custom codebooks tailored to their specific research questions using `qlm_codebook()`. To ensure quality and reliability of AI-generated coding, **quallmer** provides `qlm_compare()` for evaluating inter-rater reliability and `qlm_validate()` for assessing accuracy against gold standards. With `qlm_replicate()`, researchers can systematically compare results across different models and settings to assess sensitivity and reproducibility. The quallmer trail system captures complete audit trails following Lincoln and Guba's (1985) concept for establishing trustworthiness in qualitative research, using `qlm_trail()` and `qlm_archive()`.
+Using `qlm_code()`, users can apply codebook-based qualitative coding powered by large language models (LLMs) to generate structured, interpretable outputs. The package includes built-in codebooks for common applications and allows researchers to create custom codebooks tailored to their specific research questions using `qlm_codebook()`. To ensure quality and reliability of AI-generated coding, **quallmer** provides `qlm_compare()` for evaluating inter-rater reliability and `qlm_validate()` for assessing accuracy against gold standards. With `qlm_replicate()`, researchers can systematically compare results across different models and settings to assess sensitivity and reproducibility. The `qlm_trail()` function creates complete audit trails following Lincoln and Guba's (1985) concept for establishing trustworthiness in qualitative research.
 
 **The quallmer package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.**
 
@@ -60,18 +60,15 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 - Enables systematic assessment of coding reliability and sensitivity to model choices.
 
 
-## Audit trail
+## Audit trail and replication material
 
 #### `qlm_trail()`
 - Creates complete audit trails following Lincoln and Guba's (1985) concept for establishing trustworthiness.
 - Captures the full decision history: models, parameters, timestamps, and parent-child relationships.
 - Stores all coded results for confirmability and dependability.
 - Reconstructs branching workflows when multiple coded objects are compared or validated.
-
-#### `qlm_archive()`
-- One-call convenience function to document your entire workflow.
-- Creates RDS (complete archive), JSON (portable metadata), and Quarto reports.
-- Works with coded objects directly or with a pre-built `qlm_trail` object.
+- Generates replication materials: environment setup, API configuration, and executable R code.
+- Use `qlm_trail(..., path = "filename")` to save RDS archive and Quarto report.
 
 
 ## Interactive quallmer app
