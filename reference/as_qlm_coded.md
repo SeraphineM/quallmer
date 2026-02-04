@@ -13,7 +13,7 @@ for coded data alongside LLM-coded results.
 
 ``` r
 as_qlm_coded(
-  data,
+  x,
   name = NULL,
   is_gold = FALSE,
   codebook = NULL,
@@ -24,7 +24,7 @@ as_qlm_coded(
 
 ## Arguments
 
-- data:
+- x:
 
   A data frame containing coded data. Must include a `.id` column for
   unit identifiers and one or more coded variables.

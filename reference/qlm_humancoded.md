@@ -10,7 +10,7 @@ instead, which provides the same functionality with an additional
 
 ``` r
 qlm_humancoded(
-  data,
+  x,
   name = NULL,
   codebook = NULL,
   texts = NULL,
@@ -20,7 +20,7 @@ qlm_humancoded(
 
 ## Arguments
 
-- data:
+- x:
 
   A data frame containing human-coded data. Must include a `.id` column
   for unit identifiers and one or more coded variables.
