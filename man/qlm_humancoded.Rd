@@ -5,7 +5,7 @@
 \title{Convert human-coded data to qlm_coded format (deprecated)}
 \usage{
 qlm_humancoded(
-  data,
+  x,
   name = NULL,
   codebook = NULL,
   texts = NULL,
@@ -13,7 +13,7 @@ qlm_humancoded(
 )
 }
 \arguments{
-\item{data}{A data frame containing human-coded data. Must include a \code{.id}
+\item{x}{A data frame containing human-coded data. Must include a \code{.id}
 column for unit identifiers and one or more coded variables.}
 
 \item{name}{Character string identifying this coding run (e.g., "Coder_A",
