@@ -37,7 +37,9 @@ qualitative research.
 without requiring deep expertise in R, programming or machine
 learning.**
 
-## Coding and validation workflow
+# The quallmer workflow
+
+## 1. Define codebook
 
 #### `qlm_codebook()`
 
@@ -52,6 +54,8 @@ learning.**
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
 
+## 2. Code data
+
 #### `qlm_code()`
 
 - Applies LLM-based coding to qualitative data using a `qlm_codebook`.
@@ -59,6 +63,19 @@ learning.**
   [ellmer](https://ellmer.tidyverse.org/index.html).
 - Returns a `qlm_coded` object containing the coded results and metadata
   for reproducibility.
+
+## 3. Replicate with different settings
+
+#### `qlm_replicate()`
+
+- Re-executes coding with optional overrides (different models,
+  codebooks, or parameters).
+- Tracks provenance chain for comparing results across different
+  configurations.
+- Enables systematic assessment of coding reliability and sensitivity to
+  model choices.
+
+## 4. Compare and validate results
 
 #### `qlm_compare()`
 
@@ -77,18 +94,7 @@ learning.**
 - Supports multiple averaging methods (macro, micro, weighted) and
   per-class breakdowns.
 
-## Replication
-
-#### `qlm_replicate()`
-
-- Re-executes coding with optional overrides (different models,
-  codebooks, or parameters).
-- Tracks provenance chain for comparing results across different
-  configurations.
-- Enables systematic assessment of coding reliability and sensitivity to
-  model choices.
-
-## Audit trail and replication material
+## 5. Document audit trail
 
 #### `qlm_trail()`
 
@@ -118,9 +124,9 @@ package. For authentication and usage of each of these LLMs, please
 refer to the respective
 [ellmer](https://ellmer.tidyverse.org/reference/index.html)
 documentation and see our [tutorial for setting up an OpenAI API
-key](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/openai.html)
+key](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/openai.html)
 or [getting started with an open-source Ollama
-model](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/ollama.html).
+model](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/ollama.html).
 
 ## Installation
 
