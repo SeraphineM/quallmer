@@ -31,10 +31,6 @@ navbar:
     examples:
       text: Tutorials
       menu:
-      - text: Creating codebooks
-        href: articles/pkgdown/tutorials/custom-codebook.html
-      - text: Comparing and replicating coded results
-        href: articles/pkgdown/tutorials/compare.html
       - text: The quallmer audit trail
         href: articles/pkgdown/tutorials/trail.html
       - text: Using the quallmer.app
