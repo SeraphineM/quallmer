@@ -20,9 +20,7 @@ jobs:
       group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # API keys removed - no longer needed without article builds
     permissions:
       contents: write
     steps:
@@ -39,22 +37,21 @@ jobs:
           extra-packages: any::pkgdown, local::.
           needs: website
 
-      - name: Debug OPENAI_API_KEY in R
-        run: |
-          Rscript -e '
-            key <- Sys.getenv("OPENAI_API_KEY");
-            cat("Has key:", nzchar(key), "\n");
-            cat("Length:", nchar(key), "\n");
-          '
+      # Debug step removed - was for API key troubleshooting
 
-      - name: Build site
-        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+      - name: Build site (reference only, preserve articles)
+        run: |
+          pkgdown::init_site()
+          pkgdown::build_home(preview = FALSE)
+          pkgdown::build_reference()
+          pkgdown::build_news()
+          # Deliberately skip build_articles()
         shell: Rscript {0}
 
       - name: Deploy to GitHub pages 🚀
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
-          clean: false
+          clean: false    # Critical: preserves existing articles
           branch: gh-pages
           folder: docs

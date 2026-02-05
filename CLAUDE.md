@@ -39,10 +39,36 @@ R CMD check quallmer_*.tar.gz --as-cran
 ```
 
 ### Website
+
+**Hybrid build strategy**: To avoid API key issues in CI and enable article caching:
+- **CI builds**: Reference docs, home page, and news only (no articles)
+- **Local builds**: Articles must be built and deployed locally using the Makefile
+
+```bash
+# Knit README.md from README.Rmd
+make readme
+
+# Build all articles locally (automatically updates README first)
+make articles
+
+# Build a specific article
+make article NAME=pkgdown/getting-started/workflow
+
+# Deploy articles to gh-pages (automatically updates README first)
+make deploy-articles
+
+# Full local site build (automatically updates README first)
+make site
+```
+
 ```r
-pkgdown::build_site()     # Build/update website in docs/
 pkgdown::check_pkgdown()  # Validate pkgdown configuration
 ```
+
+**Important**:
+- Articles requiring API keys must be built locally and deployed via `make deploy-articles`
+- The CI workflow preserves existing articles on gh-pages using `clean: false` in the deploy action
+- `make articles`, `make site`, and `make deploy-articles` automatically knit README.md before running
 
 ### Running the Shiny App
 ```r
@@ -119,7 +145,8 @@ quallmer builds on the ellmer framework. Key points:
 ### CI/CD
 - GitHub Actions run R CMD check on multiple platforms (Linux, macOS, Windows)
 - Code coverage tracked and reported via Codecov
-- pkgdown site built and deployed automatically on push to main
+- pkgdown site (reference docs, home, news) built and deployed automatically on push to main
+- **Articles are NOT built in CI** - they must be built locally and deployed via `make deploy-articles`
 
 ## Git Workflow
 ### Commits

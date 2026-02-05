@@ -20,3 +20,4 @@
 ^issue-27-plan\.md$
 ^vignettes/pkgdown$
 ^batch_results\.json$
+^Makefile$
