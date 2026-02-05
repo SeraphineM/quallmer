@@ -162,18 +162,9 @@ backward compatibility with existing code using <code><a href="annotate.html">an
 <span class="r-in"><span><span class="co"># Use with qlm_code() (requires API key)</span></span></span>
 <span class="r-in"><span><span class="va">texts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"This is terrible."</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">coded</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">texts</span>, <span class="va">my_codebook</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in openai_key():</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-in"><span><span class="va">coded</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # quallmer coded object</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # Run:      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # Codebook: Sentiment</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # Model:    openai/gpt-4o-mini</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> # Units:    2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 3</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     .id score explanation                                                       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">*</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1     1 The expression 'I love this!' conveys a strong positive sentiment…</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">1</span> The use of the word 'terrible' clearly expresses a strong negativ…</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

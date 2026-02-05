@@ -48,6 +48,10 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="quallmer-development-version">quallmer (development version)<a class="anchor" aria-label="anchor" href="#quallmer-development-version"></a></h2>
 <div class="section level3">
+<h3 id="build-system-development-version">Build system<a class="anchor" aria-label="anchor" href="#build-system-development-version"></a></h3>
+<ul><li>Build system: pkgdown articles now built locally via Makefile to enable caching and avoid API key requirements in CI (#68).</li>
+</ul></div>
+<div class="section level3">
 <h3 id="gold-standard-handling-and-validation-improvements-development-version">Gold standard handling and validation improvements<a class="anchor" aria-label="anchor" href="#gold-standard-handling-and-validation-improvements-development-version"></a></h3>
 <ul><li>New <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> function replaces <code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code> as the primary function for converting human-coded or external data to <code>qlm_coded</code> objects. The new function includes an <code>is_gold</code> parameter to mark gold standard objects for automatic detection.</li>
 <li>
@@ -74,7 +78,7 @@
 <li>
 <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> results now include a <code>rater</code> column identifying which object is being validated, enabling easy combining of multiple validations.</li>
 <li>Both functions return data frames (class <code>qlm_comparison</code> and <code>qlm_validation</code>) instead of lists, making them easier to filter, combine, and analyze.</li>
-<li>Results from multiple <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> or <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> calls can be combined with <code><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">bind_rows()</a></code> for analysis across multiple coders or conditions.</li>
+<li>Results from multiple <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> or <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> calls can be combined with <code>bind_rows()</code> for analysis across multiple coders or conditions.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="api-refinements-development-version">API refinements<a class="anchor" aria-label="anchor" href="#api-refinements-development-version"></a></h3>

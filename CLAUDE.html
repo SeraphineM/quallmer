@@ -89,13 +89,28 @@
 </div>
 <div class="section level3">
 <h3 id="website">Website<a class="anchor" aria-label="anchor" href="#website"></a></h3>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgdown.r-lib.org/reference/build_site.html" class="external-link">build_site</a></span><span class="op">(</span><span class="op">)</span>     <span class="co"># Build/update website in docs/</span></span>
-<span><span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">check_pkgdown</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Validate pkgdown configuration</span></span></code></pre></div>
+<p><strong>Hybrid build strategy</strong>: To avoid API key issues in CI and enable article caching: - <strong>CI builds</strong>: Reference docs, home page, and news only (no articles) - <strong>Local builds</strong>: Articles must be built and deployed locally using the Makefile</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Knit README.md from README.Rmd</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">make</span> readme</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Build all articles locally (automatically updates README first)</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">make</span> articles</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># Build a specific article</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">make</span> article NAME=pkgdown/getting-started/workflow</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Deploy articles to gh-pages (automatically updates README first)</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="fu">make</span> deploy-articles</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a><span class="co"># Full local site build (automatically updates README first)</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="fu">make</span> site</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">check_pkgdown</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># Validate pkgdown configuration</span></span></code></pre></div>
+<p><strong>Important</strong>: - Articles requiring API keys must be built locally and deployed via <code>make deploy-articles</code> - The CI workflow preserves existing articles on gh-pages using <code>clean: false</code> in the deploy action - <code>make articles</code>, <code>make site</code>, and <code>make deploy-articles</code> automatically knit README.md before running</p>
 </div>
 <div class="section level3">
 <h3 id="running-the-shiny-app">Running the Shiny App<a class="anchor" aria-label="anchor" href="#running-the-shiny-app"></a></h3>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">quallmer</span><span class="fu">::</span><span class="fu">validate_app</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Launch validation interface</span></span></code></pre></div>
 </div>
 </div>
@@ -202,7 +217,10 @@
 <h3 id="cicd">CI/CD<a class="anchor" aria-label="anchor" href="#cicd"></a></h3>
 <ul><li>GitHub Actions run R CMD check on multiple platforms (Linux, macOS, Windows)</li>
 <li>Code coverage tracked and reported via Codecov</li>
-<li>pkgdown site built and deployed automatically on push to main</li>
+<li>pkgdown site (reference docs, home, news) built and deployed automatically on push to main</li>
+<li>
+<strong>Articles are NOT built in CI</strong> - they must be built locally and deployed via <code>make deploy-articles</code>
+</li>
 </ul></div>
 </div>
 <div class="section level2">
