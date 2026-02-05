@@ -23,6 +23,9 @@
 #' @param texts Optional vector of original texts or data that were coded.
 #'   Should correspond to the `.id` values in `data`. If provided, enables
 #'   more complete provenance tracking.
+#' @param notes Optional character string with descriptive notes about this
+#'   coding. Useful for documenting details when viewing results in
+#'   [qlm_trail()]. Default is `NULL`.
 #' @param metadata Optional list of metadata about the coding process. Can
 #'   include any relevant information such as:
 #'   \describe{
@@ -30,9 +33,8 @@
 #'     \item{`coder_id`}{Identifier for the coder}
 #'     \item{`training`}{Description of coder training}
 #'     \item{`date`}{Date of coding}
-#'     \item{`notes`}{Any additional notes}
 #'   }
-#'   The function automatically adds `timestamp`, `n_units`, and
+#'   The function automatically adds `timestamp`, `n_units`, `notes`, and
 #'   `source = "human"`.
 #'
 #' @return A `qlm_coded` object (tibble with additional class and attributes)
@@ -114,6 +116,7 @@ as_qlm_coded <- function(
   is_gold = FALSE,
   codebook = NULL,
   texts = NULL,
+  notes = NULL,
   metadata = list()
 ) {
   # Validate inputs
@@ -160,6 +163,7 @@ as_qlm_coded <- function(
     list(
       timestamp = Sys.time(),
       n_units = nrow(x),
+      notes = notes,
       source = "human",
       is_gold = is_gold
     ),

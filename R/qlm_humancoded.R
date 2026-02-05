@@ -10,6 +10,7 @@
 #'   "expert_rater"). Default is `NULL`.
 #' @param codebook Optional list containing coding instructions.
 #' @param texts Optional vector of original texts or data that were coded.
+#' @param notes Optional character string with descriptive notes.
 #' @param metadata Optional list of metadata about the coding process.
 #'
 #' @return A `qlm_humancoded` object (inherits from `qlm_coded`).
@@ -23,6 +24,7 @@ qlm_humancoded <- function(
   name = NULL,
   codebook = NULL,
   texts = NULL,
+  notes = NULL,
   metadata = list()
 ) {
   as_qlm_coded(
@@ -31,6 +33,7 @@ qlm_humancoded <- function(
     is_gold = FALSE,
     codebook = codebook,
     texts = texts,
+    notes = notes,
     metadata = metadata
   )
 }
