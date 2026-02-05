@@ -22,16 +22,8 @@ A \code{qlm_codebook} object defining instructions for scaling texts on a
 left-right ideological dimension.
 }
 \examples{
-\dontrun{
 # View the codebook
 data_codebook_ideology
-
-# Use with political texts
-coded <- qlm_code(tail(quanteda::data_corpus_inaugural),
-                  data_codebook_ideology,
-                  model = "openai/gpt-4o-mini")
-coded
-}
 }
 \seealso{
 \code{\link[=qlm_codebook]{qlm_codebook()}}, \code{\link[=qlm_code]{qlm_code()}}

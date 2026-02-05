@@ -70,41 +70,16 @@ where batch results are cached, \code{wait} controls whether to wait for complet
 and \code{ignore_hash} can force reprocessing of cached results.
 }
 \examples{
-\dontrun{
-set.seed(24)
-texts <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
-
+\donttest{
 # Basic sentiment analysis
-coded <- qlm_code(texts, data_codebook_sentiment, model = "openai")
-coded  # Print results as tibble
-
-# With named inputs (names become IDs in output)
-texts <- c(doc1 = "Great service!", doc2 = "Very disappointing.")
-coded <- qlm_code(texts, data_codebook_sentiment, model = "openai")
-
-# Specify provider and model
+texts <- c("I love this product!", "Terrible experience.", "It's okay.")
 coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
-
-# With execution control
-coded <- qlm_code(texts, data_codebook_sentiment,
-                  model = "openai/gpt-4o-mini",
-                  params = params(temperature = 0))
-
-# Include token usage and cost
-coded <- qlm_code(texts, data_codebook_sentiment,
-                  model = "openai",
-                  include_tokens = TRUE,
-                  include_cost = TRUE)
 coded
 
-# Use batch processing for cost-effective large-scale coding
-coded_batch <- qlm_code(texts, data_codebook_sentiment,
-                        model = "openai",
-                        batch = TRUE,
-                        path = "batch_results.json",
-                        ignore_hash = TRUE,
-                        include_cost = TRUE)
-coded_batch
+# With named inputs (names become IDs in output)
+texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
+coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
+coded2
 }
 
 }

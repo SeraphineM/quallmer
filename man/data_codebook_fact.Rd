@@ -22,12 +22,15 @@ A \code{qlm_codebook} object defining instructions for assessing the truthfulnes
 and accuracy of texts.
 }
 \examples{
-\dontrun{
 # View the codebook
 data_codebook_fact
 
-# Use with claims or articles
-# NEEDS ACTUAL DATA
+\donttest{
+# Use with claims or articles (requires API key)
+claims <- c(
+  "The Earth is flat.",
+  "Water boils at 100 degrees Celsius at sea level."
+)
 coded <- qlm_code(claims,
                   data_codebook_fact,
                   model = "openai/gpt-4o-mini")
