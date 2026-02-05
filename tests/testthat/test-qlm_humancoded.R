@@ -118,3 +118,35 @@ test_that("print.qlm_coded distinguishes human vs LLM coding", {
   expect_true(any(grepl("Source.*Human coder", output)))
   expect_false(any(grepl("Model:", output)))
 })
+
+
+test_that("as_qlm_coded and qlm_humancoded store notes in metadata", {
+  data <- data.frame(.id = 1:5, category = c("A", "B", "A", "B", "A"))
+
+  # Test as_qlm_coded with notes
+  coded_with_notes <- as_qlm_coded(
+    data,
+    name = "test_coder",
+    notes = "Pilot coding for training purposes"
+  )
+
+  run <- attr(coded_with_notes, "run")
+  expect_equal(run$metadata$notes, "Pilot coding for training purposes")
+
+  # Test print output includes notes
+  output <- capture.output(print(coded_with_notes))
+  expect_true(any(grepl("Notes:.*Pilot coding for training purposes", output)))
+
+  # Test qlm_humancoded with notes
+  human_with_notes <- qlm_humancoded(
+    data,
+    name = "test_coder",
+    notes = "Final coding after training"
+  )
+
+  run2 <- attr(human_with_notes, "run")
+  expect_equal(run2$metadata$notes, "Final coding after training")
+
+  output2 <- capture.output(print(human_with_notes))
+  expect_true(any(grepl("Notes:.*Final coding after training", output2)))
+})

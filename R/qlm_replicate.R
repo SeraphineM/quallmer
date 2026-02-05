@@ -17,6 +17,9 @@
 #'   original setting.
 #' @param name Optional name for this run. If `NULL`, defaults to the model
 #'   name (if changed) or `"replication_N"` where N is the replication count.
+#' @param notes Optional character string with descriptive notes about this
+#'   replication. Useful for documenting why this replication was run or what
+#'   differs from the original. Default is `NULL`.
 #'
 #' @return A `qlm_coded` object with `run$parent` set to the parent's run name.
 #'
@@ -47,7 +50,7 @@
 #'
 #' @importFrom utils modifyList
 #' @export
-qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL) {
+qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL, notes = NULL) {
   # Input validation
   if (!inherits(x, "qlm_coded")) {
     cli::cli_abort("{.arg x} must be a {.cls qlm_coded} object.")
@@ -98,7 +101,8 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
       codebook = use_codebook,
       model = use_model,
       batch = use_batch,
-      name = name
+      name = name,
+      notes = notes
     ),
     execution_args
   ))

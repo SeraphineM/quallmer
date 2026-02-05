@@ -402,3 +402,37 @@ test_that("qlm_code builds metadata correctly", {
   expect_true(inherits(metadata$timestamp, "POSIXct"))
   expect_true(difftime(Sys.time(), metadata$timestamp, units = "secs") < 1)
 })
+
+
+test_that("qlm_code stores notes in metadata", {
+  skip_if_not_installed("ellmer")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test Codebook", "Test instructions", type_obj)
+
+  # Create a qlm_coded object with notes
+  result <- new_qlm_coded(
+    results = data.frame(id = 1:3, score = c(0.5, -0.3, 0.8)),
+    codebook = codebook,
+    data = c("text1", "text2", "text3"),
+    input_type = "text",
+    chat_args = list(name = "test/model"),
+    execution_args = list(),
+    metadata = list(
+      timestamp = Sys.time(),
+      n_units = 3,
+      notes = "Test run with temperature 0.5"
+    ),
+    name = "test_run",
+    call = quote(qlm_code(...)),
+    parent = NULL
+  )
+
+  # Verify notes are stored in metadata
+  run <- attr(result, "run")
+  expect_equal(run$metadata$notes, "Test run with temperature 0.5")
+
+  # Test print output includes notes
+  output <- capture.output(print(result))
+  expect_true(any(grepl("Notes:.*Test run with temperature 0.5", output)))
+})
