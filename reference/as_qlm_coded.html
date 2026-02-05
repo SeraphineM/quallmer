@@ -67,6 +67,7 @@ alongside LLM-coded results.</p>
 <span>  is_gold <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  codebook <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  texts <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  notes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -112,6 +113,12 @@ Should correspond to the <code>.id</code> values in <code>data</code>. If provid
 more complete provenance tracking.</p></dd>
 
 
+<dt id="arg-notes">notes<a class="anchor" aria-label="anchor" href="#arg-notes"></a></dt>
+<dd><p>Optional character string with descriptive notes about this
+coding. Useful for documenting details when viewing results in
+<code><a href="qlm_trail.html">qlm_trail()</a></code>. Default is <code>NULL</code>.</p></dd>
+
+
 <dt id="arg-metadata">metadata<a class="anchor" aria-label="anchor" href="#arg-metadata"></a></dt>
 <dd><p>Optional list of metadata about the coding process. Can
 include any relevant information such as:</p><dl><dt><code>coder_name</code></dt>
@@ -126,11 +133,8 @@ include any relevant information such as:</p><dl><dt><code>coder_name</code></dt
 <dt><code>date</code></dt>
 <dd><p>Date of coding</p></dd>
 
-<dt><code>notes</code></dt>
-<dd><p>Any additional notes</p></dd>
 
-
-</dl><p>The function automatically adds <code>timestamp</code>, <code>n_units</code>, and
+</dl><p>The function automatically adds <code>timestamp</code>, <code>n_units</code>, <code>notes</code>, and
 <code>source = "human"</code>.</p></dd>
 
 </dl></div>

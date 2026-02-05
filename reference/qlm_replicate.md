@@ -7,7 +7,15 @@ to the original coding.
 ## Usage
 
 ``` r
-qlm_replicate(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL)
+qlm_replicate(
+  x,
+  ...,
+  codebook = NULL,
+  model = NULL,
+  batch = NULL,
+  name = NULL,
+  notes = NULL
+)
 ```
 
 ## Arguments
@@ -43,6 +51,12 @@ qlm_replicate(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL)
 
   Optional name for this run. If `NULL`, defaults to the model name (if
   changed) or `"replication_N"` where N is the replication count.
+
+- notes:
+
+  Optional character string with descriptive notes about this
+  replication. Useful for documenting why this replication was run or
+  what differs from the original. Default is `NULL`.
 
 ## Value
 

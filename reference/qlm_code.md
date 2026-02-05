@@ -7,7 +7,7 @@ and metadata for reproducibility.
 ## Usage
 
 ``` r
-qlm_code(x, codebook, model, ..., batch = FALSE, name = NULL)
+qlm_code(x, codebook, model, ..., batch = FALSE, name = NULL, notes = NULL)
 ```
 
 ## Arguments
@@ -64,6 +64,14 @@ qlm_code(x, codebook, model, ..., batch = FALSE, name = NULL)
 - name:
 
   Character string identifying this coding run. Default is `NULL`.
+
+- notes:
+
+  Optional character string with descriptive notes about this coding
+  run. Useful for documenting the purpose or rationale when viewing
+  results in
+  [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md).
+  Default is `NULL`.
 
 ## Value
 

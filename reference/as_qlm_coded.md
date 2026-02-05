@@ -18,6 +18,7 @@ as_qlm_coded(
   is_gold = FALSE,
   codebook = NULL,
   texts = NULL,
+  notes = NULL,
   metadata = list()
 )
 ```
@@ -67,6 +68,13 @@ as_qlm_coded(
   correspond to the `.id` values in `data`. If provided, enables more
   complete provenance tracking.
 
+- notes:
+
+  Optional character string with descriptive notes about this coding.
+  Useful for documenting details when viewing results in
+  [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md).
+  Default is `NULL`.
+
 - metadata:
 
   Optional list of metadata about the coding process. Can include any
@@ -88,11 +96,7 @@ as_qlm_coded(
 
   :   Date of coding
 
-  `notes`
-
-  :   Any additional notes
-
-  The function automatically adds `timestamp`, `n_units`, and
+  The function automatically adds `timestamp`, `n_units`, `notes`, and
   `source = "human"`.
 
 ## Value

@@ -174,9 +174,9 @@ To create a permanent record, provide a `path` argument:
 # Save to a temporary directory for this example
 temp_path <- file.path(tempdir(), "my_analysis")
 qlm_trail(coded1, coded2, path = temp_path)
-#> ✔ Trail saved to /tmp/RtmpVG0895/my_analysis.rds
-#> ✔ Report saved to /tmp/RtmpVG0895/my_analysis.qmd
-#> ℹ Render with `quarto::quarto_render("/tmp/RtmpVG0895/my_analysis.qmd")`
+#> ✔ Trail saved to /tmp/Rtmpyah4TO/my_analysis.rds
+#> ✔ Report saved to /tmp/Rtmpyah4TO/my_analysis.qmd
+#> ℹ Render with `quarto::quarto_render("/tmp/Rtmpyah4TO/my_analysis.qmd")`
 ```
 
 This creates two files:

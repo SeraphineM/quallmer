@@ -14,6 +14,7 @@ qlm_humancoded(
   name = NULL,
   codebook = NULL,
   texts = NULL,
+  notes = NULL,
   metadata = list()
 )
 ```
@@ -37,6 +38,10 @@ qlm_humancoded(
 - texts:
 
   Optional vector of original texts or data that were coded.
+
+- notes:
+
+  Optional character string with descriptive notes.
 
 - metadata:
 
