@@ -1,5 +1,9 @@
 # quallmer (development version)
 
+## Build system
+
+* Build system: pkgdown articles now built locally via Makefile to enable caching and avoid API key requirements in CI (#68).
+
 ## Gold standard handling and validation improvements
 
 * New `as_qlm_coded()` function replaces `qlm_humancoded()` as the primary function for converting human-coded or external data to `qlm_coded` objects. The new function includes an `is_gold` parameter to mark gold standard objects for automatic detection.
