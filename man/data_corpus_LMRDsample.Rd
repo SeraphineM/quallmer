@@ -38,4 +38,7 @@ Y. Ng, and Christopher Potts. (2011). "\href{http://ai.stanford.edu/~amaas/paper
 49th Annual Meeting of the Association for Computational Linguistics (ACL
 2011).
 }
+\seealso{
+\link{data_codebook_sentiment} for an example codebook and usage with this corpus
+}
 \keyword{data}

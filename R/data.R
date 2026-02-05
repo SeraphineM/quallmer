@@ -60,6 +60,7 @@
 #'   49th Annual Meeting of the Association for Computational Linguistics (ACL
 #'   2011).
 #' @source <http://ai.stanford.edu/~amaas/data/sentiment/>
+#' @seealso [data_codebook_sentiment] for an example codebook and usage with this corpus
 #' @keywords data
 #' @examples
 #' # Inspect the corpus

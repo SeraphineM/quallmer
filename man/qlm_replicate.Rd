@@ -35,17 +35,18 @@ modified settings. If no overrides are provided, uses identical settings
 to the original coding.
 }
 \examples{
-\dontshow{if (Sys.getenv("ANTHROPIC_API_KEY") != "" || Sys.getenv("OPENAI_API_KEY") != "") withAutoprint(\{ # examplesIf}
+\donttest{
 # First create a coded object
 texts <- c("I love this!", "Terrible.", "It's okay.")
-coded <- qlm_code(texts, data_codebook_sentiment, model = "anthropic", name = "run1")
+coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", name = "run1")
 
 # Replicate with same model
 coded2 <- qlm_replicate(coded, name = "run2")
 
 # Compare results
 qlm_compare(coded, coded2, by = "sentiment")
-\dontshow{\}) # examplesIf}
+}
+
 }
 \seealso{
 \code{\link[=qlm_code]{qlm_code()}} for initial coding, \code{\link[=qlm_compare]{qlm_compare()}} for comparing

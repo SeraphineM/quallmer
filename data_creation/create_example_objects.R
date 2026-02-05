@@ -5,8 +5,8 @@
 library(quallmer)
 
 # Check for API key
-if (Sys.getenv("ANTHROPIC_API_KEY") == "") {
-  stop("ANTHROPIC_API_KEY environment variable not set. ",
+if (Sys.getenv("OPENAI_API_KEY") == "") {
+  stop("OPENAI_API_KEY environment variable not set. ",
        "Please set it before running this script.")
 }
 
@@ -28,7 +28,7 @@ cat("Generating example coded object with sentiment analysis...\n")
 example_coded_sentiment <- qlm_code(
   texts,
   data_codebook_sentiment,
-  model = "anthropic/claude-3-5-haiku-20241022",
+  model = "openai/gpt-4.1",
   name = "example_sentiment"
 )
 
@@ -39,7 +39,7 @@ cat("Generating replicated coded object...\n")
 
 example_coded_mini <- qlm_replicate(
   example_coded_sentiment,
-  model = "anthropic/claude-3-5-haiku-20241022",  # Use same model for consistency
+  model = "openai/gpt-4.1-mini",
   name = "example_mini"
 )
 

@@ -66,17 +66,18 @@ where batch results are cached, \code{wait} controls whether to wait for complet
 and \code{ignore_hash} can force reprocessing of cached results.
 }
 \examples{
-\dontshow{if (Sys.getenv("ANTHROPIC_API_KEY") != "" || Sys.getenv("OPENAI_API_KEY") != "") withAutoprint(\{ # examplesIf}
+\donttest{
 # Basic sentiment analysis
 texts <- c("I love this product!", "Terrible experience.", "It's okay.")
-coded <- qlm_code(texts, data_codebook_sentiment, model = "anthropic")
+coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 coded
 
 # With named inputs (names become IDs in output)
 texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
-coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "anthropic")
+coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 coded2
-\dontshow{\}) # examplesIf}
+}
+
 }
 \seealso{
 \code{\link[=qlm_codebook]{qlm_codebook()}} for creating codebooks, \code{\link[=annotate]{annotate()}} for the deprecated function.

@@ -54,16 +54,18 @@
 #' @seealso
 #' [qlm_codebook()] for creating codebooks, [annotate()] for the deprecated function.
 #'
-#' @examplesIf Sys.getenv("ANTHROPIC_API_KEY") != "" || Sys.getenv("OPENAI_API_KEY") != ""
+#' @examples
+#' \donttest{
 #' # Basic sentiment analysis
 #' texts <- c("I love this product!", "Terrible experience.", "It's okay.")
-#' coded <- qlm_code(texts, data_codebook_sentiment, model = "anthropic")
+#' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 #' coded
 #'
 #' # With named inputs (names become IDs in output)
 #' texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
-#' coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "anthropic")
+#' coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 #' coded2
+#' }
 #'
 #' @export
 qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL) {
