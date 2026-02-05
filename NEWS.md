@@ -34,6 +34,7 @@
 
 ## The quallmer audit trail
 
+* New `notes` parameter in `qlm_code()`, `qlm_replicate()`, and `as_qlm_coded()` for documenting the rationale behind each coding run. Notes are displayed in print output and captured in `qlm_trail()`.
 * The trail API has been simplified to a single function following Lincoln and Guba's (1985) audit trail concept for establishing trustworthiness in qualitative research.
 * `qlm_trail()` now accepts an optional `path` argument. When provided, saves RDS archive and generates Quarto report with full audit trail documentation.
 * The Quarto report includes all Lincoln and Guba audit trail components: instrument development (codebooks), process notes (run parameters and timeline), data reconstruction (comparisons and validations), and raw data summary.
