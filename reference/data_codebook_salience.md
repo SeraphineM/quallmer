@@ -43,14 +43,15 @@ A `qlm_codebook` object containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # View the codebook
 data_codebook_salience
-
-# Use with documents
-coded <- qlm_code(tail(quanteda::data_corpus_inaugural),
-                  data_codebook_salience,
-                  model = "openai/gpt-4o-mini")
-coded
-} # }
+#> quallmer codebook: Issue salience 
+#>   Input type:   text
+#>   Role:         You are an expert in political communication and issue frami...
+#>   Instructions: Identify the primary policy issue discussed in this text and...
+#>   Output schema:ellmer::TypeObject
+#>   Levels:
+#>     issue: nominal
+#>     salience: ordinal
+#>     explanation: nominal
 ```

@@ -40,32 +40,26 @@ Analysis](http://ai.stanford.edu/~amaas/papers/wvSent_acl2011.pdf)". The
 49th Annual Meeting of the Association for Computational Linguistics
 (ACL 2011).
 
+## See also
+
+[data_codebook_sentiment](https://quallmer.github.io/quallmer/reference/data_codebook_sentiment.md)
+for an example codebook and usage with this corpus
+
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-library(quanteda)
+# Inspect the corpus
+summary(data_corpus_LMRDsample)
+#>    Length    Class1    Class2      Mode 
+#>       200    corpus character character 
 
-# define a sentiment codebook
-codebook_posneg <- qlm_codebook(
-  name = "Sentiment analysis of movie reviews",
-  instructions = "You will rate the sentiment from movie reviews.",
-  schema = type_object(
-    polarity = type_enum(c("pos", "neg"),
-    description = "Sentiment label (pos = positive, neg = negative")
-  )
-)
-
-set.seed(10001)
-test_corpus <- data_corpus_LMRDsample %>%
-  corpus_sample(size = 10, by = polarity)
-
-result <- qlm_code(test_corpus, codebook_posneg, model = "openai/gpt-4o-mini")
-
-# Create gold standard from corpus metadata
-gold <- data.frame(.id = result$.id, polarity = test_corpus$polarity)
-
-# Validate against human annotations
-qlm_validate(result, gold, by = "polarity")
-} # }
+# Sample a few reviews
+head(data_corpus_LMRDsample, 3)
+#> Corpus consisting of 3 documents.
+#> 
+#> Docvars: docnumber, rating, polarity
+#> 
+#> 1035_3.txt: A frustrating documentary. Louis Kahn's son, who saw his father onl...
+#> 3540_3.txt: I truly was disappointed by this film which I had high hopes for. I...
+#> [ ... and 1 more document ]
 ```

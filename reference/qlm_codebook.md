@@ -89,7 +89,6 @@ the deprecated function.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # Define a custom codebook
 my_codebook <- qlm_codebook(
   name = "Sentiment",
@@ -101,7 +100,7 @@ my_codebook <- qlm_codebook(
 )
 
 # With a role
-my_codebook <- qlm_codebook(
+my_codebook_role <- qlm_codebook(
   name = "Sentiment",
   instructions = "Rate the sentiment from -1 (negative) to 1 (positive).",
   schema = type_object(
@@ -122,9 +121,21 @@ my_codebook_levels <- qlm_codebook(
   levels = list(score = "interval", explanation = "nominal")
 )
 
-# Use with qlm_code()
+# \donttest{
+# Use with qlm_code() (requires API key)
 texts <- c("I love this!", "This is terrible.")
 coded <- qlm_code(texts, my_codebook, model = "openai/gpt-4o-mini")
-coded  # Print results as tibble
-} # }
+coded
+#> # quallmer coded object
+#> # Run:      
+#> # Codebook: Sentiment
+#> # Model:    openai/gpt-4o-mini
+#> # Units:    2
+#> 
+#> # A tibble: 2 × 3
+#>     .id score explanation                                                       
+#> * <int> <dbl> <chr>                                                             
+#> 1     1     1 The expression 'I love this!' conveys a strong positive sentiment…
+#> 2     2    -1 The use of the word 'terrible' clearly expresses a strong negativ…
+# }
 ```

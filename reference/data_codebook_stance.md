@@ -43,14 +43,14 @@ A `qlm_codebook` object containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # View the codebook
 data_codebook_stance
-
-# Use with text data
-coded <- qlm_code(tail(quanteda::data_corpus_inaugural),
-                  data_codebook_stance,
-                  model = "openai/gpt-4o-mini")
- coded
-} # }
+#> quallmer codebook: Stance detection 
+#>   Input type:   text
+#>   Role:         You are an expert in political communication and discourse a...
+#>   Instructions: Classify the stance towards climate change expressed in this...
+#>   Output schema:ellmer::TypeObject
+#>   Levels:
+#>     stance: nominal
+#>     explanation: nominal
 ```

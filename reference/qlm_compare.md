@@ -168,37 +168,46 @@ for human coding.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Compare two LLM coding runs on movie reviews
-set.seed(42)
-reviews <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
-coded1 <- qlm_code(reviews, data_codebook_sentiment, model = "openai/gpt-4o-mini")
-coded2 <- qlm_code(reviews, data_codebook_sentiment, model = "openai/gpt-4o")
+# Load example coded objects
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
 
-# Compare all variables (auto-detect levels from codebook)
-qlm_compare(coded1, coded2)
+# Compare two coding runs
+comparison <- qlm_compare(
+  examples$example_coded_sentiment,
+  examples$example_coded_mini,
+  by = "sentiment",
+  level = "nominal"
+)
+print(comparison)
+#> 
+#> ── Inter-rater reliability ──
+#> 
+#> Subjects: 5
+#> Raters: 2
+#> 
+#> 
+#> ── sentiment (nominal) 
+#> Percent agreement: 1.0000
+#> Krippendorff's alpha: 1.0000
+#> Kappa: 1.0000
+#> 
 
-# Compare specific variables
-qlm_compare(coded1, coded2, by = c("sentiment", "rating"))
-
-# Compare single variable with explicit level (backward compatible)
-qlm_compare(coded1, coded2, by = sentiment, level = "nominal")
-
-# Can also use quoted names
-qlm_compare(coded1, coded2, by = "sentiment", level = "nominal")
-
-# Compare with different levels per variable
-qlm_compare(coded1, coded2, by = c("sentiment", "rating"),
-            level = list(sentiment = "nominal", rating = "ordinal"))
-
-# Get confidence intervals
-qlm_compare(coded1, coded2, ci = "analytic")
-
-# Get bootstrap confidence intervals
-qlm_compare(coded1, coded2, ci = "bootstrap", bootstrap_n = 1000)
-
-# Compare three raters
-coded3 <- qlm_replicate(coded1, params = params(temperature = 0.5))
-qlm_compare(coded1, coded2, coded3)
-} # }
+# Compare specific variables with explicit levels
+qlm_compare(
+  examples$example_coded_sentiment,
+  examples$example_coded_mini,
+  by = "sentiment"
+)
+#> 
+#> ── Inter-rater reliability ──
+#> 
+#> Subjects: 5
+#> Raters: 2
+#> 
+#> 
+#> ── sentiment (nominal) 
+#> Percent agreement: 1.0000
+#> Krippendorff's alpha: 1.0000
+#> Kappa: 1.0000
+#> 
 ```

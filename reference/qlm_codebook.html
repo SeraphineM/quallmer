@@ -126,8 +126,7 @@ backward compatibility with existing code using <code><a href="annotate.html">an
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Define a custom codebook</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Define a custom codebook</span></span></span>
 <span class="r-in"><span><span class="va">my_codebook</span> <span class="op">&lt;-</span> <span class="fu">qlm_codebook</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  name <span class="op">=</span> <span class="st">"Sentiment"</span>,</span></span>
 <span class="r-in"><span>  instructions <span class="op">=</span> <span class="st">"Rate the sentiment from -1 (negative) to 1 (positive)."</span>,</span></span>
@@ -138,7 +137,7 @@ backward compatibility with existing code using <code><a href="annotate.html">an
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With a role</span></span></span>
-<span class="r-in"><span><span class="va">my_codebook</span> <span class="op">&lt;-</span> <span class="fu">qlm_codebook</span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">my_codebook_role</span> <span class="op">&lt;-</span> <span class="fu">qlm_codebook</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  name <span class="op">=</span> <span class="st">"Sentiment"</span>,</span></span>
 <span class="r-in"><span>  instructions <span class="op">=</span> <span class="st">"Rate the sentiment from -1 (negative) to 1 (positive)."</span>,</span></span>
 <span class="r-in"><span>  schema <span class="op">=</span> <span class="fu">type_object</span><span class="op">(</span></span></span>
@@ -159,11 +158,23 @@ backward compatibility with existing code using <code><a href="annotate.html">an
 <span class="r-in"><span>  levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>score <span class="op">=</span> <span class="st">"interval"</span>, explanation <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Use with qlm_code()</span></span></span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="co"># Use with qlm_code() (requires API key)</span></span></span>
 <span class="r-in"><span><span class="va">texts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"This is terrible."</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">coded</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">texts</span>, <span class="va">my_codebook</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">coded</span>  <span class="co"># Print results as tibble</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="va">coded</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # quallmer coded object</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Run:      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Codebook: Sentiment</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Model:    openai/gpt-4o-mini</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Units:    2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 3</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     .id score explanation                                                       </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">*</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                             </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1     1 The expression 'I love this!' conveys a strong positive sentiment…</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     2    -<span style="color: #BB0000;">1</span> The use of the word 'terrible' clearly expresses a strong negativ…</span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

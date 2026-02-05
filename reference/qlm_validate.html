@@ -228,63 +228,56 @@ nominal data. For ordinal data, these metrics are not computed.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Basic validation against gold standard</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Load example coded objects</span></span></span>
+<span class="r-in"><span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_objects.rds"</span>, package <span class="op">=</span> <span class="st">"quallmer"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">24</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">reviews</span> <span class="op">&lt;-</span> <span class="va">data_corpus_LMRDsample</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span><span class="op">)</span>, size <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">]</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Code movie reviews</span></span></span>
-<span class="r-in"><span><span class="va">coded</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">reviews</span>,</span></span>
-<span class="r-in"><span>  <span class="va">data_codebook_sentiment</span>,</span></span>
-<span class="r-in"><span>  model <span class="op">=</span> <span class="st">"openai/gpt-4o"</span></span></span>
+<span class="r-in"><span><span class="co"># Validate against gold standard (auto-detected)</span></span></span>
+<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">examples</span><span class="op">$</span><span class="va">example_coded_mini</span>,</span></span>
+<span class="r-in"><span>  <span class="va">examples</span><span class="op">$</span><span class="va">example_gold_standard</span>,</span></span>
+<span class="r-in"><span>  by <span class="op">=</span> <span class="st">"sentiment"</span>,</span></span>
+<span class="r-in"><span>  level <span class="op">=</span> <span class="st">"nominal"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">validation</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">quallmer validation</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> n: 5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── sentiment (nominal) </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> By class:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> &lt;macro&gt;:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> accuracy: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> precision: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> recall: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> F1: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Cohen's kappa: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Create gold standard from corpus metadata</span></span></span>
-<span class="r-in"><span><span class="va">gold_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  .id <span class="op">=</span> <span class="va">coded</span><span class="op">$</span><span class="va">.id</span>,</span></span>
-<span class="r-in"><span>  sentiment <span class="op">=</span> <span class="fu">quanteda</span><span class="fu">::</span><span class="fu"><a href="https://quanteda.io/reference/docvars.html" class="external-link">docvars</a></span><span class="op">(</span><span class="va">reviews</span>, <span class="st">"polarity"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  rating <span class="op">=</span> <span class="fu">quanteda</span><span class="fu">::</span><span class="fu"><a href="https://quanteda.io/reference/docvars.html" class="external-link">docvars</a></span><span class="op">(</span><span class="va">reviews</span>, <span class="st">"rating"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Explicit gold parameter (backward compatible)</span></span></span>
+<span class="r-in"><span><span class="va">validation2</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">examples</span><span class="op">$</span><span class="va">example_coded_mini</span>,</span></span>
+<span class="r-in"><span>  gold <span class="op">=</span> <span class="va">examples</span><span class="op">$</span><span class="va">example_gold_standard</span>,</span></span>
+<span class="r-in"><span>  by <span class="op">=</span> <span class="st">"sentiment"</span>,</span></span>
+<span class="r-in"><span>  level <span class="op">=</span> <span class="st">"nominal"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Method 1: Mark as gold standard with as_qlm_coded() - auto-detected</span></span></span>
-<span class="r-in"><span><span class="va">gold</span> <span class="op">&lt;-</span> <span class="fu"><a href="as_qlm_coded.html">as_qlm_coded</a></span><span class="op">(</span><span class="va">gold_data</span>, name <span class="op">=</span> <span class="st">"Expert"</span>, is_gold <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span><span class="op">)</span>  <span class="co"># gold parameter auto-detected!</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">validation</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Method 2: Explicit gold parameter (backward compatible)</span></span></span>
-<span class="r-in"><span><span class="va">gold</span> <span class="op">&lt;-</span> <span class="fu"><a href="as_qlm_coded.html">as_qlm_coded</a></span><span class="op">(</span><span class="va">gold_data</span>, name <span class="op">=</span> <span class="st">"Expert"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, gold <span class="op">=</span> <span class="va">gold</span><span class="op">)</span>  <span class="co"># explicit gold =</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">validation</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Validate specific variables</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sentiment"</span>, <span class="st">"rating"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Validate single variable with explicit level (backward compatible)</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="va">sentiment</span>, level <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Can also use quoted names</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="st">"sentiment"</span>, level <span class="op">=</span> <span class="st">"nominal"</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Validate with different levels per variable</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sentiment"</span>, <span class="st">"rating"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                           level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>sentiment <span class="op">=</span> <span class="st">"nominal"</span>, rating <span class="op">=</span> <span class="st">"ordinal"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Get confidence intervals</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, ci <span class="op">=</span> <span class="st">"analytic"</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Get bootstrap confidence intervals</span></span></span>
-<span class="r-in"><span><span class="va">validation</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, ci <span class="op">=</span> <span class="st">"bootstrap"</span>, bootstrap_n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Use micro-averaging (nominal level only)</span></span></span>
-<span class="r-in"><span><span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="va">sentiment</span>, level <span class="op">=</span> <span class="st">"nominal"</span>, average <span class="op">=</span> <span class="st">"micro"</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Get per-class breakdown (for nominal data only)</span></span></span>
-<span class="r-in"><span><span class="va">validation_detailed</span> <span class="op">&lt;-</span> <span class="fu">qlm_validate</span><span class="op">(</span><span class="va">coded</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="va">sentiment</span>,</span></span>
-<span class="r-in"><span>                                    level <span class="op">=</span> <span class="st">"nominal"</span>, average <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">validation_detailed</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">validation2</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">quallmer validation</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> n: 5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── sentiment (nominal) </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> By class:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> &lt;macro&gt;:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> accuracy: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> precision: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> recall: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> F1: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Cohen's kappa: 1.0000</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

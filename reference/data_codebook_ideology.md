@@ -43,14 +43,14 @@ A `qlm_codebook` object containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # View the codebook
 data_codebook_ideology
-
-# Use with political texts
-coded <- qlm_code(tail(quanteda::data_corpus_inaugural),
-                  data_codebook_ideology,
-                  model = "openai/gpt-4o-mini")
-coded
-} # }
+#> quallmer codebook: Ideological scaling 
+#>   Input type:   text
+#>   Role:         You are an expert political scientist specializing in ideolo...
+#>   Instructions: Rate the ideological position of this text on a scale from 0...
+#>   Output schema:ellmer::TypeObject
+#>   Levels:
+#>     score: ordinal
+#>     explanation: nominal
 ```

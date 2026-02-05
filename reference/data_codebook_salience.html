@@ -84,16 +84,17 @@ topics discussed in texts by their salience.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># View the codebook</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># View the codebook</span></span></span>
 <span class="r-in"><span><span class="va">data_codebook_salience</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Use with documents</span></span></span>
-<span class="r-in"><span><span class="va">coded</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="fu">quanteda</span><span class="fu">::</span><span class="va"><a href="https://quanteda.io/reference/data_corpus_inaugural.html" class="external-link">data_corpus_inaugural</a></span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                  <span class="va">data_codebook_salience</span>,</span></span>
-<span class="r-in"><span>                  model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">coded</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> quallmer codebook: Issue salience </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Input type:   text</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Role:         You are an expert in political communication and issue frami...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Instructions: Identify the primary policy issue discussed in this text and...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Output schema:ellmer::TypeObject</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Levels:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     issue: nominal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     salience: ordinal</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     explanation: nominal</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

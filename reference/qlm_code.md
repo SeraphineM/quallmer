@@ -127,40 +127,38 @@ for the deprecated function.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-set.seed(24)
-texts <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
-
+# \donttest{
 # Basic sentiment analysis
-coded <- qlm_code(texts, data_codebook_sentiment, model = "openai")
-coded  # Print results as tibble
+texts <- c("I love this product!", "Terrible experience.", "It's okay.")
+coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
+coded
+#> # quallmer coded object
+#> # Run:      
+#> # Codebook: Sentiment analysis
+#> # Model:    openai/gpt-4o-mini
+#> # Units:    3
+#> 
+#> # A tibble: 3 × 3
+#>     .id sentiment rating
+#> * <int> <fct>      <int>
+#> 1     1 pos           10
+#> 2     2 neg            1
+#> 3     3 pos            5
 
 # With named inputs (names become IDs in output)
-texts <- c(doc1 = "Great service!", doc2 = "Very disappointing.")
-coded <- qlm_code(texts, data_codebook_sentiment, model = "openai")
-
-# Specify provider and model
-coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
-
-# With execution control
-coded <- qlm_code(texts, data_codebook_sentiment,
-                  model = "openai/gpt-4o-mini",
-                  params = params(temperature = 0))
-
-# Include token usage and cost
-coded <- qlm_code(texts, data_codebook_sentiment,
-                  model = "openai",
-                  include_tokens = TRUE,
-                  include_cost = TRUE)
-coded
-
-# Use batch processing for cost-effective large-scale coding
-coded_batch <- qlm_code(texts, data_codebook_sentiment,
-                        model = "openai",
-                        batch = TRUE,
-                        path = "batch_results.json",
-                        ignore_hash = TRUE,
-                        include_cost = TRUE)
-coded_batch
-} # }
+texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
+coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
+coded2
+#> # quallmer coded object
+#> # Run:      
+#> # Codebook: Sentiment analysis
+#> # Model:    openai/gpt-4o-mini
+#> # Units:    2
+#> 
+#> # A tibble: 2 × 3
+#>   .id     sentiment rating
+#> * <chr>   <fct>      <int>
+#> 1 review1 pos           10
+#> 2 review2 neg            2
+# }
 ```

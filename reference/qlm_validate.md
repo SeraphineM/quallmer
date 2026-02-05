@@ -223,61 +223,54 @@ for converting human-coded data,
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Basic validation against gold standard
+# Load example coded objects
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
 
-set.seed(24)
-reviews <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
-
-# Code movie reviews
-coded <- qlm_code(
-  reviews,
-  data_codebook_sentiment,
-  model = "openai/gpt-4o"
+# Validate against gold standard (auto-detected)
+validation <- qlm_validate(
+  examples$example_coded_mini,
+  examples$example_gold_standard,
+  by = "sentiment",
+  level = "nominal"
 )
+print(validation)
+#> 
+#> ── quallmer validation ──
+#> 
+#> n: 5
+#> 
+#> 
+#> ── sentiment (nominal) 
+#> By class:
+#> <macro>:
+#> accuracy: 1.0000
+#> precision: 1.0000
+#> recall: 1.0000
+#> F1: 1.0000
+#> Cohen's kappa: 1.0000
+#> 
 
-# Create gold standard from corpus metadata
-gold_data <- data.frame(
-  .id = coded$.id,
-  sentiment = quanteda::docvars(reviews, "polarity"),
-  rating = quanteda::docvars(reviews, "rating")
+# Explicit gold parameter (backward compatible)
+validation2 <- qlm_validate(
+  examples$example_coded_mini,
+  gold = examples$example_gold_standard,
+  by = "sentiment",
+  level = "nominal"
 )
-
-# Method 1: Mark as gold standard with as_qlm_coded() - auto-detected
-gold <- as_qlm_coded(gold_data, name = "Expert", is_gold = TRUE)
-validation <- qlm_validate(coded, gold)  # gold parameter auto-detected!
-print(validation)
-
-# Method 2: Explicit gold parameter (backward compatible)
-gold <- as_qlm_coded(gold_data, name = "Expert")
-validation <- qlm_validate(coded, gold = gold)  # explicit gold =
-print(validation)
-
-# Validate specific variables
-validation <- qlm_validate(coded, gold, by = c("sentiment", "rating"))
-
-# Validate single variable with explicit level (backward compatible)
-validation <- qlm_validate(coded, gold, by = sentiment, level = "nominal")
-
-# Can also use quoted names
-validation <- qlm_validate(coded, gold, by = "sentiment", level = "nominal")
-
-# Validate with different levels per variable
-validation <- qlm_validate(coded, gold, by = c("sentiment", "rating"),
-                           level = list(sentiment = "nominal", rating = "ordinal"))
-
-# Get confidence intervals
-validation <- qlm_validate(coded, gold, ci = "analytic")
-
-# Get bootstrap confidence intervals
-validation <- qlm_validate(coded, gold, ci = "bootstrap", bootstrap_n = 1000)
-
-# Use micro-averaging (nominal level only)
-qlm_validate(coded, gold, by = sentiment, level = "nominal", average = "micro")
-
-# Get per-class breakdown (for nominal data only)
-validation_detailed <- qlm_validate(coded, gold, by = sentiment,
-                                    level = "nominal", average = "none")
-print(validation_detailed)
-} # }
+print(validation2)
+#> 
+#> ── quallmer validation ──
+#> 
+#> n: 5
+#> 
+#> 
+#> ── sentiment (nominal) 
+#> By class:
+#> <macro>:
+#> accuracy: 1.0000
+#> precision: 1.0000
+#> recall: 1.0000
+#> F1: 1.0000
+#> Cohen's kappa: 1.0000
+#> 
 ```

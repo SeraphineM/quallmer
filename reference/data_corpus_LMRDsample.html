@@ -87,34 +87,27 @@ Y. Ng, and Christopher Potts. (2011). "<a href="http://ai.stanford.edu/~amaas/pa
 49th Annual Meeting of the Association for Computational Linguistics (ACL
 2011).</p>
     </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><a href="data_codebook_sentiment.html">data_codebook_sentiment</a> for an example codebook and usage with this corpus</p></div>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quanteda.io" class="external-link">quanteda</a></span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Inspect the corpus</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    Length    Class1    Class2      Mode </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       200    corpus character character </span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># define a sentiment codebook</span></span></span>
-<span class="r-in"><span><span class="va">codebook_posneg</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  name <span class="op">=</span> <span class="st">"Sentiment analysis of movie reviews"</span>,</span></span>
-<span class="r-in"><span>  instructions <span class="op">=</span> <span class="st">"You will rate the sentiment from movie reviews."</span>,</span></span>
-<span class="r-in"><span>  schema <span class="op">=</span> <span class="fu">type_object</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    polarity <span class="op">=</span> <span class="fu">type_enum</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"pos"</span>, <span class="st">"neg"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    description <span class="op">=</span> <span class="st">"Sentiment label (pos = positive, neg = negative"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">10001</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">test_corpus</span> <span class="op">&lt;-</span> <span class="va">data_corpus_LMRDsample</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://quanteda.io/reference/corpus_sample.html" class="external-link">corpus_sample</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">10</span>, by <span class="op">=</span> <span class="va">polarity</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">test_corpus</span>, <span class="va">codebook_posneg</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Create gold standard from corpus metadata</span></span></span>
-<span class="r-in"><span><span class="va">gold</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>.id <span class="op">=</span> <span class="va">result</span><span class="op">$</span><span class="va">.id</span>, polarity <span class="op">=</span> <span class="va">test_corpus</span><span class="op">$</span><span class="va">polarity</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Validate against human annotations</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="qlm_validate.html">qlm_validate</a></span><span class="op">(</span><span class="va">result</span>, <span class="va">gold</span>, by <span class="op">=</span> <span class="st">"polarity"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="co"># Sample a few reviews</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span>, <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Corpus consisting of 3 documents.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Docvars: docnumber, rating, polarity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1035_3.txt: A frustrating documentary. Louis Kahn's son, who saw his father onl...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3540_3.txt: I truly was disappointed by this film which I had high hopes for. I...</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [ ... and 1 more document ]</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

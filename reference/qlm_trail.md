@@ -90,24 +90,34 @@ Lincoln, Y. S., & Guba, E. G. (1985). *Naturalistic Inquiry*. Sage.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-# Code texts with sentiment codebook
-coded1 <- qlm_code(
-  texts,
-  data_codebook_sentiment,
-  model = "openai/gpt-4o",
-  name = "gpt4o_run"
+# Load example coded objects
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+
+# View audit trail from two coding runs
+trail <- qlm_trail(
+  examples$example_coded_sentiment,
+  examples$example_coded_mini
 )
-
-# Replicate with different model
-coded2 <- qlm_replicate(coded1, model = "openai/gpt-4o-mini", name = "mini_run")
-
-# View the audit trail
-trail <- qlm_trail(coded1, coded2)
 print(trail)
+#> # quallmer audit trail (2 runs)
+#> 
+#> 1. example_sentiment (original)
+#>    2026-02-05 01:29 | openai/gpt-4.1
+#>    Codebook: Sentiment analysis
+#> 
+#> 2. example_mini (parent: example_sentiment)
+#>    2026-02-05 01:29 | openai/gpt-4.1-mini
+#>    Codebook: Sentiment analysis
 
-# Save the complete audit trail
-qlm_trail(coded1, coded2, path = "my_analysis")
-# Creates: my_analysis.rds, my_analysis.qmd
-} # }
+# \donttest{
+# Save complete audit trail (creates .rds and .qmd files)
+qlm_trail(
+  examples$example_coded_sentiment,
+  examples$example_coded_mini,
+  path = tempfile("my_analysis")
+)
+#> ✔ Trail saved to /tmp/RtmpACzeKe/my_analysis1b8c4c94f03b.rds
+#> ✔ Report saved to /tmp/RtmpACzeKe/my_analysis1b8c4c94f03b.qmd
+#> ℹ Render with `quarto::quarto_render("/tmp/RtmpACzeKe/my_analysis1b8c4c94f03b.qmd")`
+# }
 ```

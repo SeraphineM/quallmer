@@ -44,14 +44,28 @@ A `qlm_codebook` object containing:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # View the codebook
 data_codebook_fact
+#> quallmer codebook: Fact-checking 
+#>   Input type:   text
+#>   Role:         You are an expert fact-checker with knowledge of current eve...
+#>   Instructions: Assess whether the main factual claim in this text is true, ...
+#>   Output schema:ellmer::TypeObject
+#>   Levels:
+#>     claim: nominal
+#>     verdict: nominal
+#>     explanation: nominal
 
-# Use with claims or articles
-# NEEDS ACTUAL DATA
+# \donttest{
+# Use with claims or articles (requires API key)
+claims <- c(
+  "The Earth is flat.",
+  "Water boils at 100 degrees Celsius at sea level."
+)
 coded <- qlm_code(claims,
                   data_codebook_fact,
                   model = "openai/gpt-4o-mini")
-} # }
+#> [working] (0 + 0) -> 1 -> 1 | ■■■■■■■■■■■■■■■■                  50%
+#> [working] (0 + 0) -> 0 -> 2 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+# }
 ```
