@@ -17,6 +17,9 @@
 #'   original setting.
 #' @param name Optional name for this run. If `NULL`, defaults to the model
 #'   name (if changed) or `"replication_N"` where N is the replication count.
+#' @param notes Optional character string with descriptive notes about this
+#'   replication. Useful for documenting why this replication was run or what
+#'   differs from the original. Default is `NULL`.
 #'
 #' @return A `qlm_coded` object with `run$parent` set to the parent's run name.
 #'
@@ -24,30 +27,21 @@
 #'   replicated results.
 #'
 #' @examples
-#' \dontrun{
-#' set.seed(24)
-#' reviews <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
+#' \donttest{
+#' # First create a coded object
+#' texts <- c("I love this!", "Terrible.", "It's okay.")
+#' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", name = "run1")
 #'
-#' # Code movie reviews
-#' coded <- qlm_code(
-#'   reviews,
-#'   data_codebook_sentiment,
-#'   model = "openai/gpt-4o"
-#' )
-#'
-#' # Replicate with different model
-#' coded2 <- qlm_replicate(coded, model = "openai/gpt-4o-mini")
-#'
-#' # Replicate using batch processing for cost savings
-#' coded3 <- qlm_replicate(coded, batch = TRUE, path = "batch_results.json")
+#' # Replicate with same model
+#' coded2 <- qlm_replicate(coded, name = "run2")
 #'
 #' # Compare results
-#' qlm_compare(coded, coded2, coded3, by = "sentiment")
+#' qlm_compare(coded, coded2, by = "sentiment")
 #' }
 #'
 #' @importFrom utils modifyList
 #' @export
-qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL) {
+qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL, notes = NULL) {
   # Input validation
   if (!inherits(x, "qlm_coded")) {
     cli::cli_abort("{.arg x} must be a {.cls qlm_coded} object.")
@@ -98,7 +92,8 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
       codebook = use_codebook,
       model = use_model,
       batch = use_batch,
-      name = name
+      name = name,
+      notes = notes
     ),
     execution_args
   ))

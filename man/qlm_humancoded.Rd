@@ -9,6 +9,7 @@ qlm_humancoded(
   name = NULL,
   codebook = NULL,
   texts = NULL,
+  notes = NULL,
   metadata = list()
 )
 }
@@ -22,6 +23,8 @@ column for unit identifiers and one or more coded variables.}
 \item{codebook}{Optional list containing coding instructions.}
 
 \item{texts}{Optional vector of original texts or data that were coded.}
+
+\item{notes}{Optional character string with descriptive notes.}
 
 \item{metadata}{Optional list of metadata about the coding process.}
 }

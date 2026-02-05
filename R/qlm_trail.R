@@ -43,25 +43,23 @@
 #' Lincoln, Y. S., & Guba, E. G. (1985). *Naturalistic Inquiry*. Sage.
 #'
 #' @examples
-#' \dontrun{
-#' # Code texts with sentiment codebook
-#' coded1 <- qlm_code(
-#'   texts,
-#'   data_codebook_sentiment,
-#'   model = "openai/gpt-4o",
-#'   name = "gpt4o_run"
+#' # Load example coded objects
+#' examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+#'
+#' # View audit trail from two coding runs
+#' trail <- qlm_trail(
+#'   examples$example_coded_sentiment,
+#'   examples$example_coded_mini
 #' )
-#'
-#' # Replicate with different model
-#' coded2 <- qlm_replicate(coded1, model = "openai/gpt-4o-mini", name = "mini_run")
-#'
-#' # View the audit trail
-#' trail <- qlm_trail(coded1, coded2)
 #' print(trail)
 #'
-#' # Save the complete audit trail
-#' qlm_trail(coded1, coded2, path = "my_analysis")
-#' # Creates: my_analysis.rds, my_analysis.qmd
+#' \donttest{
+#' # Save complete audit trail (creates .rds and .qmd files)
+#' qlm_trail(
+#'   examples$example_coded_sentiment,
+#'   examples$example_coded_mini,
+#'   path = tempfile("my_analysis")
+#' )
 #' }
 #'
 #' @seealso [qlm_code()], [qlm_replicate()], [qlm_compare()], [qlm_validate()]
@@ -251,6 +249,9 @@ print.qlm_trail <- function(x, ...) {
     if (!is.null(run$chat_args$name)) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
     }
+    if (!is.null(run$metadata$notes)) {
+      cat("Notes:   ", run$metadata$notes, "\n", sep = "")
+    }
 
     # Show comparison info if available
     if (!is.null(run$comparison_data)) {
@@ -308,6 +309,10 @@ print.qlm_trail <- function(x, ...) {
 
       if (!is.null(run$codebook$name)) {
         cat("   Codebook: ", run$codebook$name, "\n", sep = "")
+      }
+
+      if (!is.null(run$metadata$notes)) {
+        cat("   Notes: ", run$metadata$notes, "\n", sep = "")
       }
 
       if (!is.null(run$comparison_data)) {

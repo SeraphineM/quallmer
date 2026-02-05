@@ -26,36 +26,19 @@ dataset for sentiment classification.  The original dataset contains 50,000
 highly polar movie reviews.
 }
 \examples{
-\dontrun{
-library(quanteda)
+# Inspect the corpus
+summary(data_corpus_LMRDsample)
 
-# define a sentiment codebook
-codebook_posneg <- qlm_codebook(
-  name = "Sentiment analysis of movie reviews",
-  instructions = "You will rate the sentiment from movie reviews.",
-  schema = type_object(
-    polarity = type_enum(c("pos", "neg"),
-    description = "Sentiment label (pos = positive, neg = negative")
-  )
-)
-
-set.seed(10001)
-test_corpus <- data_corpus_LMRDsample \%>\%
-  corpus_sample(size = 10, by = polarity)
-
-result <- qlm_code(test_corpus, codebook_posneg, model = "openai/gpt-4o-mini")
-
-# Create gold standard from corpus metadata
-gold <- data.frame(.id = result$.id, polarity = test_corpus$polarity)
-
-# Validate against human annotations
-qlm_validate(result, gold, by = "polarity")
-}
+# Sample a few reviews
+head(data_corpus_LMRDsample, 3)
 }
 \references{
 Andrew L. Maas, Raymond E. Daly, Peter T. Pham, Dan Huang, Andrew
 Y. Ng, and Christopher Potts. (2011). "\href{http://ai.stanford.edu/~amaas/papers/wvSent_acl2011.pdf}{Learning Word Vectors for Sentiment Analysis}". The
 49th Annual Meeting of the Association for Computational Linguistics (ACL
 2011).
+}
+\seealso{
+\link{data_codebook_sentiment} for an example codebook and usage with this corpus
 }
 \keyword{data}

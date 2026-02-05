@@ -29,6 +29,9 @@
 #'   Batch-specific arguments (`path`, `wait`, `ignore_hash`) are only used when
 #'   `batch = TRUE`. Arguments not recognized by any function will generate a warning.
 #' @param name Character string identifying this coding run. Default is `NULL`.
+#' @param notes Optional character string with descriptive notes about this
+#'   coding run. Useful for documenting the purpose or rationale when viewing
+#'   results in [qlm_trail()]. Default is `NULL`.
 #'
 #' @details
 #' Progress indicators and error handling are provided by the underlying
@@ -55,45 +58,20 @@
 #' [qlm_codebook()] for creating codebooks, [annotate()] for the deprecated function.
 #'
 #' @examples
-#' \dontrun{
-#' set.seed(24)
-#' texts <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
-#'
+#' \donttest{
 #' # Basic sentiment analysis
-#' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai")
-#' coded  # Print results as tibble
-#'
-#' # With named inputs (names become IDs in output)
-#' texts <- c(doc1 = "Great service!", doc2 = "Very disappointing.")
-#' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai")
-#'
-#' # Specify provider and model
+#' texts <- c("I love this product!", "Terrible experience.", "It's okay.")
 #' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
-#'
-#' # With execution control
-#' coded <- qlm_code(texts, data_codebook_sentiment,
-#'                   model = "openai/gpt-4o-mini",
-#'                   params = params(temperature = 0))
-#'
-#' # Include token usage and cost
-#' coded <- qlm_code(texts, data_codebook_sentiment,
-#'                   model = "openai",
-#'                   include_tokens = TRUE,
-#'                   include_cost = TRUE)
 #' coded
 #'
-#' # Use batch processing for cost-effective large-scale coding
-#' coded_batch <- qlm_code(texts, data_codebook_sentiment,
-#'                         model = "openai",
-#'                         batch = TRUE,
-#'                         path = "batch_results.json",
-#'                         ignore_hash = TRUE,
-#'                         include_cost = TRUE)
-#' coded_batch
+#' # With named inputs (names become IDs in output)
+#' texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
+#' coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
+#' coded2
 #' }
 #'
 #' @export
-qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL) {
+qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes = NULL) {
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
     codebook <- as_qlm_codebook(codebook)
@@ -196,6 +174,7 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL) {
   metadata <- list(
     timestamp = Sys.time(),
     n_units = length(x),
+    notes = notes,
     ellmer_version = tryCatch(
       as.character(utils::packageVersion("ellmer")),
       error = function(e) NA_character_
@@ -323,6 +302,11 @@ print.qlm_coded <- function(x, ...) {
 
   if (!is.null(run$parent)) {
     cat("# Parent:   ", run$parent, "\n", sep = "")
+  }
+
+  # Show notes if present
+  if (!is.null(run$metadata$notes)) {
+    cat("# Notes:    ", run$metadata$notes, "\n", sep = "")
   }
 
   cat("\n")

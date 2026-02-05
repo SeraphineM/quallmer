@@ -33,7 +33,6 @@
 #'   [task()] for the deprecated function.
 #'
 #' @examples
-#' \dontrun{
 #' # Define a custom codebook
 #' my_codebook <- qlm_codebook(
 #'   name = "Sentiment",
@@ -45,7 +44,7 @@
 #' )
 #'
 #' # With a role
-#' my_codebook <- qlm_codebook(
+#' my_codebook_role <- qlm_codebook(
 #'   name = "Sentiment",
 #'   instructions = "Rate the sentiment from -1 (negative) to 1 (positive).",
 #'   schema = type_object(
@@ -66,10 +65,11 @@
 #'   levels = list(score = "interval", explanation = "nominal")
 #' )
 #'
-#' # Use with qlm_code()
+#' \donttest{
+#' # Use with qlm_code() (requires API key)
 #' texts <- c("I love this!", "This is terrible.")
 #' coded <- qlm_code(texts, my_codebook, model = "openai/gpt-4o-mini")
-#' coded  # Print results as tibble
+#' coded
 #' }
 #'
 #' @export
