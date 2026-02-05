@@ -23,11 +23,11 @@ reviews. Designed to work with \link{data_corpus_LMRDsample} but with an expande
 polarity scale that includes a "mixed" category.
 }
 \examples{
-\dontrun{
 # View the codebook
 data_codebook_sentiment
 
-# Use with movie review corpus
+\donttest{
+# Use with movie review corpus (requires API key)
 coded <- qlm_code(data_corpus_LMRDsample[1:10],
                   data_codebook_sentiment,
                   model = "openai")

@@ -50,7 +50,6 @@ has dual class inheritance (\code{c("qlm_codebook", "task")}) to maintain
 backward compatibility with existing code using \code{\link[=annotate]{annotate()}}.
 }
 \examples{
-\dontrun{
 # Define a custom codebook
 my_codebook <- qlm_codebook(
   name = "Sentiment",
@@ -62,7 +61,7 @@ my_codebook <- qlm_codebook(
 )
 
 # With a role
-my_codebook <- qlm_codebook(
+my_codebook_role <- qlm_codebook(
   name = "Sentiment",
   instructions = "Rate the sentiment from -1 (negative) to 1 (positive).",
   schema = type_object(
@@ -83,10 +82,11 @@ my_codebook_levels <- qlm_codebook(
   levels = list(score = "interval", explanation = "nominal")
 )
 
-# Use with qlm_code()
+\donttest{
+# Use with qlm_code() (requires API key)
 texts <- c("I love this!", "This is terrible.")
 coded <- qlm_code(texts, my_codebook, model = "openai/gpt-4o-mini")
-coded  # Print results as tibble
+coded
 }
 
 }

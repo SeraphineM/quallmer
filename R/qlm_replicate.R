@@ -23,27 +23,16 @@
 #' @seealso [qlm_code()] for initial coding, [qlm_compare()] for comparing
 #'   replicated results.
 #'
-#' @examples
-#' \dontrun{
-#' set.seed(24)
-#' reviews <- data_corpus_LMRDsample[sample(length(data_corpus_LMRDsample), size = 20)]
+#' @examplesIf Sys.getenv("ANTHROPIC_API_KEY") != "" || Sys.getenv("OPENAI_API_KEY") != ""
+#' # First create a coded object
+#' texts <- c("I love this!", "Terrible.", "It's okay.")
+#' coded <- qlm_code(texts, data_codebook_sentiment, model = "anthropic", name = "run1")
 #'
-#' # Code movie reviews
-#' coded <- qlm_code(
-#'   reviews,
-#'   data_codebook_sentiment,
-#'   model = "openai/gpt-4o"
-#' )
-#'
-#' # Replicate with different model
-#' coded2 <- qlm_replicate(coded, model = "openai/gpt-4o-mini")
-#'
-#' # Replicate using batch processing for cost savings
-#' coded3 <- qlm_replicate(coded, batch = TRUE, path = "batch_results.json")
+#' # Replicate with same model
+#' coded2 <- qlm_replicate(coded, name = "run2")
 #'
 #' # Compare results
-#' qlm_compare(coded, coded2, coded3, by = "sentiment")
-#' }
+#' qlm_compare(coded, coded2, by = "sentiment")
 #'
 #' @importFrom utils modifyList
 #' @export
