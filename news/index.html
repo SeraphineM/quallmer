@@ -24,9 +24,7 @@
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials"><li><a class="dropdown-item" href="../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
-    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
-    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials"><li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
@@ -88,7 +86,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="the-quallmer-audit-trail-development-version">The quallmer audit trail<a class="anchor" aria-label="anchor" href="#the-quallmer-audit-trail-development-version"></a></h3>
-<ul><li>The trail API has been simplified to a single function following Lincoln and Guba’s (1985) audit trail concept for establishing trustworthiness in qualitative research.</li>
+<ul><li>New <code>notes</code> parameter in <code><a href="../reference/qlm_code.html">qlm_code()</a></code>, <code><a href="../reference/qlm_replicate.html">qlm_replicate()</a></code>, and <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> for documenting the rationale behind each coding run. Notes are displayed in print output and captured in <code><a href="../reference/qlm_trail.html">qlm_trail()</a></code>.</li>
+<li>The trail API has been simplified to a single function following Lincoln and Guba’s (1985) audit trail concept for establishing trustworthiness in qualitative research.</li>
 <li>
 <code><a href="../reference/qlm_trail.html">qlm_trail()</a></code> now accepts an optional <code>path</code> argument. When provided, saves RDS archive and generates Quarto report with full audit trail documentation.</li>
 <li>The Quarto report includes all Lincoln and Guba audit trail components: instrument development (codebooks), process notes (run parameters and timeline), data reconstruction (comparisons and validations), and raw data summary.</li>
