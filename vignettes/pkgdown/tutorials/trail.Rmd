@@ -54,6 +54,29 @@ qlm_compare()    →  Creates comparison linked to inputs
 qlm_trail()      →  Extracts and organizes all metadata
 ```
 
+## Testing branches
+
+After initial coding with `qlm_code()`, the workflow branches into different types of quality assessment:
+
+```
+                           ┌─── a) Robustness (test-retest reliability)
+                           │    qlm_replicate() → qlm_compare()
+                           │
+qlm_code() ────────────────┼─── b) Reliability (test-test across models)
+                           │    qlm_replicate(<alter settings>) → qlm_compare()
+                           │
+                           └─── c) Accuracy (vs. gold standard)
+                                qlm_validate()
+```
+
+**a) Robustness via repetition**: Run the same model and settings multiple times to establish test-retest reliability. Use `qlm_replicate()` with identical settings, then `qlm_compare()` to measure consistency.
+
+**b) Reliability via different models**: Compare results across different LLMs or temperatures to establish test-test reliability. Use `qlm_replicate()` with altered settings (e.g., different model, temperature), then `qlm_compare()` to assess agreement.
+
+**c) Accuracy versus a gold standard**: If human-coded gold standard data exists, use `qlm_validate()` to compute accuracy metrics (precision, recall, F1, etc.).
+
+`qlm_trail()` collects all these branches into a single trail object, providing a complete record of what was tested and how the results compare.
+
 ## Creating a trail
 
 Pass any quallmer objects to `qlm_trail()`:
