@@ -92,7 +92,6 @@ coded
 }
 \seealso{
 \code{\link[=qlm_code]{qlm_code()}} for applying codebooks to data,
-\link{data_codebook_sentiment}, \link{data_codebook_stance}, \link{data_codebook_ideology},
-\link{data_codebook_salience}, \link{data_codebook_fact} for predefined codebooks,
+\link{data_codebook_sentiment} for a predefined codebook example,
 \code{\link[=task]{task()}} for the deprecated function.
 }
