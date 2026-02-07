@@ -113,6 +113,70 @@
 "data_codebook_sentiment"
 
 
+#' Immigration policy codebook based on Benoit et al. (2016)
+#'
+#' A `qlm_codebook` object defining instructions for annotating whether a text
+#' pertains to immigration policy and, if so, the stance toward immigration
+#' openness. This codebook replicates the crowd-sourced annotation task from
+#' Benoit et al. (2016) and is designed to work with
+#' [data_corpus_manifsentsUK2010sample].
+#'
+#' @format A `qlm_codebook` object containing:
+#'   \describe{
+#'     \item{name}{Task name: "Immigration policy coding from Benoit et al. (2016)"}
+#'     \item{instructions}{Coding instructions for identifying whether sentences
+#'       from UK 2010 election manifestos pertain to immigration policy, and if so,
+#'       rating the policy position expressed}
+#'     \item{schema}{Response schema with two fields: `llm_immigration_label`
+#'       (Enum: "Not immigration" or "Immigration" indicating whether the sentence
+#'       relates to immigration policy), and `llm_immigration_position` (Integer
+#'       from -1 to 1, where -1 = pro-immigration, 0 = neutral, and 1 =
+#'       anti-immigration)}
+#'     \item{input_type}{"text"}
+#'     \item{levels}{Named character vector: llm_immigration_label = "nominal",
+#'       llm_immigration_position = "ordinal"}
+#'   }
+#'
+#' @references
+#' Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
+#' [Crowd-sourced Text Analysis:
+#' Reproducible and Agile Production of Political Data](https://doi.org/10.1017/S0003055416000058).
+#' *American Political Science Review*, 110(2), 278--295.
+#'
+#' @seealso [qlm_codebook()], [qlm_code()], [data_corpus_manifsentsUK2010sample]
+#' @keywords data
+#' @examples
+#' # View the codebook
+#' data_codebook_immigration
+#'
+#' \dontrun{
+#' # Use with UK manifesto sentences (requires API key)
+#' if (requireNamespace("quanteda", quietly = TRUE)) {
+#'   coded <- qlm_code(data_corpus_manifsentsUK2010sample,
+#'                     data_codebook_immigration,
+#'                     model = "openai/gpt-4o-mini")
+#'
+#'   # Compare with crowd-sourced annotations
+#'   crowd <- as_qlm_coded(
+#'     data.frame(
+#'       .id = docnames(data_corpus_manifsentsUK2010sample),
+#'       immigration_label = data_corpus_manifsentsUK2010sample$crowd_immigration_label,
+#'       immigration_position = as.integer(as.character(cut(
+#'         data_corpus_manifsentsUK2010sample$crowd_immigration_mean,
+#'         breaks = c(-Inf, -.5, .5, Inf),
+#'         labels = c(-1, 0, 1)
+#'       )))
+#'     ),
+#'     is_gold = TRUE
+#'   )
+#'
+#'   qlm_validate(coded, gold = crowd)
+#'
+#' }
+#' }
+"data_codebook_immigration"
+
+
 #' Stance detection codebook for climate change
 #'
 #' A `qlm_codebook` object defining instructions for detecting stance towards
