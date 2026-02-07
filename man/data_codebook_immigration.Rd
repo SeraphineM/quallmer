@@ -46,12 +46,7 @@ if (requireNamespace("quanteda", quietly = TRUE)) {
   crowd <- as_qlm_coded(
     data.frame(
       .id = docnames(data_corpus_manifsentsUK2010sample),
-      immigration_label = data_corpus_manifsentsUK2010sample$crowd_immigration_label,
-      immigration_position = as.integer(as.character(cut(
-        data_corpus_manifsentsUK2010sample$crowd_immigration_mean,
-        breaks = c(-Inf, -.5, .5, Inf),
-        labels = c(-1, 0, 1)
-      )))
+      docvars(data_corpus_manifsentsUK2010sample)
     ),
     is_gold = TRUE
   )

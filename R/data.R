@@ -18,18 +18,20 @@
 #'   \item{party}{factor; abbreviation of the party that wrote the manifesto.}
 #'   \item{partyname}{factor; party that wrote the manifesto.}
 #'   \item{year}{integer; 4-digit year of the election.}
-#'   \item{crowd_immigration_label}{Factor indicating whether the majority of
+#'   \item{immigration_label}{Factor indicating whether the majority of
 #'   crowd workers labelled a sentence as referring to immigration or not. The
 #'   variable has missing values (`NA`) for all non-annotated manifestos.}
-#'   \item{crowd_immigration_mean}{numeric; the direction
+#'   \item{immigration_mean}{numeric; the direction
 #'   of statements coded as "Immigration" based on the aggregated crowd codings.
 #'   The variable is the mean of the scores assigned by workers who coded a
 #'   sentence and who allocated the sentence to the "Immigration" category. The
 #'   variable ranges from -1 (Favorable and open immigration policy) to +1
 #'   ("Negative and closed immigration policy").}
-#'   \item{crowd_immigration_n}{integer; the number of coders who
-#'   contributed to the
-#'   mean score `crowd_immigration_mean`.}
+#'   \item{immigration_n}{integer; the number of coders who
+#'   contributed to the mean score `immigration_mean`.}
+#'   \item{immigration_position}{integer; a thresholded version of `immigration_mean`
+#'   coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 ≤ mean ≤ 0.5),
+#'   or 1 (anti-immigration, mean > 0.5). Set to `NA` for non-immigration sentences.}
 #'   }
 #' @references Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
 #'   [Crowd-sourced Text Analysis:
@@ -160,12 +162,7 @@
 #'   crowd <- as_qlm_coded(
 #'     data.frame(
 #'       .id = docnames(data_corpus_manifsentsUK2010sample),
-#'       immigration_label = data_corpus_manifsentsUK2010sample$crowd_immigration_label,
-#'       immigration_position = as.integer(as.character(cut(
-#'         data_corpus_manifsentsUK2010sample$crowd_immigration_mean,
-#'         breaks = c(-Inf, -.5, .5, Inf),
-#'         labels = c(-1, 0, 1)
-#'       )))
+#'       docvars(data_corpus_manifsentsUK2010sample)
 #'     ),
 #'     is_gold = TRUE
 #'   )
