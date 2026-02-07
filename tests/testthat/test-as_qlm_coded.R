@@ -121,6 +121,38 @@ test_that("as_qlm_coded.data.frame errors with invalid id column", {
   )
 })
 
+test_that("as_qlm_coded.data.frame supports NSE for id parameter", {
+  data <- data.frame(
+    doc_id = c("A", "B", "C"),
+    sentiment = c("pos", "neg", "pos")
+  )
+
+  # Test with bare name (NSE)
+  result_nse <- as_qlm_coded(data, id = doc_id, name = "test_nse")
+
+  # Check .id was created from doc_id
+  expect_true(".id" %in% names(result_nse))
+  expect_equal(result_nse$.id, c("A", "B", "C"))
+
+  # Test with quoted string (should work the same)
+  result_quoted <- as_qlm_coded(data, id = "doc_id", name = "test_quoted")
+
+  # Should produce identical results
+  expect_equal(result_nse$.id, result_quoted$.id)
+})
+
+test_that("as_qlm_coded.data.frame defaults to .id when id is NULL", {
+  data <- data.frame(
+    .id = c("X", "Y", "Z"),
+    sentiment = c("pos", "neg", "pos")
+  )
+
+  # Test with NULL (should use .id)
+  result <- as_qlm_coded(data, name = "test")
+
+  expect_equal(result$.id, c("X", "Y", "Z"))
+})
+
 
 # Test corpus method -----------------------------------------------------------
 
@@ -287,6 +319,44 @@ test_that("as_qlm_coded.corpus errors when corpus has no names and id is NULL", 
     as_qlm_coded(corpus_no_names),
     "no document names"
   )
+})
+
+test_that("as_qlm_coded.corpus supports NSE for id parameter", {
+  data("data_corpus_manifsentsUK2010sample")
+
+  # Test with bare name (NSE)
+  result_nse <- as_qlm_coded(
+    data_corpus_manifsentsUK2010sample,
+    id = party,
+    name = "crowd_nse"
+  )
+
+  # Check that party docvar was used as .id
+  docvars <- attr(data_corpus_manifsentsUK2010sample, "docvars")
+  expect_equal(result_nse$.id, docvars$party)
+  expect_false("party" %in% names(result_nse))
+
+  # Test with quoted string (should work the same)
+  result_quoted <- as_qlm_coded(
+    data_corpus_manifsentsUK2010sample,
+    id = "party",
+    name = "crowd_quoted"
+  )
+
+  # Should produce identical results
+  expect_equal(result_nse$.id, result_quoted$.id)
+  expect_equal(names(result_nse), names(result_quoted))
+})
+
+test_that("as_qlm_coded.corpus defaults to document names when id is NULL", {
+  data("data_corpus_manifsentsUK2010sample")
+
+  # Test with NULL (should use document names)
+  result <- as_qlm_coded(data_corpus_manifsentsUK2010sample, name = "crowd")
+
+  expect_equal(result$.id, names(data_corpus_manifsentsUK2010sample))
+  # All user docvars should be included
+  expect_true("party" %in% names(result))
 })
 
 

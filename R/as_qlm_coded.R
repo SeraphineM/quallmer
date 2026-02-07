@@ -40,7 +40,7 @@
 #' provenance tracking.
 #'
 #' @examples
-#' # Basic usage with data frame
+#' # Basic usage with data frame (default .id column)
 #' human_data <- data.frame(
 #'   .id = 1:10,
 #'   sentiment = sample(c("pos", "neg"), 10, replace = TRUE)
@@ -49,12 +49,15 @@
 #' coder_a <- as_qlm_coded(human_data, name = "Coder_A")
 #' coder_a
 #'
-#' # Use custom id column
+#' # Use custom id column with NSE (unquoted)
 #' data_with_custom_id <- data.frame(
 #'   doc_id = 1:10,
 #'   sentiment = sample(c("pos", "neg"), 10, replace = TRUE)
 #' )
-#' coder_custom <- as_qlm_coded(data_with_custom_id, id = "doc_id", name = "Coder_C")
+#' coder_custom <- as_qlm_coded(data_with_custom_id, id = doc_id, name = "Coder_C")
+#'
+#' # Or use quoted string
+#' coder_custom2 <- as_qlm_coded(data_with_custom_id, id = "doc_id", name = "Coder_D")
 #'
 #' # Create a gold standard from data frame
 #' gold <- as_qlm_coded(
@@ -70,8 +73,8 @@
 #' )
 #' coder_b <- as_qlm_coded(coder_b_data, name = "Coder_B")
 #'
-#' # No need for gold = when gold object is marked
-#' qlm_validate(coder_a, coder_b, gold, by = "sentiment", level = "nominal")
+#' # No need for gold = when gold object is marked (NSE works for 'by' too)
+#' qlm_validate(coder_a, coder_b, gold, by = sentiment, level = "nominal")
 #'
 #' # Create from corpus object (simplified workflow)
 #' data("data_corpus_manifsentsUK2010sample")
@@ -81,8 +84,15 @@
 #' )
 #' # Document names automatically become .id, all docvars included
 #'
-#' # Use a docvar as identifier
+#' # Use a docvar as identifier with NSE (unquoted)
 #' crowd_party <- as_qlm_coded(
+#'   data_corpus_manifsentsUK2010sample,
+#'   id = party,
+#'   is_gold = TRUE
+#' )
+#'
+#' # Or use quoted string
+#' crowd_party2 <- as_qlm_coded(
 #'   data_corpus_manifsentsUK2010sample,
 #'   id = "party",
 #'   is_gold = TRUE
@@ -119,10 +129,12 @@ as_qlm_coded <- function(x,
 
 
 #' @rdname as_qlm_coded
-#' @param id For data frames: Character string specifying which column contains
-#'   unit identifiers. Default is `".id"`. For corpus objects: defaults to
-#'   document names or or a character string specifying which docvar to use as
-#'   the .id variable.
+#' @param id For data frames: Name of the column containing unit identifiers
+#'   (supports both quoted and unquoted). Default is `NULL`, which looks for a
+#'   column named `".id"`. Can be an unquoted column name (`id = doc_id`) or a
+#'   quoted string (`id = "doc_id"`). For corpus objects: `NULL` (default) uses
+#'   document names from `names(x)`, or specify a docvar name (quoted or
+#'   unquoted) to use as identifiers.
 #' @param name Character. a string identifying this coding run (e.g., "Coder_A",
 #'   "expert_rater", "Gold_Standard"). Default is `NULL`.
 #' @param is_gold Logical. If `TRUE`, marks this object as a gold standard for
@@ -155,7 +167,7 @@ as_qlm_coded <- function(x,
 #' @export
 as_qlm_coded.data.frame <- function(
   x,
-  id = ".id",
+  id,
   name = NULL,
   is_gold = FALSE,
   codebook = NULL,
@@ -163,6 +175,26 @@ as_qlm_coded.data.frame <- function(
   notes = NULL,
   metadata = list()
 ) {
+  # Handle id parameter with NSE support
+  if (missing(id)) {
+    id <- ".id"
+  } else {
+    id <- tryCatch({
+      # Try to capture as symbol first (supports bare names)
+      rlang::as_string(rlang::ensym(id))
+    }, error = function(e) {
+      # If that fails, check if it's already a character string
+      if (is.character(id) && length(id) == 1) {
+        id
+      } else {
+        cli::cli_abort(c(
+          "Invalid {.arg id} argument.",
+          "i" = "Use an unquoted column name (e.g., {.code id = doc_id}) or a quoted string (e.g., {.code id = \"doc_id\"})."
+        ))
+      }
+    })
+  }
+
   # Validate and handle id column
   if (!id %in% names(x)) {
     cli::cli_abort(c(
@@ -236,7 +268,7 @@ as_qlm_coded.data.frame <- function(
 #' @export
 as_qlm_coded.corpus <- function(
   x,
-  id = names(x),
+  id,
   name = NULL,
   is_gold = FALSE,
   codebook = NULL,
@@ -268,11 +300,45 @@ as_qlm_coded.corpus <- function(
   }
 
   # Determine how to create .id column
-  # If id is a single string and matches a docvar name, use that docvar
-  # Otherwise, treat id as a vector of id values (default: document names)
-  if (length(id) == 1 && !is.na(id) && id %in% names(docvars)) {
+  if (missing(id)) {
+    # Default: use document names
+    doc_names <- names(x)
+    if (is.null(doc_names) || length(doc_names) == 0) {
+      cli::cli_abort(c(
+        "Corpus has no document names.",
+        "i" = "Specify {.arg id} parameter to use a docvar as identifier."
+      ))
+    }
+    id_col <- doc_names
+    data_cols <- docvars[, user_docvars, drop = FALSE]
+  } else {
+    # User specified an id - use NSE to capture it
+    id <- tryCatch({
+      # Try to capture as symbol first (supports bare names)
+      rlang::as_string(rlang::ensym(id))
+    }, error = function(e) {
+      # If that fails, check if it's already a character string
+      if (is.character(id) && length(id) == 1) {
+        id
+      } else {
+        cli::cli_abort(c(
+          "Invalid {.arg id} argument.",
+          "i" = "Use an unquoted docvar name (e.g., {.code id = party}) or a quoted string (e.g., {.code id = \"party\"})."
+        ))
+      }
+    })
+
+    # Check if the specified id is a docvar
+    if (!id %in% names(docvars)) {
+      cli::cli_abort(c(
+        "Specified {.arg id} docvar {.val {id}} not found in corpus.",
+        "i" = "Available docvars: {.val {names(docvars)}}"
+      ))
+    }
+
     # Use specified docvar as .id
     id_col <- docvars[[id]]
+
     # Remove id column from other data
     other_vars <- setdiff(user_docvars, id)
     if (length(other_vars) == 0) {
@@ -282,28 +348,6 @@ as_qlm_coded.corpus <- function(
       ))
     }
     data_cols <- docvars[, other_vars, drop = FALSE]
-  } else if (length(id) == 1) {
-    # Single string but not a docvar name - error
-    cli::cli_abort(c(
-      "Specified {.arg id} docvar {.val {id}} not found in corpus.",
-      "i" = "Available docvars: {.val {names(docvars)}}"
-    ))
-  } else {
-    # Use id as a vector of identifier values (default: names(x))
-    if (is.null(id) || length(id) == 0) {
-      cli::cli_abort(c(
-        "Corpus has no document names.",
-        "i" = "Specify {.arg id} parameter to use a docvar as identifier."
-      ))
-    }
-    if (length(id) != length(x)) {
-      cli::cli_abort(c(
-        "{.arg id} must have the same length as the corpus.",
-        "x" = "Corpus has {length(x)} documents but {.arg id} has {length(id)} values."
-      ))
-    }
-    id_col <- id
-    data_cols <- docvars[, user_docvars, drop = FALSE]
   }
 
   # Combine .id with other columns
