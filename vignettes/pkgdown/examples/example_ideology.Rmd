@@ -34,7 +34,7 @@ library(dplyr)
 library(ggplot2)
 ```
 
-The full corpus of 4,740 speeches is stored in the examples data folder (a 100-speech sample is available in the package as `data_speeches_ms2020_sample`):
+The full corpus of 4,740 speeches is stored in the examples data folder (a 100-speech sample is available in the package as `data_corpus_ms2020sample`):
 
 ```{r load-data}
 # Load full corpus from examples folder

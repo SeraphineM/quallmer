@@ -35,3 +35,35 @@ data_corpus_manifsentsUK2010sample <- data_corpus_manifsentsUK2010sample %>%
 
 usethis::use_data(data_corpus_manifsentsUK2010sample, overwrite = TRUE)
 
+## create the political speeches corpus (Maerz & Schneider 2020)
+
+# Load the full speeches dataset
+data_speeches_ms2020 <- readRDS("vignettes/pkgdown/examples/data/data_speeches_ms2020.rds")
+
+# Create a balanced sample of 100 speeches
+set.seed(1002)
+data_speeches_sample <- data_speeches_ms2020 |>
+  dplyr::group_by(regime) |>
+  dplyr::slice_sample(n = 50) |>
+  dplyr::ungroup()
+
+# Fix malformed 0x92 byte (Windows-1252 smart quote) by replacing with apostrophe
+data_speeches_sample <- data_speeches_sample |>
+  dplyr::mutate(dplyr::across(where(is.character), ~gsub("\x92", "'", .x, useBytes = TRUE)))
+
+# Convert date and regime to appropriate types
+data_speeches_sample <- data_speeches_sample |>
+  dplyr::mutate(
+    date = as.Date(date),
+    regime = factor(regime)
+  )
+
+# Convert to quanteda corpus (quanteda handles text normalization)
+data_corpus_ms2020sample <- quanteda::corpus(
+  data_speeches_sample,
+  docid_field = ".id",
+  text_field = "text"
+)
+
+usethis::use_data(data_corpus_ms2020sample, overwrite = TRUE)
+

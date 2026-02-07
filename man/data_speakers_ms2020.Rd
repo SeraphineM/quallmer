@@ -44,6 +44,6 @@ of government. \emph{Quality & Quantity}, 54, 517-545.
 \doi{10.1007/s11135-019-00885-7}
 }
 \seealso{
-\link{data_speeches_ms2020_sample}
+\link{data_corpus_ms2020sample}
 }
 \keyword{data}

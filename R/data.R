@@ -37,8 +37,10 @@
 #'   *American Political Science Review*, 100,(2), 278--295.
 #' @keywords data
 #' @examples
-#' # Inspect the corpus
-#' summary(data_corpus_manifsentsUK2010sample)
+#' if (requireNamespace("quanteda", quietly = TRUE)) {
+#'   # Inspect the corpus
+#'   summary(data_corpus_manifsentsUK2010sample)
+#' }
 "data_corpus_manifsentsUK2010sample"
 
 #' Sample from Large Movie Review Dataset (Maas et al. 2011)
@@ -63,11 +65,13 @@
 #' @seealso [data_codebook_sentiment] for an example codebook and usage with this corpus
 #' @keywords data
 #' @examples
-#' # Inspect the corpus
-#' summary(data_corpus_LMRDsample)
+#' if (requireNamespace("quanteda", quietly = TRUE)) {
+#'   # Inspect the corpus
+#'   summary(data_corpus_LMRDsample)
 #'
-#' # Sample a few reviews
-#' head(data_corpus_LMRDsample, 3)
+#'   # Sample a few reviews
+#'   head(data_corpus_LMRDsample, 3)
+#' }
 "data_corpus_LMRDsample"
 
 
@@ -134,7 +138,7 @@
 #' \doi{10.1007/s11135-019-00885-7}
 #'
 #' @source Replication data available at \url{https://dataverse.harvard.edu/dataverse/sfm}
-#' @seealso [data_speeches_ms2020_sample]
+#' @seealso [data_corpus_ms2020sample]
 #' @keywords data
 #' @examples
 #' # View the data
@@ -151,23 +155,24 @@
 "data_speakers_ms2020"
 
 
-#' Sample of political speeches from Maerz & Schneider (2020)
+#' Sample corpus of political speeches from Maerz & Schneider (2020)
 #'
-#' A sample of 100 speeches from the Maerz & Schneider (2020) corpus,
-#' balanced across speakers and regime types. This sample is included in
-#' the package for demos and testing. The full corpus of 4,740 speeches
-#' is available in the package's pkgdown examples folder.
+#' A corpus of 100 speeches from the Maerz & Schneider (2020) corpus,
+#' balanced across regime types (50 autocracies, 50 democracies). This sample
+#' is included in the package for demos and testing. The full corpus of 4,740
+#' speeches is available in the package's pkgdown examples folder.
 #'
-#' @format A data frame with 100 rows and 8 variables:
+#' @format A [corpus][quanteda::corpus] object.
+#'   The corpus consists of 100 speeches randomly sampled from 40 heads of
+#'   government across 27 countries, balanced by regime type. The corpus
+#'   contains the following document-level variables:
 #'   \describe{
-#'     \item{.id}{Integer. Unique identifier (from full corpus).}
 #'     \item{speaker}{Character. Name of the head of government.}
 #'     \item{country}{Character. Country name.}
-#'     \item{regime}{Character. Regime type: "Democracy" or "Autocracy".}
+#'     \item{regime}{Factor. Regime type: "Democracy" or "Autocracy".}
 #'     \item{score}{Numeric. Original dictionary-based liberal-illiberal score.}
 #'     \item{date}{Date. Date of the speech.}
 #'     \item{title}{Character. Title of the speech.}
-#'     \item{text}{Character. Full text of the speech.}
 #'   }
 #'
 #' @references
@@ -180,9 +185,14 @@
 #' @seealso [data_speakers_ms2020]
 #' @keywords data
 #' @examples
-#' # View the sample
-#' head(data_speeches_ms2020_sample)
+#' if (requireNamespace("quanteda", quietly = TRUE)) {
+#'   # Inspect the corpus
+#'   summary(data_corpus_ms2020sample, n = 10)
 #'
-#' # Speakers in the sample
-#' table(data_speeches_ms2020_sample$regime)
-"data_speeches_ms2020_sample"
+#'   # Regime distribution
+#'   table(data_corpus_ms2020sample$regime)
+#'
+#'   # View a sample speech
+#'   cat(data_corpus_ms2020sample[1])
+#' }
+"data_corpus_ms2020sample"
