@@ -141,11 +141,13 @@
 #' head(data_speakers_ms2020)
 #'
 #' # Plot ideology by regime type
-#' library(ggplot2)
-#' ggplot(data_speakers_ms2020, aes(x = reorder(speaker, score), y = score, color = regime)) +
-#'   geom_point() +
-#'   coord_flip() +
-#'   labs(x = NULL, y = "Illiberal - Liberal")
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   library(ggplot2)
+#'   ggplot(data_speakers_ms2020, aes(x = reorder(speaker, score), y = score, color = regime)) +
+#'     geom_point() +
+#'     coord_flip() +
+#'     labs(x = NULL, y = "Illiberal - Liberal")
+#' }
 "data_speakers_ms2020"
 
 

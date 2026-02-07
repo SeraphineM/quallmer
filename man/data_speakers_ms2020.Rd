@@ -29,11 +29,13 @@ for 40 heads of government, from Maerz & Schneider (2020).
 head(data_speakers_ms2020)
 
 # Plot ideology by regime type
-library(ggplot2)
-ggplot(data_speakers_ms2020, aes(x = reorder(speaker, score), y = score, color = regime)) +
-  geom_point() +
-  coord_flip() +
-  labs(x = NULL, y = "Illiberal - Liberal")
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  library(ggplot2)
+  ggplot(data_speakers_ms2020, aes(x = reorder(speaker, score), y = score, color = regime)) +
+    geom_point() +
+    coord_flip() +
+    labs(x = NULL, y = "Illiberal - Liberal")
+}
 }
 \references{
 Maerz, S. F., & Schneider, C. Q. (2020). Comparing public communication in
