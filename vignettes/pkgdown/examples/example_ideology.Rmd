@@ -1,9 +1,9 @@
 ---
-title: "Example: Ideology in political speeches"
+title: "Example: Illiberalism in political speeches"
 subtitle: "Replicating Maerz & Schneider (2020)"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Example: Ideology in political speeches}
+  %\VignetteIndexEntry{Example: Illiberalism in political speeches}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-This example replicates the ideology scaling from [Maerz & Schneider (2020)](https://doi.org/10.1007/s11135-019-00885-7) using LLM-based coding with quallmer, and compares the results to the original dictionary approach.
+This example replicates the scaling of ideology, considering a range of views consisting of liberalism and illiberalism, from [Maerz & Schneider (2020)](https://doi.org/10.1007/s11135-019-00885-7).  It uses LLM-based coding with **quallmer** and compares the results to those in the original article that used an index constructed on a dictionary approach.
 
 ## The original study
 
