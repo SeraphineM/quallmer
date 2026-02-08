@@ -53,6 +53,8 @@
 <h3 id="gold-standard-handling-and-validation-improvements-development-version">Gold standard handling and validation improvements<a class="anchor" aria-label="anchor" href="#gold-standard-handling-and-validation-improvements-development-version"></a></h3>
 <ul><li>New <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> function replaces <code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code> as the primary function for converting human-coded or external data to <code>qlm_coded</code> objects. The new function includes an <code>is_gold</code> parameter to mark gold standard objects for automatic detection.</li>
 <li>
+<code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> now supports quanteda corpus objects directly via S3 method dispatch. Document variables (docvars) are automatically converted to coded variables, with document names used as identifiers by default. This simplifies the workflow for corpus-based gold standards (#81).</li>
+<li>
 <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> now auto-detects gold standards marked with <code>as_qlm_coded(data, is_gold = TRUE)</code>, making the <code>gold =</code> parameter optional when using marked objects. Explicit <code>gold =</code> still works for backward compatibility.</li>
 <li>
 <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> signature changed to <code>qlm_validate(..., gold, by, ...)</code> to support validating multiple coded objects against a single gold standard in one call. Results include a <code>rater</code> column identifying each object.</li>
