@@ -89,12 +89,12 @@ The corpus contains the following document-level variables:</p><dl><dt>party</dt
 <dt>year</dt>
 <dd><p>integer; 4-digit year of the election.</p></dd>
 
-<dt>crowd_immigration_label</dt>
+<dt>immigration_label</dt>
 <dd><p>Factor indicating whether the majority of
 crowd workers labelled a sentence as referring to immigration or not. The
 variable has missing values (<code>NA</code>) for all non-annotated manifestos.</p></dd>
 
-<dt>crowd_immigration_mean</dt>
+<dt>immigration_mean</dt>
 <dd><p>numeric; the direction
 of statements coded as "Immigration" based on the aggregated crowd codings.
 The variable is the mean of the scores assigned by workers who coded a
@@ -102,10 +102,14 @@ sentence and who allocated the sentence to the "Immigration" category. The
 variable ranges from -1 (Favorable and open immigration policy) to +1
 ("Negative and closed immigration policy").</p></dd>
 
-<dt>crowd_immigration_n</dt>
+<dt>immigration_n</dt>
 <dd><p>integer; the number of coders who
-contributed to the
-mean score <code>crowd_immigration_mean</code>.</p></dd>
+contributed to the mean score <code>immigration_mean</code>.</p></dd>
+
+<dt>immigration_position</dt>
+<dd><p>integer; a thresholded version of <code>immigration_mean</code>
+coded as -1 (pro-immigration, mean &lt; -0.5), 0 (neutral, -0.5 ≤ mean ≤ 0.5),
+or 1 (anti-immigration, mean &gt; 0.5). Set to <code>NA</code> for non-immigration sentences.</p></dd>
 
 
 </dl></div>
