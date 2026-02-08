@@ -2,10 +2,35 @@
 % Please edit documentation in R/as_qlm_coded.R
 \name{as_qlm_coded}
 \alias{as_qlm_coded}
+\alias{as_qlm_coded.data.frame}
+\alias{as_qlm_coded.default}
 \title{Convert coded data to qlm_coded format}
 \usage{
 as_qlm_coded(
   x,
+  id,
+  name = NULL,
+  is_gold = FALSE,
+  codebook = NULL,
+  texts = NULL,
+  notes = NULL,
+  metadata = list()
+)
+
+\method{as_qlm_coded}{data.frame}(
+  x,
+  id,
+  name = NULL,
+  is_gold = FALSE,
+  codebook = NULL,
+  texts = NULL,
+  notes = NULL,
+  metadata = list()
+)
+
+\method{as_qlm_coded}{default}(
+  x,
+  id,
   name = NULL,
   is_gold = FALSE,
   codebook = NULL,
@@ -15,10 +40,20 @@ as_qlm_coded(
 )
 }
 \arguments{
-\item{x}{A data frame containing coded data. Must include a \code{.id}
-column for unit identifiers and one or more coded variables.}
+\item{x}{A data frame or quanteda corpus object containing coded data.
+For data frames: Must include a column with unit identifiers (default
+\code{".id"}).
+For corpus objects: Document variables (docvars) are treated as coded
+variables, and document names are used as identifiers by default.}
 
-\item{name}{Character string identifying this coding run (e.g., "Coder_A",
+\item{id}{For data frames: Name of the column containing unit identifiers
+(supports both quoted and unquoted). Default is \code{NULL}, which looks for a
+column named \code{".id"}. Can be an unquoted column name (\code{id = doc_id}) or a
+quoted string (\code{id = "doc_id"}). For corpus objects: \code{NULL} (default) uses
+document names from \code{names(x)}, or specify a docvar name (quoted or
+unquoted) to use as identifiers.}
+
+\item{name}{Character. a string identifying this coding run (e.g., "Coder_A",
 "expert_rater", "Gold_Standard"). Default is \code{NULL}.}
 
 \item{is_gold}{Logical. If \code{TRUE}, marks this object as a gold standard for
@@ -59,10 +94,10 @@ for provenance tracking. When \code{is_gold = TRUE}, the object is marked as
 a gold standard in its attributes.
 }
 \description{
-Converts a data frame of coded data (human-coded or from external sources)
-into a \code{qlm_coded} object. This enables provenance tracking and integration
-with \code{qlm_compare()}, \code{qlm_validate()}, and \code{qlm_trail()} for coded data
-alongside LLM-coded results.
+Converts a data frame or quanteda corpus of coded data (human-coded or from
+external sources) into a \code{qlm_coded} object. This enables provenance tracking
+and integration with \code{qlm_compare()}, \code{qlm_validate()}, and \code{qlm_trail()} for
+coded data alongside LLM-coded results.
 }
 \details{
 When printed, objects created with \code{as_qlm_coded()} display "Source: Human coder"
@@ -83,7 +118,7 @@ qlm_validate(coded1, coded2, gold = gold, by = "sentiment")
 }
 }
 \examples{
-# Basic usage
+# Basic usage with data frame (default .id column)
 human_data <- data.frame(
   .id = 1:10,
   sentiment = sample(c("pos", "neg"), 10, replace = TRUE)
@@ -92,7 +127,17 @@ human_data <- data.frame(
 coder_a <- as_qlm_coded(human_data, name = "Coder_A")
 coder_a
 
-# Create a gold standard
+# Use custom id column with NSE (unquoted)
+data_with_custom_id <- data.frame(
+  doc_id = 1:10,
+  sentiment = sample(c("pos", "neg"), 10, replace = TRUE)
+)
+coder_custom <- as_qlm_coded(data_with_custom_id, id = doc_id, name = "Coder_C")
+
+# Or use quoted string
+coder_custom2 <- as_qlm_coded(data_with_custom_id, id = "doc_id", name = "Coder_D")
+
+# Create a gold standard from data frame
 gold <- as_qlm_coded(
   human_data,
   name = "Expert",
@@ -106,8 +151,30 @@ coder_b_data <- data.frame(
 )
 coder_b <- as_qlm_coded(coder_b_data, name = "Coder_B")
 
-# No need for gold = when gold object is marked
-qlm_validate(coder_a, coder_b, gold, by = "sentiment", level = "nominal")
+# No need for gold = when gold object is marked (NSE works for 'by' too)
+qlm_validate(coder_a, coder_b, gold, by = sentiment, level = "nominal")
+
+# Create from corpus object (simplified workflow)
+data("data_corpus_manifsentsUK2010sample")
+crowd <- as_qlm_coded(
+  data_corpus_manifsentsUK2010sample,
+  is_gold = TRUE
+)
+# Document names automatically become .id, all docvars included
+
+# Use a docvar as identifier with NSE (unquoted)
+crowd_party <- as_qlm_coded(
+  data_corpus_manifsentsUK2010sample,
+  id = party,
+  is_gold = TRUE
+)
+
+# Or use quoted string
+crowd_party2 <- as_qlm_coded(
+  data_corpus_manifsentsUK2010sample,
+  id = "party",
+  is_gold = TRUE
+)
 
 # With complete metadata
 expert <- as_qlm_coded(
