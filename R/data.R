@@ -18,18 +18,20 @@
 #'   \item{party}{factor; abbreviation of the party that wrote the manifesto.}
 #'   \item{partyname}{factor; party that wrote the manifesto.}
 #'   \item{year}{integer; 4-digit year of the election.}
-#'   \item{crowd_immigration_label}{Factor indicating whether the majority of
+#'   \item{immigration_label}{Factor indicating whether the majority of
 #'   crowd workers labelled a sentence as referring to immigration or not. The
 #'   variable has missing values (`NA`) for all non-annotated manifestos.}
-#'   \item{crowd_immigration_mean}{numeric; the direction
+#'   \item{immigration_mean}{numeric; the direction
 #'   of statements coded as "Immigration" based on the aggregated crowd codings.
 #'   The variable is the mean of the scores assigned by workers who coded a
 #'   sentence and who allocated the sentence to the "Immigration" category. The
 #'   variable ranges from -1 (Favorable and open immigration policy) to +1
 #'   ("Negative and closed immigration policy").}
-#'   \item{crowd_immigration_n}{integer; the number of coders who
-#'   contributed to the
-#'   mean score `crowd_immigration_mean`.}
+#'   \item{immigration_n}{integer; the number of coders who
+#'   contributed to the mean score `immigration_mean`.}
+#'   \item{immigration_position}{integer; a thresholded version of `immigration_mean`
+#'   coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 ≤ mean ≤ 0.5),
+#'   or 1 (anti-immigration, mean > 0.5). Set to `NA` for non-immigration sentences.}
 #'   }
 #' @references Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
 #'   [Crowd-sourced Text Analysis:
@@ -115,6 +117,65 @@
 #' print(comparison)
 #' }
 "data_codebook_sentiment"
+
+
+#' Immigration policy codebook based on Benoit et al. (2016)
+#'
+#' A `qlm_codebook` object defining instructions for annotating whether a text
+#' pertains to immigration policy and, if so, the stance toward immigration
+#' openness. This codebook replicates the crowd-sourced annotation task from
+#' Benoit et al. (2016) and is designed to work with
+#' [data_corpus_manifsentsUK2010sample].
+#'
+#' @format A `qlm_codebook` object containing:
+#'   \describe{
+#'     \item{name}{Task name: "Immigration policy coding from Benoit et al. (2016)"}
+#'     \item{instructions}{Coding instructions for identifying whether sentences
+#'       from UK 2010 election manifestos pertain to immigration policy, and if so,
+#'       rating the policy position expressed}
+#'     \item{schema}{Response schema with two fields: `llm_immigration_label`
+#'       (Enum: "Not immigration" or "Immigration" indicating whether the sentence
+#'       relates to immigration policy), and `llm_immigration_position` (Integer
+#'       from -1 to 1, where -1 = pro-immigration, 0 = neutral, and 1 =
+#'       anti-immigration)}
+#'     \item{input_type}{"text"}
+#'     \item{levels}{Named character vector: llm_immigration_label = "nominal",
+#'       llm_immigration_position = "ordinal"}
+#'   }
+#'
+#' @references
+#' Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
+#' [Crowd-sourced Text Analysis:
+#' Reproducible and Agile Production of Political Data](https://doi.org/10.1017/S0003055416000058).
+#' *American Political Science Review*, 110(2), 278--295.
+#'
+#' @seealso [qlm_codebook()], [qlm_code()], [data_corpus_manifsentsUK2010sample]
+#' @keywords data
+#' @examples
+#' # View the codebook
+#' data_codebook_immigration
+#'
+#' \dontrun{
+#' # Use with UK manifesto sentences (requires API key)
+#' if (requireNamespace("quanteda", quietly = TRUE)) {
+#'   coded <- qlm_code(data_corpus_manifsentsUK2010sample,
+#'                     data_codebook_immigration,
+#'                     model = "openai/gpt-4o-mini")
+#'
+#'   # Compare with crowd-sourced annotations
+#'   crowd <- as_qlm_coded(
+#'     data.frame(
+#'       .id = docnames(data_corpus_manifsentsUK2010sample),
+#'       docvars(data_corpus_manifsentsUK2010sample)
+#'     ),
+#'     is_gold = TRUE
+#'   )
+#'
+#'   qlm_validate(coded, gold = crowd)
+#'
+#' }
+#' }
+"data_codebook_immigration"
 
 
 #' Speaker-level ideology scores from Maerz & Schneider (2020)

@@ -13,18 +13,20 @@ The corpus contains the following document-level variables: \describe{
 \item{party}{factor; abbreviation of the party that wrote the manifesto.}
 \item{partyname}{factor; party that wrote the manifesto.}
 \item{year}{integer; 4-digit year of the election.}
-\item{crowd_immigration_label}{Factor indicating whether the majority of
+\item{immigration_label}{Factor indicating whether the majority of
 crowd workers labelled a sentence as referring to immigration or not. The
 variable has missing values (\code{NA}) for all non-annotated manifestos.}
-\item{crowd_immigration_mean}{numeric; the direction
+\item{immigration_mean}{numeric; the direction
 of statements coded as "Immigration" based on the aggregated crowd codings.
 The variable is the mean of the scores assigned by workers who coded a
 sentence and who allocated the sentence to the "Immigration" category. The
 variable ranges from -1 (Favorable and open immigration policy) to +1
 ("Negative and closed immigration policy").}
-\item{crowd_immigration_n}{integer; the number of coders who
-contributed to the
-mean score \code{crowd_immigration_mean}.}
+\item{immigration_n}{integer; the number of coders who
+contributed to the mean score \code{immigration_mean}.}
+\item{immigration_position}{integer; a thresholded version of \code{immigration_mean}
+coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 ≤ mean ≤ 0.5),
+or 1 (anti-immigration, mean > 0.5). Set to \code{NA} for non-immigration sentences.}
 }
 }
 \usage{

@@ -33,6 +33,15 @@ library(quanteda.tidy)
 data_corpus_manifsentsUK2010sample <- data_corpus_manifsentsUK2010sample %>%
   select(contains("party"), year, contains("immigration"))
 
+data_corpus_manifsentsUK2010sample <- data_corpus_manifsentsUK2010sample %>%
+  rename(immigration_label = crowd_immigration_label,
+         immigration_mean = crowd_immigration_mean,
+         immigration_n = crowd_immigration_n) %>%
+  mutate(immigration_position = as.integer(as.character(cut(
+    data_corpus_manifsentsUK2010sample$crowd_immigration_mean,
+    breaks = c(-Inf, -.5, .5, Inf),
+    labels = c(-1, 0, 1)))))
+
 usethis::use_data(data_corpus_manifsentsUK2010sample, overwrite = TRUE)
 
 ## create the political speeches corpus (Maerz & Schneider 2020)
