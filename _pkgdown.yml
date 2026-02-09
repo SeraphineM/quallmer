@@ -39,14 +39,14 @@ navbar:
     examples:
       text: Examples
       menu:
-      - text: "Illiberalism in political speeches"
+      - text: Illiberalism in political speeches
         href: articles/pkgdown/examples/example_illiberalism.html
     reference:
       text: Reference
       href: reference/index.html
     github:
       icon: fab fa-github
-      href: https://github.com/SeraphineM/quallmer
+      href: https://github.com/quallmer/quallmer
       aria-label: View on GitHub
 
 # Exclude maintainer/contributor Markdown files from home pages

@@ -48,9 +48,8 @@ learning.**
 - Uses `instructions` and type specifications from
   [ellmer](https://ellmer.tidyverse.org/reference/type_boolean.html) to
   define coding instructions and output structure.
-- Example codebook objects (e.g., `data_codebook_sentiment`,
-  `data_codebook_stance`, `data_codebook_ideology`) demonstrate how to
-  use built-in codebooks for common qualitative coding tasks.
+- Example codebook objects (e.g., `data_codebook_sentiment`) demonstrate
+  how to use built-in codebooks for common qualitative coding tasks.
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
 
@@ -143,6 +142,37 @@ pak::pak("quallmer/quallmer")
 To learn more about how to use the package, please refer to our
 [step-by-step
 tutorials](https://quallmer.github.io/quallmer/articles/getting-started.html).
+
+## For package maintainers
+
+### Updating pkgdown articles
+
+The package uses a hybrid pkgdown build strategy to avoid API key issues
+in CI:
+
+- **CI automatically builds**: Reference docs, home page, and news
+- **You must build locally**: Articles (vignettes requiring API keys)
+
+To update articles:
+
+``` bash
+# Build all articles (automatically updates README.md first)
+make articles
+
+# Build a specific article
+make article NAME=pkgdown/getting-started/workflow
+
+# Deploy updated articles to gh-pages (automatically updates README.md first)
+make deploy-articles
+
+# Just update README.md from README.Rmd
+make readme
+```
+
+The `deploy-articles` target safely updates only the `articles/`
+directory on gh-pages without affecting other site content. Note that
+`make articles`, `make site`, and `make deploy-articles` automatically
+knit README.md before running, so you don’t forget to update it.
 
 ## Acknowledgments
 

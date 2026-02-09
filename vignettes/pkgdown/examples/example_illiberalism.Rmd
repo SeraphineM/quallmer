@@ -18,13 +18,13 @@ knitr::opts_chunk$set(
 )
 ```
 
-This example replicates the scaling of ideology, considering a range of views consisting of liberalism and illiberalism, from [Maerz & Schneider (2020)](https://doi.org/10.1007/s11135-019-00885-7).  It uses LLM-based coding with **quallmer** and compares the results to those in the original article that used an index constructed on a dictionary approach.
+This example replicates the scaling of ideology, considering a range of views consisting of liberalism and illiberalism, from [Maerz & Schneider (2019)](https://doi.org/10.1007/s11135-019-00885-7).  It uses LLM-based coding with **quallmer** and compares the results to those in the original article that used an index constructed on a dictionary approach.
 
 ## The original study
 
 Maerz and Schneider (2020) analyzed 4,740 speeches by 40 heads of government from 27 countries to measure liberal vs. illiberal rhetoric. The original study used a dictionary-based approach with 129 terms associated with liberal rhetoric (e.g., *free-*, *liberal-*, *tolera-*) or illiberal rhetoric (e.g., *anarch-*, *chaos*, *patriot-*).
 
-The key finding was that regime type (democracy vs. autocracy) predicts rhetorical style, with autocratic leaders using more illiberal language.
+The key finding was that language styles of political leaders correlate with regime type, with autocratic leaders using more illiberal language. 
 
 ## Loading packages and data
 
@@ -34,7 +34,7 @@ library(dplyr)
 library(ggplot2)
 ```
 
-The full corpus of 4,740 speeches is stored in the examples data folder (a 100-speech sample is available in the package as `data_corpus_ms2020sample`):
+We first load the full corpus of 4,740 speeches (a 100-speech sample is available in the package as `data_corpus_ms2020sample`):
 
 ```{r load-data}
 # Load full corpus from examples folder
@@ -42,11 +42,6 @@ data_speeches_ms2020 <- readRDS("data/data_speeches_ms2020.rds")
 
 # Full corpus
 dim(data_speeches_ms2020)
-
-# Preview
-data_speeches_ms2020 %>%
-  select(speaker, country, regime, score) %>%
-  head()
 
 # Speeches per speaker
 data_speeches_ms2020 %>%
@@ -192,6 +187,7 @@ llm_coded <- as_qlm_coded(
 
 ```{r compare}
 # Compare the two approaches
+# Set tolerance to 1 since the scales are different (z-scores) and we want to assess correlation rather than exact agreement (this affects the percent agreement metric)
 comparison <- qlm_compare(dictionary_coded, llm_coded, by = "score", level = "interval", tolerance = 1)
 comparison
 ```
