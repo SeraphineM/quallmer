@@ -197,34 +197,6 @@
 <p>To learn more about how to use the package, please refer to our <a href="https://quallmer.github.io/quallmer/articles/getting-started.html">step-by-step tutorials</a>.</p>
 </div>
 <div class="section level2">
-<h2 id="for-package-maintainers">For package maintainers<a class="anchor" aria-label="anchor" href="#for-package-maintainers"></a>
-</h2>
-<div class="section level3">
-<h3 id="updating-pkgdown-articles">Updating pkgdown articles<a class="anchor" aria-label="anchor" href="#updating-pkgdown-articles"></a>
-</h3>
-<p>The package uses a hybrid pkgdown build strategy to avoid API key issues in CI:</p>
-<ul>
-<li>
-<strong>CI automatically builds</strong>: Reference docs, home page, and news</li>
-<li>
-<strong>You must build locally</strong>: Articles (vignettes requiring API keys)</li>
-</ul>
-<p>To update articles:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Build all articles (automatically updates README.md first)</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">make</span> articles</span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Build a specific article</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">make</span> article NAME=pkgdown/getting-started/workflow</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="co"># Deploy updated articles to gh-pages (automatically updates README.md first)</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">make</span> deploy-articles</span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Just update README.md from README.Rmd</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="fu">make</span> readme</span></code></pre></div>
-<p>The <code>deploy-articles</code> target safely updates only the <code>articles/</code> directory on gh-pages without affecting other site content. Note that <code>make articles</code>, <code>make site</code>, and <code>make deploy-articles</code> automatically knit README.md before running, so you don’t forget to update it.</p>
-</div>
-</div>
-<div class="section level2">
 <h2 id="acknowledgments">Acknowledgments<a class="anchor" aria-label="anchor" href="#acknowledgments"></a>
 </h2>
 <p>Development of this package was assisted by <a href="https://claude.com/claude-code" class="external-link">Claude Code</a>, an AI coding assistant by Anthropic, for code refactoring, documentation updates, and package restructuring.</p>
