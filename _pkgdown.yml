@@ -39,8 +39,8 @@ navbar:
     examples:
       text: Examples
       menu:
-      - text: "Ideology in political speeches"
-        href: articles/pkgdown/examples/example_ideology.html
+      - text: "Illiberalism in political speeches"
+        href: articles/pkgdown/examples/example_illiberalism.html
     reference:
       text: Reference
       href: reference/index.html
