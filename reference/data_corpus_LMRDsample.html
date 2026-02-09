@@ -31,6 +31,10 @@ highly polar movie reviews."><meta property="og:image" content="https://quallmer
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials"><li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-examples"><li><a class="dropdown-item" href="../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -92,20 +96,27 @@ Y. Ng, and Christopher Potts. (2011). "<a href="http://ai.stanford.edu/~amaas/pa
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Inspect the corpus</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    Length    Class1    Class2      Mode </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       200    corpus character character </span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"quanteda"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="co"># Inspect the corpus</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Sample a few reviews</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span>, <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Corpus consisting of 3 documents.</span>
+<span class="r-in"><span>  <span class="co"># Sample a few reviews</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span>, <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Registered S3 methods overwritten by 'quanteda':</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   method       from    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [.corpus     quallmer</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   print.corpus quallmer</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Corpus consisting of 3 documents and 3 docvars.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1035_3.txt :</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> "A frustrating documentary. Louis Kahn's son, who saw his fat..."</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Docvars: docnumber, rating, polarity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3540_3.txt :</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> "I truly was disappointed by this film which I had high hopes..."</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1035_3.txt: A frustrating documentary. Louis Kahn's son, who saw his father onl...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3540_3.txt: I truly was disappointed by this film which I had high hopes for. I...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [ ... and 1 more document ]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4526_4.txt :</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> "Rather foolish attempt at a Hitchcock-type mystery-thriller,..."</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

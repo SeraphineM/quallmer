@@ -41,6 +41,10 @@ information on the crowd-sourced annotation  approach."><meta property="og:image
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials"><li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-examples"><li><a class="dropdown-item" href="../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -122,10 +126,215 @@ or 1 (anti-immigration, mean &gt; 0.5). Set to <code>NA</code> for non-immigrati
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Inspect the corpus</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">data_corpus_manifsentsUK2010sample</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    Length    Class1    Class2      Mode </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       155    corpus character character </span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"quanteda"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="co"># Inspect the corpus</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">data_corpus_manifsentsUK2010sample</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Corpus consisting of 155 documents, showing 100 documents:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                Text Types Tokens Sentences     party               partyname</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_345    17     18         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_278    15     15         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_215    28     30         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_245    17     21         3       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       BNP_2010_1086    34     37         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_373    58     79         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_408    24     31         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_239    25     35         3       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_223    23     24         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_416    31     35         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_285    32     34         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_355    26     28         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_346    28     33         3 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_284    44     51         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_351    34     40         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_356    17     19         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_349    10     11         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_335    16     16         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Con_2010_1154    29     31         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Con_2010_1155    25     29         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_328    12     12         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_330    22     28         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_331    34     38         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_332    13     15         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_854    25     30         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_852    33     38         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_834    25     26         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_833    21     22         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_848    32     40         2    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_836    22     26         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_842    39     48         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_821    17     20         2       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_834    19     21         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Lab_2010_1319    32     38         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_839    31     36         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_841    30     40         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_832    17     18         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_730    24     24         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_825    27     30         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Lab_2010_742    28     32         1       Lab            Labour Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_666    12     12         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_625    31     35         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_660    25     27         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_678     9     10         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_661    12     12         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_671    33     36         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_669    12     12         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_667    17     17         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_662    17     19         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         LD_2010_680    34     41         1        LD       Liberal Demoracts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         PC_2010_295    30     37         1        PC             Plaid Cymru</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         PC_2010_294    19     21         1        PC             Plaid Cymru</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         PC_2010_292    18     18         1        PC             Plaid Cymru</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         PC_2010_296    22     23         1        PC             Plaid Cymru</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        SNP_2010_212    35     39         1       SNP Scottish National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        SNP_2010_211    25     28         1       SNP Scottish National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_123    29     33         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_335    19     19         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_333    17     18         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_126    23     27         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_308    13     14         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_118    21     21         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_132    28     31         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_134     8      8         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_105    23     23         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       UKIP_2010_106    19     20         1      UKIP   UK Independence Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       BNP_2010_1153    38     46         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_720    10     10         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       BNP_2010_1032    19     19         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_687    25     27         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_241    32     35         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_658    26     28         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_616    14     14         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_315    20     21         2       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        BNP_2010_662    20     21         1       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       BNP_2010_1151    36     44         2       BNP  British National Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_453    41     46         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_529    25     30         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_119    14     14         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_422    22     23         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_562    25     27         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Coalition_2010_91    26     31         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_420    25     28         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_582    31     33         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_240    16     16         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Coalition_2010_410    11     14         1 Coalition     Coalition Agreement</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_467    10     10         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_821    12     12         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_120    19     27         3       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       Con_2010_1081    20     20         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_199    20     20         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_173    29     32         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_384    29     36         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_681    26     27         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_613    27     30         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        Con_2010_187    14     14         1       Con      Conservative Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_264    25     28         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_698    17     18         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_151    16     17         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Greens_2010_279     7      7         1    Greens             Green Party</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  year immigration_label immigration_mean immigration_n immigration_position</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000            10                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.39024390            45                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.90476190            35                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             6                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.33333333             6                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.40000000            10                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             9                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.83333333             9                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             6                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -1.00000000             9                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.28571429             9                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.33333333             6                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -1.00000000            11                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.60000000             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.83333333             7                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -1.00000000             6                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.75000000             8                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.66666667             6                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.50000000             7                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.94736842            49                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.66666667            10                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.50000000             6                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.85000000            50                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.59459459            39                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.90322581            36                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.06976744            49                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.20000000             9                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.57894737            53                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             6                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.33333333             6                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.33333333             6                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.66666667             7                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.40000000             7                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.33333333             6                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.57142857             9                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.59183673            56                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.16666667             7                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.83333333             7                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.27272727            46                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.75862069            39                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.40000000            10                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.67647059            39                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.16666667             7                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -1.00000000             6                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.84375000            44                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.83333333            42                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.50000000             7                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.00000000             7                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.94736842            48                   -1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration      -0.21621622            46                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.66666667            45                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.91666667            36                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             7                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.50000000            48                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.25000000             7                    0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             6                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       1.00000000             7                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.83333333             7                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010       Immigration       0.66666667             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration       1.00000000             9                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration       1.00000000             7                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration       1.00000000             8                    1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA            40                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  2010   Not immigration               NA             6                   NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
