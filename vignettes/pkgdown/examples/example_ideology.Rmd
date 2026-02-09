@@ -64,7 +64,6 @@ codebook_ideology <- qlm_codebook(
   name = "Liberal-illiberal rhetoric",
   instructions = paste(
     "Analyze the rhetorical style of this political speech.",
-    "Rate how liberal or illiberal the rhetoric is on a scale from -10 to +10:",
     "",
     "ILLIBERAL rhetoric (negative scores) includes:",
     "- Nationalism and patriotic appeals",
@@ -83,7 +82,7 @@ codebook_ideology <- qlm_codebook(
     "A score of 0 indicates neutral or mixed rhetoric."
   ),
   schema = ellmer::type_object(
-    score = ellmer::type_number(
+    score = ellmer::type_integer(
       description = "Rhetoric score from -10 (illiberal) to +10 (liberal)"
     ),
     explanation = ellmer::type_string(
@@ -193,7 +192,7 @@ llm_coded <- as_qlm_coded(
 
 ```{r compare}
 # Compare the two approaches
-comparison <- qlm_compare(dictionary_coded, llm_coded, by = "score", level = "interval")
+comparison <- qlm_compare(dictionary_coded, llm_coded, by = "score", level = "interval", tolerance = 1)
 comparison
 ```
 
@@ -223,6 +222,7 @@ plot_data <- speaker_scores %>%
 # Create comparison plot
 ggplot(plot_data, aes(x = reorder(speaker, score), y = score,
                        color = regime, shape = method)) +
+  geom_line(aes(group = speaker), linewidth = 0.3, alpha = 0.5) +
   geom_point(size = 3, alpha = 0.8) +
   geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
   scale_color_manual(

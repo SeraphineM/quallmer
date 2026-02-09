@@ -178,44 +178,6 @@
 "data_codebook_immigration"
 
 
-#' Speaker-level ideology scores from Maerz & Schneider (2020)
-#'
-#' A dataset containing dictionary-based liberal-illiberal rhetoric scores
-#' for 40 heads of government, from Maerz & Schneider (2020).
-#'
-#' @format A data frame with 40 rows and 5 variables:
-#'   \describe{
-#'     \item{speaker}{Character. Name of the head of government.}
-#'     \item{regime}{Character. Regime type: "Democracy" or "Autocracy".}
-#'     \item{country}{Character. Country name.}
-#'     \item{n_speeches}{Integer. Number of speeches analyzed.}
-#'     \item{score}{Numeric. Liberal-illiberal rhetoric score (negative = illiberal, positive = liberal).}
-#'   }
-#'
-#' @references
-#' Maerz, S. F., & Schneider, C. Q. (2020). Comparing public communication in
-#' democracies and autocracies: Automated text analyses of speeches by heads
-#' of government. *Quality & Quantity*, 54, 517-545.
-#' \doi{10.1007/s11135-019-00885-7}
-#'
-#' @source Replication data available at \url{https://dataverse.harvard.edu/dataverse/sfm}
-#' @seealso [data_corpus_ms2020sample]
-#' @keywords data
-#' @examples
-#' # View the data
-#' head(data_speakers_ms2020)
-#'
-#' # Plot ideology by regime type
-#' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   library(ggplot2)
-#'   ggplot(data_speakers_ms2020, aes(x = reorder(speaker, score), y = score, color = regime)) +
-#'     geom_point() +
-#'     coord_flip() +
-#'     labs(x = NULL, y = "Illiberal - Liberal")
-#' }
-"data_speakers_ms2020"
-
-
 #' Sample corpus of political speeches from Maerz & Schneider (2020)
 #'
 #' A corpus of 100 speeches from the Maerz & Schneider (2020) corpus,
@@ -243,7 +205,6 @@
 #' \doi{10.1007/s11135-019-00885-7}
 #'
 #' @source Replication data available at \url{https://dataverse.harvard.edu/dataverse/sfm}
-#' @seealso [data_speakers_ms2020]
 #' @keywords data
 #' @examples
 #' if (requireNamespace("quanteda", quietly = TRUE)) {

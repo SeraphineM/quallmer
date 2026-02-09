@@ -48,7 +48,4 @@ democracies and autocracies: Automated text analyses of speeches by heads
 of government. \emph{Quality & Quantity}, 54, 517-545.
 \doi{10.1007/s11135-019-00885-7}
 }
-\seealso{
-\link{data_speakers_ms2020}
-}
 \keyword{data}
