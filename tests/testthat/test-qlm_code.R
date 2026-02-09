@@ -148,19 +148,8 @@ test_that("qlm_code routes arguments correctly", {
 test_that("qlm_code works with predefined codebooks", {
   skip_if_not_installed("ellmer")
 
-  # All predefined codebooks should be valid
-  codebooks <- list(
-    data_codebook_sentiment,
-    data_codebook_stance,
-    data_codebook_ideology,
-    data_codebook_salience,
-    data_codebook_fact
-  )
-
-  for (codebook in codebooks) {
-    expect_true(inherits(codebook, "qlm_codebook"))
-    # All should be accepted by qlm_code (can't test execution)
-  }
+  # Predefined codebook should be valid
+  expect_true(inherits(data_codebook_sentiment, "qlm_codebook"))
 })
 
 

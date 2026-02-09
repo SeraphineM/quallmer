@@ -161,14 +161,6 @@ test_that("qlm_codebook role parameter works correctly", {
 test_that("predefined codebooks are qlm_codebook objects", {
   skip_if_not_installed("ellmer")
 
-  # All predefined codebooks should be qlm_codebook objects
+  # Predefined codebook should be qlm_codebook object
   expect_true(inherits(data_codebook_sentiment, "qlm_codebook"))
-
-  expect_true(inherits(data_codebook_stance, "qlm_codebook"))
-
-  expect_true(inherits(data_codebook_ideology, "qlm_codebook"))
-
-  expect_true(inherits(data_codebook_salience, "qlm_codebook"))
-
-  expect_true(inherits(data_codebook_fact, "qlm_codebook"))
 })

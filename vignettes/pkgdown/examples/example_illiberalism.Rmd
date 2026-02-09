@@ -1,0 +1,304 @@
+---
+title: "Example: Illiberalism in political speeches"
+subtitle: "Replicating Maerz & Schneider (2020)"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Example: Illiberalism in political speeches}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 6
+)
+```
+
+This example replicates the scaling of ideology, considering a range of views consisting of liberalism and illiberalism, from [Maerz & Schneider (2020)](https://doi.org/10.1007/s11135-019-00885-7).  It uses LLM-based coding with **quallmer** and compares the results to those in the original article that used an index constructed on a dictionary approach.
+
+## The original study
+
+Maerz and Schneider (2020) analyzed 4,740 speeches by 40 heads of government from 27 countries to measure liberal vs. illiberal rhetoric. The original study used a dictionary-based approach with 129 terms associated with liberal rhetoric (e.g., *free-*, *liberal-*, *tolera-*) or illiberal rhetoric (e.g., *anarch-*, *chaos*, *patriot-*).
+
+The key finding was that regime type (democracy vs. autocracy) predicts rhetorical style, with autocratic leaders using more illiberal language.
+
+## Loading packages and data
+
+```{r packages, message=FALSE, warning=FALSE}
+library(quallmer)
+library(dplyr)
+library(ggplot2)
+```
+
+The full corpus of 4,740 speeches is stored in the examples data folder (a 100-speech sample is available in the package as `data_corpus_ms2020sample`):
+
+```{r load-data}
+# Load full corpus from examples folder
+data_speeches_ms2020 <- readRDS("data/data_speeches_ms2020.rds")
+
+# Full corpus
+dim(data_speeches_ms2020)
+
+# Preview
+data_speeches_ms2020 %>%
+  select(speaker, country, regime, score) %>%
+  head()
+
+# Speeches per speaker
+data_speeches_ms2020 %>%
+  count(speaker, regime) %>%
+  arrange(desc(n)) %>%
+  head(10)
+```
+
+## The codebook
+
+We create a codebook that operationalizes the liberal-illiberal concept from the original study:
+
+```{r codebook}
+codebook_ideology <- qlm_codebook(
+  name = "Liberal-illiberal rhetoric",
+  instructions = paste(
+    "Analyze the rhetorical style of this political speech.",
+    "",
+    "ILLIBERAL rhetoric (negative scores) includes:",
+    "- Nationalism and patriotic appeals",
+    "- Paternalism and appeals to tradition",
+    "- Emphasis on order, stability, and security",
+    "- In-group/out-group distinctions",
+    "- Rejection of pluralism",
+    "",
+    "LIBERAL rhetoric (positive scores) includes:",
+    "- Individual rights and freedoms",
+    "- Tolerance and pluralism",
+    "- Civil liberties and minority rights",
+    "- Democratic values and rule of law",
+    "- Open society principles",
+    "",
+    "A score of 0 indicates neutral or mixed rhetoric."
+  ),
+  schema = ellmer::type_object(
+    score = ellmer::type_integer(
+      description = "Rhetoric score from -10 (illiberal) to +10 (liberal)"
+    ),
+    explanation = ellmer::type_string(
+      description = "Brief explanation of the assigned score"
+    )
+  ),
+  role = "You are an expert political scientist analyzing political rhetoric.",
+  input_type = "text"
+)
+
+codebook_ideology
+```
+
+## Running the LLM analysis
+
+We code all 4,740 speeches using GPT-4o-mini:
+
+```{r code-all, eval=FALSE}
+coded_speeches <- qlm_code(
+  data_speeches_ms2020$text,
+  codebook = codebook_ideology,
+  model = "openai/gpt-4o-mini",
+  name = "gpt4o_mini_ideology",
+  notes = "LLM coding of 4,740 speeches for liberal-illiberal rhetoric"
+)
+
+# Save results
+saveRDS(coded_speeches, "data/coded_ideology_gpt4o.rds")
+```
+
+```{r load-coded, echo=FALSE}
+# Load pre-computed results
+coded_speeches <- readRDS("data/coded_ideology_gpt4o.rds")
+```
+
+Here's a random sample of 10 coded speeches with metadata:
+
+```{r sample-results}
+set.seed(42)
+sample_ids <- sample(data_speeches_ms2020$.id, 10)
+
+data_speeches_ms2020 %>%
+  filter(.id %in% sample_ids) %>%
+  select(.id, speaker, country, regime) %>%
+  left_join(
+    as.data.frame(coded_speeches) %>% select(.id, llm_score = score, explanation),
+    by = ".id"
+  ) %>%
+  knitr::kable(
+    col.names = c("ID", "Speaker", "Country", "Regime", "Score", "Explanation"),
+    caption = "Random sample of 10 coded speeches"
+  )
+```
+
+## Aggregating to speaker level
+
+The original study aggregates speech-level dictionary counts to speaker-level scores using a log-odds transformation (Lowe et al., 2011):
+
+$$\mu = \log\left(\frac{L + a}{I + a}\right)$$
+
+where $L$ and $I$ are counts of liberal and illiberal dictionary terms, and $a = 0.5$ is a Jeffreys prior. Since the LLM uses a -10 to +10 scale, we standardize both to z-scores for comparison:
+
+```{r aggregate}
+# Combine coded results with metadata
+coded_with_meta <- data_speeches_ms2020 %>%
+  select(.id, speaker, country, regime, dictionary_score = score) %>%
+  left_join(
+    as.data.frame(coded_speeches) %>% select(.id, llm_score = score),
+    by = ".id"
+  )
+
+# Aggregate to speaker level (mean score per speaker)
+speaker_scores <- coded_with_meta %>%
+  group_by(speaker, country, regime) %>%
+  summarise(
+    n_speeches = n(),
+    dictionary_score = mean(dictionary_score),
+    llm_score = mean(llm_score, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # Standardize both scores to z-scores for comparison
+  mutate(
+    dictionary_z = scale(dictionary_score)[,1],
+    llm_z = scale(llm_score)[,1]
+  ) %>%
+  arrange(dictionary_score)
+
+head(speaker_scores)
+```
+
+## Comparing dictionary and LLM approaches
+
+We use `qlm_compare()` to assess inter-rater reliability between the two approaches at the speaker level:
+
+```{r create-coded-objects}
+# Create qlm_coded objects for comparison (using z-scores)
+dictionary_coded <- as_qlm_coded(
+  speaker_scores %>% select(.id = speaker, score = dictionary_z),
+  name = "dictionary_ms2020"
+)
+
+llm_coded <- as_qlm_coded(
+  speaker_scores %>% select(.id = speaker, score = llm_z),
+  name = "gpt4o_mini_aggregated"
+)
+```
+
+```{r compare}
+# Compare the two approaches
+comparison <- qlm_compare(dictionary_coded, llm_coded, by = "score", level = "interval", tolerance = 1)
+comparison
+```
+
+The comparison reveals a strong positive correlation between the dictionary-based and LLM-based approaches. The Pearson's *r* and ICC values indicate that both methods capture similar underlying variation in liberal-illiberal rhetoric across speakers. This suggests that LLM-based coding can serve as a viable alternative to traditional dictionary approaches, while offering additional benefits such as contextual interpretation and explicit justifications for each score.
+
+Importantly, perfect agreement is not expected: the dictionary approach counts keyword occurrences, while the LLM evaluates rhetorical style holistically. The observed correlation demonstrates convergent validity — both methods measure related but not identical aspects of the liberal-illiberal dimension.
+
+## Replicating Figure 1
+
+Figure 1 from the original paper shows each leader's position on the illiberal-liberal scale. We create a comparison showing both approaches using standardized scores:
+
+```{r figure1-comparison, fig.height=12, fig.width=10}
+# Prepare data for plotting (using z-scores for comparability)
+plot_data <- speaker_scores %>%
+  tidyr::pivot_longer(
+    cols = c(dictionary_z, llm_z),
+    names_to = "method",
+    values_to = "score"
+  ) %>%
+  mutate(
+    method = case_when(
+      method == "dictionary_z" ~ "Dictionary (original)",
+      method == "llm_z" ~ "LLM (GPT-4o-mini)"
+    )
+  )
+
+# Create comparison plot
+ggplot(plot_data, aes(x = reorder(speaker, score), y = score,
+                       color = regime, shape = method)) +
+  geom_line(aes(group = speaker), linewidth = 0.3, alpha = 0.5) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_hline(yintercept = 0, linetype = "dashed", alpha = 0.5) +
+  scale_color_manual(
+    name = "Regime type",
+    values = c("Autocracy" = "#FF3300", "Democracy" = "#00CC00")
+  ) +
+  scale_shape_manual(
+    name = "Method",
+    values = c("Dictionary (original)" = 16, "LLM (GPT-4o-mini)" = 17)
+  ) +
+  labs(
+    x = NULL,
+    y = "Illiberal ← → Liberal rhetoric (z-score)",
+    title = "Ideology scores by speaker: Dictionary vs. LLM",
+    subtitle = "Both scores standardized to z-scores for comparison"
+  ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "vertical",
+    panel.grid.major.y = element_blank()
+  )
+```
+
+*Note:* Regime classifications are based on V-Dem's `v2x_regime` variable and correspond to the years mostly covered by the speeches for each speaker. For more details, see the [original paper](https://doi.org/10.1007/s11135-019-00885-7).
+
+## Scatter plot: Dictionary vs. LLM scores
+
+A direct comparison of the two scoring methods using standardized scores:
+
+```{r scatter, fig.height=7, fig.width=8}
+ggplot(speaker_scores, aes(x = dictionary_z, y = llm_z, color = regime)) +
+  geom_point(size = 4, alpha = 0.8) +
+  geom_smooth(method = "lm", se = TRUE, color = "gray40", linetype = "dashed") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dotted", alpha = 0.5) +
+  scale_color_manual(
+    name = "Regime type",
+    values = c("Autocracy" = "#FF3300", "Democracy" = "#00CC00")
+  ) +
+  labs(
+    x = "Dictionary score (z-score)",
+    y = "LLM score (z-score)",
+    title = "Dictionary vs. LLM ideology scores",
+    subtitle = "Both standardized; dotted = perfect agreement; dashed = linear fit"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+The scatter plot shows the relationship between the two scoring methods at the speaker level. Points close to the dotted diagonal line indicate strong agreement between methods. The color separation confirms the original study's finding: autocratic leaders (red) cluster toward the illiberal end, while democratic leaders (green) tend toward more liberal rhetoric.
+
+The linear fit (dashed line) closely follows the diagonal, indicating that the methods not only correlate but also produce comparable scales after z-score standardization. Deviations from the diagonal highlight cases where the LLM's contextual interpretation differs from the dictionary's keyword-based assessment — these cases may warrant qualitative inspection of the LLM's explanations to understand the discrepancy.
+
+## Creating the audit trail
+
+Document the complete analysis:
+
+```{r trail, eval=FALSE}
+qlm_trail(coded_speeches, path = "ideology_replication")
+```
+
+This creates two files:
+
+- `ideology_replication.rds`: Complete trail object containing all coding runs, codebooks, and metadata (reloadable with `readRDS()`)
+- `ideology_replication.qmd`: Quarto document with full audit trail documentation following Lincoln and Guba's (1985) framework, including instrument development, process notes, and replication code
+
+## Conclusion
+
+This replication demonstrates:
+
+1. **Comparable results**: The LLM approach produces scores that correlate with the original dictionary method
+2. **Context sensitivity**: LLMs can capture rhetorical nuances that keyword-based dictionaries miss
+3. **Justifications**: LLMs provide explanations for their scores, enhancing interpretability and transparency. 
+4. **Transparency**: The original dictionary approach remains valuable for its transparency and reproducibility. The LLM coding is documented with an audit trail, ensuring that the process is transparent and traceable.
+
+## References
+
+Maerz, S. F., & Schneider, C. Q. (2020). Comparing public communication in democracies and autocracies: Automated text analyses of speeches by heads of government. *Quality & Quantity*, 54, 517–545. https://doi.org/10.1007/s11135-019-00885-7

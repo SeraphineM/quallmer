@@ -28,8 +28,7 @@
 #'   codebook to data.
 #'
 #' @seealso [qlm_code()] for applying codebooks to data,
-#'   [data_codebook_sentiment], [data_codebook_stance], [data_codebook_ideology],
-#'   [data_codebook_salience], [data_codebook_fact] for predefined codebooks,
+#'   [data_codebook_sentiment] for a predefined codebook example,
 #'   [task()] for the deprecated function.
 #'
 #' @examples
