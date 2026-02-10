@@ -38,6 +38,7 @@ Then, you can load the package and begin using its functions.
 ``` r
 library(quallmer)
 #> Loading required package: ellmer
+#> Warning: package 'ellmer' was built under R version 4.5.2
 ```
 
 ## The quallmer workflow

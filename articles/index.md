@@ -2,6 +2,8 @@
 
 ### All vignettes
 
+- [Example: Illiberalism in political
+  speeches](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_illiberalism.md):
 - [Example: Sentiment
   analysis](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_sentiment.md):
 - [Getting started with

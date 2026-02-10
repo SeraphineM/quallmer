@@ -13,11 +13,13 @@ people who left these reviews, from the original dataset.
 library(quanteda.tidy)
 ```
 
+    ## Warning: package 'quanteda.tidy' was built under R version 4.5.2
+
     ## Loading required package: quanteda
 
     ## Package version: 4.3.1
-    ## Unicode version: 15.1
-    ## ICU version: 74.2
+    ## Unicode version: 14.0
+    ## ICU version: 71.1
 
     ## Parallel computing: disabled
 
@@ -33,6 +35,8 @@ library(quanteda.tidy)
 ``` r
 library(dplyr)
 ```
+
+    ## Warning: package 'dplyr' was built under R version 4.5.2
 
     ## 
     ## Attaching package: 'dplyr'
@@ -51,10 +55,17 @@ library(dplyr)
 
 ``` r
 library(tidyr)
+```
+
+    ## Warning: package 'tidyr' was built under R version 4.5.2
+
+``` r
 library(quallmer)
 ```
 
     ## Loading required package: ellmer
+
+    ## Warning: package 'ellmer' was built under R version 4.5.2
 
 ``` r
 # inspect the labelled data

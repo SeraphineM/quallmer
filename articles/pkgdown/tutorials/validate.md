@@ -17,14 +17,15 @@ To install it:
 
 ``` r
 # install.packages("pak")
-pak::pak("SeraphineM/quallmer.app")
+pak::pak("quallmer/quallmer.app")
 ```
 
 ## Launching the quallmer app
 
 To launch the quallmer app, load the `quallmer.app` package and call the
-`qlm_app()` function. This will open the quallmer app in a new window or
-tab in your web browser.
+[`qlm_app()`](https://rdrr.io/pkg/quallmer.app/man/qlm_app.html)
+function. This will open the quallmer app in a new window or tab in your
+web browser.
 
 ``` r
 library(quallmer.app)

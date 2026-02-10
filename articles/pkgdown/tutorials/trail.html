@@ -46,10 +46,14 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
-<li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
+<li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
+  </ul>
+</li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-examples">
+<li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
@@ -59,7 +63,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../../../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/SeraphineM/quallmer" aria-label="View on GitHub"><span class="fa fab fa-github"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/quallmer/quallmer" aria-label="View on GitHub"><span class="fa fab fa-github"></span></a></li>
       </ul>
 </div>
 
@@ -81,344 +85,220 @@
 
     
     
-<p>The quallmer trail system creates complete audit trails following
-Lincoln and Guba’s (1985) concept for establishing trustworthiness in
-qualitative research. It automatically captures the full decision
-history of your coding workflow, supporting the confirmability and
-dependability criteria that allow others to trace the logic of your
-analytical decisions.</p>
+<p>The <code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code> function creates audit trails following
+Lincoln and Guba’s (1985) framework for establishing trustworthiness in
+qualitative research. It captures the complete decision history of your
+coding workflow.</p>
 <div class="section level2">
-<h2 id="lincoln-and-gubas-audit-trail-framework">Lincoln and Guba’s audit trail framework<a class="anchor" aria-label="anchor" href="#lincoln-and-gubas-audit-trail-framework"></a>
+<h2 id="the-audit-trail-concept">The audit trail concept<a class="anchor" aria-label="anchor" href="#the-audit-trail-concept"></a>
 </h2>
 <p>Lincoln and Guba (1985, p. 319-320) describe six categories of audit
-trail materials:</p>
+trail materials for qualitative research:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Raw data:</strong> Original texts, recordings, notes</li>
+<strong>Raw data</strong>: Original texts</li>
 <li>
-<strong>Data reduction products:</strong> Summaries, condensed
-notes</li>
+<strong>Data reduction products</strong>: Summaries, coded
+results</li>
 <li>
-<strong>Data reconstruction products:</strong> Themes,
-interpretations, findings</li>
+<strong>Data reconstruction products</strong>: Themes, comparisons,
+findings</li>
 <li>
-<strong>Process notes:</strong> Methodological decisions,
+<strong>Process notes</strong>: Methodological decisions,
 procedures</li>
 <li>
-<strong>Materials relating to intentions:</strong> Proposals,
-personal notes</li>
+<strong>Materials relating to intentions</strong>: Research
+proposals, notes</li>
 <li>
-<strong>Instrument development information:</strong> Codebooks,
-protocols</li>
+<strong>Instrument development</strong>: Codebooks, protocols</li>
 </ol>
-</div>
-<div class="section level2">
-<h2 id="how-quallmer-implements-the-audit-trail">How quallmer implements the audit trail<a class="anchor" aria-label="anchor" href="#how-quallmer-implements-the-audit-trail"></a>
-</h2>
-<p>The quallmer package operationalizes this framework for LLM-assisted
-text analysis:</p>
-<pre><code>qlm_code()      -&gt;  Produces coded results (raw output)
-      |
-qlm_replicate() -&gt;  Re-runs with modifications (process notes)
-      |
-qlm_trail()     -&gt;  Documents complete workflow (audit trail)</code></pre>
+<p>quallmer automatically captures these materials as you work:</p>
 <table class="table">
-<colgroup>
-<col width="48%">
-<col width="51%">
-</colgroup>
 <thead><tr class="header">
-<th>Audit trail component</th>
-<th>quallmer implementation</th>
+<th>Component</th>
+<th>What quallmer stores</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>Raw data</td>
-<td>Original texts stored in coded objects</td>
+<td>Original texts in coded objects</td>
 </tr>
 <tr class="even">
-<td>Data reduction products</td>
+<td>Data reduction</td>
 <td>Coded results from each run</td>
 </tr>
 <tr class="odd">
-<td>Data reconstruction products</td>
-<td>Comparisons and validations</td>
+<td>Data reconstruction</td>
+<td>Comparison and validation results</td>
 </tr>
 <tr class="even">
 <td>Process notes</td>
-<td>Model parameters, timestamps, decision history</td>
+<td>Model, temperature, timestamps, user notes</td>
 </tr>
 <tr class="odd">
-<td>Materials relating to intentions</td>
-<td>Function calls documenting intent</td>
+<td>Intentions</td>
+<td>The R function calls you made</td>
 </tr>
 <tr class="even">
-<td>Instrument development information</td>
-<td>Codebook with instructions and schema</td>
+<td>Instruments</td>
+<td>Codebook instructions and schema</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level2">
-<h2 id="basic-usage">Basic usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
+<h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
-<p>First, let’s load the package and create some example coded objects
-to demonstrate the trail system:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quallmer.github.io/quallmer/">quallmer</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loading required package: ellmer</span></span></code></pre></div>
-<p>In a real workflow, you would use <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code> and
-<code><a href="../../../reference/qlm_replicate.html">qlm_replicate()</a></code>:</p>
+<p>Every quallmer object carries metadata about how it was created. The
+trail system connects these objects to show your complete workflow:</p>
+<pre><code>qlm_code()       →  Creates coded object with run metadata
+      ↓
+qlm_replicate()  →  Creates new object linked to parent
+      ↓
+qlm_compare()    →  Creates comparison linked to inputs
+      ↓
+qlm_trail()      →  Extracts and organizes all metadata</code></pre>
+</div>
+<div class="section level2">
+<h2 id="testing-branches">Testing branches<a class="anchor" aria-label="anchor" href="#testing-branches"></a>
+</h2>
+<p>After initial coding with <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code>, the workflow
+branches into different types of quality assessment:</p>
+<pre><code>                           ┌─── a) Robustness (test-retest reliability)
+                           │    qlm_replicate() → qlm_compare()
+                           │
+qlm_code() ────────────────┼─── b) Reliability (test-test across models)
+                           │    qlm_replicate(&lt;alter settings&gt;) → qlm_compare()
+                           │
+                           └─── c) Accuracy (vs. gold standard)
+                                qlm_validate()</code></pre>
+<p><strong>a) Robustness via repetition</strong>: Run the same model and
+settings multiple times to establish test-retest reliability. Use
+<code><a href="../../../reference/qlm_replicate.html">qlm_replicate()</a></code> with identical settings, then
+<code><a href="../../../reference/qlm_compare.html">qlm_compare()</a></code> to measure consistency.</p>
+<p><strong>b) Reliability via different models</strong>: Compare results
+across different LLMs or temperatures to establish test-test
+reliability. Use <code><a href="../../../reference/qlm_replicate.html">qlm_replicate()</a></code> with altered settings
+(e.g., different model, temperature), then <code><a href="../../../reference/qlm_compare.html">qlm_compare()</a></code> to
+assess agreement.</p>
+<p><strong>c) Accuracy versus a gold standard</strong>: If human-coded
+gold standard data exists, use <code><a href="../../../reference/qlm_validate.html">qlm_validate()</a></code> to compute
+accuracy metrics (precision, recall, F1, etc.).</p>
+<p><code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code> collects all these branches into a single
+trail object, providing a complete record of what was tested and how the
+results compare.</p>
+</div>
+<div class="section level2">
+<h2 id="creating-a-trail">Creating a trail<a class="anchor" aria-label="anchor" href="#creating-a-trail"></a>
+</h2>
+<p>Pass any quallmer objects to <code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code>:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Initial coding run (requires API key)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quallmer.github.io/quallmer/">quallmer</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># After your analysis...</span></span>
 <span><span class="va">coded1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
-<span>  <span class="va">texts</span>,</span>
-<span>  <span class="va">data_codebook_sentiment</span>,</span>
+<span>  <span class="va">texts</span>, <span class="va">codebook</span>,</span>
 <span>  model <span class="op">=</span> <span class="st">"openai/gpt-4o"</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"gpt4o_run"</span></span>
+<span>  name <span class="op">=</span> <span class="st">"gpt4o"</span>,</span>
+<span>  notes <span class="op">=</span> <span class="st">"Initial coding with GPT-4o"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Replicate with different model</span></span>
 <span><span class="va">coded2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_replicate.html">qlm_replicate</a></span><span class="op">(</span></span>
 <span>  <span class="va">coded1</span>,</span>
-<span>  model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"mini_run"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>For this tutorial, we’ll create mock coded objects that show what the
-trail system captures:</p>
+<span>  model <span class="op">=</span> <span class="st">"anthropic/claude-sonnet-4"</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"claude"</span>,</span>
+<span>  notes <span class="op">=</span> <span class="st">"Replication to check model agreement"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, by <span class="op">=</span> <span class="va">sentiment</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Create the audit trail</span></span>
+<span><span class="va">trail</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, <span class="va">comparison</span><span class="op">)</span></span>
+<span><span class="va">trail</span></span></code></pre></div>
+<p>The print output shows:</p>
+<ul>
+<li>Run names and parent relationships</li>
+<li>Timestamps and model information</li>
+<li>Notes documenting why each run was performed</li>
+<li>Comparison/validation summaries</li>
+<li>Whether the chain is complete</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="saving-the-trail">Saving the trail<a class="anchor" aria-label="anchor" href="#saving-the-trail"></a>
+</h2>
+<p>Add a <code>path</code> argument to save permanent files:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create first coded object (simulating qlm_code output)</span></span>
-<span><span class="va">coded1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  .id <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,</span>
-<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"I love this product!"</span>,</span>
-<span>    <span class="st">"Terrible experience."</span>,</span>
-<span>    <span class="st">"It's okay, nothing special."</span>,</span>
-<span>    <span class="st">"Best purchase ever!"</span>,</span>
-<span>    <span class="st">"Would not recommend."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>, <span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">coded1</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"qlm_coded"</span>, <span class="st">"data.frame"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="st">"run"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"gpt4o_run"</span>,</span>
-<span>  parent <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  call <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">texts</span>, <span class="va">data_codebook_sentiment</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    timestamp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2024-06-15 10:30:00"</span><span class="op">)</span>,</span>
-<span>    n_units <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>    quallmer_version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"quallmer"</span><span class="op">)</span>,</span>
-<span>    ellmer_version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"ellmer"</span><span class="op">)</span>,</span>
-<span>    R_version <span class="op">=</span> <span class="va">R.version.string</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  chat_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"openai/gpt-4o"</span>, temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
-<span>  codebook <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    name <span class="op">=</span> <span class="st">"Sentiment Analysis"</span>,</span>
-<span>    instructions <span class="op">=</span> <span class="st">"Classify the sentiment of each text as positive, negative, or neutral."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create second coded object (simulating qlm_replicate output)</span></span>
-<span><span class="va">coded2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  .id <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,</span>
-<span>  text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"I love this product!"</span>,</span>
-<span>    <span class="st">"Terrible experience."</span>,</span>
-<span>    <span class="st">"It's okay, nothing special."</span>,</span>
-<span>    <span class="st">"Best purchase ever!"</span>,</span>
-<span>    <span class="st">"Would not recommend."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  sentiment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>, <span class="st">"positive"</span>, <span class="st">"negative"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">coded2</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"qlm_coded"</span>, <span class="st">"data.frame"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">coded2</span>, <span class="st">"run"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"mini_run"</span>,</span>
-<span>  parent <span class="op">=</span> <span class="st">"gpt4o_run"</span>,</span>
-<span>  call <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu"><a href="../../../reference/qlm_replicate.html">qlm_replicate</a></span><span class="op">(</span><span class="va">coded1</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    timestamp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2024-06-15 10:35:00"</span><span class="op">)</span>,</span>
-<span>    n_units <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>    quallmer_version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"quallmer"</span><span class="op">)</span>,</span>
-<span>    ellmer_version <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">packageVersion</a></span><span class="op">(</span><span class="st">"ellmer"</span><span class="op">)</span>,</span>
-<span>    R_version <span class="op">=</span> <span class="va">R.version.string</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  chat_args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span>, temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
-<span>  codebook <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    name <span class="op">=</span> <span class="st">"Sentiment Analysis"</span>,</span>
-<span>    instructions <span class="op">=</span> <span class="st">"Classify the sentiment of each text as positive, negative, or neutral."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Now we can create and view the audit trail:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, <span class="va">comparison</span>, path <span class="op">=</span> <span class="st">"my_analysis"</span><span class="op">)</span></span></code></pre></div>
+<p>This creates:</p>
+<ul>
+<li>
+<strong>my_analysis.rds</strong>: Complete R object with all coded
+data</li>
+<li>
+<strong>my_analysis.qmd</strong>: Quarto document for human-readable
+documentation</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="the-quarto-report">The Quarto report<a class="anchor" aria-label="anchor" href="#the-quarto-report"></a>
+</h2>
+<p>The generated <code>.qmd</code> file contains:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Trail summary</strong>: Number of runs, completeness
+status</li>
+<li>
+<strong>Instrument development</strong>: All codebooks used with
+instructions</li>
+<li>
+<strong>Process notes</strong>: Chronological record of each
+run</li>
+<li>
+<strong>Data reconstruction</strong>: Comparison and validation
+results</li>
+<li>
+<strong>Replication section</strong>: Code to reproduce the
+analysis</li>
+</ol>
+<p>Render it with:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create the audit trail</span></span>
-<span><span class="va">trail</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># View the trail</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">trail</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # quallmer audit trail (2 runs)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; 1. gpt4o_run (original)</span></span>
-<span><span class="co">#&gt;    2024-06-15 10:30 | openai/gpt-4o</span></span>
-<span><span class="co">#&gt;    Codebook: Sentiment Analysis</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; 2. mini_run (parent: gpt4o_run)</span></span>
-<span><span class="co">#&gt;    2024-06-15 10:35 | openai/gpt-4o-mini</span></span>
-<span><span class="co">#&gt;    Codebook: Sentiment Analysis</span></span></code></pre></div>
-<p>The trail shows:</p>
-<ul>
-<li>The chronological order of runs (parent first, then children)</li>
-<li>Timestamps and model information for each run</li>
-<li>Parent-child relationships between runs</li>
-<li>Codebook used for each run</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="saving-the-audit-trail">Saving the audit trail<a class="anchor" aria-label="anchor" href="#saving-the-audit-trail"></a>
-</h2>
-<p>To create a permanent record, provide a <code>path</code>
-argument:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Save to a temporary directory for this example</span></span>
-<span><span class="va">temp_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"my_analysis"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, path <span class="op">=</span> <span class="va">temp_path</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Trail saved to <span style="color: #0000BB;">/tmp/RtmpfjxQcv/my_analysis.rds</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Report saved to <span style="color: #0000BB;">/tmp/RtmpfjxQcv/my_analysis.qmd</span></span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Render with `quarto::quarto_render("/tmp/RtmpfjxQcv/my_analysis.qmd")`</span></span></code></pre></div>
-<p>This creates two files:</p>
-<ul>
-<li>
-<strong>my_analysis.rds</strong>: Complete trail object with all
-coded data (reloadable with <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code>)</li>
-<li>
-<strong>my_analysis.qmd</strong>: Quarto document with full audit
-trail documentation</li>
-</ul>
-<p>The Quarto report includes all Lincoln and Guba audit trail
-components:</p>
-<ul>
-<li>
-<strong>Trail summary</strong>: Overview and system information</li>
-<li>
-<strong>Instrument development</strong>: Codebooks with instructions
-and schema</li>
-<li>
-<strong>Process notes</strong>: Chronological record of all runs
-with parameters</li>
-<li>
-<strong>Raw data and coded results</strong>: Summary of data stored
-in RDS</li>
-<li>
-<strong>Replication</strong>: Environment setup and executable
-code</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="including-comparisons">Including comparisons<a class="anchor" aria-label="anchor" href="#including-comparisons"></a>
-</h2>
-<p>When you include comparison objects, the trail captures the complete
-assessment workflow:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create a comparison object (simulating qlm_compare output)</span></span>
-<span><span class="va">comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  level <span class="op">=</span> <span class="st">"nominal"</span>,</span>
-<span>  subjects <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  raters <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  alpha_nominal <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>  kappa <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>  kappa_type <span class="op">=</span> <span class="st">"Cohen's"</span>,</span>
-<span>  percent_agreement <span class="op">=</span> <span class="fl">1.0</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">comparison</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"qlm_comparison"</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">comparison</span>, <span class="st">"run"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"irr_comparison"</span>,</span>
-<span>  parent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gpt4o_run"</span>, <span class="st">"mini_run"</span><span class="op">)</span>,</span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>timestamp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.POSIXlt.html" class="external-link">as.POSIXct</a></span><span class="op">(</span><span class="st">"2024-06-15 10:40:00"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Create trail with comparison</span></span>
-<span><span class="va">trail_with_comparison</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded1</span>, <span class="va">coded2</span>, <span class="va">comparison</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">trail_with_comparison</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # quallmer audit trail (3 runs)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; 1. gpt4o_run (original)</span></span>
-<span><span class="co">#&gt;    2024-06-15 10:30 | openai/gpt-4o</span></span>
-<span><span class="co">#&gt;    Codebook: Sentiment Analysis</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; 2. mini_run (parent: gpt4o_run)</span></span>
-<span><span class="co">#&gt;    2024-06-15 10:35 | openai/gpt-4o-mini</span></span>
-<span><span class="co">#&gt;    Codebook: Sentiment Analysis</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; 3. irr_comparison (parents: gpt4o_run, mini_run)</span></span>
-<span><span class="co">#&gt;    2024-06-15 10:40 | unknown</span></span>
-<span><span class="co">#&gt;    Comparison: nominal level | 5 subjects | 2 raters</span></span></code></pre></div>
-<p>The trail now includes comparison information showing which runs were
-compared and the inter-rater reliability metrics.</p>
+<code class="sourceCode R"><span><span class="fu">quarto</span><span class="fu">::</span><span class="fu"><a href="https://quarto-dev.github.io/quarto-r/reference/quarto_render.html" class="external-link">quarto_render</a></span><span class="op">(</span><span class="st">"my_analysis.qmd"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="loading-saved-trails">Loading saved trails<a class="anchor" aria-label="anchor" href="#loading-saved-trails"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Reload a saved trail</span></span>
-<span><span class="va">loaded_trail</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">temp_path</span>, <span class="st">".rds"</span><span class="op">)</span><span class="op">)</span></span>
+<p>Reload a trail to access the data:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">trail</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">"my_analysis.rds"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Access coded data from a specific run</span></span>
-<span><span class="va">coded_data</span> <span class="op">&lt;-</span> <span class="va">loaded_trail</span><span class="op">$</span><span class="va">runs</span><span class="op">$</span><span class="va">gpt4o_run</span><span class="op">$</span><span class="va">data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">coded_data</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   .id                        text sentiment</span></span>
-<span><span class="co">#&gt; 1   1        I love this product!  positive</span></span>
-<span><span class="co">#&gt; 2   2        Terrible experience.  negative</span></span>
-<span><span class="co">#&gt; 3   3 It's okay, nothing special.   neutral</span></span>
-<span><span class="co">#&gt; 4   4         Best purchase ever!  positive</span></span>
-<span><span class="co">#&gt; 5   5        Would not recommend.  negative</span></span>
+<span><span class="co"># Access runs</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">trail</span><span class="op">$</span><span class="va">runs</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View run metadata</span></span>
-<span><span class="va">loaded_trail</span><span class="op">$</span><span class="va">runs</span><span class="op">$</span><span class="va">gpt4o_run</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">timestamp</span></span>
-<span><span class="co">#&gt; [1] "2024-06-15 10:30:00 UTC"</span></span>
-<span><span class="va">loaded_trail</span><span class="op">$</span><span class="va">runs</span><span class="op">$</span><span class="va">gpt4o_run</span><span class="op">$</span><span class="va">chat_args</span><span class="op">$</span><span class="va">name</span></span>
-<span><span class="co">#&gt; [1] "openai/gpt-4o"</span></span></code></pre></div>
+<span><span class="co"># Get coded data from a run</span></span>
+<span><span class="va">trail</span><span class="op">$</span><span class="va">runs</span><span class="op">$</span><span class="va">gpt4o</span><span class="op">$</span><span class="va">data</span></span>
+<span></span>
+<span><span class="co"># Check run metadata</span></span>
+<span><span class="va">trail</span><span class="op">$</span><span class="va">runs</span><span class="op">$</span><span class="va">gpt4o</span><span class="op">$</span><span class="va">metadata</span><span class="op">$</span><span class="va">timestamp</span></span>
+<span><span class="va">trail</span><span class="op">$</span><span class="va">runs</span><span class="op">$</span><span class="va">gpt4o</span><span class="op">$</span><span class="va">chat_args</span><span class="op">$</span><span class="va">name</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="replication-materials">Replication materials<a class="anchor" aria-label="anchor" href="#replication-materials"></a>
+<h2 id="best-practices">Best practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
 </h2>
-<p>The generated Quarto report serves as comprehensive replication
-materials. The replication section includes:</p>
-<ul>
-<li>
-<strong>Environment setup</strong>: Package installation and API
-credential configuration</li>
-<li>
-<strong>Loading the trail</strong>: Code to load the RDS file</li>
-<li>
-<strong>Replication code</strong>: Executable R code to replicate
-each coding run</li>
-<li>
-<strong>Note on reproducibility</strong>: Guidance on LLM
-stochasticity</li>
-</ul>
-<p>This makes it easy for other researchers to reproduce or extend your
-analysis.</p>
-</div>
-<div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
-</h2>
-<p>The <code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code> function provides workflow traceability
-following Lincoln and Guba’s (1985) audit trail concept:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Automatic tracking</strong>: Every <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code>
-and <code><a href="../../../reference/qlm_replicate.html">qlm_replicate()</a></code> captures the full decision history</li>
+<strong>Name your runs</strong>: Use the <code>name</code> parameter
+for readable trails</li>
 <li>
-<strong>Simple extraction</strong>: <code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code>
-reconstructs your complete audit trail</li>
+<strong>Add notes</strong>: Use the <code>notes</code> parameter to
+document why each run was performed</li>
 <li>
-<strong>Easy archiving</strong>: Add <code>path</code> to save RDS
-and generate Quarto report with replication instructions</li>
+<strong>Include all objects</strong>: Pass every relevant object to
+<code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code> for a complete chain</li>
+<li>
+<strong>Save early</strong>: Create trail files before sharing or
+publishing results</li>
 </ol>
-<p>Always name your runs with the <code>name</code> parameter to make
-trails easier to interpret.</p>
 </div>
 <div class="section level2">
 <h2 id="reference">Reference<a class="anchor" aria-label="anchor" href="#reference"></a>
