@@ -58,8 +58,10 @@ if (requireNamespace("quanteda", quietly = TRUE)) {
 }
 \references{
 Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
-\href{https://doi.org/10.1017/S0003055416000058}{Crowd-sourced Text Analysis: Reproducible and Agile Production of Political Data}.
+Crowd-sourced Text Analysis:
+Reproducible and Agile Production of Political Data.
 \emph{American Political Science Review}, 110(2), 278--295.
+\doi{10.1017/S0003055416000058}
 }
 \seealso{
 \code{\link[=qlm_codebook]{qlm_codebook()}}, \code{\link[=qlm_code]{qlm_code()}}, \link{data_corpus_manifsentsUK2010sample}

@@ -87,7 +87,7 @@ The new API uses the `qlm_` prefix to avoid namespace conflicts (e.g., with `ggp
 
 ## Package restructuring
 
-* `validate_app()` has been extracted into the companion package [quallmer.app](https://github.com/SeraphineM/quallmer.app). This reduces dependencies in the core quallmer package (removing shiny, bslib, and htmltools from Imports). Install quallmer.app separately for interactive validation functionality.
+* `validate_app()` has been extracted into the companion package [quallmer.app](https://github.com/quallmer/quallmer.app). This reduces dependencies in the core quallmer package (removing shiny, bslib, and htmltools from Imports). Install quallmer.app separately for interactive validation functionality.
 
 ## Other changes
 

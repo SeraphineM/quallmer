@@ -15,10 +15,10 @@ Authors@R: c(
     )
   )
 Description: Tools for AI-assisted qualitative data coding using large language
-    models (LLMs). Provides a codebook-based workflow for defining coding
+    models ('LLMs'). Provides a 'codebook'-based workflow for defining coding
     instructions and applying them to texts, images, and other data. Includes
-    built-in codebooks for common applications and functions for creating custom
-    codebooks tailored to specific research questions. Supports replication across
+    built-in 'codebooks' for common applications and functions for creating custom
+    'codebooks' tailored to specific research questions. Supports replication across
     models and settings, computing inter-coder reliability and gold-standard
     validation metrics.
 License: GPL-3

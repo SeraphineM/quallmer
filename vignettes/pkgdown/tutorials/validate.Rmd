@@ -11,7 +11,7 @@ The quallmer app is available in the companion package `quallmer.app`. To instal
 
 ```r
 # install.packages("pak")
-pak::pak("SeraphineM/quallmer.app")
+pak::pak("quallmer/quallmer.app")
 ```
 
 ## Launching the quallmer app

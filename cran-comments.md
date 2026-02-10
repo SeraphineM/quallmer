@@ -9,11 +9,18 @@ The first submission in December 2025 was rejected, citiing several reasons, whi
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 notes
+
+### Notes
+
+**CRAN incoming feasibility**: Found URLs with non-standard status codes:
+    - `https://dataverse.harvard.edu/dataverse/sfm` returns status 202 (Accepted)
+    - This is a valid HTTP status code used by Harvard Dataverse for asynchronous content processing
+    - The URL is accessible and working correctly
 
 ## Test environments
 
-* Local macOS R 4.5.x: `devtools::check(--as-cran)` — OK
+* Local macOS R 4.5.2: `devtools::check(--as-cran)` — OK
 * devtools::check_win_release()
 * devtools::check_win_oldrelease()
 * devtools::check_win_devel()
