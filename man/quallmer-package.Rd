@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Tools for AI-assisted qualitative data coding using large language models (LLMs). Provides a codebook-based workflow for defining coding instructions and applying them to texts, images, and other data. Includes built-in codebooks for common applications and functions for creating custom codebooks tailored to specific research questions. Supports replication across models and settings, computing inter-coder reliability and gold-standard validation metrics.
+Tools for AI-assisted qualitative data coding using large language models ('LLMs'). Provides a 'codebook'-based workflow for defining coding instructions and applying them to texts, images, and other data. Includes built-in 'codebooks' for common applications and functions for creating custom 'codebooks' tailored to specific research questions. Supports replication across models and settings, computing inter-coder reliability and gold-standard validation metrics.
 }
 \references{
 Krippendorff, K. (2019). Content Analysis: An Introduction to Its
