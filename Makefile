@@ -20,7 +20,7 @@ deploy-articles: readme
 	cd gh-pages-tmp && \
 		git add articles/ && \
 		git commit -m "Update articles" && \
-		git push origin gh-pages
+		git push origin HEAD:gh-pages
 	git worktree remove gh-pages-tmp
 
 # Full local site build (with updated README)
