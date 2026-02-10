@@ -7,8 +7,8 @@
 #'   policy (as the mean score of crowd coders on a scale of -1 (favours open
 #'   immigration policy), 0 (neutral), or 1 (anti-immigration).
 #'
-#' @description The sentences were sampled from the corpus used in [Benoit et al.
-#'   (2016)](https://doi.org/10.1017/S0003055416000058), which contains more
+#' @description The sentences were sampled from the corpus used in Benoit et al.
+#'   (2016) \doi{10.1017/S0003055416000058}, which contains more
 #'   information on the crowd-sourced annotation  approach.
 #' @format A [corpus][quanteda::corpus] object.
 #'   The corpus consists of 155 sentences randomly sampled from the party
@@ -30,13 +30,14 @@
 #'   \item{immigration_n}{integer; the number of coders who
 #'   contributed to the mean score `immigration_mean`.}
 #'   \item{immigration_position}{integer; a thresholded version of `immigration_mean`
-#'   coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 ≤ mean ≤ 0.5),
+#'   coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 <= mean <= 0.5),
 #'   or 1 (anti-immigration, mean > 0.5). Set to `NA` for non-immigration sentences.}
 #'   }
 #' @references Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
-#'   [Crowd-sourced Text Analysis:
-#'   Reproducible and Agile Production of Political Data](https://doi.org/10.1017/S0003055416000058).
-#'   *American Political Science Review*, 100,(2), 278--295.
+#'   Crowd-sourced Text Analysis:
+#'   Reproducible and Agile Production of Political Data.
+#'   \emph{American Political Science Review}, 100,(2), 278--295.
+#'   \doi{10.1017/S0003055416000058}
 #' @keywords data
 #' @examples
 #' # Inspect the corpus
@@ -141,9 +142,10 @@
 #'
 #' @references
 #' Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
-#' [Crowd-sourced Text Analysis:
-#' Reproducible and Agile Production of Political Data](https://doi.org/10.1017/S0003055416000058).
-#' *American Political Science Review*, 110(2), 278--295.
+#' Crowd-sourced Text Analysis:
+#' Reproducible and Agile Production of Political Data.
+#' \emph{American Political Science Review}, 110(2), 278--295.
+#' \doi{10.1017/S0003055416000058}
 #'
 #' @seealso [qlm_codebook()], [qlm_code()], [data_corpus_manifsentsUK2010sample]
 #' @keywords data

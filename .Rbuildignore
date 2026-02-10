@@ -21,3 +21,4 @@
 ^vignettes/pkgdown$
 ^batch_results\.json$
 ^Makefile$
+^repomix-output\.xml$

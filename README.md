@@ -9,9 +9,9 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/quallmer)](https://CRAN.R-project.org/package=quallmer)
-[![R-CMD-check](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/SeraphineM/quallmer/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/SeraphineM/quallmer/graph/badge.svg)](https://app.codecov.io/gh/SeraphineM/quallmer)
+coverage](https://codecov.io/gh/quallmer/quallmer/graph/badge.svg)](https://app.codecov.io/gh/quallmer/quallmer)
 [![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://quallmer.github.io/quallmer/)
 <!-- badges: end -->
 
@@ -143,6 +143,37 @@ pak::pak("quallmer/quallmer")
 To learn more about how to use the package, please refer to our
 [step-by-step
 tutorials](https://quallmer.github.io/quallmer/articles/getting-started.html).
+
+## For package maintainers
+
+### Updating pkgdown articles
+
+The package uses a hybrid pkgdown build strategy to avoid API key issues
+in CI:
+
+- **CI automatically builds**: Reference docs, home page, and news
+- **You must build locally**: Articles (vignettes requiring API keys)
+
+To update articles:
+
+``` bash
+# Build all articles (automatically updates README.md first)
+make articles
+
+# Build a specific article
+make article NAME=pkgdown/getting-started/workflow
+
+# Deploy updated articles to gh-pages (automatically updates README.md first)
+make deploy-articles
+
+# Just update README.md from README.Rmd
+make readme
+```
+
+The `deploy-articles` target safely updates only the `articles/`
+directory on gh-pages without affecting other site content. Note that
+`make articles`, `make site`, and `make deploy-articles` automatically
+knit README.md before running, so you don’t forget to update it.
 
 ## Acknowledgments
 

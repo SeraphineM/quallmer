@@ -9,7 +9,18 @@ The first submission in December 2025 was rejected, citiing several reasons, whi
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 2 notes
+
+### Notes
+
+1. **CRAN incoming feasibility**: Found one URL that redirects:
+   - `https://github.com/SeraphineM/quallmer.app` redirects to `https://github.com/quallmer/quallmer.app`
+   - This is documented in NEWS.md as the package repository was moved to the quallmer organization
+   - The URL returns 200 OK and works correctly
+
+2. **HTML version of manual**: Skipping HTML validation due to local HTML Tidy version
+   - This is a local environment issue and does not affect the package itself
+   - CRAN's check systems have appropriate HTML Tidy versions
 
 ## Test environments
 

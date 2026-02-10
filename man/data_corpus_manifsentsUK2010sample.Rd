@@ -25,7 +25,7 @@ variable ranges from -1 (Favorable and open immigration policy) to +1
 \item{immigration_n}{integer; the number of coders who
 contributed to the mean score \code{immigration_mean}.}
 \item{immigration_position}{integer; a thresholded version of \code{immigration_mean}
-coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 ≤ mean ≤ 0.5),
+coded as -1 (pro-immigration, mean < -0.5), 0 (neutral, -0.5 <= mean <= 0.5),
 or 1 (anti-immigration, mean > 0.5). Set to \code{NA} for non-immigration sentences.}
 }
 }
@@ -40,7 +40,8 @@ or not and then on a scale of favorability or not toward open immigration
 policy (as the mean score of crowd coders on a scale of -1 (favours open
 immigration policy), 0 (neutral), or 1 (anti-immigration).
 
-The sentences were sampled from the corpus used in \href{https://doi.org/10.1017/S0003055416000058}{Benoit et al. (2016)}, which contains more
+The sentences were sampled from the corpus used in Benoit et al.
+(2016) \doi{10.1017/S0003055416000058}, which contains more
 information on the crowd-sourced annotation  approach.
 }
 \examples{
@@ -49,7 +50,9 @@ summary(data_corpus_manifsentsUK2010sample)
 }
 \references{
 Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).
-\href{https://doi.org/10.1017/S0003055416000058}{Crowd-sourced Text Analysis: Reproducible and Agile Production of Political Data}.
+Crowd-sourced Text Analysis:
+Reproducible and Agile Production of Political Data.
 \emph{American Political Science Review}, 100,(2), 278--295.
+\doi{10.1017/S0003055416000058}
 }
 \keyword{data}
