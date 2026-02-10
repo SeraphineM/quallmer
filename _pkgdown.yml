@@ -10,6 +10,7 @@ navbar:
     left:
     - home
     - quick-start
+    - tutorials
     - examples
     - reference
     - news
@@ -28,19 +29,24 @@ navbar:
         href: articles/pkgdown/getting-started/openai.html
       - text: Working with an open-source Ollama model
         href: articles/pkgdown/getting-started/ollama.html
-    examples:
+    tutorials:
       text: Tutorials
       menu:
       - text: The quallmer audit trail
         href: articles/pkgdown/tutorials/trail.html
       - text: Using the quallmer.app
         href: articles/pkgdown/tutorials/validate.html
+    examples:
+      text: Examples
+      menu:
+      - text: Illiberalism in political speeches
+        href: articles/pkgdown/examples/example_illiberalism.html
     reference:
       text: Reference
       href: reference/index.html
     github:
       icon: fab fa-github
-      href: https://github.com/SeraphineM/quallmer
+      href: https://github.com/quallmer/quallmer
       aria-label: View on GitHub
 
 # Exclude maintainer/contributor Markdown files from home pages

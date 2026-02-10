@@ -26,11 +26,13 @@ dataset for sentiment classification.  The original dataset contains 50,000
 highly polar movie reviews.
 }
 \examples{
-# Inspect the corpus
-summary(data_corpus_LMRDsample)
+if (requireNamespace("quanteda", quietly = TRUE)) {
+  # Inspect the corpus
+  summary(data_corpus_LMRDsample)
 
-# Sample a few reviews
-head(data_corpus_LMRDsample, 3)
+  # Sample a few reviews
+  head(data_corpus_LMRDsample, 3)
+}
 }
 \references{
 Andrew L. Maas, Raymond E. Daly, Peter T. Pham, Dan Huang, Andrew

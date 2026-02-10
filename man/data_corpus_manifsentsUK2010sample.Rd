@@ -45,8 +45,10 @@ The sentences were sampled from the corpus used in Benoit et al.
 information on the crowd-sourced annotation  approach.
 }
 \examples{
-# Inspect the corpus
-summary(data_corpus_manifsentsUK2010sample)
+if (requireNamespace("quanteda", quietly = TRUE)) {
+  # Inspect the corpus
+  summary(data_corpus_manifsentsUK2010sample)
+}
 }
 \references{
 Benoit, K., Conway, D., Lauderdale, B.E., Laver, M., & Mikhaylov, S. (2016).

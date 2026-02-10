@@ -73,7 +73,7 @@ The new API uses the `qlm_` prefix to avoid namespace conflicts (e.g., with `ggp
 
 ## Example codebooks
 
-* New example codebook data objects provide ready-to-use codebooks for common tasks: `data_codebook_sentiment`, `data_codebook_stance`, `data_codebook_ideology`, `data_codebook_salience`, and `data_codebook_fact`. 
+* New example codebook data object `data_codebook_sentiment` provides a ready-to-use codebook for sentiment analysis. 
 * All predefined `task_*()` functions are deprecated in favor of using the data objects or creating custom codebooks with `qlm_codebook()`.
 
 ## Deprecated and superseded functions

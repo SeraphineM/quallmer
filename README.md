@@ -48,9 +48,8 @@ learning.**
 - Uses `instructions` and type specifications from
   [ellmer](https://ellmer.tidyverse.org/reference/type_boolean.html) to
   define coding instructions and output structure.
-- Example codebook objects (e.g., `data_codebook_sentiment`,
-  `data_codebook_stance`, `data_codebook_ideology`) demonstrate how to
-  use built-in codebooks for common qualitative coding tasks.
+- Example codebook objects (e.g., `data_codebook_sentiment`) demonstrate
+  how to use built-in codebooks for common qualitative coding tasks.
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
 
