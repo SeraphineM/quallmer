@@ -24,7 +24,7 @@ The first submission in December 2025 was rejected, citiing several reasons, whi
 
 ## Test environments
 
-* Local macOS R 4.5.x: `devtools::check(--as-cran)` — OK
+* Local macOS R 4.5.2: `devtools::check(--as-cran)` — OK
 * devtools::check_win_release()
 * devtools::check_win_oldrelease()
 * devtools::check_win_devel()
