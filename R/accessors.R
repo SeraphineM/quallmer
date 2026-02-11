@@ -114,15 +114,16 @@ upgrade_meta <- function(x) {
 }
 
 
-#' Extract metadata from quallmer objects
+#' Get or set quallmer object metadata
 #'
-#' Extracts metadata from `qlm_coded`, `qlm_codebook`, `qlm_comparison`, and
+#' Get or set metadata from `qlm_coded`, `qlm_codebook`, `qlm_comparison`, and
 #' `qlm_validation` objects. Metadata is organized into three types: user,
-#' object, and system.
+#' object, and system. Only user metadata can be modified.
 #'
 #' @param x A quallmer object (`qlm_coded`, `qlm_codebook`, `qlm_comparison`, or `qlm_validation`).
-#' @param field Optional character string specifying a single metadata field to extract.
-#'   If `NULL` (default), returns all metadata of the specified type.
+#' @param field Optional character string specifying a single metadata field to extract or set.
+#'   If `NULL` (default), `qlm_meta()` returns all metadata of the specified type, and
+#'   `qlm_meta<-()` expects `value` to be a named list.
 #' @param type Character string specifying the type of metadata to extract:
 #'   \describe{
 #'     \item{`"user"`}{User-specified descriptive information (default). These fields
@@ -135,9 +136,11 @@ upgrade_meta <- function(x) {
 #'     \item{`"all"`}{Returns a named list combining all three types.}
 #'   }
 #'
-#' @return If `field` is `NULL`, returns a named list of metadata for the specified
-#'   type. If `field` is specified, returns the value of that single field (which
-#'   may be `NULL` if not set).
+#' @param value For `qlm_meta<-()`, the new value for the metadata field, or a
+#'   named list of user metadata fields.
+#'
+#' @return `qlm_meta()` returns the requested metadata (a named list or single value).
+#'   `qlm_meta<-()` returns the modified object (invisibly).
 #'
 #' @details
 #' Metadata is stratified into three types following the quanteda convention:
@@ -156,8 +159,19 @@ upgrade_meta <- function(x) {
 #' For `qlm_codebook` objects, user metadata includes `name` and `instructions`
 #' (the codebook instructions text), both of which can be modified.
 #'
-#' @seealso [codebook()] for extracting the codebook component, [inputs()] for
-#'   extracting input data.
+#' **Modification via `qlm_meta<-()` (assignment):**
+#'
+#' Only user metadata can be modified. For `qlm_coded`, `qlm_comparison`, and
+#' `qlm_validation` objects, modifiable fields are `name` and `notes`. For
+#' `qlm_codebook` objects, modifiable fields are `name` and `instructions`.
+#'
+#' Object and system metadata are read-only and set at creation time. Attempting
+#' to modify these will produce an informative error.
+#'
+#' @seealso
+#' - [accessors] for an overview of the accessor function system
+#' - [codebook()] for extracting the codebook component
+#' - [inputs()] for extracting input data
 #'
 #' @examples
 #' # Load example objects
@@ -179,6 +193,18 @@ upgrade_meta <- function(x) {
 #'
 #' # All metadata
 #' qlm_meta(coded, type = "all")
+#'
+#' # Modify user metadata
+#' qlm_meta(coded, "name") <- "updated_run"
+#' qlm_meta(coded, "notes") <- "Analysis notes"
+#'
+#' # Set multiple fields at once
+#' qlm_meta(coded) <- list(name = "final_run", notes = "Final analysis")
+#'
+#' \dontrun{
+#' # This will error - object and system metadata are read-only
+#' qlm_meta(coded, "timestamp") <- Sys.time()
+#' }
 #'
 #' @export
 qlm_meta <- function(x, field = NULL, type = c("user", "object", "system", "all")) {
@@ -382,43 +408,7 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
 }
 
 
-#' Set metadata for quallmer objects
-#'
-#' Modifies user metadata fields for quallmer objects. Only user metadata
-#' (`name` and `notes`) can be modified. Attempting to modify object or system
-#' metadata will produce an error.
-#'
-#' @param x A quallmer object (`qlm_coded`, `qlm_codebook`, `qlm_comparison`, or `qlm_validation`).
-#' @param field Optional character string specifying which user metadata field to set.
-#'   If `NULL`, `value` should be a named list with user metadata fields.
-#' @param value The new value for the metadata field, or a named list of user metadata.
-#'
-#' @return The modified object (invisibly).
-#'
-#' @details
-#' Only user metadata can be modified via `qlm_meta<-()`. For `qlm_coded`, `qlm_comparison`,
-#' and `qlm_validation` objects, user metadata fields are `name` and `notes`. For
-#' `qlm_codebook` objects, user metadata fields are `name` and `instructions`.
-#'
-#' Object and system metadata are read-only and set at creation time. Attempting
-#' to modify these will produce an informative error.
-#'
-#' @examples
-#' # Load example objects
-#' examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
-#' coded <- examples$example_coded_sentiment
-#'
-#' # Set a single field
-#' qlm_meta(coded, "notes") <- "Updated analysis notes"
-#'
-#' # Set multiple fields
-#' qlm_meta(coded) <- list(name = "analysis_v2", notes = "Second iteration")
-#'
-#' \dontrun{
-#' # This will error - object metadata is read-only
-#' qlm_meta(coded, "timestamp") <- Sys.time()
-#' }
-#'
+#' @rdname qlm_meta
 #' @export
 `qlm_meta<-` <- function(x, field = NULL, value) {
   UseMethod("qlm_meta<-")
@@ -641,13 +631,16 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
 #' role) used in the coding run.
 #'
 #' This function is an extractor for the codebook component, not a metadata
-#' accessor. For codebook metadata (name, instructions), use [meta()].
+#' accessor. For codebook metadata (name, instructions), use [qlm_meta()].
 #'
 #' Note: `qlm_codebook()` is the constructor for creating codebooks; `codebook()`
 #' is the extractor for retrieving them from coded objects.
 #'
-#' @seealso [qlm_codebook()] for creating codebooks, [qlm_meta()] for extracting metadata,
-#'   [inputs()] for extracting input data.
+#' @seealso
+#' - [accessors] for an overview of the accessor function system
+#' - [qlm_codebook()] for creating codebooks
+#' - [qlm_meta()] for extracting metadata
+#' - [inputs()] for extracting input data
 #'
 #' @examples
 #' # Load example objects
@@ -723,8 +716,11 @@ codebook.qlm_validation <- function(x) {
 #' a direct conceptual mapping: what is passed in via `inputs =` is retrieved
 #' back via `inputs()`.
 #'
-#' @seealso [qlm_code()] for creating coded objects, [codebook()] for extracting
-#'   the codebook, [meta()] for extracting metadata.
+#' @seealso
+#' - [accessors] for an overview of the accessor function system
+#' - [qlm_code()] for creating coded objects
+#' - [codebook()] for extracting the codebook
+#' - [qlm_meta()] for extracting metadata
 #'
 #' @examples
 #' # Load example objects

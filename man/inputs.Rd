@@ -39,6 +39,10 @@ texts
 
 }
 \seealso{
-\code{\link[=qlm_code]{qlm_code()}} for creating coded objects, \code{\link[=codebook]{codebook()}} for extracting
-the codebook, \code{\link[quanteda:meta]{quanteda::meta()}} for extracting metadata.
+\itemize{
+\item \link{accessors} for an overview of the accessor function system
+\item \code{\link[=qlm_code]{qlm_code()}} for creating coded objects
+\item \code{\link[=codebook]{codebook()}} for extracting the codebook
+\item \code{\link[=qlm_meta]{qlm_meta()}} for extracting metadata
+}
 }

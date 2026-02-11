@@ -23,7 +23,7 @@ for \code{lm} objects. It specifies the coding instrument (instructions, schema,
 role) used in the coding run.
 
 This function is an extractor for the codebook component, not a metadata
-accessor. For codebook metadata (name, instructions), use \code{\link[quanteda:meta]{quanteda::meta()}}.
+accessor. For codebook metadata (name, instructions), use \code{\link[=qlm_meta]{qlm_meta()}}.
 
 Note: \code{qlm_codebook()} is the constructor for creating codebooks; \code{codebook()}
 is the extractor for retrieving them from coded objects.
@@ -42,6 +42,10 @@ qlm_meta(cb, "name")
 
 }
 \seealso{
-\code{\link[=qlm_codebook]{qlm_codebook()}} for creating codebooks, \code{\link[=qlm_meta]{qlm_meta()}} for extracting metadata,
-\code{\link[=inputs]{inputs()}} for extracting input data.
+\itemize{
+\item \link{accessors} for an overview of the accessor function system
+\item \code{\link[=qlm_codebook]{qlm_codebook()}} for creating codebooks
+\item \code{\link[=qlm_meta]{qlm_meta()}} for extracting metadata
+\item \code{\link[=inputs]{inputs()}} for extracting input data
+}
 }

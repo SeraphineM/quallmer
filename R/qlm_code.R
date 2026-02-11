@@ -55,7 +55,8 @@
 #'   The `execution_args` contains all non-chat execution arguments (for either parallel or batch processing).
 #'
 #' @seealso
-#' [qlm_codebook()] for creating codebooks, [annotate()] for the deprecated function.
+#' [qlm_codebook()] for creating codebooks, [qlm_replicate()] for replicating
+#' coding runs, [qlm_compare()] and [qlm_validate()] for assessing reliability.
 #'
 #' @examples
 #' \donttest{

@@ -2,15 +2,19 @@
 % Please edit documentation in R/accessors.R
 \name{qlm_meta}
 \alias{qlm_meta}
-\title{Extract metadata from quallmer objects}
+\alias{qlm_meta<-}
+\title{Get or set quallmer object metadata}
 \usage{
 qlm_meta(x, field = NULL, type = c("user", "object", "system", "all"))
+
+qlm_meta(x, field = NULL) <- value
 }
 \arguments{
 \item{x}{A quallmer object (\code{qlm_coded}, \code{qlm_codebook}, \code{qlm_comparison}, or \code{qlm_validation}).}
 
-\item{field}{Optional character string specifying a single metadata field to extract.
-If \code{NULL} (default), returns all metadata of the specified type.}
+\item{field}{Optional character string specifying a single metadata field to extract or set.
+If \code{NULL} (default), \code{qlm_meta()} returns all metadata of the specified type, and
+\verb{qlm_meta<-()} expects \code{value} to be a named list.}
 
 \item{type}{Character string specifying the type of metadata to extract:
 \describe{
@@ -23,16 +27,18 @@ include: \code{batch}, \code{call}, \code{chat_args}, \code{execution_args}, \co
 include: \code{timestamp}, \code{ellmer_version}, \code{quallmer_version}, \code{R_version}.}
 \item{\code{"all"}}{Returns a named list combining all three types.}
 }}
+
+\item{value}{For \verb{qlm_meta<-()}, the new value for the metadata field, or a
+named list of user metadata fields.}
 }
 \value{
-If \code{field} is \code{NULL}, returns a named list of metadata for the specified
-type. If \code{field} is specified, returns the value of that single field (which
-may be \code{NULL} if not set).
+\code{qlm_meta()} returns the requested metadata (a named list or single value).
+\verb{qlm_meta<-()} returns the modified object (invisibly).
 }
 \description{
-Extracts metadata from \code{qlm_coded}, \code{qlm_codebook}, \code{qlm_comparison}, and
+Get or set metadata from \code{qlm_coded}, \code{qlm_codebook}, \code{qlm_comparison}, and
 \code{qlm_validation} objects. Metadata is organized into three types: user,
-object, and system.
+object, and system. Only user metadata can be modified.
 }
 \details{
 Metadata is stratified into three types following the quanteda convention:
@@ -50,6 +56,15 @@ version information. Read-only. Fields: \code{timestamp}, \code{ellmer_version},
 
 For \code{qlm_codebook} objects, user metadata includes \code{name} and \code{instructions}
 (the codebook instructions text), both of which can be modified.
+
+\strong{Modification via \verb{qlm_meta<-()} (assignment):}
+
+Only user metadata can be modified. For \code{qlm_coded}, \code{qlm_comparison}, and
+\code{qlm_validation} objects, modifiable fields are \code{name} and \code{notes}. For
+\code{qlm_codebook} objects, modifiable fields are \code{name} and \code{instructions}.
+
+Object and system metadata are read-only and set at creation time. Attempting
+to modify these will produce an informative error.
 }
 \examples{
 # Load example objects
@@ -72,8 +87,23 @@ qlm_meta(coded, "timestamp", type = "system")
 # All metadata
 qlm_meta(coded, type = "all")
 
+# Modify user metadata
+qlm_meta(coded, "name") <- "updated_run"
+qlm_meta(coded, "notes") <- "Analysis notes"
+
+# Set multiple fields at once
+qlm_meta(coded) <- list(name = "final_run", notes = "Final analysis")
+
+\dontrun{
+# This will error - object and system metadata are read-only
+qlm_meta(coded, "timestamp") <- Sys.time()
+}
+
 }
 \seealso{
-\code{\link[=codebook]{codebook()}} for extracting the codebook component, \code{\link[=inputs]{inputs()}} for
-extracting input data.
+\itemize{
+\item \link{accessors} for an overview of the accessor function system
+\item \code{\link[=codebook]{codebook()}} for extracting the codebook component
+\item \code{\link[=inputs]{inputs()}} for extracting input data
+}
 }
