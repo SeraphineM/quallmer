@@ -74,7 +74,7 @@
 #' coder_b <- as_qlm_coded(coder_b_data, name = "Coder_B")
 #'
 #' # No need for gold = when gold object is marked (NSE works for 'by' too)
-#' qlm_validate(coder_a, coder_b, gold, by = sentiment, level = "nominal")
+#' qlm_validate(coder_a, coder_b, gold = gold, by = sentiment, level = "nominal")
 #'
 #' # Create from corpus object (simplified workflow)
 #' data("data_corpus_manifsentsUK2010sample")

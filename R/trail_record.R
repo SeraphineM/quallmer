@@ -14,7 +14,7 @@
 #' @param cache_dir Optional directory in which to cache Trails. If \code{NULL}, caching disabled.
 #'   For examples and tests, use \code{tempdir()} to comply with CRAN policies.
 #' @param overwrite Whether to overwrite existing cache.
-#' @param annotate_fun Function used to perform the annotation (default \code{annotate()}).
+#' @param annotate_fun Function used to perform the annotation.
 #'
 #' @return An object of class \code{"trail_record"}.
 #' @keywords internal

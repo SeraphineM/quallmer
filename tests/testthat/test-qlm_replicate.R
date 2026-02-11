@@ -35,9 +35,9 @@ test_that("qlm_replicate works with no overrides", {
   result <- qlm_replicate(coded)
 
   expect_s3_class(result, "qlm_coded")
-  expect_equal(attr(result, "run")$parent, "original")
-  expect_identical(attr(result, "run")$codebook, attr(coded, "run")$codebook)
-  expect_equal(attr(result, "run")$chat_args$name, attr(coded, "run")$chat_args$name)
+  expect_equal(attr(result, "meta")$object$parent, "original")
+  expect_identical(attr(result, "codebook"), attr(coded, "codebook"))
+  expect_equal(attr(result, "meta")$object$chat_args$name, attr(coded, "meta")$object$chat_args$name)
 })
 
 test_that("qlm_replicate applies model override", {
@@ -81,8 +81,8 @@ test_that("qlm_replicate applies model override", {
 
   result <- qlm_replicate(coded, model = "openai/gpt-4o-mini")
 
-  expect_equal(attr(result, "run")$chat_args$name, "openai/gpt-4o-mini")
-  expect_equal(attr(result, "run")$parent, "original")
+  expect_equal(attr(result, "meta")$object$chat_args$name, "openai/gpt-4o-mini")
+  expect_equal(attr(result, "meta")$object$parent, "original")
 })
 
 test_that("qlm_replicate applies codebook override", {
@@ -127,7 +127,7 @@ test_that("qlm_replicate applies codebook override", {
 
   result <- qlm_replicate(coded, codebook = codebook2)
 
-  expect_equal(attr(result, "run")$codebook, codebook2)
+  expect_equal(attr(result, "codebook"), codebook2)
 })
 
 test_that("qlm_replicate applies name override", {
@@ -170,7 +170,7 @@ test_that("qlm_replicate applies name override", {
 
   result <- qlm_replicate(coded, name = "my_replication")
 
-  expect_equal(attr(result, "run")$name, "my_replication")
+  expect_equal(attr(result, "meta")$user$name, "my_replication")
 })
 
 test_that("qlm_replicate auto-generates name from model", {
@@ -213,7 +213,7 @@ test_that("qlm_replicate auto-generates name from model", {
 
   result <- qlm_replicate(coded, model = "anthropic/claude-sonnet-4-20250514")
 
-  expect_equal(attr(result, "run")$name, "claude-sonnet-4-20250514")
+  expect_equal(attr(result, "meta")$user$name, "claude-sonnet-4-20250514")
 })
 
 test_that("qlm_replicate passes through additional arguments", {
@@ -256,7 +256,7 @@ test_that("qlm_replicate passes through additional arguments", {
 
   result <- qlm_replicate(coded, temperature = 0.7)
 
-  expect_equal(attr(result, "run")$execution_args$temperature, 0.7)
+  expect_equal(attr(result, "meta")$object$execution_args$temperature, 0.7)
 })
 
 test_that("qlm_replicate stores correct call", {
@@ -299,8 +299,8 @@ test_that("qlm_replicate stores correct call", {
 
   result <- qlm_replicate(coded, model = "openai/gpt-4o-mini")
 
-  expect_true(inherits(attr(result, "run")$call, "call"))
-  expect_true(grepl("qlm_replicate", deparse(attr(result, "run")$call)[1]))
+  expect_true(inherits(attr(result, "meta")$object$call, "call"))
+  expect_true(grepl("qlm_replicate", deparse(attr(result, "meta")$object$call)[1]))
 })
 
 
@@ -346,7 +346,7 @@ test_that("qlm_replicate preserves batch flag by default", {
   result <- qlm_replicate(coded)
 
   # Verify batch flag is preserved
-  expect_true(attr(result, "run")$batch)
+  expect_true(attr(result, "meta")$object$batch)
 })
 
 
@@ -392,7 +392,7 @@ test_that("qlm_replicate allows batch override to TRUE", {
   result <- qlm_replicate(coded, batch = TRUE, path = "/tmp/batch")
 
   # Verify batch flag was overridden
-  expect_true(attr(result, "run")$batch)
+  expect_true(attr(result, "meta")$object$batch)
 })
 
 
@@ -438,5 +438,5 @@ test_that("qlm_replicate allows batch override to FALSE", {
   result <- qlm_replicate(coded, batch = FALSE, max_active = 5)
 
   # Verify batch flag was overridden
-  expect_false(attr(result, "run")$batch)
+  expect_false(attr(result, "meta")$object$batch)
 })

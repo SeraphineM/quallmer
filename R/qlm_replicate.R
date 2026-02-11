@@ -36,7 +36,7 @@
 #' coded2 <- qlm_replicate(coded, name = "run2")
 #'
 #' # Compare results
-#' qlm_compare(coded, coded2, by = "sentiment")
+#' qlm_compare(coded, coded2, by = "sentiment", level = "nominal")
 #' }
 #'
 #' @importFrom utils modifyList
@@ -47,17 +47,19 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     cli::cli_abort("{.arg x} must be a {.cls qlm_coded} object.")
   }
 
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
   # Extract original components
   original_data <- attr(x, "data")
-  original_run <- attr(x, "run")
-  original_codebook <- original_run$codebook
-  original_model <- original_run$chat_args$name
-  # Backward compatibility: support both execution_args and pcs_args
+  meta_attr <- attr(x, "meta")
+  original_codebook <- attr(x, "codebook")
+  original_model <- meta_attr$object$chat_args$name
   # Ensure it's always a list (empty if NULL)
-  original_execution_args <- original_run$execution_args %||% original_run$pcs_args %||% list()
+  original_execution_args <- meta_attr$object$execution_args %||% list()
   # Extract batch flag (default to FALSE for backward compatibility)
-  original_batch <- original_run$batch %||% FALSE
-  parent_name <- original_run$name
+  original_batch <- meta_attr$object$batch %||% FALSE
+  parent_name <- meta_attr$user$name
 
   # Apply batch override if provided, otherwise use original
   use_batch <- batch %||% original_batch
@@ -98,11 +100,11 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     execution_args
   ))
 
-  # Override the run attributes to reflect this is a replication
-  run <- attr(result, "run")
-  run$call <- current_call
-  run$parent <- parent_name
-  attr(result, "run") <- run
+  # Override the metadata to reflect this is a replication
+  result_meta <- attr(result, "meta")
+  result_meta$object$call <- current_call
+  result_meta$object$parent <- parent_name
+  attr(result, "meta") <- result_meta
 
   result
 }

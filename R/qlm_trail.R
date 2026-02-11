@@ -85,12 +85,44 @@ qlm_trail <- function(..., path = NULL) {
       ))
     }
 
-    run <- attr(obj, "run")
-    if (is.null(run)) {
+    # Auto-upgrade old structure if needed
+    obj <- upgrade_meta(obj)
+
+    meta_attr <- attr(obj, "meta")
+    if (is.null(meta_attr)) {
       cli::cli_abort(c(
-        "Object {i} does not have a {.field run} attribute.",
+        "Object {i} does not have metadata.",
         "i" = "This object may have been created with an older version of quallmer."
       ))
+    }
+
+    # Build a "run" structure for compatibility with trail code
+    run <- list(
+      name = meta_attr$user$name,
+      notes = meta_attr$user$notes,
+      call = meta_attr$object$call,
+      parent = meta_attr$object$parent,
+      metadata = list(
+        timestamp = meta_attr$system$timestamp,
+        quallmer_version = meta_attr$system$quallmer_version,
+        R_version = meta_attr$system$R_version
+      )
+    )
+
+    # Add object-specific metadata
+    if (inherits(obj, "qlm_coded")) {
+      run$batch <- meta_attr$object$batch
+      run$chat_args <- meta_attr$object$chat_args
+      run$execution_args <- meta_attr$object$execution_args
+      run$codebook <- attr(obj, "codebook")
+      run$metadata$n_units <- meta_attr$object$n_units
+      run$metadata$ellmer_version <- meta_attr$system$ellmer_version
+    } else if (inherits(obj, "qlm_comparison")) {
+      run$metadata$n_raters <- meta_attr$object$n_raters
+      run$metadata$variables <- meta_attr$object$variables
+    } else if (inherits(obj, "qlm_validation")) {
+      run$metadata$variables <- meta_attr$object$variables
+      run$metadata$average <- meta_attr$object$average
     }
 
     # Store comparison/validation data if this is a comparison or validation object

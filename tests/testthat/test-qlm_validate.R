@@ -93,7 +93,7 @@ test_that("qlm_validate handles mismatched IDs", {
 
   # Should error with no matching IDs
   expect_error(
-    qlm_validate(mock_coded, gold = gold, by = "category"),
+    qlm_validate(mock_coded, gold = gold, by = "category", level = "nominal"),
     "No valid validations could be computed"
   )
 })
@@ -123,7 +123,7 @@ test_that("qlm_validate warns about NA values", {
 
   # Should warn about NA values
   expect_warning(
-    qlm_validate(mock_coded, gold = gold, by = "category"),
+    qlm_validate(mock_coded, gold = gold, by = "category", level = "nominal"),
     "Missing values in variable"
   )
 })
@@ -543,7 +543,7 @@ test_that("qlm_validate ordinal level computes only appropriate metrics", {
     data = paste0("text", 1:20),
     input_type = "text",
     chat_args = list(name = "test/model"),
-    pcs_args = list(),
+    execution_args = list(),
     metadata = list(timestamp = Sys.time(), n_units = 20),
     name = "original",
     call = quote(qlm_code(...)),
@@ -598,7 +598,7 @@ test_that("qlm_validate ordinal correlation measures work correctly", {
     data = paste0("text", 1:10),
     input_type = "text",
     chat_args = list(name = "test/model"),
-    pcs_args = list(),
+    execution_args = list(),
     metadata = list(timestamp = Sys.time(), n_units = 10),
     name = "original",
     call = quote(qlm_code(...)),
@@ -646,7 +646,7 @@ test_that("qlm_validate nominal level computes all metrics", {
     data = paste0("text", 1:20),
     input_type = "text",
     chat_args = list(name = "test/model"),
-    pcs_args = list(),
+    execution_args = list(),
     metadata = list(timestamp = Sys.time(), n_units = 20),
     name = "original",
     call = quote(qlm_code(...)),
@@ -686,7 +686,7 @@ test_that("qlm_validate prints appropriate terminology for ordinal vs nominal", 
     data = paste0("text", 1:10),
     input_type = "text",
     chat_args = list(name = "test/model"),
-    pcs_args = list(),
+    execution_args = list(),
     metadata = list(timestamp = Sys.time(), n_units = 10),
     name = "original",
     call = quote(qlm_code(...)),

@@ -6,7 +6,7 @@
 #'
 #' This function replaces [task()], which is now deprecated. The returned object
 #' has dual class inheritance (`c("qlm_codebook", "task")`) to maintain
-#' backward compatibility with existing code using [annotate()].
+#' backward compatibility.
 #'
 #' @param name Name of the codebook (character).
 #' @param instructions Instructions to guide the model in performing the coding task.

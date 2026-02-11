@@ -31,7 +31,7 @@ For examples and tests, use \code{tempdir()} to comply with CRAN policies.}
 
 \item{overwrite}{Whether to overwrite existing cache.}
 
-\item{annotate_fun}{Function used to perform the annotation (default \code{annotate()}).}
+\item{annotate_fun}{Function used to perform the annotation.}
 }
 \value{
 An object of class \code{"trail_record"}.
