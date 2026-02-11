@@ -431,21 +431,26 @@ qlm_compare <- function(...,
     }
   }, character(1))
 
-  # Add attributes and class
+  # Add attributes and class with new metadata structure
   structure(
     result_df,
     class = c("qlm_comparison", class(result_df)),
     raters = n_raters,
     n = n_subjects_total,
     call = match.call(),
-    run = list(
-      name = paste0("comparison_", substr(digest::digest(parent_names), 1, 8)),
-      call = match.call(),
-      parent = parent_names[!is.na(parent_names)],
-      metadata = list(
-        timestamp = Sys.time(),
+    meta = list(
+      user = list(
+        name = paste0("comparison_", substr(digest::digest(parent_names), 1, 8)),
+        notes = NULL
+      ),
+      object = list(
+        call = match.call(),
+        parent = parent_names[!is.na(parent_names)],
         n_raters = n_raters,
-        variables = by,
+        variables = by
+      ),
+      system = list(
+        timestamp = Sys.time(),
         quallmer_version = tryCatch(as.character(utils::packageVersion("quallmer")), error = function(e) NA_character_),
         R_version = paste(R.version$major, R.version$minor, sep = ".")
       )

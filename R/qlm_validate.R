@@ -1022,20 +1022,25 @@ qlm_validate <- function(
     }
   }
 
-  # Add attributes and class
+  # Add attributes and class with new metadata structure
   structure(
     result_df,
     class = c("qlm_validation", class(result_df)),
     n = n_subjects_total,
     call = match.call(),
-    run = list(
-      name = paste0("validation_", substr(digest::digest(list(parent_names, gold_run_name)), 1, 8)),
-      call = match.call(),
-      parent = c(parent_names[!is.na(parent_names)], gold_run_name[!is.na(gold_run_name)]),
-      metadata = list(
-        timestamp = Sys.time(),
+    meta = list(
+      user = list(
+        name = paste0("validation_", substr(digest::digest(list(parent_names, gold_run_name)), 1, 8)),
+        notes = NULL
+      ),
+      object = list(
+        call = match.call(),
+        parent = c(parent_names[!is.na(parent_names)], gold_run_name[!is.na(gold_run_name)]),
         variables = by,
-        average = average,
+        average = average
+      ),
+      system = list(
+        timestamp = Sys.time(),
         quallmer_version = tryCatch(as.character(utils::packageVersion("quallmer")), error = function(e) NA_character_),
         R_version = paste(R.version$major, R.version$minor, sep = ".")
       )

@@ -107,16 +107,16 @@ test_that("qlm_code returns qlm_coded object structure", {
 
   # Verify attributes with new hierarchical structure
   expect_true(!is.null(attr(mock_coded, "data")))
-  expect_equal(attr(mock_coded, "input_type"), "text")
-  run_attr <- attr(mock_coded, "run")
-  expect_true(!is.null(run_attr))
-  expect_identical(run_attr[["codebook"]], codebook)
-  expect_true(is.list(run_attr[["chat_args"]]))
-  expect_true(is.list(run_attr[["execution_args"]]))
-  expect_false(run_attr[["batch"]])  # batch flag should be FALSE by default
-  expect_true(is.list(run_attr[["metadata"]]))
-  expect_equal(run_attr[["name"]], "original")
-  expect_null(run_attr[["parent"]])
+  expect_equal(attr(mock_coded, "meta")$object$input_type, "text")
+  meta_attr <- attr(mock_coded, "meta")
+  expect_true(!is.null(meta_attr))
+  expect_identical(attr(mock_coded, "codebook"), codebook)
+  expect_true(is.list(meta_attr$object$chat_args))
+  expect_true(is.list(meta_attr$object$execution_args))
+  expect_false(meta_attr$object$batch)  # batch flag should be FALSE by default
+  expect_true(is.list(meta_attr$system))
+  expect_equal(meta_attr$user$name, "original")
+  expect_null(meta_attr$object$parent)
 })
 
 
@@ -229,15 +229,15 @@ test_that("new_qlm_coded stores batch flag and execution_args", {
   )
 
   # Verify batch flag is stored
-  run_attr <- attr(mock_coded, "run")
-  expect_true(run_attr[["batch"]])
+  meta_attr <- attr(mock_coded, "meta")
+  expect_true(meta_attr$object$batch)
 
   # Verify execution_args contains all args (both parallel and batch specific)
-  expect_true(is.list(run_attr[["execution_args"]]))
-  expect_equal(run_attr[["execution_args"]]$path, "/tmp/batch")
-  expect_true(run_attr[["execution_args"]]$wait)
-  expect_equal(run_attr[["execution_args"]]$max_active, 5)
-  expect_true(run_attr[["execution_args"]]$convert)
+  expect_true(is.list(meta_attr$object$execution_args))
+  expect_equal(meta_attr$object$execution_args$path, "/tmp/batch")
+  expect_true(meta_attr$object$execution_args$wait)
+  expect_equal(meta_attr$object$execution_args$max_active, 5)
+  expect_true(meta_attr$object$execution_args$convert)
 })
 
 
@@ -264,9 +264,9 @@ test_that("new_qlm_coded maintains backward compatibility with pcs_args", {
   )
 
   # Verify pcs_args are converted to execution_args
-  run_attr <- attr(mock_coded, "run")
-  expect_true(is.list(run_attr[["execution_args"]]))
-  expect_equal(run_attr[["execution_args"]]$max_active, 5)
+  meta_attr <- attr(mock_coded, "meta")
+  expect_true(is.list(meta_attr$object$execution_args))
+  expect_equal(meta_attr$object$execution_args$max_active, 5)
 })
 
 
@@ -324,7 +324,7 @@ test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
 
   # Verify result structure
   expect_s3_class(result, "qlm_coded")
-  expect_false(attr(result, "run")$batch)
+  expect_false(attr(result, "meta")$object$batch)
 })
 
 
@@ -356,8 +356,8 @@ test_that("qlm_code uses batch_chat_structured when batch=TRUE", {
 
   # Verify result structure
   expect_s3_class(result, "qlm_coded")
-  expect_true(attr(result, "run")$batch)
-  expect_equal(attr(result, "run")$execution_args$convert, TRUE)
+  expect_true(attr(result, "meta")$object$batch)
+  expect_equal(attr(result, "meta")$object$execution_args$convert, TRUE)
 })
 
 
@@ -377,19 +377,19 @@ test_that("qlm_code builds metadata correctly", {
   result <- qlm_code(c("text1", "text2", "text3"), codebook,
                      model = "test/model")
 
-  metadata <- attr(result, "run")$metadata
+  meta_attr <- attr(result, "meta")
 
   # Verify metadata structure
-  expect_true(is.list(metadata))
-  expect_true("timestamp" %in% names(metadata))
-  expect_equal(metadata$n_units, 3)
-  expect_true("ellmer_version" %in% names(metadata))
-  expect_true("quallmer_version" %in% names(metadata))
-  expect_true("R_version" %in% names(metadata))
+  expect_true(is.list(meta_attr$system))
+  expect_true("timestamp" %in% names(meta_attr$system))
+  expect_equal(meta_attr$object$n_units, 3)
+  expect_true("ellmer_version" %in% names(meta_attr$system))
+  expect_true("quallmer_version" %in% names(meta_attr$system))
+  expect_true("R_version" %in% names(meta_attr$system))
 
   # Verify timestamp is recent
-  expect_true(inherits(metadata$timestamp, "POSIXct"))
-  expect_true(difftime(Sys.time(), metadata$timestamp, units = "secs") < 1)
+  expect_true(inherits(meta_attr$system$timestamp, "POSIXct"))
+  expect_true(difftime(Sys.time(), meta_attr$system$timestamp, units = "secs") < 1)
 })
 
 
@@ -418,8 +418,8 @@ test_that("qlm_code stores notes in metadata", {
   )
 
   # Verify notes are stored in metadata
-  run <- attr(result, "run")
-  expect_equal(run$metadata$notes, "Test run with temperature 0.5")
+  meta_attr <- attr(result, "meta")
+  expect_equal(meta_attr$user$notes, "Test run with temperature 0.5")
 
   # Test print output includes notes
   output <- capture.output(print(result))

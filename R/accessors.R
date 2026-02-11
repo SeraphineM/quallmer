@@ -1,3 +1,119 @@
+#' Upgrade old metadata structure to new format
+#'
+#' Migrates objects using the old `attr(x, "run")` structure to the new
+#' `attr(x, "meta")` structure. This function is called automatically by
+#' accessor functions when they detect an old-style object.
+#'
+#' @param x A quallmer object with old-style metadata
+#' @return The same object with upgraded metadata structure
+#' @keywords internal
+#' @noRd
+upgrade_meta <- function(x) {
+  # Check if already upgraded
+  if (!is.null(attr(x, "meta"))) {
+    return(x)
+  }
+
+  # Get old run attribute
+  run <- attr(x, "run")
+  if (is.null(run)) {
+    return(x)  # Nothing to upgrade
+  }
+
+  # Build new metadata structure
+  if (inherits(x, "qlm_coded")) {
+    # For qlm_coded objects
+    object_meta <- list(
+      batch = run$batch,
+      call = run$call,
+      chat_args = run$chat_args,
+      execution_args = run$execution_args,
+      parent = run$parent,
+      n_units = run$metadata$n_units,
+      input_type = attr(x, "input_type")
+    )
+
+    # Add source and is_gold if present (for human-coded data)
+    if (!is.null(run$metadata$source)) {
+      object_meta$source <- run$metadata$source
+    }
+    if (!is.null(run$metadata$is_gold)) {
+      object_meta$is_gold <- run$metadata$is_gold
+    }
+
+    new_meta <- list(
+      user = list(
+        name = run$name,
+        notes = run$metadata$notes
+      ),
+      object = object_meta,
+      system = list(
+        timestamp = run$metadata$timestamp,
+        ellmer_version = run$metadata$ellmer_version,
+        quallmer_version = run$metadata$quallmer_version,
+        R_version = run$metadata$R_version
+      )
+    )
+
+    # Set new attributes
+    attr(x, "meta") <- new_meta
+    attr(x, "codebook") <- run$codebook
+
+    # Remove old attributes
+    attr(x, "run") <- NULL
+    # Keep attr(x, "data") and old attr(x, "input_type") for now, will be cleaned up
+
+  } else if (inherits(x, "qlm_comparison")) {
+    # For qlm_comparison objects
+    new_meta <- list(
+      user = list(
+        name = run$name,
+        notes = run$metadata$notes
+      ),
+      object = list(
+        call = run$call,
+        parent = run$parent,
+        n_raters = run$metadata$n_raters,
+        variables = run$metadata$variables
+      ),
+      system = list(
+        timestamp = run$metadata$timestamp,
+        quallmer_version = run$metadata$quallmer_version,
+        R_version = run$metadata$R_version
+      )
+    )
+
+    attr(x, "meta") <- new_meta
+    attr(x, "run") <- NULL
+
+  } else if (inherits(x, "qlm_validation")) {
+    # For qlm_validation objects
+    new_meta <- list(
+      user = list(
+        name = run$name,
+        notes = run$metadata$notes
+      ),
+      object = list(
+        call = run$call,
+        parent = run$parent,
+        variables = run$metadata$variables,
+        average = run$metadata$average
+      ),
+      system = list(
+        timestamp = run$metadata$timestamp,
+        quallmer_version = run$metadata$quallmer_version,
+        R_version = run$metadata$R_version
+      )
+    )
+
+    attr(x, "meta") <- new_meta
+    attr(x, "run") <- NULL
+  }
+
+  x
+}
+
+
 #' Extract metadata from quallmer objects
 #'
 #' Extracts metadata from `qlm_coded`, `qlm_codebook`, `qlm_comparison`, and
@@ -74,39 +190,26 @@ qlm_meta <- function(x, field = NULL, type = c("user", "object", "system", "all"
 qlm_meta.qlm_coded <- function(x, field = NULL, type = c("user", "object", "system", "all")) {
   type <- match.arg(type)
 
-  run <- attr(x, "run")
-  if (is.null(run)) {
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  if (is.null(meta_attr)) {
     cli::cli_abort("Object has no metadata attributes.")
   }
 
   # Extract metadata by type
   if (type == "user") {
-    metadata <- list(
-      name = run$name,
-      notes = run$metadata$notes
-    )
+    metadata <- meta_attr$user
   } else if (type == "object") {
-    metadata <- list(
-      batch = run$batch,
-      call = run$call,
-      chat_args = run$chat_args,
-      execution_args = run$execution_args,
-      parent = run$parent,
-      n_units = run$metadata$n_units,
-      input_type = attr(x, "input_type")
-    )
+    metadata <- meta_attr$object
   } else if (type == "system") {
-    metadata <- list(
-      timestamp = run$metadata$timestamp,
-      ellmer_version = run$metadata$ellmer_version,
-      quallmer_version = run$metadata$quallmer_version,
-      R_version = run$metadata$R_version
-    )
+    metadata <- meta_attr$system
   } else if (type == "all") {
     metadata <- list(
-      user = qlm_meta.qlm_coded(x, field = NULL, type = "user"),
-      object = qlm_meta.qlm_coded(x, field = NULL, type = "object"),
-      system = qlm_meta.qlm_coded(x, field = NULL, type = "system")
+      user = meta_attr$user,
+      object = meta_attr$object,
+      system = meta_attr$system
     )
   }
 
@@ -135,35 +238,26 @@ qlm_meta.qlm_coded <- function(x, field = NULL, type = c("user", "object", "syst
 qlm_meta.qlm_comparison <- function(x, field = NULL, type = c("user", "object", "system", "all")) {
   type <- match.arg(type)
 
-  run <- attr(x, "run")
-  if (is.null(run)) {
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  if (is.null(meta_attr)) {
     cli::cli_abort("Object has no metadata attributes.")
   }
 
   # Extract metadata by type
   if (type == "user") {
-    metadata <- list(
-      name = run$name,
-      notes = run$metadata$notes
-    )
+    metadata <- meta_attr$user
   } else if (type == "object") {
-    metadata <- list(
-      call = run$call,
-      parent = run$parent,
-      n_raters = run$metadata$n_raters,
-      variables = run$metadata$variables
-    )
+    metadata <- meta_attr$object
   } else if (type == "system") {
-    metadata <- list(
-      timestamp = run$metadata$timestamp,
-      quallmer_version = run$metadata$quallmer_version,
-      R_version = run$metadata$R_version
-    )
+    metadata <- meta_attr$system
   } else if (type == "all") {
     metadata <- list(
-      user = qlm_meta.qlm_comparison(x, field = NULL, type = "user"),
-      object = qlm_meta.qlm_comparison(x, field = NULL, type = "object"),
-      system = qlm_meta.qlm_comparison(x, field = NULL, type = "system")
+      user = meta_attr$user,
+      object = meta_attr$object,
+      system = meta_attr$system
     )
   }
 
@@ -192,35 +286,26 @@ qlm_meta.qlm_comparison <- function(x, field = NULL, type = c("user", "object", 
 qlm_meta.qlm_validation <- function(x, field = NULL, type = c("user", "object", "system", "all")) {
   type <- match.arg(type)
 
-  run <- attr(x, "run")
-  if (is.null(run)) {
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  if (is.null(meta_attr)) {
     cli::cli_abort("Object has no metadata attributes.")
   }
 
   # Extract metadata by type
   if (type == "user") {
-    metadata <- list(
-      name = run$name,
-      notes = run$metadata$notes
-    )
+    metadata <- meta_attr$user
   } else if (type == "object") {
-    metadata <- list(
-      call = run$call,
-      parent = run$parent,
-      variables = run$metadata$variables,
-      average = run$metadata$average
-    )
+    metadata <- meta_attr$object
   } else if (type == "system") {
-    metadata <- list(
-      timestamp = run$metadata$timestamp,
-      quallmer_version = run$metadata$quallmer_version,
-      R_version = run$metadata$R_version
-    )
+    metadata <- meta_attr$system
   } else if (type == "all") {
     metadata <- list(
-      user = qlm_meta.qlm_validation(x, field = NULL, type = "user"),
-      object = qlm_meta.qlm_validation(x, field = NULL, type = "object"),
-      system = qlm_meta.qlm_validation(x, field = NULL, type = "system")
+      user = meta_attr$user,
+      object = meta_attr$object,
+      system = meta_attr$system
     )
   }
 
@@ -342,8 +427,11 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
 
 #' @export
 `qlm_meta<-.qlm_coded` <- function(x, field = NULL, value) {
-  run <- attr(x, "run")
-  if (is.null(run)) {
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  if (is.null(meta_attr)) {
     cli::cli_abort("Object has no metadata attributes.")
   }
 
@@ -360,12 +448,8 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       ))
     }
 
-    # Update the appropriate location
-    if (field == "name") {
-      run$name <- value
-    } else if (field == "notes") {
-      run$metadata$notes <- value
-    }
+    # Update the appropriate field in user metadata
+    meta_attr$user[[field]] <- value
   } else {
     # Multiple field update - value should be a list
     if (!is.list(value)) {
@@ -385,25 +469,25 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       ))
     }
 
-    # Update fields
-    if ("name" %in% names(value)) {
-      run$name <- value$name
-    }
-    if ("notes" %in% names(value)) {
-      run$metadata$notes <- value$notes
+    # Update fields in user metadata
+    for (field_name in names(value)) {
+      meta_attr$user[[field_name]] <- value[[field_name]]
     }
   }
 
-  # Update the run attribute
-  attr(x, "run") <- run
+  # Update the meta attribute
+  attr(x, "meta") <- meta_attr
   x
 }
 
 
 #' @export
 `qlm_meta<-.qlm_comparison` <- function(x, field = NULL, value) {
-  run <- attr(x, "run")
-  if (is.null(run)) {
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  if (is.null(meta_attr)) {
     cli::cli_abort("Object has no metadata attributes.")
   }
 
@@ -419,11 +503,7 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       ))
     }
 
-    if (field == "name") {
-      run$name <- value
-    } else if (field == "notes") {
-      run$metadata$notes <- value
-    }
+    meta_attr$user[[field]] <- value
   } else {
     if (!is.list(value)) {
       cli::cli_abort(c(
@@ -441,23 +521,23 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       ))
     }
 
-    if ("name" %in% names(value)) {
-      run$name <- value$name
-    }
-    if ("notes" %in% names(value)) {
-      run$metadata$notes <- value$notes
+    for (field_name in names(value)) {
+      meta_attr$user[[field_name]] <- value[[field_name]]
     }
   }
 
-  attr(x, "run") <- run
+  attr(x, "meta") <- meta_attr
   x
 }
 
 
 #' @export
 `qlm_meta<-.qlm_validation` <- function(x, field = NULL, value) {
-  run <- attr(x, "run")
-  if (is.null(run)) {
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  if (is.null(meta_attr)) {
     cli::cli_abort("Object has no metadata attributes.")
   }
 
@@ -473,11 +553,7 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       ))
     }
 
-    if (field == "name") {
-      run$name <- value
-    } else if (field == "notes") {
-      run$metadata$notes <- value
-    }
+    meta_attr$user[[field]] <- value
   } else {
     if (!is.list(value)) {
       cli::cli_abort(c(
@@ -495,15 +571,12 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       ))
     }
 
-    if ("name" %in% names(value)) {
-      run$name <- value$name
-    }
-    if ("notes" %in% names(value)) {
-      run$metadata$notes <- value$notes
+    for (field_name in names(value)) {
+      meta_attr$user[[field_name]] <- value[[field_name]]
     }
   }
 
-  attr(x, "run") <- run
+  attr(x, "meta") <- meta_attr
   x
 }
 
@@ -596,11 +669,10 @@ codebook <- function(x) {
 
 #' @export
 codebook.qlm_coded <- function(x) {
-  run <- attr(x, "run")
-  if (is.null(run)) {
-    return(NULL)
-  }
-  run$codebook
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  attr(x, "codebook")
 }
 
 

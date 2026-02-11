@@ -18,10 +18,10 @@ test_that("as_qlm_coded.data.frame creates object with correct structure", {
   expect_true("category" %in% names(result))
 
   # Check attributes
-  run <- attr(result, "run")
-  expect_equal(run$name, "test_coder")
-  expect_equal(run$metadata$source, "human")
-  expect_equal(run$metadata$n_units, 10)
+  meta_attr <- attr(result, "meta")
+  expect_equal(meta_attr$user$name, "test_coder")
+  expect_equal(meta_attr$object$source, "human")
+  expect_equal(meta_attr$object$n_units, 10)
 })
 
 test_that("as_qlm_coded.data.frame validates inputs", {
@@ -49,9 +49,9 @@ test_that("as_qlm_coded.data.frame accepts custom codebook", {
 
   result <- as_qlm_coded(data, codebook = codebook)
 
-  run <- attr(result, "run")
-  expect_equal(run$codebook$name, "Sentiment Coding")
-  expect_equal(run$codebook$instructions, "Code as positive or negative")
+  codebook_attr <- attr(result, "codebook")
+  expect_equal(codebook_attr$name, "Sentiment Coding")
+  expect_equal(codebook_attr$instructions, "Code as positive or negative")
 })
 
 test_that("as_qlm_coded.data.frame handles is_gold parameter", {
@@ -59,11 +59,11 @@ test_that("as_qlm_coded.data.frame handles is_gold parameter", {
 
   # Test without is_gold
   result_not_gold <- as_qlm_coded(data, name = "test")
-  expect_false(attr(result_not_gold, "run")$metadata$is_gold)
+  expect_false(attr(result_not_gold, "meta")$object$is_gold)
 
   # Test with is_gold
   result_gold <- as_qlm_coded(data, name = "gold", is_gold = TRUE)
-  expect_true(attr(result_gold, "run")$metadata$is_gold)
+  expect_true(attr(result_gold, "meta")$object$is_gold)
 })
 
 test_that("as_qlm_coded.data.frame accepts texts parameter", {
@@ -84,12 +84,12 @@ test_that("as_qlm_coded.data.frame accepts metadata parameter", {
     metadata = list(coder_name = "Dr. Smith", experience = "5 years")
   )
 
-  run <- attr(result, "run")
-  expect_equal(run$metadata$coder_name, "Dr. Smith")
-  expect_equal(run$metadata$experience, "5 years")
+  meta_attr <- attr(result, "meta")
+  expect_equal(meta_attr$user$coder_name, "Dr. Smith")
+  expect_equal(meta_attr$user$experience, "5 years")
   # Should still have automatic metadata
-  expect_equal(run$metadata$source, "human")
-  expect_true(!is.null(run$metadata$timestamp))
+  expect_equal(meta_attr$object$source, "human")
+  expect_true(!is.null(meta_attr$system$timestamp))
 })
 
 test_that("as_qlm_coded.data.frame accepts custom id column", {
@@ -215,8 +215,8 @@ test_that("as_qlm_coded.corpus handles is_gold parameter", {
     is_gold = TRUE
   )
 
-  run <- attr(result, "run")
-  expect_true(run$metadata$is_gold)
+  meta_attr <- attr(result, "meta")
+  expect_true(meta_attr$object$is_gold)
 })
 
 test_that("as_qlm_coded.corpus preserves corpus text by default", {
@@ -381,7 +381,7 @@ test_that("corpus-based qlm_coded works with qlm_validate", {
   # Should work with qlm_validate (gold detected automatically)
   # We're just checking it doesn't error - actual validation logic tested elsewhere
   expect_no_error({
-    result <- qlm_validate(comp_coded, gold, by = "party", level = "nominal")
+    result <- qlm_validate(comp_coded, gold = gold, by = "party", level = "nominal")
   })
 })
 
@@ -420,8 +420,8 @@ test_that("corpus method produces identical results to manual data.frame convers
 
   # Should have identical metadata (except call)
   expect_equal(
-    attr(result_corpus, "run")$metadata$is_gold,
-    attr(result_manual, "run")$metadata$is_gold
+    attr(result_corpus, "meta")$object$is_gold,
+    attr(result_manual, "meta")$object$is_gold
   )
   expect_equal(
     attr(result_corpus, "data"),
