@@ -276,6 +276,9 @@ as_qlm_coded.corpus <- function(
   notes = NULL,
   metadata = list()
 ) {
+  # Wrap corpus with qlm_corpus class
+  x <- as_qlm_corpus(x)
+
   # Extract docvars from corpus
   docvars <- attr(x, "docvars")
 

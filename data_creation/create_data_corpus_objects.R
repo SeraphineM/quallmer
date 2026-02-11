@@ -2,7 +2,7 @@
 
 ## create the movie review corpus
 
-load("data_corpus_LMRD.rda")
+load("data_creation/data_corpus_LMRD.rda")
 
 set.seed(1001)
 data_corpus_LMRDsample <- corpus_sample(data_corpus_LMRD, size = 100, by = polarity)
@@ -10,6 +10,9 @@ docnames(data_corpus_LMRDsample) <- data_corpus_LMRDsample |>
   docnames() |>
   basename()
 data_corpus_LMRDsample$set <- NULL
+
+# Add qlm_corpus class wrapper
+class(data_corpus_LMRDsample) <- c("qlm_corpus", class(data_corpus_LMRDsample))
 
 usethis::use_data(data_corpus_LMRDsample, overwrite = TRUE)
 
@@ -42,6 +45,9 @@ data_corpus_manifsentsUK2010sample <- data_corpus_manifsentsUK2010sample %>%
     breaks = c(-Inf, -.5, .5, Inf),
     labels = c(-1, 0, 1)))))
 
+# Add qlm_corpus class wrapper
+class(data_corpus_manifsentsUK2010sample) <- c("qlm_corpus", class(data_corpus_manifsentsUK2010sample))
+
 usethis::use_data(data_corpus_manifsentsUK2010sample, overwrite = TRUE)
 
 ## create the political speeches corpus (Maerz & Schneider 2020)
@@ -73,6 +79,9 @@ data_corpus_ms2020sample <- quanteda::corpus(
   docid_field = ".id",
   text_field = "text"
 )
+
+# Add qlm_corpus class wrapper
+class(data_corpus_ms2020sample) <- c("qlm_corpus", class(data_corpus_ms2020sample))
 
 usethis::use_data(data_corpus_ms2020sample, overwrite = TRUE)
 

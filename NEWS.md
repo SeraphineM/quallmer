@@ -1,5 +1,9 @@
 # quallmer (development version)
 
+## Internal changes
+
+* Refactored corpus methods to use `qlm_corpus` wrapper class pattern instead of conditional `registerS3method()`, eliminating load-order dependencies and runtime checks (#86).
+
 ## Build system
 
 * Build system: pkgdown articles now built locally via Makefile to enable caching and avoid API key requirements in CI (#68).
