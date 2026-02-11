@@ -47,9 +47,39 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="core-coding-functions">Core coding functions<a class="anchor" aria-label="anchor" href="#core-coding-functions"></a></h2>
+
+      <div class="section-desc"><p>Functions for LLM-powered coding of qualitative data</p></div>
+
+      <dl></dl></div><div class="section level2">
 
 
+
+
+      <dl><dt>
+
+          <code><a href="qlm_code.html">qlm_code()</a></code>
+
+        </dt>
+        <dd>Code qualitative data with an LLM</dd>
+
+        <dt>
+
+          <code><a href="qlm_replicate.html">qlm_replicate()</a></code>
+
+        </dt>
+        <dd>Replicate a coding task</dd>
+
+        <dt>
+
+          <code><a href="qlm_codebook.html">qlm_codebook()</a></code>
+
+        </dt>
+        <dd>Define a qualitative codebook</dd>
+      </dl></div><div class="section level2">
+      <h2 id="human-coded-data">Human-coded data<a class="anchor" aria-label="anchor" href="#human-coded-data"></a></h2>
+
+      <div class="section-desc"><p>Convert and work with human-coded or externally coded data</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -65,12 +95,88 @@
 
         <dt>
 
-          <code><a href="data_codebook_immigration.html">data_codebook_immigration</a></code>
+          <code><a href="qlm_humancoded.html">qlm_humancoded()</a></code>
 
         </dt>
-        <dd>Immigration policy codebook based on Benoit et al. (2016)</dd>
+        <dd>Convert human-coded data to qlm_coded format (deprecated)</dd>
+      </dl></div><div class="section level2">
+      <h2 id="accessor-functions">Accessor functions<a class="anchor" aria-label="anchor" href="#accessor-functions"></a></h2>
+
+      <div class="section-desc"><p>Extract and modify metadata and components from quallmer objects</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="accessors.html">accessors</a></code>
+
+        </dt>
+        <dd>Accessor functions for quallmer objects</dd>
 
         <dt>
+
+          <code><a href="qlm_meta.html">qlm_meta()</a></code> <code><a href="qlm_meta.html">`qlm_meta&lt;-`()</a></code>
+
+        </dt>
+        <dd>Get or set quallmer object metadata</dd>
+
+        <dt>
+
+          <code><a href="codebook.html">codebook()</a></code>
+
+        </dt>
+        <dd>Extract codebook from quallmer objects</dd>
+
+        <dt>
+
+          <code><a href="inputs.html">inputs()</a></code>
+
+        </dt>
+        <dd>Extract input data from qlm_coded objects</dd>
+      </dl></div><div class="section level2">
+      <h2 id="validation-and-comparison">Validation and comparison<a class="anchor" aria-label="anchor" href="#validation-and-comparison"></a></h2>
+
+      <div class="section-desc"><p>Assess reliability and validate against gold standards</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="qlm_validate.html">qlm_validate()</a></code>
+
+        </dt>
+        <dd>Validate coded results against a gold standard</dd>
+
+        <dt>
+
+          <code><a href="qlm_compare.html">qlm_compare()</a></code>
+
+        </dt>
+        <dd>Compare coded results for inter-rater reliability</dd>
+
+        <dt>
+
+          <code><a href="qlm_trail.html">qlm_trail()</a></code>
+
+        </dt>
+        <dd>Create an audit trail from quallmer objects</dd>
+      </dl></div><div class="section level2">
+      <h2 id="predefined-codebooks">Predefined codebooks<a class="anchor" aria-label="anchor" href="#predefined-codebooks"></a></h2>
+
+      <div class="section-desc"><p>Ready-to-use codebooks for common coding tasks</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="data_codebook_sentiment.html">data_codebook_sentiment</a></code>
 
@@ -78,6 +184,22 @@
         <dd>Sentiment analysis codebook for movie reviews</dd>
 
         <dt>
+
+          <code><a href="data_codebook_immigration.html">data_codebook_immigration</a></code>
+
+        </dt>
+        <dd>Immigration policy codebook based on Benoit et al. (2016)</dd>
+      </dl></div><div class="section level2">
+      <h2 id="example-data">Example data<a class="anchor" aria-label="anchor" href="#example-data"></a></h2>
+
+      <div class="section-desc"><p>Sample datasets for testing and examples</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="data_corpus_LMRDsample.html">data_corpus_LMRDsample</a></code>
 
@@ -97,50 +219,9 @@
 
         </dt>
         <dd>Sample corpus of political speeches from Maerz &amp; Schneider (2020)</dd>
-
-        <dt>
-
-          <code><a href="qlm_code.html">qlm_code()</a></code>
-
-        </dt>
-        <dd>Code qualitative data with an LLM</dd>
-
-        <dt>
-
-          <code><a href="qlm_codebook.html">qlm_codebook()</a></code>
-
-        </dt>
-        <dd>Define a qualitative codebook</dd>
-
-        <dt>
-
-          <code><a href="qlm_compare.html">qlm_compare()</a></code>
-
-        </dt>
-        <dd>Compare coded results for inter-rater reliability</dd>
-
-        <dt>
-
-          <code><a href="qlm_replicate.html">qlm_replicate()</a></code>
-
-        </dt>
-        <dd>Replicate a coding task</dd>
-
-        <dt>
-
-          <code><a href="qlm_trail.html">qlm_trail()</a></code>
-
-        </dt>
-        <dd>Create an audit trail from quallmer objects</dd>
-
-        <dt>
-
-          <code><a href="qlm_validate.html">qlm_validate()</a></code>
-
-        </dt>
-        <dd>Validate coded results against a gold standard</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
