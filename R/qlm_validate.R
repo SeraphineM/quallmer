@@ -13,12 +13,7 @@ extract_codebook_from_coded <- function(obj) {
     return(NULL)
   }
 
-  run <- attr(obj, "run")
-  if (is.null(run) || is.null(run$codebook)) {
-    return(NULL)
-  }
-
-  run$codebook
+  codebook(obj)
 }
 
 
@@ -386,8 +381,9 @@ qlm_validate <- function(
 
     # Check for objects marked as gold standards
     is_gold <- vapply(x_list, function(obj) {
-      run <- attr(obj, "run")
-      !is.null(run) && !is.null(run$metadata) && isTRUE(run$metadata$is_gold)
+      obj <- upgrade_meta(obj)
+      meta_attr <- attr(obj, "meta")
+      !is.null(meta_attr) && !is.null(meta_attr$object$is_gold) && isTRUE(meta_attr$object$is_gold)
     }, logical(1))
 
     if (sum(is_gold) == 1) {
@@ -485,23 +481,14 @@ qlm_validate <- function(
     gold <- as_qlm_coded(gold, name = "auto_converted_gold")
   }
 
-  # Extract object names from run attributes
+  # Extract object names from metadata
   object_names <- vapply(x_list, function(obj) {
-    run <- attr(obj, "run")
-    if (!is.null(run) && !is.null(run$name)) {
-      run$name
-    } else {
-      NA_character_
-    }
+    name <- tryCatch(qlm_meta(obj, "name"), error = function(e) NULL)
+    if (!is.null(name)) name else NA_character_
   }, character(1))
 
   # Extract gold standard name
-  gold_run <- attr(gold, "run")
-  gold_name <- if (!is.null(gold_run) && !is.null(gold_run$name)) {
-    gold_run$name
-  } else {
-    NA_character_
-  }
+  gold_name <- tryCatch(qlm_meta(gold, "name"), error = function(e) NA_character_)
 
   # Validate .id columns
   for (i in seq_along(x_list)) {
@@ -1005,10 +992,8 @@ qlm_validate <- function(
   # Extract parent run names from all objects
   parent_names <- vapply(x_list, function(obj) {
     if (inherits(obj, "qlm_coded")) {
-      run <- attr(obj, "run")
-      if (!is.null(run) && !is.null(run$name)) {
-        return(run$name)
-      }
+      name <- tryCatch(qlm_meta(obj, "name"), error = function(e) NULL)
+      if (!is.null(name)) return(name)
     }
     NA_character_
   }, character(1))
@@ -1016,10 +1001,7 @@ qlm_validate <- function(
   # Extract gold standard name
   gold_run_name <- NA_character_
   if (inherits(gold, "qlm_coded")) {
-    gold_run <- attr(gold, "run")
-    if (!is.null(gold_run) && !is.null(gold_run$name)) {
-      gold_run_name <- gold_run$name
-    }
+    gold_run_name <- tryCatch(qlm_meta(gold, "name"), error = function(e) NA_character_)
   }
 
   # Add attributes and class with new metadata structure

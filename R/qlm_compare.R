@@ -284,14 +284,10 @@ qlm_compare <- function(...,
   # Now process each variable and build results data frame
   n_raters <- length(coded_list)
 
-  # Extract object names from run attributes
+  # Extract object names from metadata
   object_names <- vapply(coded_list, function(obj) {
-    run <- attr(obj, "run")
-    if (!is.null(run) && !is.null(run$name)) {
-      run$name
-    } else {
-      NA_character_
-    }
+    name <- tryCatch(qlm_meta(obj, "name"), error = function(e) NULL)
+    if (!is.null(name)) name else NA_character_
   }, character(1))
 
   # Create names for raters (used in ratings matrix column names)
@@ -423,12 +419,8 @@ qlm_compare <- function(...,
 
   # Extract parent run names from coded objects
   parent_names <- vapply(coded_list, function(obj) {
-    run <- attr(obj, "run")
-    if (!is.null(run) && !is.null(run$name)) {
-      run$name
-    } else {
-      NA_character_
-    }
+    name <- tryCatch(qlm_meta(obj, "name"), error = function(e) NULL)
+    if (!is.null(name)) name else NA_character_
   }, character(1))
 
   # Add attributes and class with new metadata structure
@@ -758,12 +750,7 @@ extract_codebook_from_coded <- function(obj) {
     return(NULL)
   }
 
-  run <- attr(obj, "run")
-  if (is.null(run) || is.null(run$codebook)) {
-    return(NULL)
-  }
-
-  run$codebook
+  codebook(obj)
 }
 
 

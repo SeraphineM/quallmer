@@ -54,3 +54,45 @@ home:
   exclude:
     - AGENTS.md
     - CLAUDE.md
+
+# Reference index organization
+reference:
+  - title: Core coding functions
+    desc: Functions for LLM-powered coding of qualitative data
+    contents:
+      - qlm_code
+      - qlm_replicate
+      - qlm_codebook
+
+  - title: Human-coded data
+    desc: Convert and work with human-coded or externally coded data
+    contents:
+      - as_qlm_coded
+      - qlm_humancoded
+
+  - title: Accessor functions
+    desc: Extract and modify metadata and components from quallmer objects
+    contents:
+      - accessors
+      - qlm_meta
+      - "`qlm_meta<-`"
+      - codebook
+      - inputs
+
+  - title: Validation and comparison
+    desc: Assess reliability and validate against gold standards
+    contents:
+      - qlm_validate
+      - qlm_compare
+      - qlm_trail
+
+  - title: Predefined codebooks
+    desc: Ready-to-use codebooks for common coding tasks
+    contents:
+      - data_codebook_sentiment
+      - data_codebook_immigration
+
+  - title: Example data
+    desc: Sample datasets for testing and examples
+    contents:
+      - starts_with("data_corpus_")
