@@ -50,8 +50,10 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="quallmer-development-version">quallmer (development version)<a class="anchor" aria-label="anchor" href="#quallmer-development-version"></a></h2>
 <div class="section level3">
-<h3 id="accessor-functions-development-version">Accessor functions<a class="anchor" aria-label="anchor" href="#accessor-functions-development-version"></a></h3>
-<ul><li>New <code><a href="../reference/qlm_meta.html">qlm_meta()</a></code> accessor function provides stratified access to metadata for <code>qlm_coded</code>, <code>qlm_codebook</code>, <code>qlm_comparison</code>, and <code>qlm_validation</code> objects. Metadata is organized into three types following the quanteda convention:
+<h3 id="internal-changes-development-version">Internal changes<a class="anchor" aria-label="anchor" href="#internal-changes-development-version"></a></h3>
+<ul><li><p>Refactored corpus methods to use <code>qlm_corpus</code> wrapper class pattern instead of conditional <code><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">registerS3method()</a></code>, eliminating load-order dependencies and runtime checks (#86). ## Accessor functions</p></li>
+<li>
+<p>New <code><a href="../reference/qlm_meta.html">qlm_meta()</a></code> accessor function provides stratified access to metadata for <code>qlm_coded</code>, <code>qlm_codebook</code>, <code>qlm_comparison</code>, and <code>qlm_validation</code> objects. Metadata is organized into three types following the quanteda convention:</p>
 <ul><li>
 <code>type = "user"</code> (default): User-specified fields (<code>name</code>, <code>notes</code>) that can be modified via <code>qlm_meta&lt;-()</code>.</li>
 <li>
@@ -59,10 +61,10 @@
 <li>
 <code>type = "system"</code>: Read-only environment information (<code>timestamp</code>, <code>ellmer_version</code>, <code>quallmer_version</code>, <code>R_version</code>).</li>
 </ul></li>
-<li>New <code>qlm_meta&lt;-()</code> replacement function allows modifying user metadata fields only. Attempting to modify object or system metadata produces an informative error (#72).</li>
-<li>New <code><a href="../reference/codebook.html">codebook()</a></code> extractor retrieves the codebook component from <code>qlm_coded</code>, <code>qlm_comparison</code>, and <code>qlm_validation</code> objects. This is a core component accessor analogous to <code><a href="https://rdrr.io/r/stats/formula.html" class="external-link">formula()</a></code> for <code>lm</code> objects (#72).</li>
-<li>New <code><a href="../reference/inputs.html">inputs()</a></code> extractor retrieves the original input data (texts or image paths) from <code>qlm_coded</code> objects. The function name mirrors the <code>inputs</code> argument in <code><a href="../reference/qlm_code.html">qlm_code()</a></code> (#72).</li>
-<li>These accessor functions replace direct <code>attr(x, "run")$...</code> access, providing a stable API for extracting and modifying object metadata and components.</li>
+<li><p>New <code>qlm_meta&lt;-()</code> replacement function allows modifying user metadata fields only. Attempting to modify object or system metadata produces an informative error (#72).</p></li>
+<li><p>New <code><a href="../reference/codebook.html">codebook()</a></code> extractor retrieves the codebook component from <code>qlm_coded</code>, <code>qlm_comparison</code>, and <code>qlm_validation</code> objects. This is a core component accessor analogous to <code><a href="https://rdrr.io/r/stats/formula.html" class="external-link">formula()</a></code> for <code>lm</code> objects (#72).</p></li>
+<li><p>New <code><a href="../reference/inputs.html">inputs()</a></code> extractor retrieves the original input data (texts or image paths) from <code>qlm_coded</code> objects. The function name mirrors the <code>inputs</code> argument in <code><a href="../reference/qlm_code.html">qlm_code()</a></code> (#72).</p></li>
+<li><p>These accessor functions replace direct <code>attr(x, "run")$...</code> access, providing a stable API for extracting and modifying object metadata and components.</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="build-system-development-version">Build system<a class="anchor" aria-label="anchor" href="#build-system-development-version"></a></h3>
