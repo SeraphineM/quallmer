@@ -16,3 +16,4 @@
 \description{
 Subset method for qlm_corpus objects
 }
+\keyword{internal}

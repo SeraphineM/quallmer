@@ -17,3 +17,4 @@ When quanteda is available, delegates to its print.corpus method using
 NextMethod(). This displays basic information about the corpus structure
 without requiring quanteda as a dependency.
 }
+\keyword{internal}

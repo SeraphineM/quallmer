@@ -36,6 +36,7 @@ as_qlm_corpus <- function(x) {
 #' @param x a qlm_corpus object
 #' @param ... additional arguments passed to methods
 #' @export
+#' @keywords internal
 print.qlm_corpus <- function(x, ...) {
   if (isNamespaceLoaded("quanteda")) {
     # Remove qlm_corpus class and delegate to quanteda's print.corpus
@@ -90,6 +91,7 @@ print.qlm_corpus <- function(x, ...) {
 #' @param i index for subsetting
 #' @param ... additional arguments
 #' @export
+#' @keywords internal
 `[.qlm_corpus` <- function(x, i, ...) {
   if (isNamespaceLoaded("quanteda")) {
     # Remove qlm_corpus class and delegate to quanteda's [.corpus
