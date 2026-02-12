@@ -43,6 +43,8 @@ navbar:
         href: articles/pkgdown/examples/example_illiberalism.html
       - text: Image analysis of campaign posters
         href: articles/pkgdown/examples/example_images.html
+      - text: Audio transcription and analysis
+        href: articles/pkgdown/examples/example_audio.html
     reference:
       text: Reference
       href: reference/index.html
