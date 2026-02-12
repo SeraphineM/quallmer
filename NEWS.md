@@ -1,4 +1,4 @@
-# quallmer (development version)
+# quallmer 0.3.0
 
 ## CRAN submission
 
