@@ -67,8 +67,8 @@ A \code{qlm_validation} object (a tibble/data frame) with the following columns:
 \item{\code{level}}{Measurement level used}
 \item{\code{measure}}{Name of the validation metric}
 \item{\code{value}}{Computed value of the metric}
-\item{\code{class}}{For nominal data: averaging method used (e.g., "\if{html}{\out{<macro>}}", "\if{html}{\out{<micro>}}",
-"\if{html}{\out{<weighted>}}") or class label (when \code{average = "none"}). For ordinal/interval
+\item{\code{class}}{For nominal data: averaging method used (e.g., "macro", "micro",
+"weighted") or class label (when \code{average = "none"}). For ordinal/interval
 data: NA (averaging not applicable).}
 \item{\code{rater}}{Name of the object being validated (from input names)}
 \item{\code{ci_lower}}{Lower bound of confidence interval (only if \code{ci != "none"})}

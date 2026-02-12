@@ -228,8 +228,8 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
 #'     \item{`level`}{Measurement level used}
 #'     \item{`measure`}{Name of the validation metric}
 #'     \item{`value`}{Computed value of the metric}
-#'     \item{`class`}{For nominal data: averaging method used (e.g., "<macro>", "<micro>",
-#'       "<weighted>") or class label (when `average = "none"`). For ordinal/interval
+#'     \item{`class`}{For nominal data: averaging method used (e.g., "macro", "micro",
+#'       "weighted") or class label (when `average = "none"`). For ordinal/interval
 #'       data: NA (averaging not applicable).}
 #'     \item{`rater`}{Name of the object being validated (from input names)}
 #'     \item{`ci_lower`}{Lower bound of confidence interval (only if `ci != "none"`)}
