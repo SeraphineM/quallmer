@@ -15,12 +15,21 @@ Authors@R: c(
     )
   )
 Description: Tools for AI-assisted qualitative data coding using large language
-    models ('LLMs'). Provides a 'codebook'-based workflow for defining coding
-    instructions and applying them to texts, images, and other data. Includes
-    built-in 'codebooks' for common applications and functions for creating custom
-    'codebooks' tailored to specific research questions. Supports replication across
-    models and settings, computing inter-coder reliability and gold-standard
-    validation metrics.
+    models ('LLMs') via the 'ellmer' package, supporting providers including
+    'OpenAI', 'Anthropic', 'Google', 'Azure', and local models via 'Ollama'.
+    Provides a 'codebook'-based workflow for defining coding instructions and
+    applying them to texts, images, and other data. Includes built-in 'codebooks'
+    for common applications such as sentiment analysis and policy coding, and
+    functions for creating custom 'codebooks' for specific research questions.
+    Supports systematic replication across models and settings, computing
+    inter-coder reliability statistics including Krippendorff's alpha
+    (Krippendorff 2019, <doi:10.4135/9781071878781>) and Fleiss' kappa
+    (Fleiss 1971, <doi:10.1037/h0031619>), as well as gold-standard validation
+    metrics including accuracy, precision, recall, and F1 scores following
+    Sokolova and Lapalme (2009, <doi:10.1016/j.ipm.2009.03.002>). Provides audit
+    trail functionality for documenting coding workflows following Lincoln and
+    Guba's (1985, ISBN:0803924313) framework for establishing trustworthiness
+    in qualitative research.
 License: GPL-3
 URL: https://quallmer.github.io/quallmer/
 Depends:

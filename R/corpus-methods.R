@@ -35,6 +35,9 @@ as_qlm_corpus <- function(x) {
 #'
 #' @param x a qlm_corpus object
 #' @param ... additional arguments passed to methods
+#'
+#' @return Invisibly returns the input object \code{x}. Called for side effects
+#'   (printing to console).
 #' @export
 #' @keywords internal
 print.qlm_corpus <- function(x, ...) {
@@ -90,6 +93,9 @@ print.qlm_corpus <- function(x, ...) {
 #' @param x a qlm_corpus object
 #' @param i index for subsetting
 #' @param ... additional arguments
+#'
+#' @return A subsetted \code{qlm_corpus} object containing only the selected
+#'   documents.
 #' @export
 #' @keywords internal
 `[.qlm_corpus` <- function(x, i, ...) {

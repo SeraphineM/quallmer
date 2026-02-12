@@ -11,6 +11,10 @@
 
 \item{...}{additional arguments passed to methods}
 }
+\value{
+Invisibly returns the input object \code{x}. Called for side effects
+(printing to console).
+}
 \description{
 Provides a simple print method for corpus objects when quanteda is not loaded.
 When quanteda is available, delegates to its print.corpus method using

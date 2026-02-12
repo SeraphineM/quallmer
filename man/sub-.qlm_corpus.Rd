@@ -13,6 +13,10 @@
 
 \item{...}{additional arguments}
 }
+\value{
+A subsetted \code{qlm_corpus} object containing only the selected
+documents.
+}
 \description{
 Subset method for qlm_corpus objects
 }
