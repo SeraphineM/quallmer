@@ -18,9 +18,6 @@ contains the following document-level variables:
 \item{title}{Character. Title of the speech.}
 }
 }
-\source{
-Replication data available at \url{https://dataverse.harvard.edu/dataverse/sfm}
-}
 \usage{
 data_corpus_ms2020sample
 }

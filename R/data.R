@@ -206,7 +206,6 @@
 #' of government. *Quality & Quantity*, 54, 517-545.
 #' \doi{10.1007/s11135-019-00885-7}
 #'
-#' @source Replication data available at \url{https://dataverse.harvard.edu/dataverse/sfm}
 #' @keywords data
 #' @examples
 #' if (requireNamespace("quanteda", quietly = TRUE)) {
