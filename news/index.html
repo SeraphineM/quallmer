@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,19 +50,19 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="quallmer-development-version">quallmer (development version)<a class="anchor" aria-label="anchor" href="#quallmer-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.3.0" id="quallmer-030">quallmer 0.3.0<a class="anchor" aria-label="anchor" href="#quallmer-030"></a></h2>
 <div class="section level3">
-<h3 id="cran-submission-development-version">CRAN submission<a class="anchor" aria-label="anchor" href="#cran-submission-development-version"></a></h3>
+<h3 id="cran-submission-0-3-0">CRAN submission<a class="anchor" aria-label="anchor" href="#cran-submission-0-3-0"></a></h3>
 <ul><li>Expanded DESCRIPTION with supported LLM providers, method details, and DOI references.</li>
 <li>Added <code>\value</code> documentation to all exported methods.</li>
 <li>Fixed HTML validation issue in <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> documentation.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="internal-changes-development-version">Internal changes<a class="anchor" aria-label="anchor" href="#internal-changes-development-version"></a></h3>
+<h3 id="internal-changes-0-3-0">Internal changes<a class="anchor" aria-label="anchor" href="#internal-changes-0-3-0"></a></h3>
 <ul><li>Refactored corpus methods to use <code>qlm_corpus</code> wrapper class pattern instead of conditional <code><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">registerS3method()</a></code>, eliminating load-order dependencies and runtime checks (#86).</li>
 </ul></div>
 <div class="section level3">
-<h3 id="accessor-functions-development-version">Accessor functions<a class="anchor" aria-label="anchor" href="#accessor-functions-development-version"></a></h3>
+<h3 id="accessor-functions-0-3-0">Accessor functions<a class="anchor" aria-label="anchor" href="#accessor-functions-0-3-0"></a></h3>
 <ul><li>New <code><a href="../reference/qlm_meta.html">qlm_meta()</a></code> accessor function provides stratified access to metadata for <code>qlm_coded</code>, <code>qlm_codebook</code>, <code>qlm_comparison</code>, and <code>qlm_validation</code> objects. Metadata is organized into three types following the quanteda convention:
 <ul><li>
 <code>type = "user"</code> (default): User-specified fields (<code>name</code>, <code>notes</code>) that can be modified via <code>qlm_meta&lt;-()</code>.</li>
@@ -77,11 +77,11 @@
 <li>These accessor functions replace direct <code>attr(x, "run")$...</code> access, providing a stable API for extracting and modifying object metadata and components.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="build-system-development-version">Build system<a class="anchor" aria-label="anchor" href="#build-system-development-version"></a></h3>
+<h3 id="build-system-0-3-0">Build system<a class="anchor" aria-label="anchor" href="#build-system-0-3-0"></a></h3>
 <ul><li>Build system: pkgdown articles now built locally via Makefile to enable caching and avoid API key requirements in CI (#68).</li>
 </ul></div>
 <div class="section level3">
-<h3 id="gold-standard-handling-and-validation-improvements-development-version">Gold standard handling and validation improvements<a class="anchor" aria-label="anchor" href="#gold-standard-handling-and-validation-improvements-development-version"></a></h3>
+<h3 id="gold-standard-handling-and-validation-improvements-0-3-0">Gold standard handling and validation improvements<a class="anchor" aria-label="anchor" href="#gold-standard-handling-and-validation-improvements-0-3-0"></a></h3>
 <ul><li>New <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> function replaces <code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code> as the primary function for converting human-coded or external data to <code>qlm_coded</code> objects. The new function includes an <code>is_gold</code> parameter to mark gold standard objects for automatic detection.</li>
 <li>
 <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> now supports quanteda corpus objects directly via S3 method dispatch. Document variables (docvars) are automatically converted to coded variables, with document names used as identifiers by default. This simplifies the workflow for corpus-based gold standards (#81).</li>
@@ -95,7 +95,7 @@
 <li>Improved error messages in <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> detect common mistakes like forgetting <code>gold =</code> or misspelling parameter names, with helpful suggestions for correction.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="confidence-intervals-and-reliability-metrics-development-version">Confidence intervals and reliability metrics<a class="anchor" aria-label="anchor" href="#confidence-intervals-and-reliability-metrics-development-version"></a></h3>
+<h3 id="confidence-intervals-and-reliability-metrics-0-3-0">Confidence intervals and reliability metrics<a class="anchor" aria-label="anchor" href="#confidence-intervals-and-reliability-metrics-0-3-0"></a></h3>
 <ul><li>
 <code>ci</code> parameter added to <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> and <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> with options <code>"none"</code> (default), <code>"analytic"</code>, or <code>"bootstrap"</code>.</li>
 <li>Bootstrap confidence intervals now work for all metrics in both functions via percentile method with configurable <code>bootstrap_n</code> parameter (default 1000).</li>
@@ -103,7 +103,7 @@
 <li>Results include <code>ci_lower</code> and <code>ci_upper</code> columns when <code>ci != "none"</code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="rater-identification-and-combinability-development-version">Rater identification and combinability<a class="anchor" aria-label="anchor" href="#rater-identification-and-combinability-development-version"></a></h3>
+<h3 id="rater-identification-and-combinability-0-3-0">Rater identification and combinability<a class="anchor" aria-label="anchor" href="#rater-identification-and-combinability-0-3-0"></a></h3>
 <ul><li>
 <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> results now include <code>rater1</code>, <code>rater2</code>, <code>rater3</code>, etc. columns containing the names of compared objects (from <code>name</code> attribute), enabling easy identification when combining multiple comparisons with <code><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">dplyr::bind_rows()</a></code>.</li>
 <li>
@@ -112,13 +112,13 @@
 <li>Results from multiple <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> or <code><a href="../reference/qlm_validate.html">qlm_validate()</a></code> calls can be combined with <code>bind_rows()</code> for analysis across multiple coders or conditions.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="api-refinements-development-version">API refinements<a class="anchor" aria-label="anchor" href="#api-refinements-development-version"></a></h3>
+<h3 id="api-refinements-0-3-0">API refinements<a class="anchor" aria-label="anchor" href="#api-refinements-0-3-0"></a></h3>
 <ul><li>
 <code><a href="../reference/qlm_code.html">qlm_code()</a></code> default <code>name</code> parameter changed from <code>"original"</code> to <code>NULL</code> for cleaner output when names aren’t specified.</li>
 <li>Auto-conversion messages now recommend <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> instead of <code><a href="../reference/qlm_humancoded.html">qlm_humancoded()</a></code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="the-quallmer-audit-trail-development-version">The quallmer audit trail<a class="anchor" aria-label="anchor" href="#the-quallmer-audit-trail-development-version"></a></h3>
+<h3 id="the-quallmer-audit-trail-0-3-0">The quallmer audit trail<a class="anchor" aria-label="anchor" href="#the-quallmer-audit-trail-0-3-0"></a></h3>
 <ul><li>New <code>notes</code> parameter in <code><a href="../reference/qlm_code.html">qlm_code()</a></code>, <code><a href="../reference/qlm_replicate.html">qlm_replicate()</a></code>, and <code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> for documenting the rationale behind each coding run. Notes are displayed in print output and captured in <code><a href="../reference/qlm_trail.html">qlm_trail()</a></code>.</li>
 <li>The trail API has been simplified to a single function following Lincoln and Guba’s (1985) audit trail concept for establishing trustworthiness in qualitative research.</li>
 <li>
