@@ -47,7 +47,7 @@ that guide the LLM and the structured output schema.
 \details{
 This function replaces \code{\link[=task]{task()}}, which is now deprecated. The returned object
 has dual class inheritance (\code{c("qlm_codebook", "task")}) to maintain
-backward compatibility with existing code using \code{\link[=annotate]{annotate()}}.
+backward compatibility.
 }
 \examples{
 # Define a custom codebook

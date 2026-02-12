@@ -55,7 +55,8 @@
 #'   The `execution_args` contains all non-chat execution arguments (for either parallel or batch processing).
 #'
 #' @seealso
-#' [qlm_codebook()] for creating codebooks, [annotate()] for the deprecated function.
+#' [qlm_codebook()] for creating codebooks, [qlm_replicate()] for replicating
+#' coding runs, [qlm_compare()] and [qlm_validate()] for assessing reliability.
 #'
 #' @examples
 #' \donttest{
@@ -247,21 +248,57 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   # Convert to tibble (always available via ellmer)
   results <- tibble::as_tibble(results)
 
-  # Add qlm_coded class and attributes with hierarchical structure
+  # Add qlm_coded class and attributes with new metadata structure
+  # Build object metadata - include source and is_gold if present
+  object_meta <- list(
+    batch = batch,
+    call = call,
+    chat_args = chat_args,
+    execution_args = execution_args,
+    parent = parent,
+    n_units = metadata$n_units,
+    input_type = input_type
+  )
+
+  # Add source and is_gold from metadata if present (for human-coded data)
+  if (!is.null(metadata$source)) {
+    object_meta$source <- metadata$source
+  }
+  if (!is.null(metadata$is_gold)) {
+    object_meta$is_gold <- metadata$is_gold
+  }
+
+  # Build user metadata: start with name and notes, then add custom metadata
+  user_meta <- list(
+    name = name,
+    notes = metadata$notes
+  )
+
+  # Add any custom metadata fields (exclude system, object, and user-handled fields)
+  system_fields <- c("timestamp", "ellmer_version", "quallmer_version", "R_version")
+  object_fields <- c("n_units", "source", "is_gold")
+  user_handled <- c("name", "notes")
+  exclude_fields <- c(system_fields, object_fields, user_handled)
+
+  custom_metadata <- metadata[!names(metadata) %in% exclude_fields]
+  if (length(custom_metadata) > 0) {
+    user_meta <- c(user_meta, custom_metadata)
+  }
+
   structure(
     results,
     class = c("qlm_coded", class(results)),
     data = data,
-    input_type = input_type,
-    run = list(
-      name = name,
-      batch = batch,
-      call = call,
-      codebook = codebook,
-      chat_args = chat_args,
-      execution_args = execution_args,
-      metadata = metadata,
-      parent = parent
+    codebook = codebook,
+    meta = list(
+      user = user_meta,
+      object = object_meta,
+      system = list(
+        timestamp = metadata$timestamp,
+        ellmer_version = metadata$ellmer_version,
+        quallmer_version = metadata$quallmer_version,
+        R_version = metadata$R_version
+      )
     )
   )
 }
@@ -276,37 +313,41 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
 #' @keywords internal
 #' @export
 print.qlm_coded <- function(x, ...) {
-  run <- attr(x, "run")
+  # Auto-upgrade old structure if needed
+  x <- upgrade_meta(x)
+
+  meta_attr <- attr(x, "meta")
+  codebook_attr <- attr(x, "codebook")
 
   # Print header
   cat("# quallmer coded object\n")
-  cat("# Run:      ", run$name, "\n", sep = "")
+  cat("# Run:      ", meta_attr$user$name, "\n", sep = "")
 
   # Distinguish human vs LLM coding
-  if (!is.null(run$metadata$source) && run$metadata$source == "human") {
+  if (!is.null(meta_attr$object$source) && meta_attr$object$source == "human") {
     cat("# Source:   Human coder\n")
-    if (!is.null(run$codebook$name) && run$codebook$name != "Human-coded data") {
-      cat("# Codebook: ", run$codebook$name, "\n", sep = "")
+    if (!is.null(codebook_attr$name) && codebook_attr$name != "Human-coded data") {
+      cat("# Codebook: ", codebook_attr$name, "\n", sep = "")
     }
   } else {
-    cat("# Codebook: ", run$codebook$name, "\n", sep = "")
-    cat("# Model:    ", run$chat_args$name %||% "unknown", "\n", sep = "")
+    cat("# Codebook: ", codebook_attr$name, "\n", sep = "")
+    cat("# Model:    ", meta_attr$object$chat_args$name %||% "unknown", "\n", sep = "")
   }
 
   # Show if this is a gold standard
-  if (!is.null(run$metadata$is_gold) && isTRUE(run$metadata$is_gold)) {
+  if (!is.null(meta_attr$object$is_gold) && isTRUE(meta_attr$object$is_gold)) {
     cat("# Gold:     Yes\n")
   }
 
-  cat("# Units:    ", run$metadata$n_units, "\n", sep = "")
+  cat("# Units:    ", meta_attr$object$n_units, "\n", sep = "")
 
-  if (!is.null(run$parent)) {
-    cat("# Parent:   ", run$parent, "\n", sep = "")
+  if (!is.null(meta_attr$object$parent)) {
+    cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
   }
 
   # Show notes if present
-  if (!is.null(run$metadata$notes)) {
-    cat("# Notes:    ", run$metadata$notes, "\n", sep = "")
+  if (!is.null(meta_attr$user$notes)) {
+    cat("# Notes:    ", meta_attr$user$notes, "\n", sep = "")
   }
 
   cat("\n")

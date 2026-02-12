@@ -3,6 +3,16 @@
 ## Internal changes
 
 * Refactored corpus methods to use `qlm_corpus` wrapper class pattern instead of conditional `registerS3method()`, eliminating load-order dependencies and runtime checks (#86).
+## Accessor functions
+
+* New `qlm_meta()` accessor function provides stratified access to metadata for `qlm_coded`, `qlm_codebook`, `qlm_comparison`, and `qlm_validation` objects. Metadata is organized into three types following the quanteda convention:
+  - `type = "user"` (default): User-specified fields (`name`, `notes`) that can be modified via `qlm_meta<-()`.
+  - `type = "object"`: Read-only parameters set at creation time (`batch`, `call`, `chat_args`, `execution_args`, `parent`, `n_units`, `input_type`).
+  - `type = "system"`: Read-only environment information (`timestamp`, `ellmer_version`, `quallmer_version`, `R_version`).
+* New `qlm_meta<-()` replacement function allows modifying user metadata fields only. Attempting to modify object or system metadata produces an informative error (#72).
+* New `codebook()` extractor retrieves the codebook component from `qlm_coded`, `qlm_comparison`, and `qlm_validation` objects. This is a core component accessor analogous to `formula()` for `lm` objects (#72).
+* New `inputs()` extractor retrieves the original input data (texts or image paths) from `qlm_coded` objects. The function name mirrors the `inputs` argument in `qlm_code()` (#72).
+* These accessor functions replace direct `attr(x, "run")$...` access, providing a stable API for extracting and modifying object metadata and components.
 
 ## Build system
 

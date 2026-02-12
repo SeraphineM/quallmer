@@ -186,7 +186,7 @@ trail_icr <- function(
 #' @param overwrite Logical. If `TRUE`, ignore all cached results and
 #'   recompute annotations for every setting.
 #' @param annotate_fun Annotation backend function used by
-#'   `trail_record()` (default = `annotate()`).
+#'   `trail_record()`.
 #' @param min_coders Minimum number of non-missing coders per unit
 #'   required for inclusion in the inter-rater reliability calculation.
 #'

@@ -56,7 +56,7 @@ coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", 
 coded2 <- qlm_replicate(coded, name = "run2")
 
 # Compare results
-qlm_compare(coded, coded2, by = "sentiment")
+qlm_compare(coded, coded2, by = "sentiment", level = "nominal")
 }
 
 }

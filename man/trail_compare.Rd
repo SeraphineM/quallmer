@@ -45,7 +45,7 @@ For examples and tests, use \code{tempdir()} to comply with CRAN policies.}
 recompute annotations for every setting.}
 
 \item{annotate_fun}{Annotation backend function used by
-\code{trail_record()} (default = \code{annotate()}).}
+\code{trail_record()}.}
 
 \item{min_coders}{Minimum number of non-missing coders per unit
 required for inclusion in the inter-rater reliability calculation.}

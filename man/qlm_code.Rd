@@ -84,5 +84,6 @@ coded2
 
 }
 \seealso{
-\code{\link[=qlm_codebook]{qlm_codebook()}} for creating codebooks, \code{\link[=annotate]{annotate()}} for the deprecated function.
+\code{\link[=qlm_codebook]{qlm_codebook()}} for creating codebooks, \code{\link[=qlm_replicate]{qlm_replicate()}} for replicating
+coding runs, \code{\link[=qlm_compare]{qlm_compare()}} and \code{\link[=qlm_validate]{qlm_validate()}} for assessing reliability.
 }

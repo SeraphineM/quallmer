@@ -14,10 +14,10 @@ test_that("qlm_humancoded creates object with correct structure", {
   expect_true("category" %in% names(result))
 
   # Check attributes
-  run <- attr(result, "run")
-  expect_equal(run$name, "test_coder")
-  expect_equal(run$metadata$source, "human")
-  expect_equal(run$metadata$n_units, 10)
+  meta_attr <- attr(result, "meta")
+  expect_equal(meta_attr$user$name, "test_coder")
+  expect_equal(meta_attr$object$source, "human")
+  expect_equal(meta_attr$object$n_units, 10)
 })
 
 test_that("qlm_humancoded validates inputs", {
@@ -45,10 +45,10 @@ test_that("qlm_humancoded accepts custom codebook", {
 
   result <- qlm_humancoded(data, codebook = codebook)
 
-  run <- attr(result, "run")
-  expect_equal(run$codebook$name, "Sentiment Coding")
-  expect_equal(run$codebook$instructions, "Code as positive or negative")
-  expect_null(run$codebook$schema)  # Always NULL for human coding
+  codebook_attr <- attr(result, "codebook")
+  expect_equal(codebook_attr$name, "Sentiment Coding")
+  expect_equal(codebook_attr$instructions, "Code as positive or negative")
+  expect_null(codebook_attr$schema)  # Always NULL for human coding
 })
 
 test_that("qlm_humancoded accepts custom metadata", {
@@ -62,11 +62,11 @@ test_that("qlm_humancoded accepts custom metadata", {
 
   result <- qlm_humancoded(data, metadata = metadata)
 
-  run <- attr(result, "run")
-  expect_equal(run$metadata$coder_name, "Alice")
-  expect_equal(run$metadata$coder_id, "A001")
-  expect_equal(run$metadata$training, "2 hours")
-  expect_equal(run$metadata$source, "human")  # Always added
+  meta_attr <- attr(result, "meta")
+  expect_equal(meta_attr$user$coder_name, "Alice")
+  expect_equal(meta_attr$user$coder_id, "A001")
+  expect_equal(meta_attr$user$training, "2 hours")
+  expect_equal(meta_attr$object$source, "human")  # Always added
 })
 
 test_that("qlm_humancoded works with qlm_compare", {
@@ -130,8 +130,8 @@ test_that("as_qlm_coded and qlm_humancoded store notes in metadata", {
     notes = "Pilot coding for training purposes"
   )
 
-  run <- attr(coded_with_notes, "run")
-  expect_equal(run$metadata$notes, "Pilot coding for training purposes")
+  meta_attr <- attr(coded_with_notes, "meta")
+  expect_equal(meta_attr$user$notes, "Pilot coding for training purposes")
 
   # Test print output includes notes
   output <- capture.output(print(coded_with_notes))
@@ -144,8 +144,8 @@ test_that("as_qlm_coded and qlm_humancoded store notes in metadata", {
     notes = "Final coding after training"
   )
 
-  run2 <- attr(human_with_notes, "run")
-  expect_equal(run2$metadata$notes, "Final coding after training")
+  meta_attr2 <- attr(human_with_notes, "meta")
+  expect_equal(meta_attr2$user$notes, "Final coding after training")
 
   output2 <- capture.output(print(human_with_notes))
   expect_true(any(grepl("Notes:.*Final coding after training", output2)))
