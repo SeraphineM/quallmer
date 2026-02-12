@@ -1,8 +1,15 @@
 # quallmer (development version)
 
+## CRAN submission
+
+* Expanded DESCRIPTION with supported LLM providers, method details, and DOI references.
+* Added `\value` documentation to all exported methods.
+* Fixed HTML validation issue in `qlm_validate()` documentation.
+
 ## Internal changes
 
 * Refactored corpus methods to use `qlm_corpus` wrapper class pattern instead of conditional `registerS3method()`, eliminating load-order dependencies and runtime checks (#86).
+
 ## Accessor functions
 
 * New `qlm_meta()` accessor function provides stratified access to metadata for `qlm_coded`, `qlm_codebook`, `qlm_comparison`, and `qlm_validation` objects. Metadata is organized into three types following the quanteda convention:
