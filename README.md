@@ -5,14 +5,15 @@
 
 <!-- badges: start -->
 
-[![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/quallmer)](https://CRAN.R-project.org/package=quallmer)
+[![](https://img.shields.io/badge/devel%20version-0.3.0-royalblue.svg)](https://github.com/quallmer/quallmer)
 [![R-CMD-check](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/quallmer/quallmer/graph/badge.svg)](https://app.codecov.io/gh/quallmer/quallmer)
 [![pkgdown](https://img.shields.io/badge/pkgdown-site-blue)](https://quallmer.github.io/quallmer/)
+[![Lifecycle:
+stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
 <!-- badges: end -->
 
 The **quallmer** package is an **easy-to-use toolbox to quickly apply
