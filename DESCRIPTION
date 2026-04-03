@@ -30,7 +30,7 @@ Description: Tools for AI-assisted qualitative data coding using large language
     trail functionality for documenting coding workflows following Lincoln and
     Guba's (1985, ISBN:0803924313) framework for establishing trustworthiness
     in qualitative research.
-License: GPL-3
+License: GPL (>= 3)
 URL: https://quallmer.github.io/quallmer/
 Depends:
     R (>= 3.5.0),
