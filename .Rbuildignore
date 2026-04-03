@@ -23,3 +23,4 @@
 ^Makefile$
 ^repomix-output\.xml$
 ^LICENSE\.md$
+^joss_paper$
