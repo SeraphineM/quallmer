@@ -1,0 +1,180 @@
+---
+title: 'The quallmer package - a toolbox for qualitative analysis with large language models (LLMs)'
+tags:
+  - R
+  - LLMs
+  - qualitative analysis
+  - text analysis
+  - content analysis
+  - reproducibility
+date: today
+format:
+  pdf:
+    pdf-engine: pdflatex
+    keep-tex: true
+    include-in-header:
+      text: |
+        \makeatletter
+        \renewcommand{\maketitle}{%
+          \begin{center}
+            {\LARGE\bfseries \@title\footnotemark \par}
+            \vskip 1.5em
+            {\normalsize Seraphine F. Maerz\textsuperscript{1} \quad Kenneth Benoit\textsuperscript{2} \par}
+            \vskip 0.5em
+            {\small\itshape \textsuperscript{1}University of Melbourne, Australia \par}
+            {\small\itshape \textsuperscript{2}Singapore Management University, Singapore \par}
+            \vskip 1em
+            {\normalsize \@date \par}
+          \end{center}
+          \vskip 2em
+          \footnotetext{Both authors contributed equally. Author order follows the citation rule in the \textit{quallmer} package: \url{https://github.com/quallmer/quallmer}. Ken, is this okay for you or what would you suggest?}
+        }
+        \makeatother
+        \usepackage{url}
+bibliography: paper.bib
+---
+
+# Summary
+
+*quallmer* is an R package that enables researchers to apply large language model (LLM)-assisted qualitative coding to texts, images, PDFs, audio, and tabular data while maintaining the rigorous standards of transparency and traceability essential to qualitative research. The package provides a complete workflow for 1) flexibly defining comprehensive codebooks tailored to specific research questions and data types; 2) applying LLM-based analyses; 3) replicating analyses across different models and settings; 4) comparing results using established inter-rater reliability metrics; validating outputs against human-coded gold standards; and 5) documenting complete audit trails which capture the full decision history of the workflow, including model parameters, timestamps, and parent-child relationships across analyses. This audit trail functionality operationalizes the trustworthiness criteria established by @lincoln1985naturalistic, meeting their established standards of credibility, transferability, dependability, and confirmability in LLM-assisted qualitative research. By embedding these methodological principles directly into the software architecture, *quallmer* allows researchers to combine the scalability and capabilities of LLMs while ensuring that their analytical decisions are fully documented. Built on the *ellmer* package [@ellmer2025], *quallmer* supports a wide range of LLM providers---including OpenAI, Anthropic Claude, Google Gemini, Mistral, and local models via Ollama---giving researchers flexibility in their choice of models. 
+
+\newpage
+
+# State of the field and the *quallmer* contribution
+
+Large language models (LLMs) offer a unique opportunity to bridge the long-standing divide between qualitative and quantitative research traditions. Qualitative approaches prioritize interpretive depth, contextual understanding, and attention to meaning, while quantitative methods emphasize scale, replicability, and systematic measurement. LLMs, with their capacity to process and interpret text at scale, can potentially combine these strengths---applying nuanced, context-sensitive analysis to large volumes of data. However, this bridging potential can only be realized if the methodological wisdom of qualitative research is taken seriously. 
+
+Qualitative content analysis^[We use the term "qualitative content analysis" to refer broadly to any qualitative research method that involves systematic coding of textual or visual material, including thematic analysis, discourse analysis, and other approaches. The key commonality is the requirement for systematic coding according to well-defined coding schemes, as emphasized by @krippendorff2019content. In this sense, qualitative content analysis is part of the broader tradition of qualitative research methods that prioritize interpretive depth and contextual understanding while also demanding methodological rigor and transparency [@lincoln1985naturalistic].] requires systematic coding of textual or visual material according to well-defined coding schemes [@krippendorff2019content]. While LLMs offer unprecedented scalability and capabilities for processing large volumes of qualitative data, their integration into rigorous research workflows presents significant challenges. Existing tools for AI-assisted qualitative analysis typically operate as black boxes, offering limited transparency into how coding decisions are made and providing no systematic way to assess reliability, validate results, or replicate analyses across different model configurations. For examle, the widely used NVivo software [-@nvivo2026] has recently added AI features such as automatic coding and theme generation, but these operate with little transparency and no support for systematic reliability assessment. In addition, the three provided AI coding modes (sentiment, theme, and auto-coding) are static and cannot be customized by researchers to fit specific research questions or data types. Similary, MAXQDA's "AI Coding" function [-@maxqda2026] provides no transparency into the coding process, no support for reliability assessment, no mechanism for documenting analytical decisions, and no flexibility in defining coding schemes.
+
+Contrary to these static black box tools, researchers who write custom code to use LLMs for qualitative analysis face a different set of challenges. While they can achieve greater transparency and flexibility, they must also take on the substantial burden of building their own infrastructure for managing codebooks, tracking provenance, computing reliability metrics, and documenting their workflows [e.g., @Fang2026]. This requires significant technical expertise and diverts effort from substantive research questions. Several R packages provide general-purpose LLM wrappers [@ellmer2025; @Lin2025; @Gruber2024], and others support text analysis workflows [@quanteda2018], but none combine LLM capabilities with the specific requirements of trustworthy qualitative research, as defined by @lincoln1985naturalistic, for example. In their pathbreaking book, they established the criteria of credibility, transferability, dependability, and confirmability as essential standards for rigorous qualitative research. These criteria broadly translate into the need for internal validity (credibility), external validity (transferability), reliability (dependability), and objectivity (confirmability) in qualitative research [@king1994designing; @seale1999guiding, see also @tbl-criteria]. To meet these standards, researchers must maintain detailed *audit trails* that document their analytical decisions, including coding instructions, model parameters, and the rationale behind key choices. Lincoln and Guba [-@lincoln1985naturalistic, p. 319-320] decribe six key features an audit trail should provide access to: 1) raw data, 2) data reduction and analysis products, 3) data reconstruction and synthesis products, 4) process notes, 5) materials relating to intentions and dispositions, and 6) instrument development information. These components together create a comprehensive record of the research process that allows others to assess the trustworthiness of the findings and understand how conclusions were reached. However, existing AI-assisted tools for qualitative analysis provide no mechanism for operationalizing the trustworthiness criteria or generating such a comprehensive audit trail.
+
+\footnotesize
+| Conventional inquiry | Trustworthiness criteria |
+|----------------------|----------------------|
+| Internal validity | Credibility |
+| External validity | Transferability |
+| Reliability | Dependability |
+| Objectivity | Confirmability |
+
+: Lincoln and Guba's (1985) trustworthiness criteria for qualitative research. {#tbl-criteria}
+
+\normalsize
+
+The *quallmer* package^[Available on CRAN and comprehensively documented here: <https://quallmer.github.io/quallmer/>] addresses this gap by embedding trustworthiness directly into the software architecture. The package’s design reflects a key insight: the challenge of AI-assisted qualitative analysis is not primarily technical but methodological. Researchers need tools that help them maintain analytical rigor while leveraging LLM capabilities, not simply tools that make API calls easier. Based on this, the package provides a complete workflow for LLM-assisted qualitative analysis that enables researchers to:
+
+1) define explicit, reusable codebooks that specify coding instructions and expected output types and are flexible enough to accommodate a wide range of research questions and data types; 
+
+2) apply LLM-based coding while automatically capturing all metadata necessary for replication; 
+
+3) replicate coding results across different models, prompts, or settings to systematically assess coding reliability and sensitivity to model choices; 
+
+4) compare coding results using established inter-rater reliability metrics (e.g., Krippendorff's alpha, Cohen's kappa) and validate LLM outputs against human-coded gold standards with comprehensive performance metrics (e.g., accuracy, precision, recall, F1-scores); 
+
+5) generate complete audit trails that document every analytical decision, enabling full transparency and traceability of the research process, and produce replication materials that allow other researchers to reproduce the analysis with the same or different LLM configurations.
+
+This workflow is a significant contribution to the field of AI-assisted qualitative content analysis, as it operationalizes established methodological principles [@lincoln1985naturalistic; @krippendorff2019content] in a way that is accessible to researchers without deep technical expertise, providing built-in tools for reliability assessment, validation, and audit trail generation.
+
+
+# Software design
+
+The *quallmer* package implements a structured 5-step workflow through the following core functions: 1) `qlm_codebook()` for codebook definition, 2) `qlm_code()` for data coding, 3) `qlm_replicate()` for replication, 4) `qlm_compare()` and `qlm_validate()` for comparison and validation, and 5) `qlm_trail()` for audit trail generation. Each function addresses specific requirements of trustworthy qualitative research as established by @lincoln1985naturalistic and @krippendorff2019content.
+
+The package is built on top of the *ellmer* framework [@ellmer2025], which provides a flexible interface for interacting with a wide range of LLM providers, allowing *quallmer* to support various proprietary and open-source LLMs. This design choice ensures that researchers can choose the models that best fit their research questions and resource constraints. The package's architecture emphasizes modularity and extensibility, allowing researchers to customize codebooks, coding procedures, and validation metrics as needed while ensuring that all analyses are fully documented and reproducible.
+
+The package emphasizes *accessibility*: researchers can apply sophisticated LLM-assisted analysis in R without deep programming expertise or machine learning knowledge, lowering barriers to adoption while maintaining methodological standards. The companion *quallmer.app* package - also available on CRAN - provides a Shiny application that allows users to manually code data, review LLM-assisted coding, and compute agreement metrics, bridging automated and human-in-the-loop workflows.
+
+The *quallmer* package evolved from *quanteda.llm* [@quantedallm2025], an earlier implementation that integrated LLM capabilities with the *quanteda* text analysis framework [@quanteda2018]. Through workshops and training sessions with social scientists, we identified that researchers needed not just LLM access but a complete methodology for trustworthy AI-assisted qualitative research. Feedback from these sessions shaped key design decisions: the explicit and highly customizable codebook definition, the built-in reliability metrics, and especially the audit trail functionality. The package's design reflects a commitment to methodological rigor and transparency.
+
+# Example: coding political speeches
+
+To illustrate the *quallmer* workflow, we present a simplified example analyzing political rhetoric in speeches. The complete tutorial is available at <https://quallmer.github.io/quallmer/>.
+
+**Step 1: Codebook definition.** The `qlm_codebook()` function creates highly flexible and reusable coding schemes that specify instructions for the LLM and define the expected structure of outputs using *ellmer* type specifications. In its simplest form, a codebook requires only a name, instructions, and output schema, but there is extensive flexibility to define more complex codebooks with multiple fields, nested structures, and custom instructions. The codebook structure enforces clear documentation of coding instructions and expected output formats, which is essential for transparency and replication.
+
+\footnotesize
+```r
+library(quallmer)
+
+codebook_ideology <- qlm_codebook(
+  name = "Liberal-illiberal rhetoric",
+  instructions = "Analyze the rhetorical style of this political speech.
+    ILLIBERAL rhetoric (negative scores):
+    nationalism, paternalism, traditionalism.
+    LIBERAL rhetoric (positive scores):
+    individual rights, tolerance, civil liberties, democratic values.
+    Score 0 = neutral/mixed.",
+  schema = type_object(
+    score = type_integer("Score from -10 (illiberal) to +10 (liberal)"),
+    explanation = type_string("Brief explanation of the score")
+  )
+)
+```
+\normalsize
+
+**Step 2: Data coding.** The `qlm_code()` function applies codebooks to texts, images, PDFs, audio, or tabular data using any LLM supported by *ellmer*. The function returns `qlm_coded` objects that contain not only the coding results but also comprehensive metadata---including timestamps, model identifiers, and the exact codebook used---enabling precise replication. This automatic metadata capture ensures that every coding run is fully documented without requiring additional effort from the researcher.
+
+\footnotesize
+```r
+coded_speeches <- qlm_code(
+  speech_corpus$text,
+  codebook = codebook_ideology,
+  model = "openai/gpt-4o-mini",
+  name = "ideology_coding_run1"
+)
+```
+\normalsize
+
+**Step 3: Replication.** The `qlm_replicate()` function re-executes coding with different models, codebooks, or parameter settings (e.g., temperature) while maintaining provenance chains that link replicated results to their parent analyses. This enables systematic exploration of how analytical choices affect outcomes and supports sensitivity analyses across different LLM configurations.
+
+\footnotesize
+```r
+# with a different model
+coded_claude <- qlm_replicate(coded_speeches, model = "anthropic/claude-3-5-sonnet")
+# with a different temperature setting
+coded_temp07 <- qlm_replicate(coded_speeches, temperature = 0.7)
+```
+\normalsize
+
+**Step 4: Comparison and validation.** The `qlm_compare()` function computes inter-rater reliability metrics between coding results, supporting Krippendorff's alpha for ordinal and nominal data, Cohen's kappa for two-rater comparisons, and Fleiss' kappa for multiple raters. The `qlm_validate()` function benchmarks LLM outputs against human-coded gold standards, calculating accuracy, precision, recall, F1-scores, and per-class breakdowns. Together, these functions enable researchers to systematically assess the reliability and validity of their LLM-assisted coding.
+
+\footnotesize
+```r
+# returns Krippendorff's alpha, ICC, Pearson's r, percent agreement
+comparison <- qlm_compare(coded_speeches, coded_claude, by = "score", level = "interval")
+
+# for interval data: returns ICC, Pearson's r, MAE, RMSE
+# for nominal/binary data: returns accuracy, precision, recall, F1, Cohen's kappa
+validation <- qlm_validate(coded_speeches, gold_standard, by = "score", level = "interval")
+```
+\normalsize
+
+**Step 5: Audit trail.** The `qlm_trail()` function generates complete audit documentation following the trustworthiness framework of @lincoln1985naturalistic. The resulting trail captures decision histories, model parameters, timestamps, and parent-child relationships across all analyses, and produces replication materials including environment specifications and executable code. This generates a replication package that enables other researchers to reproduce or extend the analysis with the same or different LLM configurations. This function represents a key intellectual contribution of the package: translating established qualitative methodology into software that enforces rigorous documentation practices.
+
+\footnotesize
+```r
+# produces:
+# (1) .rds file with complete trail object (codebooks, metadata, provenance)
+# (2) .qmd file with executable Quarto document for a detailed replication report
+qlm_trail(coded_speeches, path = "replication_materials")
+```
+\normalsize
+
+# Research applications
+
+The *quallmer* toolbox enables research applications that would be impractical with manual coding alone while maintaining the rigor necessary for credible findings. Example applications include:
+
+- Large-scale content analysis of media coverage, political speeches, or social media data
+- Systematic literature reviews requiring coding of hundreds or thousands of abstracts
+- Analysis of open-ended survey responses at population scale
+- Comparative studies examining how different LLM configurations affect coding outcomes
+- Methods research on the reliability and validity of AI-assisted qualitative analysis
+
+By providing built-in tools for reliability assessment and validation, the package supports not only substantive research but also methodological investigations into best practices for LLM-assisted qualitative work.
+
+# Acknowledgements / AI usage disclosure
+
+We gratefully acknowledge the feedback from participants in our workshops and training sessions, whose experiences and suggestions substantially shaped the package design. We also thank our co-authors in various projects (especially Andrew Walter and Dean Schafer) for testing early versions of the package, including the quallmer.app.
+
+In developing *quallmer*, we used AI coding assistants---specifically Anthropic's Claude (via Claude Code) and GitHub Copilot---for code refactoring, documentation drafting, and test development. All AI-generated contributions were reviewed, validated, and revised by the human authors, who retained full responsibility for all design decisions, the intellectual framing of the package, and the conceptual framework grounding the audit trail functionality in established qualitative methodology. The use of AI tools accelerated implementation but did not substitute for the substantive scholarly decisions that define the package's contribution. This paper was drafted with AI assistance, with all content reviewed and heavily revised by the authors.
+
+# References
