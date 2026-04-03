@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "quallmer: Qualitative Analysis with Large Language Models"
+version: 0.3.0
+date-released: 2026-02-12
+authors:
+  - given-names: Seraphine F.
+    family-names: Maerz
+    email: seraphine.maerz@unimelb.edu.au
+    orcid: "https://orcid.org/0000-0002-7173-9617"
+    affiliation: University of Melbourne, Australia
+  - given-names: Kenneth
+    family-names: Benoit
+    email: kbenoit@smu.edu.sg
+    orcid: "https://orcid.org/0000-0002-0797-564X"
+    affiliation: Singapore Management University, Singapore
+license: GPL-3.0
+url: "https://quallmer.github.io/quallmer/"
+repository-code: "https://github.com/quallmer/quallmer"
+repository-artifact: "https://cran.r-project.org/package=quallmer"
+abstract: >-
+  Tools for AI-assisted qualitative data coding using large language models
+  (LLMs) via the ellmer package, supporting providers including OpenAI,
+  Anthropic, Google, Azure, and local models via Ollama. Provides a
+  codebook-based workflow for defining coding instructions and applying them
+  to texts, images, and other data. Includes built-in codebooks for common
+  applications such as sentiment analysis and policy coding, and functions for
+  creating custom codebooks for specific research questions. Supports
+  systematic replication across models and settings, inter-coder reliability
+  statistics, gold-standard validation metrics, and audit trail functionality
+  following Lincoln and Guba's (1985) trustworthiness framework.
+keywords:
+  - R
+  - qualitative analysis
+  - large language models
+  - content analysis
+  - text analysis
+  - reproducibility
+  - qualitative research
