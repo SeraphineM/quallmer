@@ -352,7 +352,15 @@ print.qlm_coded <- function(x, ...) {
 
   cat("\n")
 
-  # Print data using parent class method
-  NextMethod()
+  # Print data as tibble. Strip qlm_coded class first to avoid a
+  # "promise already under evaluation" error in pillar::type_sum() that
+  # can occur when NextMethod() passes the same promise through multiple
+  # S3 dispatch hops (print.qlm_coded -> print.tbl_df -> print.tbl ->
+  # format_tbl -> force(x)).
+  x_tbl <- x
+  class(x_tbl) <- setdiff(class(x_tbl), "qlm_coded")
+  print(x_tbl, ...)
+
+  invisible(x)
 }
 
