@@ -1,0 +1,228 @@
+---
+title: "Example: Text segmentation"
+subtitle: "Aspect-based sentiment and thematic analysis with `qlm_segment()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Example: Text segmentation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+`qlm_segment()` splits a text into thematic or conceptual units and returns a [quanteda corpus](https://quanteda.io/) with one document per segment. The schema fields from the codebook become docvars on the output corpus, making it straightforward to combine LLM-powered segmentation with downstream quantitative analysis.
+
+This article illustrates two applications: aspect-based sentiment analysis of film reviews, and thematic segmentation of recent US presidential inaugural addresses.
+
+## Packages
+
+```{r packages, message=FALSE, warning=FALSE}
+library(quallmer)
+library(quanteda)
+library(dplyr)
+library(ggplot2)
+```
+
+## Aspect-based sentiment in movie reviews
+
+Aspect-based sentiment analysis (ABSA) asks not just whether a reviewer is positive or negative overall, but which specific features they discuss and what they say about each. A review that praises the acting while criticising the plot will read as moderately positive in aggregate, but the aspect-level picture is much richer.
+
+### The data
+
+We draw four reviews from `data_corpus_LMRDsample`, the 200-review subset of the Large Movie Review Dataset bundled with quallmer (Maas et al., 2011): two negative and two positive.
+
+```{r sample-reviews}
+set.seed(42)
+idx_neg <- which(docvars(data_corpus_LMRDsample)$polarity == "neg")
+idx_pos <- which(docvars(data_corpus_LMRDsample)$polarity == "pos")
+corp_reviews <- data_corpus_LMRDsample[c(sample(idx_neg, 2), sample(idx_pos, 2))]
+corp_reviews
+```
+
+### The codebook
+
+```{r codebook-absa}
+cb_absa <- qlm_codebook(
+  name = "Aspect-based sentiment",
+  instructions = paste(
+    "Segment the review into contiguous spans that each address a single aspect",
+    "of the film. A segment may be a clause, a sentence, or several sentences.",
+    "Label each segment with the aspect it discusses and the expressed sentiment.",
+    "",
+    "Aspects: acting, cinematography, direction, music, pacing, plot, writing, other.",
+    "Return the verbatim text of each segment."
+  ),
+  schema = ellmer::type_object(
+    aspect    = ellmer::type_enum(
+      c("acting", "cinematography", "direction", "music", "pacing",
+        "plot", "writing", "other"),
+      description = "Film aspect discussed in this segment"
+    ),
+    sentiment = ellmer::type_enum(
+      c("negative", "neutral", "positive"),
+      description = "Sentiment expressed toward this aspect"
+    )
+  ),
+  role = "You are an expert film critic and NLP researcher."
+)
+
+cb_absa
+```
+
+### Segmenting the reviews
+
+```{r segment-reviews, eval=FALSE}
+segs_reviews <- qlm_segment(
+  corp_reviews,
+  codebook = cb_absa,
+  model    = "openai/gpt-4o-mini"
+)
+saveRDS(segs_reviews, "data/segs_reviews.rds")
+```
+
+```{r load-segs-reviews, echo=FALSE}
+segs_reviews <- readRDS("data/segs_reviews.rds")
+```
+
+### Segments
+
+Each review is now split into aspect-level segments. The output corpus carries `docid`, `segid`, `aspect`, and `sentiment`, plus the `polarity` and `rating` docvars inherited from the source corpus:
+
+```{r show-reviews}
+docvars(segs_reviews) |>
+  mutate(text = as.character(segs_reviews)) |>
+  select(docid, segid, aspect, sentiment, polarity, rating, text) |>
+  knitr::kable()
+```
+
+### Sentiment by aspect
+
+Pooling across all four reviews, we can see which aspects attract positive versus negative commentary:
+
+```{r plot-absa}
+docvars(segs_reviews) |>
+  count(aspect, sentiment) |>
+  mutate(
+    sentiment = factor(sentiment, levels = c("negative", "neutral", "positive")),
+    aspect    = reorder(aspect, n, sum)
+  ) |>
+  ggplot(aes(x = aspect, y = n, fill = sentiment)) +
+  geom_col() +
+  scale_fill_manual(
+    values = c(negative = "#d9534f", neutral = "#f0ad4e", positive = "#5cb85c")
+  ) +
+  labs(
+    x     = NULL,
+    y     = "Number of segments",
+    title = "Aspect-based sentiment across four film reviews",
+    fill  = "Sentiment"
+  ) +
+  coord_flip() +
+  theme_minimal()
+```
+
+## Thematic segmentation of inaugural addresses
+
+Presidential inaugural addresses typically move through several distinct themes — calls for unity, foreign policy commitments, economic priorities, statements of national values — often without explicit markers separating them. `qlm_segment()` can recover this thematic structure automatically.
+
+### The data
+
+We use the two most recent speeches in `quanteda::data_corpus_inaugural`:
+
+```{r load-inaugural}
+corp_inaugural <- tail(data_corpus_inaugural, 2)
+corp_inaugural
+```
+
+### The codebook
+
+```{r codebook-inaugural}
+cb_inaugural <- qlm_codebook(
+  name = "Thematic segmentation of inaugural addresses",
+  instructions = paste(
+    "Segment this inaugural address into contiguous thematic passages.",
+    "Begin a new segment when the speaker shifts to a clearly different theme.",
+    "Each segment must contain at least one complete sentence.",
+    "",
+    "Themes:",
+    "  democracy_governance  -- democratic institutions, rule of law, elections",
+    "  economy_prosperity    -- jobs, industry, trade, economic growth",
+    "  foreign_policy        -- international relations, alliances, diplomacy",
+    "  military_security     -- armed forces, national security, veterans",
+    "  national_unity        -- calls for solidarity, healing, shared identity",
+    "  religion_values       -- religious references, moral and cultural values",
+    "  social_issues         -- healthcare, education, civil rights, environment",
+    "  other                 -- passages that do not fit the above themes"
+  ),
+  schema = ellmer::type_object(
+    theme = ellmer::type_enum(
+      c("democracy_governance", "economy_prosperity", "foreign_policy",
+        "military_security", "national_unity", "religion_values",
+        "social_issues", "other"),
+      description = "Thematic label for this passage"
+    )
+  ),
+  role = "You are an expert in American political rhetoric and speech analysis."
+)
+
+cb_inaugural
+```
+
+### Segmenting the speeches
+
+```{r segment-inaugural, eval=FALSE}
+segs_inaugural <- qlm_segment(
+  corp_inaugural,
+  codebook = cb_inaugural,
+  model    = "openai/gpt-4.1-mini"
+)
+saveRDS(segs_inaugural, "data/segs_inaugural.rds")
+```
+
+```{r load-segs-inaugural, echo=FALSE}
+segs_inaugural <- readRDS("data/segs_inaugural.rds")
+```
+
+### Summary of themes
+
+```{r theme-table}
+docvars(segs_inaugural) |>
+  count(docid, theme) |>
+  tidyr::pivot_wider(names_from = docid, values_from = n, values_fill = 0L) |>
+  knitr::kable(caption = "Number of segments by theme and speech")
+```
+
+### Theme distribution by speech
+
+```{r plot-inaugural, fig.height=5, fig.width=9}
+docvars(segs_inaugural) |>
+  count(docid, theme) |>
+  mutate(theme = tools::toTitleCase(gsub("_", " ", theme))) |>
+  ggplot(aes(x = reorder(theme, n, sum), y = n, fill = docid)) +
+  geom_col(position = "dodge") +
+  labs(
+    x     = NULL,
+    y     = "Number of segments",
+    fill  = "Speech",
+    title = "Thematic composition of two inaugural addresses"
+  ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Conclusion
+
+`qlm_segment()` turns unstructured text into a quanteda corpus where each document is a semantically coherent unit. The output integrates directly with quanteda's ecosystem — frequency tables, readability measures, or further LLM coding of individual segments with `qlm_code()`. The ABSA example shows how mixed sentiment can be obscured in aggregate scores; the inaugural address example shows how thematic structure can be recovered automatically from long-form political text.
+
+## References
+
+Maas, A. L., Daly, R. E., Pham, P. T., Huang, D., Ng, A. Y., & Potts, C. (2011). Learning word vectors for sentiment analysis. *Proceedings of the 49th Annual Meeting of the Association for Computational Linguistics*, 142–150.

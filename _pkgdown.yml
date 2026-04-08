@@ -45,6 +45,8 @@ navbar:
         href: articles/pkgdown/examples/example_images.html
       - text: Audio transcription and analysis
         href: articles/pkgdown/examples/example_audio.html
+      - text: Text segmentation
+        href: articles/pkgdown/examples/example_segmentation.html
     reference:
       text: Reference
       href: reference/index.html
