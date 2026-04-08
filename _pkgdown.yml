@@ -67,6 +67,7 @@ reference:
       - qlm_code
       - qlm_replicate
       - qlm_codebook
+      - qlm_segment
 
   - title: Human-coded data
     desc: Convert and work with human-coded or externally coded data

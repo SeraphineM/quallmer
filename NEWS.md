@@ -1,3 +1,13 @@
+# quallmer (development version)
+
+## New features
+
+* New `qlm_segment()` segments a corpus into thematic or conceptual units using
+  an LLM, returning a quanteda corpus analogous to `quanteda::corpus_segment()`
+  output. Schema fields become docvars; `docid_` and `segid_` track provenance.
+  Enables aspect-based sentiment analysis, thematic coding, and other
+  applications requiring variable-length segmentation (#96).
+
 # quallmer 0.3.0
 
 ## CRAN submission
