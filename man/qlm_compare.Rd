@@ -19,7 +19,9 @@ to compare. These represent different "raters" (e.g., different LLM runs,
 different models, human coders, or human vs. LLM coding). Each object must
 have a \code{.id} column and the variable specified in \code{by}. Objects should have
 the same units (matching \code{.id} values). Plain data frames are automatically
-converted to \code{as_qlm_coded} objects.}
+converted to \code{as_qlm_coded} objects. Alternatively, all inputs may be
+segmented corpora from \code{\link[=qlm_segment]{qlm_segment()}} or \code{\link[=as_qlm_coded]{as_qlm_coded()}} with
+\code{qlm_segment = TRUE} (see Details).}
 
 \item{by}{Optional. Name of the variable(s) to compare across raters (supports
 both quoted and unquoted). If \code{NULL} (default), all coded variables are
@@ -82,6 +84,16 @@ reliability or agreement. This function extracts a specified variable from
 each object and computes reliability statistics using the irr package.
 }
 \details{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+When all inputs are segmented corpora — created by \code{\link[=qlm_segment]{qlm_segment()}} or by
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} — the function instead computes
+Krippendorff's alpha for unitizing (\verb{_u}alpha; Krippendorff, 2019,
+section 12.6), which measures agreement on the segmentation of a common
+text into units of potentially unequal length. If \code{by} names a docvar,
+\verb{_u}alpha[nominal] is computed (testing both boundary placement and
+segment coding); if \code{by} is omitted, \verb{|_u}alpha[binary] is computed
+(testing boundary placement only).
+
 The function merges the coded objects by their \code{.id} column and only includes
 units that are present in all objects. Missing values in any rater will
 exclude that unit from analysis.
@@ -103,6 +115,16 @@ formula which accounts for proportional differences.
 Kendall's W, ICC, and percent agreement are computed using all raters
 simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 computed as the mean of all pairwise correlations between raters.
+
+\strong{Unitizing (segmentation) reliability:}
+When comparing segmented corpora, agreement is measured at the character
+level using Krippendorff's alpha for unitizing continua (Krippendorff,
+2019, section 12.6). This accounts for segments of unequal length and
+partial overlaps between coders' unitizations. The observed and expected
+coincidence matrices are constructed from the lengths of pairwise
+segment intersections across all observer pairs. Segmented corpora must
+reference the same source text; see \code{\link[=qlm_segment]{qlm_segment()}} and \code{\link[=as_qlm_coded]{as_qlm_coded()}}
+with \code{qlm_segment = TRUE}.
 }
 \examples{
 # Load example coded objects
@@ -125,7 +147,12 @@ qlm_compare(
 )
 
 }
+\references{
+Krippendorff, K. (2019). \emph{Content Analysis: An Introduction to Its
+Methodology} (4th ed.). Sage. \doi{10.4135/9781071878781}
+}
 \seealso{
 \code{\link[=qlm_validate]{qlm_validate()}} for validation of coding against gold standards,
-\code{\link[=qlm_code]{qlm_code()}} for LLM coding, \code{\link[=as_qlm_coded]{as_qlm_coded()}} for human coding.
+\code{\link[=qlm_code]{qlm_code()}} for LLM coding, \code{\link[=as_qlm_coded]{as_qlm_coded()}} for human coding,
+\code{\link[=qlm_segment]{qlm_segment()}} for LLM-powered text segmentation.
 }

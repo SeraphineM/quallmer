@@ -201,11 +201,22 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
     all_texts    <- c(all_texts, segs$text)
     all_docnames <- c(all_docnames, paste0(doc_names[i], ".", seq_len(n_segs)))
 
+    # Compute character-level positions by aligning segments to source text
+    positions <- tryCatch(
+      align_segments(doc_texts[i], segs$text),
+      error = function(e) NULL
+    )
+
     dv <- data.frame(
       docid = rep(doc_names[i], n_segs),
       segid = seq_len(n_segs),
       stringsAsFactors = FALSE
     )
+
+    if (!is.null(positions)) {
+      dv$char_start <- positions$start
+      dv$char_end   <- positions$end
+    }
 
     for (field in names(user_props)) {
       dv[[field]] <- segs[[field]]
@@ -227,5 +238,14 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
   if (!is.null(all_dvars)) {
     quanteda::docvars(out) <- all_dvars
   }
+
+  # Mark as a segmented corpus and store continuum lengths
+  quanteda::meta(out, "qlm_segment") <- TRUE
+  continuum_lengths <- stats::setNames(
+    nchar(doc_texts),
+    doc_names
+  )
+  quanteda::meta(out, "continuum_lengths") <- continuum_lengths
+
   out
 }

@@ -14,7 +14,9 @@ as_qlm_coded(
   codebook = NULL,
   texts = NULL,
   notes = NULL,
-  metadata = list()
+  metadata = list(),
+  qlm_segment = FALSE,
+  source_text = NULL
 )
 
 \method{as_qlm_coded}{data.frame}(
@@ -25,7 +27,9 @@ as_qlm_coded(
   codebook = NULL,
   texts = NULL,
   notes = NULL,
-  metadata = list()
+  metadata = list(),
+  qlm_segment = FALSE,
+  source_text = NULL
 )
 
 \method{as_qlm_coded}{default}(
@@ -36,7 +40,9 @@ as_qlm_coded(
   codebook = NULL,
   texts = NULL,
   notes = NULL,
-  metadata = list()
+  metadata = list(),
+  qlm_segment = FALSE,
+  source_text = NULL
 )
 }
 \arguments{

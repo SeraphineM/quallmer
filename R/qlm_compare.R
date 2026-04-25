@@ -4,12 +4,24 @@
 #' reliability or agreement. This function extracts a specified variable from
 #' each object and computes reliability statistics using the irr package.
 #'
+#' `r lifecycle::badge("experimental")`
+#' When all inputs are segmented corpora — created by [qlm_segment()] or by
+#' [as_qlm_coded()] with `qlm_segment = TRUE` — the function instead computes
+#' Krippendorff's alpha for unitizing (`_u`alpha; Krippendorff, 2019,
+#' section 12.6), which measures agreement on the segmentation of a common
+#' text into units of potentially unequal length. If `by` names a docvar,
+#' `_u`alpha\[nominal\] is computed (testing both boundary placement and
+#' segment coding); if `by` is omitted, `|_u`alpha\[binary\] is computed
+#' (testing boundary placement only).
+#'
 #' @param ... Two or more data frames, `qlm_coded`, or `as_qlm_coded` objects
 #'   to compare. These represent different "raters" (e.g., different LLM runs,
 #'   different models, human coders, or human vs. LLM coding). Each object must
 #'   have a `.id` column and the variable specified in `by`. Objects should have
 #'   the same units (matching `.id` values). Plain data frames are automatically
-#'   converted to `as_qlm_coded` objects.
+#'   converted to `as_qlm_coded` objects. Alternatively, all inputs may be
+#'   segmented corpora from [qlm_segment()] or [as_qlm_coded()] with
+#'   `qlm_segment = TRUE` (see Details).
 #' @param by Optional. Name of the variable(s) to compare across raters (supports
 #'   both quoted and unquoted). If `NULL` (default), all coded variables are
 #'   compared. Can be a single variable (`by = sentiment`), a character vector
@@ -79,8 +91,23 @@
 #' simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 #' computed as the mean of all pairwise correlations between raters.
 #'
+#' **Unitizing (segmentation) reliability:**
+#' When comparing segmented corpora, agreement is measured at the character
+#' level using Krippendorff's alpha for unitizing continua (Krippendorff,
+#' 2019, section 12.6). This accounts for segments of unequal length and
+#' partial overlaps between coders' unitizations. The observed and expected
+#' coincidence matrices are constructed from the lengths of pairwise
+#' segment intersections across all observer pairs. Segmented corpora must
+#' reference the same source text; see [qlm_segment()] and [as_qlm_coded()]
+#' with `qlm_segment = TRUE`.
+#'
+#' @references
+#' Krippendorff, K. (2019). *Content Analysis: An Introduction to Its
+#' Methodology* (4th ed.). Sage. \doi{10.4135/9781071878781}
+#'
 #' @seealso [qlm_validate()] for validation of coding against gold standards,
-#' [qlm_code()] for LLM coding, [as_qlm_coded()] for human coding.
+#' [qlm_code()] for LLM coding, [as_qlm_coded()] for human coding,
+#' [qlm_segment()] for LLM-powered text segmentation.
 #'
 #' @examples
 #' # Load example coded objects
@@ -140,6 +167,23 @@ qlm_compare <- function(...,
   # Validate inputs
   if (length(coded_list) < 2) {
     cli::cli_abort("At least two data frames or {.cls qlm_coded} objects are required for comparison.")
+  }
+
+  # ---- Dispatch: segmented corpora (unitizing alpha) ----
+  is_segment_corpus <- vapply(coded_list, function(obj) {
+    inherits(obj, "corpus") &&
+      isTRUE(tryCatch(quanteda::meta(obj, "qlm_segment"), error = function(e) FALSE))
+  }, logical(1))
+
+  if (all(is_segment_corpus)) {
+    lifecycle::signal_stage("experimental", "qlm_compare(unitizing)")
+    return(compare_unitizations(coded_list, by = by, ci = ci,
+                                bootstrap_n = bootstrap_n))
+  } else if (any(is_segment_corpus)) {
+    cli::cli_abort(c(
+      "Cannot mix segmented corpora with other object types in {.fn qlm_compare}.",
+      "i" = "All inputs must be segmented corpora (from {.fn qlm_segment} or {.fn as_qlm_coded} with {.code qlm_segment = TRUE})."
+    ))
   }
 
   # Check all objects are data frames
@@ -940,9 +984,155 @@ format_measure_name <- function(measure) {
     "w" = "Kendall's W",
     "rho" = "Spearman's rho",
     "icc" = "ICC",
-    "r" = "Pearson's r"
+    "r" = "Pearson's r",
+    "alpha_u_nominal" = "Krippendorff's alpha (unitizing)",
+    "alpha_u_binary" = "Krippendorff's alpha (unitizing, binary)"
   )
 
   # Return mapped name or original if not found
-  name_map[measure] %||% measure
+  result <- name_map[measure]
+  if (is.na(result)) measure else unname(result)
+}
+
+
+#' Compare segmented corpora using Krippendorff's alpha for unitizing
+#'
+#' Internal dispatcher called by [qlm_compare()] when all inputs are segmented
+#' corpora (marked with `qlm_segment = TRUE` metadata).
+#'
+#' @param corpus_list List of quanteda corpus objects from [qlm_segment()] or
+#'   [as_qlm_coded()] with `qlm_segment = TRUE`.
+#' @param by Character vector of docvar names to use as segment values. If
+#'   `NULL`, computes `alpha_u_binary` (boundary agreement only).
+#' @param ci CI method (currently only `"none"` is supported for unitizing).
+#' @param bootstrap_n Number of bootstrap samples (not yet implemented).
+#'
+#' @return A `qlm_comparison` tibble.
+#' @keywords internal
+#' @noRd
+compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
+                                  bootstrap_n = 1000) {
+  m <- length(corpus_list)
+
+  # Validate consistent source documents
+  all_lengths <- lapply(corpus_list, function(corp) {
+    quanteda::meta(corp, "continuum_lengths")
+  })
+
+  # Find common document IDs
+  all_doc_ids <- lapply(all_lengths, names)
+  common_docs <- Reduce(intersect, all_doc_ids)
+
+  if (length(common_docs) == 0L) {
+    cli::cli_abort(c(
+      "No common source documents found across the segmented corpora.",
+      "i" = "Ensure all corpora were segmented from the same source text(s)."
+    ))
+  }
+
+  # Validate continuum lengths match
+  for (doc_id in common_docs) {
+    lengths <- vapply(all_lengths, function(l) l[[doc_id]], numeric(1))
+    if (length(unique(lengths)) > 1L) {
+      cli::cli_abort(c(
+        "Continuum lengths differ for document {.val {doc_id}}.",
+        "i" = "All corpora must be segmented from the same source text."
+      ))
+    }
+  }
+
+  # Extract observer names
+  observer_names <- vapply(corpus_list, function(corp) {
+    nm <- tryCatch(quanteda::meta(corp, "name"), error = function(e) NULL)
+    if (!is.null(nm) && nzchar(nm)) nm else NA_character_
+  }, character(1))
+
+  # Build unitization data for each document and observer
+  all_results <- list()
+
+  # Determine value variables
+  if (is.null(by)) {
+    value_vars <- list(NULL)  # binary only
+  } else {
+    value_vars <- as.list(by)
+  }
+
+  for (var in value_vars) {
+    for (doc_id in common_docs) {
+      L <- all_lengths[[1L]][[doc_id]]
+
+      unitizations <- lapply(corpus_list, function(corp) {
+        dv <- quanteda::docvars(corp)
+        idx <- dv$docid == doc_id
+        seg_dv <- dv[idx, , drop = FALSE]
+
+        if (!all(c("char_start", "char_end") %in% names(seg_dv))) {
+          cli::cli_abort(c(
+            "Corpus is missing {.var char_start}/{.var char_end} docvars.",
+            "i" = "Ensure the corpus was created with {.fn qlm_segment} or {.fn as_qlm_coded} with {.code qlm_segment = TRUE}."
+          ))
+        }
+
+        value <- if (is.null(var)) {
+          rep("segment", nrow(seg_dv))
+        } else {
+          if (!var %in% names(seg_dv)) {
+            cli::cli_abort("Variable {.var {var}} not found in docvars.")
+          }
+          as.character(seg_dv[[var]])
+        }
+
+        data.frame(
+          start = seg_dv$char_start,
+          end   = seg_dv$char_end,
+          value = value,
+          stringsAsFactors = FALSE
+        )
+      })
+
+      # Compute alpha
+      type <- if (is.null(var)) "binary" else "nominal"
+      alpha_val <- compute_alpha_u(unitizations, L = L, type = type)
+
+      measure_name <- if (is.null(var)) "alpha_u_binary" else "alpha_u_nominal"
+      variable_name <- if (is.null(var)) "(boundaries)" else var
+
+      result_row <- list(
+        variable = variable_name,
+        level    = "unitizing",
+        measure  = measure_name,
+        value    = alpha_val
+      )
+
+      for (i in seq_along(observer_names)) {
+        result_row[[paste0("rater", i)]] <- observer_names[i]
+      }
+
+      all_results[[length(all_results) + 1L]] <- result_row
+    }
+  }
+
+  result_df <- dplyr::bind_rows(all_results)
+
+  structure(
+    result_df,
+    class = c("qlm_comparison", class(result_df)),
+    raters = m,
+    n = length(common_docs),
+    call = match.call(),
+    meta = list(
+      user = list(name = "unitizing_comparison", notes = NULL),
+      object = list(
+        call = match.call(),
+        parent = observer_names[!is.na(observer_names)],
+        n_raters = m,
+        variables = by
+      ),
+      system = list(
+        timestamp = Sys.time(),
+        quallmer_version = tryCatch(as.character(utils::packageVersion("quallmer")), error = function(e) NA_character_),
+        R_version = paste(R.version$major, R.version$minor, sep = ".")
+      )
+    )
+  )
 }
