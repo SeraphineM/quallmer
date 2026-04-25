@@ -1,0 +1,164 @@
+3.2 Unitising - Cutting Text into Quasi-Sentences
+
+The coding unit is a quasi-sentence. One quasi-sentence contains exactly one statement or "message".
+In many cases, parties make one statement per sentence, which results in one quasi-sentence equalling
+one full sentence. Therefore, the basic unitising rule is that one sentence is, at minimum, one
+quasi-sentence. In no case can two or more sentences form a quasi-sentence. (The only known exception is Greek, where what is otherwise considered a sentence can span over commonly used signs
+for the end of a sentence, esp. full stops.)  There are, however,
+instances when one natural sentence contains more than one quasi-sentence, as discussed below.
+
+3.2.1 When to Cut Sentences
+
+Only if the natural sentence contains more than one unique argument should this sentence be split.
+There are two possibilities for unique arguments: 1) a sentence contains two statements that are totally
+unrelated; or 2) a sentence contains two statements that are related (e.g. they come from the same policy
+field) but address diﬀerent aspects of a larger policy.
+
+Clues to unique statements might be 1) semicolons; 2) the possibility to split up the sentence into a
+meaningful bullet point list; 3) general clues from codes. Regarding the third point, it is especially likely
+that the sentence includes two unique statements if a sentence contains codes from two or more domains
+(see Table 1, p. 6). An example would be:
+
+  "We need to address our close ties with our neighbours (107) // as well as the unique
+challenges facing small business owners in this time of economic hardship. (402)"
+(Two quasi-sentences, with codes 107 and 402.)
+
+3.2.2 When Not to Cut Sentences
+
+There are many instances when sentences should not be split into quasi-sentences. A good rule of thumb
+is that one word is most likely not a quasi-sentence. It is crucial to know that examples, reasoning,
+explanations, etc. are not unique arguments and are therefore no separate quasi-sentences.
+Coders should also be careful when unitising based on sentence operators such as commas, colons,
+hyphens, etc. Such operators might be, but are not always, indicators of a quasi-sentence. Operators do
+not indicate two quasi-sentences if they do not separate two unique statements. Examples for this case
+are:
+
+"The animal rights in our country must be improved; and we will do that. (501)"
+
+"Our country’s budget must be put on solid footing again, no matter the costs. (414)"
+
+Coders should not split up a sentence just because they think they have discovered a code. For instance,
+the mere singling out of another country is not a unique argument and, therefore, a quasi-sentence.
+Only if the statement refers to a general or specific foreign policy goal should it be considered a separate quasi-sentence. Furthermore, references to policy areas such as education, agriculture, labour, and
+the environment should not automatically be separated simply because ’catch words’ such as ’schools’,
+’farmers’, ’unions’ or ’environmentalists’ are mentioned. Again, the sentence should only be cut if it is a
+statement about the issue. Here is an example of a sentence that seems to contain several arguments at
+first glance but, on closer inspection, is revealed to have only one unique message:
+
+  "We must force our unions to step back from their demands or their policies will result in
+the loss of thousands of jobs, closing of schools, and diminishing pensions. (702)"
+
+In this example, jobs, schools, and pensions are only instances outlining the negative impact of what will
+happen if the party’s central demand (unions reducing their demands) is not met.
+
+Example:
+
+Here is a text that has been segmented into quasi-sentences using the above rules. Each numbered line represents the correct segmentation into a quasi-sentence, even when these represents parts of natural sentences (as indicated by the end-of-sentence punctuation).  (Headers are capitalised and do not end with end-of-sentence punctuation, and have been joined with the sentence that follows.)
+
+1	‘Working together for Britain' The General Election on June 9th, 1983 will be seen as a watershed in British politics.
+2	It may be recalled as the fateful day when depression became hopelessness and the slide of the post-war years accelerated into the depths of decline.
+3	Alternatively it may be remembered as the turning point when the people of this country, at the eleventh hour, decided to turn their backs on dogma and bitterness and chose a new road of partnership and progress.
+4	It is to offer real hope of a fresh start for Britain that the Alliance between 305 our two parties has been created.
+5	What we have done is unique in the 305 history of British parliamentary democracy.
+6	Two parties, one with a proud history, and one born only two years ago out of a frustration with the old systems of politics, have come together to offer an alternative government pledged to bring the country together again.
+7	The Conservative and Labour parties between them have made an industrial wasteland out of a country which was once the workshop of the world.
+8	Manufacturing output from Britain is back to the level of nearly 20 years ago.
+9	Unemployment is still rising and there are now generations of school-leavers who no longer even hope for work.
+10	Mrs Thatcher's government stands idly by, hoping that the blind forces of the marketplace will restore the jobs and factories that its indifference has destroyed.
+11	The Labour Party's response is massive further nationalization, a centralised state socialist economy and rigid controls over enterprise.
+12	The choice which Tories and socialists offer at this election is one between neglect and interference.
+13	Neither of them understands that it is only by working together in the companies and communities of Britain that we can overcome the economic problems which beset us.
+14	Meanwhile the very fabric of our common life together deteriorates.
+15	The record wave of violence and crime and increased personal stress are all signs of a society at war with itself.
+16	Rundown cities and declining rural services alike tell a story of a warped sense of priorities by successive governments.
+17	Mrs Thatcher promised 'to bring harmony where there is discord'.
+18	Instead her own example of confrontation has inflamed the bitterness so many people feel at what has happened to their own lives and local communities.
+19	Our Alliance wants to call a halt to confrontation politics.
+20	We believe we have set an example by working together as two separate parties within an alliance of principle.
+21	Our whole approach is based on co-operation: not just between our parties but between management and workers, between people of different races and above all between government and people.
+22	Because we are not prisoners of ideology we shall listen to the people we represent and ensure that the good sense of the voters is allowed to illuminate the corridors of Westminster and Whitehall.
+23	THE IMMEDIATE CRISIS: JOBS AND PRICES Our economic crisis demands tough immediate action.
+24	It also requires a Government with the courage to implement those strategic and structural reforms which alone can end the civil war between the two sides of industry.
+25	The immediate priority is to reduce unemployment. Why?
+26	To the Alliance unemployment is a scandal;
+27	robbing men and women of their careers;
+28	blighting the prospects for a quarter of all our young people,
+29	wasting our national resources,
+30	aborting our chances of industrial recovery,
+31	dividing our nation
+32	and fuelling hopelessness and crime.
+33	Much of the present unemployment is a direct result of the civil war in British industry, of restrictive practices and low investment.
+34	But in addition, conservative Government policies have caused unemployment to rise.
+35	An Alliance Government would cause unemployment to fall. How?
+36	Can it be done without releasing a fresh wave of inflation?
+37	We believe it can.
+38	We propose a carefully devised and costed jobs programmeme aimed at reducing unemployment by 1 million over two years.
+39	This programmeme will be supported by immediate measures to help those hardest hit by the slump - the disadvantaged, the pensioners, the poor.
+40	Ours is a programmeme of mind, heart and will.
+41	It is a programme that will work! The Programmeme has three points:
+42	Fiscal and Financial Pollicies for Growth;
+43	Direct Action to provide jobs;
+44	An Incomes Strategy that will stick.
+45	STRATEGY FOR INDUSTRIAL SUCCESS The Alliance is alone in recognising that Britain's industrial crisis cannot be solved by short-term measures such as import controls or money supply targets.
+46	Our crisis goes deep.
+47	Its roots lie in the class divisions of our society,
+48	in the vested interests of the Tory and Labour parties,
+49	in the refusal of management and unions to wide democracy in industry,
+50	in the way profits and risks are shared.
+51	The policies offered by the two class-based parties will further divide the nation North v South, Management v Labour.
+52	Our greatest need is to build a sense of belonging to one community.
+53	We are all in it together.
+54	It is impossible for one side or the other in Britain to 'win'.
+55	Conflict in industrial relations means that we all lose.
+56	The Alliance is committed to policies which will invest resources in the hightechnology industries of the future.
+57	We are committed to a major new effort in education and training.
+58	We are pledged to trade union reform to tough anti-monopoly measures.
+59	PARTERNSHIP IN INDUSTRY Britain has made little progress towards industrial democracy, yet several of our European partners have long traditions of participation and co-operation backed by legislation.
+60	They do not face the obstacles to progress with which our divisive industrial relations present us.
+61	To be fully effective, proposals for participation in industry need to be buttressed by action on two fronts:
+62	a major extension of profit sharing and worker share-ownership to give people a real stake where they work as well as the ability to participate in decision-taking,
+63	and reform of the trade unions to make them genuinely representative institutions.
+64	PARTICIPATION AT WORK We propose enabling legislation that will offer a flexible and sensible approach:
+65	An Industrial Democracy Act to provide for the introduction of employee participation at all levels,
+66	incentives for employee share-ownership,
+67	employee rights to information,
+68	and an Industrial Democracy Agency (IDA) to advise on and monitor the introduction of these measures:
+69	Employee Councils covering each place of work (subject to exemption for small units) for all companies employing over 1,000 people.
+70	Smaller companies would also be encouraged to introduce Employee Councils.
+71	GOVERNMENT AND INDUSTRY Priority for Industry The role of an Alliance government in relation to private industry will be to provide selective assistance taking a number of forms:
+72	an industrial credit scheme to provide low-interest, long-term finance for projects directed at modernising industry;
+73	A national innovation policy, to provide selective assistance for high-risk projects,
+74	particularly involving the development of new technologies
+75	and for research and development in potential growth industries;
+76	public purchasing policies to stimulate innovation,
+77	encourage the introduction of crucial technologies/
+78	and aid small businesses;
+79	we will establish a Cabinet Committee chaired by the Prime Minster at the centre of decision-taking on all policies with a bearing on the performance of industry.
+80	The Alliance will strengthen the Monopolies' and Mergers' Commission to ensure its ability to prevent monopoly and unhealthy concentrations of industrial and commercial power.
+81	The aim is to guarantee fair competition and to protect the interests of employers, consumers and shareholders.
+82	New and Small Business To encourage the growth of new and small businesses, we will attack red tape and provide further financial and management assistance by:
+83	extending the Loan Guarantee Scheme, in the first instance raising the maximum permitted loan to £150,000;
+84	and the Business Start-Up Scheme, raising the upper limit for investment to £75,000;
+85	and introducing Small Firm Investment Companies to provide financial and management help;
+86	zero-rating building repairs and maintenance for VAT purposes/
+87	and reducing commercial rates by 10 per cent;
+88	making sure the Department of Industry co-ordinates and publicises schemes for small businesses
+89	and that government aid ceases to discriminate against small businesses;
+90	tailoring national legislation such as the Health and Safety Regulations to the needs of small businesses
+91	and amending the statutory sick pay scheme to exclude small businesses.
+92	Agriculture and Fisheries Agriculture is an important industry and employer.
+93	To encourage its further development we will:
+94	increase Government support for effective agricultural marketing at home and abroad/
+95	and continue support for 'Food from Britain';
+96	ensure that agriculture has access like other industries to the industrial credit scheme we propose;
+97	encourage greater access to farming, especially by young entrants.
+98	The Alliance is determined to safeguard the future of our fishing industry which needs help to re-build after years of uncertainty and the drastic consequences for the deep-sea fleet of 200-mile limits in the waters they used to fish.
+99	Education and training The third basic condition for industrial success is a people with the skills and self-confidence that will be needed for the challenges of new technology.
+100	The education and training systems are not providing enough people with the skills necessary to make them employable and the country successful in competition with its rivals.
+101	We are falling further behind.
+102	Japan on present plans will be educating all its young people to the age of 18 by 1990.
+103	More than 90 per cent of the 16-19 age group in Germany gain recognised technical qualifications.
+104	And it is not just a matter of school-leavers.
+105	Our managers are less professionally qualified than our main competitors.
+106	From the bottom to top we are underskilled, and this has to be put right if we are to prosper in future.
+107	To do this, to raise standards in education and training and to improve their effectiveness is the object of proposals set out in the next Section.

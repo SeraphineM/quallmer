@@ -47,6 +47,8 @@ navbar:
         href: articles/pkgdown/examples/example_audio.html
       - text: Text segmentation
         href: articles/pkgdown/examples/example_segmentation.html
+      - text: Quasi-sentence segmentation
+        href: articles/pkgdown/examples/example_quasi_sentences.html
     reference:
       text: Reference
       href: reference/index.html
