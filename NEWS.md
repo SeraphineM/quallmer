@@ -1,4 +1,4 @@
-# quallmer (development version)
+# quallmer 0.4.0 (forthcoming)
 
 ## New features
 
@@ -7,6 +7,27 @@
   output. Schema fields become docvars; `docid_` and `segid_` track provenance.
   Enables aspect-based sentiment analysis, thematic coding, and other
   applications requiring variable-length segmentation (#96).
+
+* `qlm_compare()` now supports inter-coder reliability for segmentation tasks.
+  When all inputs are segmented corpora produced by `qlm_segment()`, it
+  automatically computes Krippendorff's alpha for unitizing (Krippendorff, 2019,
+  section 12.6), an extension of alpha designed for variable-length text
+  segmentation. Three measures are reported (marked experimental):
+  - `u_alpha_nominal` and `u_alpha_binary` measure joint boundary and coding
+    reliability across the full segmented continuum.
+  - `cu_alpha_nominal` measures coding reliability *conditional on* unitization,
+    isolating coding disagreement from boundary disagreement.
+  - Per-value `(k)u_alpha_nominal` reports reliability and coverage for each
+    individual code, enabling diagnosis of which codes are applied consistently.
+  Results include both per-document and overall (concatenated continuum) alpha.
+
+* `as_qlm_coded()` gains `qlm_segment` and `source_text` arguments for
+  converting gold-standard data frames to segmented corpora with character
+  positions, enabling ICR comparison of LLM segmentation against human-coded
+  reference data.
+
+* `qlm_segment()` now accepts a `name` argument stored in corpus metadata for
+  rater identification when comparing multiple segmenters via `qlm_compare()`.
 
 # quallmer 0.3.0
 
