@@ -40,7 +40,7 @@ Aspect-based sentiment analysis (ABSA) asks not just whether a reviewer is posit
 We draw four reviews from `data_corpus_LMRDsample`, the 200-review subset of the Large Movie Review Dataset bundled with quallmer (Maas et al., 2011): two negative and two positive.
 
 ```{r sample-reviews}
-set.seed(42)
+set.seed(55)
 idx_neg <- which(docvars(data_corpus_LMRDsample)$polarity == "neg")
 idx_pos <- which(docvars(data_corpus_LMRDsample)$polarity == "pos")
 corp_reviews <- data_corpus_LMRDsample[c(sample(idx_neg, 2), sample(idx_pos, 2))]
@@ -83,7 +83,8 @@ cb_absa
 segs_reviews <- qlm_segment(
   corp_reviews,
   codebook = cb_absa,
-  model    = "openai/gpt-4o-mini"
+  model    = "openai/gpt-4o-mini",
+  name     = "GPT-4o-mini"
 )
 saveRDS(segs_reviews, "data/segs_reviews.rds")
 ```
@@ -219,9 +220,47 @@ docvars(segs_inaugural) |>
   theme(legend.position = "bottom")
 ```
 
+## Reliability of aspect-based segmentation
+
+How reproducible is the ABSA segmentation? We re-segment the same four reviews with a second model and compare the two runs using `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing (Krippendorff, 2019, section 12.6).
+
+### A second segmentation
+
+```{r segment-reviews-2, eval=FALSE}
+segs_reviews_2 <- qlm_segment(
+  corp_reviews,
+  codebook = cb_absa,
+  model    = "anthropic/claude-sonnet-4-5",
+  name     = "Claude Sonnet 4.5"
+)
+saveRDS(segs_reviews_2, "data/segs_reviews_2.rds")
+```
+
+```{r load-segs-reviews-2, echo=FALSE}
+segs_reviews_2 <- readRDS("data/segs_reviews_2.rds")
+```
+
+### Boundary agreement
+
+`|_u_α_binary` tests whether the two models place segment boundaries in the same locations, ignoring the aspect and sentiment labels:
+
+```{r compare-binary}
+qlm_compare(segs_reviews, segs_reviews_2)
+```
+
+### Boundary and sentiment agreement
+
+When we pass `by = "sentiment"`, `_u_α_nominal` tests both boundary placement and whether the models agree on the sentiment label assigned to each span:
+
+```{r compare-nominal}
+qlm_compare(segs_reviews, segs_reviews_2, by = "sentiment")
+```
+
+The per-review breakdown shows which texts are more or less consistently segmented, while the overall row is the value to report.
+
 ## Conclusion
 
-`qlm_segment()` turns unstructured text into a quanteda corpus where each document is a semantically coherent unit. The output integrates directly with quanteda's ecosystem — frequency tables, readability measures, or further LLM coding of individual segments with `qlm_code()`. The ABSA example shows how mixed sentiment can be obscured in aggregate scores; the inaugural address example shows how thematic structure can be recovered automatically from long-form political text.
+`qlm_segment()` turns unstructured text into a quanteda corpus where each document is a semantically coherent unit. The output integrates directly with quanteda's ecosystem — frequency tables, readability measures, or further LLM coding of individual segments with `qlm_code()`. The ABSA example shows how mixed sentiment can be obscured in aggregate scores; the inaugural address example shows how thematic structure can be recovered automatically from long-form political text. Segmented corpora can be compared across models or runs with `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing — measuring both boundary and coding agreement at the character level.
 
 ## References
 

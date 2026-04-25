@@ -166,6 +166,14 @@ as_qlm_coded <- function(x,
 #'   }
 #'   The function automatically adds `timestamp`, `n_units`, `notes`, and
 #'   `source = "human"`.
+#' @param qlm_segment Logical. If `TRUE`, converts the data to a segmented
+#'   quanteda corpus suitable for unitizing comparison with [qlm_compare()].
+#'   Requires a `text` column in `x` and a `source_text` argument. Default
+#'   is `FALSE`.
+#' @param source_text A named character vector of source texts. Required when
+#'   `qlm_segment = TRUE`. Names must match `docid` values in `x` (or a
+#'   single unnamed string for single-document data). Used to compute
+#'   character-level segment positions for unitizing reliability.
 #' @export
 as_qlm_coded.data.frame <- function(
   x,

@@ -99,6 +99,7 @@ test_that("align_segments errors on missing segment", {
 # -- Tests for as_qlm_coded with qlm_segment = TRUE ----------------------------
 
 test_that("as_qlm_coded creates segmented corpus from data.frame", {
+  skip_if_not_installed("quanteda")
   source_text <- c(doc1 = "The economy is strong. Jobs are growing.")
 
   gold_df <- data.frame(
@@ -118,6 +119,7 @@ test_that("as_qlm_coded creates segmented corpus from data.frame", {
 })
 
 test_that("as_qlm_coded errors without source_text when qlm_segment = TRUE", {
+  skip_if_not_installed("quanteda")
   gold_df <- data.frame(text = "Hello", stringsAsFactors = FALSE)
   expect_error(
     as_qlm_coded(gold_df, qlm_segment = TRUE),
@@ -129,6 +131,7 @@ test_that("as_qlm_coded errors without source_text when qlm_segment = TRUE", {
 # -- Tests for qlm_compare dispatch with segmented corpora ---------------------
 
 test_that("qlm_compare dispatches to unitizing for segmented corpora", {
+  skip_if_not_installed("quanteda")
   source_text <- c(doc1 = "aaabbbccc")
 
   obs1_df <- data.frame(
@@ -153,10 +156,14 @@ test_that("qlm_compare dispatches to unitizing for segmented corpora", {
 
   expect_true(inherits(result, "qlm_comparison"))
   expect_true("alpha_u_nominal" %in% result$measure)
-  expect_equal(result$value[result$measure == "alpha_u_nominal"], 1.0)
+  expect_true("docid" %in% names(result))
+  # Per-document and overall rows, both 1.0 for identical segmentations
+  overall <- result$value[result$docid == "(overall)"]
+  expect_equal(overall, 1.0)
 })
 
 test_that("qlm_compare binary works for segmented corpora without by", {
+  skip_if_not_installed("quanteda")
   source_text <- c(doc1 = "aaabbbccc")
 
   obs1_df <- data.frame(
@@ -182,6 +189,7 @@ test_that("qlm_compare binary works for segmented corpora without by", {
 })
 
 test_that("qlm_compare nominal works with differing codes", {
+  skip_if_not_installed("quanteda")
   source_text <- c(doc1 = "aaabbbcccddd")
 
   # Same boundaries, different codes on one segment
@@ -206,8 +214,8 @@ test_that("qlm_compare nominal works with differing codes", {
   result <- qlm_compare(corp1, corp2, by = "code")
 
   expect_true("alpha_u_nominal" %in% result$measure)
-  alpha_val <- result$value[result$measure == "alpha_u_nominal"]
+  overall <- result$value[result$docid == "(overall)"]
   # Same boundaries but one code differs: alpha < 1.0 but > 0
-  expect_true(alpha_val < 1.0)
-  expect_true(alpha_val > 0)
+  expect_true(overall < 1.0)
+  expect_true(overall > 0)
 })

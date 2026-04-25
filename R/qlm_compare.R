@@ -937,23 +937,31 @@ print.qlm_comparison <- function(x, ...) {
 
     cli::cli_h3("{var} ({level})")
 
-    # Print each measure
+    # Build labels for all rows, then right-justify values
+    has_docid <- "docid" %in% names(var_data) && !all(is.na(var_data$docid))
+    has_ci    <- "ci_lower" %in% names(var_data)
+
+    labels <- vapply(seq_len(nrow(var_data)), function(i) {
+      ml <- format_measure_name(var_data$measure[i])
+      if (has_docid && !is.na(var_data$docid[i])) {
+        paste0(ml, " [", var_data$docid[i], "]")
+      } else {
+        ml
+      }
+    }, character(1))
+
+    max_width <- max(nchar(labels))
+
     for (i in seq_len(nrow(var_data))) {
-      measure <- var_data$measure[i]
-      value <- var_data$value[i]
-
-      # Format measure name for display
-      measure_label <- format_measure_name(measure)
-
-      # Check if we have CI columns
-      has_ci <- "ci_lower" %in% names(var_data)
+      padded <- formatC(labels[i], width = max_width, flag = "-")
+      val_str <- sprintf("% .4f", var_data$value[i])
 
       if (has_ci && !is.na(var_data$ci_lower[i])) {
-        # Print with CI
-        cli::cli_text("  {measure_label}: {sprintf('%.4f', value)} [{sprintf('%.4f', var_data$ci_lower[i])}, {sprintf('%.4f', var_data$ci_upper[i])}]")
+        cat(padded, val_str,
+            sprintf("[%.4f, %.4f]", var_data$ci_lower[i], var_data$ci_upper[i]),
+            "\n")
       } else {
-        # Print without CI
-        cli::cli_text("  {measure_label}: {sprintf('%.4f', value)}")
+        cat(padded, val_str, "\n")
       }
     }
 
@@ -1057,58 +1065,102 @@ compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
     value_vars <- as.list(by)
   }
 
+  # Helper: extract unitization for one document from one corpus
+  extract_doc_units <- function(corp, doc_id, var) {
+    dv <- quanteda::docvars(corp)
+    idx <- dv$docid == doc_id
+    seg_dv <- dv[idx, , drop = FALSE]
+
+    if (!all(c("char_start", "char_end") %in% names(seg_dv))) {
+      cli::cli_abort(c(
+        "Corpus is missing {.var char_start}/{.var char_end} docvars.",
+        "i" = "Ensure the corpus was created with {.fn qlm_segment} or {.fn as_qlm_coded} with {.code qlm_segment = TRUE}."
+      ))
+    }
+
+    if (anyNA(seg_dv$char_start) || anyNA(seg_dv$char_end)) {
+      return(NULL)
+    }
+
+    value <- if (is.null(var)) {
+      rep("segment", nrow(seg_dv))
+    } else {
+      if (!var %in% names(seg_dv)) {
+        cli::cli_abort("Variable {.var {var}} not found in docvars.")
+      }
+      as.character(seg_dv[[var]])
+    }
+
+    data.frame(
+      start = seg_dv$char_start,
+      end   = seg_dv$char_end,
+      value = value,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  # Helper: build a result row
+  make_row <- function(variable_name, measure_name, alpha_val, doc_id) {
+    row <- list(
+      variable = variable_name,
+      level    = "unitizing",
+      measure  = measure_name,
+      value    = alpha_val,
+      docid    = doc_id
+    )
+    for (i in seq_along(observer_names)) {
+      row[[paste0("rater", i)]] <- observer_names[i]
+    }
+    row
+  }
+
   for (var in value_vars) {
+    type <- if (is.null(var)) "binary" else "nominal"
+    measure_name  <- if (is.null(var)) "alpha_u_binary" else "alpha_u_nominal"
+    variable_name <- if (is.null(var)) "(boundaries)" else var
+
+    # Per-document alpha (skip documents where alignment failed)
+    skipped_docs <- character(0)
     for (doc_id in common_docs) {
       L <- all_lengths[[1L]][[doc_id]]
-
-      unitizations <- lapply(corpus_list, function(corp) {
-        dv <- quanteda::docvars(corp)
-        idx <- dv$docid == doc_id
-        seg_dv <- dv[idx, , drop = FALSE]
-
-        if (!all(c("char_start", "char_end") %in% names(seg_dv))) {
-          cli::cli_abort(c(
-            "Corpus is missing {.var char_start}/{.var char_end} docvars.",
-            "i" = "Ensure the corpus was created with {.fn qlm_segment} or {.fn as_qlm_coded} with {.code qlm_segment = TRUE}."
-          ))
-        }
-
-        value <- if (is.null(var)) {
-          rep("segment", nrow(seg_dv))
-        } else {
-          if (!var %in% names(seg_dv)) {
-            cli::cli_abort("Variable {.var {var}} not found in docvars.")
-          }
-          as.character(seg_dv[[var]])
-        }
-
-        data.frame(
-          start = seg_dv$char_start,
-          end   = seg_dv$char_end,
-          value = value,
-          stringsAsFactors = FALSE
-        )
-      })
-
-      # Compute alpha
-      type <- if (is.null(var)) "binary" else "nominal"
-      alpha_val <- compute_alpha_u(unitizations, L = L, type = type)
-
-      measure_name <- if (is.null(var)) "alpha_u_binary" else "alpha_u_nominal"
-      variable_name <- if (is.null(var)) "(boundaries)" else var
-
-      result_row <- list(
-        variable = variable_name,
-        level    = "unitizing",
-        measure  = measure_name,
-        value    = alpha_val
-      )
-
-      for (i in seq_along(observer_names)) {
-        result_row[[paste0("rater", i)]] <- observer_names[i]
+      unitizations <- lapply(corpus_list, extract_doc_units, doc_id = doc_id, var = var)
+      if (any(vapply(unitizations, is.null, logical(1)))) {
+        skipped_docs <- c(skipped_docs, doc_id)
+        next
       }
+      alpha_val <- compute_alpha_u(unitizations, L = L, type = type)
+      all_results[[length(all_results) + 1L]] <- make_row(variable_name, measure_name, alpha_val, doc_id)
+    }
 
-      all_results[[length(all_results) + 1L]] <- result_row
+    if (length(skipped_docs) > 0L) {
+      cli::cli_warn(c(
+        "Skipping {length(skipped_docs)} document{?s} with missing character positions: {.val {skipped_docs}}.",
+        "i" = "Segment alignment likely failed because the LLM did not return verbatim text."
+      ))
+    }
+
+    # Overall alpha: concatenate usable documents into one virtual continuum
+    usable_docs <- setdiff(common_docs, skipped_docs)
+    if (length(usable_docs) > 0L) {
+      offset <- 0
+      combined <- lapply(seq_len(m), function(i) {
+        data.frame(start = integer(0), end = integer(0), value = character(0),
+                   stringsAsFactors = FALSE)
+      })
+      total_L <- 0
+      for (doc_id in usable_docs) {
+        L <- all_lengths[[1L]][[doc_id]]
+        for (i in seq_len(m)) {
+          doc_units <- extract_doc_units(corpus_list[[i]], doc_id, var)
+          doc_units$start <- doc_units$start + offset
+          doc_units$end   <- doc_units$end + offset
+          combined[[i]] <- rbind(combined[[i]], doc_units)
+        }
+        offset <- offset + L
+        total_L <- total_L + L
+      }
+      overall_alpha <- compute_alpha_u(combined, L = total_L, type = type)
+      all_results[[length(all_results) + 1L]] <- make_row(variable_name, measure_name, overall_alpha, "(overall)")
     }
   }
 

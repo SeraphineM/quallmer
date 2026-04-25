@@ -26,3 +26,4 @@
 ^joss_paper$
 ^CITATION\.cff$
 ^\.positai$
+^quallmer-context\.xml$

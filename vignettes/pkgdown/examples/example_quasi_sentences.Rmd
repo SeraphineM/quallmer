@@ -87,7 +87,8 @@ cb_qs
 segs_manifesto <- qlm_segment(
   manifesto,
   codebook = cb_qs,
-  model    = "anthropic/claude-opus-4-6"
+  model    = "anthropic/claude-opus-4-6",
+  name     = "Claude Opus 4.6"
 )
 saveRDS(segs_manifesto, "data/segs_manifesto_nz.rds")
 ```

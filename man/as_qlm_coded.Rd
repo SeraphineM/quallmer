@@ -93,6 +93,16 @@ include any relevant information such as:
 }
 The function automatically adds \code{timestamp}, \code{n_units}, \code{notes}, and
 \code{source = "human"}.}
+
+\item{qlm_segment}{Logical. If \code{TRUE}, converts the data to a segmented
+quanteda corpus suitable for unitizing comparison with \code{\link[=qlm_compare]{qlm_compare()}}.
+Requires a \code{text} column in \code{x} and a \code{source_text} argument. Default
+is \code{FALSE}.}
+
+\item{source_text}{A named character vector of source texts. Required when
+\code{qlm_segment = TRUE}. Names must match \code{docid} values in \code{x} (or a
+single unnamed string for single-document data). Used to compute
+character-level segment positions for unitizing reliability.}
 }
 \value{
 A \code{qlm_coded} object (tibble with additional class and attributes)
