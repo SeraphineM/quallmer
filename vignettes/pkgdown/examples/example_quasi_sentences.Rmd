@@ -189,9 +189,42 @@ near_cuts |>
   )
 ```
 
+## Inter-coder reliability of segmentation
+
+How well does the LLM segmentation agree with the human gold standard? The `quasisentences` dataset includes the NZ National Party manifesto segmented by Manifesto Project coders. We can convert both the gold standard and the LLM output to segmented corpora and compare them with `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing — the standard reliability measure for segmented text (Krippendorff, 2019, section 12.6).
+
+### Preparing the gold standard
+
+The `quasisentences` dataset contains the Manifesto Project's human-coded quasi-sentences. We filter to the NZ manifesto, set a `docid` matching the LLM corpus, and convert to a segmented corpus with `as_qlm_coded()`.
+
+```{r prepare-gold}
+load("data/quasi-sentences/quasisentences.rda")
+
+gold_nz <- quasisentences[quasisentences$manifesto == "NP 1972", ]
+gold_nz$docid <- "NZ_NP_1975"
+
+gold_corp <- as_qlm_coded(
+  gold_nz,
+  qlm_segment = TRUE,
+  source_text = c(NZ_NP_1975 = manifesto_text),
+  name        = "Manifesto Project",
+  is_gold     = TRUE
+)
+
+gold_corp
+```
+
+### Comparing the segmentations
+
+`qlm_compare()` detects that both inputs are segmented corpora and computes Krippendorff's `_u_α` for unitizing — the standard reliability measure for segmented text. Since `segs_manifesto` was produced by `qlm_segment()`, it already carries the character-level positions and metadata that `qlm_compare()` needs.
+
+```{r compare-unitizations}
+qlm_compare(segs_manifesto, gold_corp)
+```
+
 ## Conclusion
 
-`qlm_segment()` applies the Manifesto Project quasi-sentence rules to a raw manifesto, producing a quanteda corpus in which each document is a single political statement. The `reason` docvar makes it possible to audit both split and non-split decisions against the handbook rules. The segmented corpus can feed directly into `qlm_code()` for domain-level coding of each quasi-sentence, reproducing the full Manifesto Project pipeline within a single R workflow.
+`qlm_segment()` applies the Manifesto Project quasi-sentence rules to a raw manifesto, producing a quanteda corpus in which each document is a single political statement. The `reason` docvar makes it possible to audit both split and non-split decisions against the handbook rules. The segmented output can be compared to a human gold standard via `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing — measuring boundary agreement at the character level. The segmented corpus can also feed directly into `qlm_code()` for domain-level coding, reproducing the full Manifesto Project pipeline within a single R workflow.
 
 ## References
 
