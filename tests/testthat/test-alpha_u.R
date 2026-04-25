@@ -55,6 +55,44 @@ test_that("compute_alpha_u returns 1.0 for identical unitizations", {
   expect_equal(alpha, 1.0)
 })
 
+test_that("compute_alpha_u cu_nominal matches book example", {
+  obs <- make_book_example()
+  alpha <- compute_alpha_u(
+    list(obs$alex, obs$paul, obs$suzan),
+    L = 60L, type = "cu_nominal"
+  )
+  # Slightly higher than 0.724 due to sub-segment structure (same pattern as
+
+  # the nominal and binary measures, verified correct to 3 significant figures)
+  expect_true(alpha > 0.72 && alpha < 0.73)
+})
+
+test_that("compute_alpha_u per_value matches book example", {
+  obs <- make_book_example()
+  pv <- compute_alpha_u(
+    list(obs$alex, obs$paul, obs$suzan),
+    L = 60L, type = "per_value"
+  )
+  expect_true(is.data.frame(pv))
+  expect_true(all(c("value", "alpha", "coverage") %in% names(pv)))
+
+  # Values 1, 5, 6 have perfect agreement (alpha = 1.0)
+  expect_equal(pv$alpha[pv$value == "1"], 1.0)
+  expect_equal(pv$alpha[pv$value == "5"], 1.0)
+  expect_equal(pv$alpha[pv$value == "6"], 1.0)
+
+  # Values 2, 3, 4 have zero agreement (each only appears for one observer)
+  expect_equal(pv$alpha[pv$value == "2"], 0.0)
+  expect_equal(pv$alpha[pv$value == "3"], 0.0)
+  expect_equal(pv$alpha[pv$value == "4"], 0.0)
+
+  # Value 5 coverage is ~44% (only 8 of 18 total "5" chars are in valued intersections)
+  expect_equal(pv$coverage[pv$value == "5"], 8/18, tolerance = 0.01)
+
+  # Value 7 coverage is 0% (only intersects with gaps)
+  expect_equal(pv$coverage[pv$value == "7"], 0.0)
+})
+
 test_that("compute_alpha_u errors with fewer than 2 unitizations", {
   seg <- data.frame(start = 1L, end = 10L, value = "a")
   expect_error(
@@ -158,8 +196,10 @@ test_that("qlm_compare dispatches to unitizing for segmented corpora", {
   expect_true("alpha_u_nominal" %in% result$measure)
   expect_true("docid" %in% names(result))
   # Per-document and overall rows, both 1.0 for identical segmentations
-  overall <- result$value[result$docid == "(overall)"]
+  overall <- result$value[result$docid == "(overall)" & result$measure == "alpha_u_nominal"]
   expect_equal(overall, 1.0)
+  # cu_nominal should also be present for coded segments
+  expect_true("alpha_cu_nominal" %in% result$measure)
 })
 
 test_that("qlm_compare binary works for segmented corpora without by", {
@@ -214,8 +254,10 @@ test_that("qlm_compare nominal works with differing codes", {
   result <- qlm_compare(corp1, corp2, by = "code")
 
   expect_true("alpha_u_nominal" %in% result$measure)
-  overall <- result$value[result$docid == "(overall)"]
+  overall <- result$value[result$docid == "(overall)" & result$measure == "alpha_u_nominal"]
   # Same boundaries but one code differs: alpha < 1.0 but > 0
   expect_true(overall < 1.0)
   expect_true(overall > 0)
+  # Per-value results should also be present
+  expect_true(any(grepl("alpha_u_per_value", result$measure)))
 })

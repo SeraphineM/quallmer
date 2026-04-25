@@ -1,18 +1,9 @@
 #' Compare coded results for inter-rater reliability
 #'
-#' Compares two or more data frames or `qlm_coded` objects to assess inter-rater
-#' reliability or agreement. This function extracts a specified variable from
-#' each object and computes reliability statistics using the irr package.
-#'
-#' `r lifecycle::badge("experimental")`
-#' When all inputs are segmented corpora — created by [qlm_segment()] or by
-#' [as_qlm_coded()] with `qlm_segment = TRUE` — the function instead computes
-#' Krippendorff's alpha for unitizing (`_u`alpha; Krippendorff, 2019,
-#' section 12.6), which measures agreement on the segmentation of a common
-#' text into units of potentially unequal length. If `by` names a docvar,
-#' `_u`alpha\[nominal\] is computed (testing both boundary placement and
-#' segment coding); if `by` is omitted, `|_u`alpha\[binary\] is computed
-#' (testing boundary placement only).
+#' Compares two or more coded objects to assess inter-rater reliability or
+#' agreement. For predefined-unit data (data frames or `qlm_coded` objects),
+#' computes standard reliability statistics. For segmented corpora from
+#' [qlm_segment()], computes Krippendorff's alpha for unitizing (see Details).
 #'
 #' @param ... Two or more data frames, `qlm_coded`, or `as_qlm_coded` objects
 #'   to compare. These represent different "raters" (e.g., different LLM runs,
@@ -50,6 +41,8 @@
 #'     \item{`level`}{Measurement level used}
 #'     \item{`measure`}{Name of the reliability metric}
 #'     \item{`value`}{Computed value of the metric}
+#'     \item{`docid`}{Source document identifier and overall indicator (unitizing
+#'       comparisons only). Absent for predefined-unit comparisons.}
 #'     \item{`rater1`, `rater2`, ...}{Names of the compared objects (one column per rater)}
 #'     \item{`ci_lower`}{Lower bound of confidence interval (only if `ci != "none"`)}
 #'     \item{`ci_upper`}{Upper bound of confidence interval (only if `ci != "none"`)}
@@ -57,7 +50,7 @@
 #'   The object has class `c("qlm_comparison", "tbl_df", "tbl", "data.frame")` and
 #'   attributes containing metadata (`raters`, `n`, `call`).
 #'
-#'   **Metrics computed by measurement level:**
+#'   **Metrics by measurement level** (predefined-unit comparisons):
 #'   \itemize{
 #'     \item **Nominal:** alpha_nominal, kappa (Cohen's/Fleiss'), percent_agreement
 #'     \item **Ordinal:** alpha_ordinal, kappa_weighted (2 raters only), w (Kendall's W),
@@ -65,6 +58,7 @@
 #'     \item **Interval/Ratio:** alpha_interval/alpha_ratio, icc, r (Pearson's),
 #'       percent_agreement
 #'   }
+#'   For unitizing measures (segmented corpora), see Details.
 #'
 #'   **Confidence intervals:**
 #'   - `ci = "analytic"`: Provides analytic CIs for ICC and Pearson's r only
@@ -91,15 +85,44 @@
 #' simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 #' computed as the mean of all pairwise correlations between raters.
 #'
-#' **Unitizing (segmentation) reliability:**
-#' When comparing segmented corpora, agreement is measured at the character
-#' level using Krippendorff's alpha for unitizing continua (Krippendorff,
-#' 2019, section 12.6). This accounts for segments of unequal length and
-#' partial overlaps between coders' unitizations. The observed and expected
-#' coincidence matrices are constructed from the lengths of pairwise
-#' segment intersections across all observer pairs. Segmented corpora must
-#' reference the same source text; see [qlm_segment()] and [as_qlm_coded()]
-#' with `qlm_segment = TRUE`.
+#' **Unitizing (segmentation) reliability**
+#' `r lifecycle::badge("experimental")`
+#'
+#' When all inputs are segmented corpora — created by [qlm_segment()] or
+#' [as_qlm_coded()] with `qlm_segment = TRUE` — agreement is measured at
+#' the character level using Krippendorff's alpha for unitizing continua
+#' (Krippendorff, 2019, section 12.6). This accounts for segments of
+#' unequal length and partial overlaps between coders' unitizations. The
+#' observed and expected coincidence matrices are constructed from the
+#' lengths of pairwise segment intersections across all observer pairs.
+#' The output includes a `docid` column with per-document and overall
+#' results. Segmented corpora must reference the same source text.
+#'
+#' Four members of the unitizing alpha family are supported:
+#' \describe{
+#'   \item{`alpha_u_binary` (`|_u`alpha)}{Computed when `by` is omitted.
+#'     Measures agreement on which character spans are identified as segments
+#'     versus gaps (irrelevant matter). Collapses all segment values to a
+#'     binary distinction. Use this for pure boundary agreement when segments
+#'     carry no codes (section 12.6.4, eq. 35).}
+#'   \item{`alpha_u_nominal` (`_u`alpha\[nominal\])}{Computed when `by`
+#'     names a docvar. Measures agreement on both boundary placement and the
+#'     value (code) assigned to each segment. This is the most comprehensive
+#'     measure: low values can reflect boundary disagreement, coding
+#'     disagreement, or both (section 12.6.3, eq. 34).}
+#'   \item{`alpha_cu_nominal` (`_cu`alpha\[nominal\])}{Computed alongside
+#'     `alpha_u_nominal` when `by` is specified. Measures coding agreement
+#'     *conditional on unitization*, restricting the coincidence matrix to
+#'     intersections of non-gap segments only. This isolates "do the coders
+#'     agree on the codes?" from "do they agree on the boundaries?"
+#'     (section 12.6.5, eqs. 36--37).}
+#'   \item{`alpha_u_per_value[k]` (`_(k)u`alpha\[nominal\])}{Computed
+#'     alongside `alpha_u_nominal` when `by` is specified. Reports the
+#'     reliability of each individual value `k`, showing which codes are
+#'     applied reliably and which are not. Coverage (the percentage of all
+#'     `k`-valued matter found in valued intersections) is reported in the
+#'     `docid` column (section 12.6.6, eq. 38).}
+#' }
 #'
 #' @references
 #' Krippendorff, K. (2019). *Content Analysis: An Introduction to Its
@@ -994,12 +1017,21 @@ format_measure_name <- function(measure) {
     "icc" = "ICC",
     "r" = "Pearson's r",
     "alpha_u_nominal" = "Krippendorff's alpha (unitizing)",
-    "alpha_u_binary" = "Krippendorff's alpha (unitizing, binary)"
+    "alpha_u_binary" = "Krippendorff's alpha (unitizing, binary)",
+    "alpha_cu_nominal" = "Krippendorff's alpha (coding | unitizing)"
   )
 
   # Return mapped name or original if not found
   result <- name_map[measure]
-  if (is.na(result)) measure else unname(result)
+  if (!is.na(result)) return(unname(result))
+
+  # Handle per-value measures: alpha_u_per_value[X] -> alpha (unitizing, value=X)
+  if (grepl("^alpha_u_per_value\\[", measure)) {
+    val <- sub("^alpha_u_per_value\\[(.+)\\]$", "\\1", measure)
+    return(paste0("alpha (unitizing, value=", val, ")"))
+  }
+
+  measure
 }
 
 
@@ -1161,6 +1193,24 @@ compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
       }
       overall_alpha <- compute_alpha_u(combined, L = total_L, type = type)
       all_results[[length(all_results) + 1L]] <- make_row(variable_name, measure_name, overall_alpha, "(overall)")
+
+      # For coded segments, also compute cu_nominal and per_value
+      if (!is.null(var)) {
+        cu_alpha <- compute_alpha_u(combined, L = total_L, type = "cu_nominal")
+        all_results[[length(all_results) + 1L]] <- make_row(
+          variable_name, "alpha_cu_nominal", cu_alpha, "(overall)"
+        )
+
+        pv <- compute_alpha_u(combined, L = total_L, type = "per_value")
+        for (row_i in seq_len(nrow(pv))) {
+          all_results[[length(all_results) + 1L]] <- make_row(
+            variable_name,
+            paste0("alpha_u_per_value[", pv$value[row_i], "]"),
+            pv$alpha[row_i],
+            paste0("(overall, coverage=", sprintf("%.0f%%", 100 * pv$coverage[row_i]), ")")
+          )
+        }
+      }
     }
   }
 

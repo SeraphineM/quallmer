@@ -56,6 +56,8 @@ A \code{qlm_comparison} object (a tibble/data frame) with the following columns:
 \item{\code{level}}{Measurement level used}
 \item{\code{measure}}{Name of the reliability metric}
 \item{\code{value}}{Computed value of the metric}
+\item{\code{docid}}{Source document identifier and overall indicator (unitizing
+comparisons only). Absent for predefined-unit comparisons.}
 \item{\code{rater1}, \code{rater2}, ...}{Names of the compared objects (one column per rater)}
 \item{\code{ci_lower}}{Lower bound of confidence interval (only if \code{ci != "none"})}
 \item{\code{ci_upper}}{Upper bound of confidence interval (only if \code{ci != "none"})}
@@ -63,7 +65,7 @@ A \code{qlm_comparison} object (a tibble/data frame) with the following columns:
 The object has class \code{c("qlm_comparison", "tbl_df", "tbl", "data.frame")} and
 attributes containing metadata (\code{raters}, \code{n}, \code{call}).
 
-\strong{Metrics computed by measurement level:}
+\strong{Metrics by measurement level} (predefined-unit comparisons):
 \itemize{
 \item \strong{Nominal:} alpha_nominal, kappa (Cohen's/Fleiss'), percent_agreement
 \item \strong{Ordinal:} alpha_ordinal, kappa_weighted (2 raters only), w (Kendall's W),
@@ -71,6 +73,7 @@ rho (Spearman's), percent_agreement
 \item \strong{Interval/Ratio:} alpha_interval/alpha_ratio, icc, r (Pearson's),
 percent_agreement
 }
+For unitizing measures (segmented corpora), see Details.
 
 \strong{Confidence intervals:}
 \itemize{
@@ -79,21 +82,12 @@ percent_agreement
 }
 }
 \description{
-Compares two or more data frames or \code{qlm_coded} objects to assess inter-rater
-reliability or agreement. This function extracts a specified variable from
-each object and computes reliability statistics using the irr package.
+Compares two or more coded objects to assess inter-rater reliability or
+agreement. For predefined-unit data (data frames or \code{qlm_coded} objects),
+computes standard reliability statistics. For segmented corpora from
+\code{\link[=qlm_segment]{qlm_segment()}}, computes Krippendorff's alpha for unitizing (see Details).
 }
 \details{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-When all inputs are segmented corpora — created by \code{\link[=qlm_segment]{qlm_segment()}} or by
-\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} — the function instead computes
-Krippendorff's alpha for unitizing (\verb{_u}alpha; Krippendorff, 2019,
-section 12.6), which measures agreement on the segmentation of a common
-text into units of potentially unequal length. If \code{by} names a docvar,
-\verb{_u}alpha[nominal] is computed (testing both boundary placement and
-segment coding); if \code{by} is omitted, \verb{|_u}alpha[binary] is computed
-(testing boundary placement only).
-
 The function merges the coded objects by their \code{.id} column and only includes
 units that are present in all objects. Missing values in any rater will
 exclude that unit from analysis.
@@ -116,15 +110,44 @@ Kendall's W, ICC, and percent agreement are computed using all raters
 simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 computed as the mean of all pairwise correlations between raters.
 
-\strong{Unitizing (segmentation) reliability:}
-When comparing segmented corpora, agreement is measured at the character
-level using Krippendorff's alpha for unitizing continua (Krippendorff,
-2019, section 12.6). This accounts for segments of unequal length and
-partial overlaps between coders' unitizations. The observed and expected
-coincidence matrices are constructed from the lengths of pairwise
-segment intersections across all observer pairs. Segmented corpora must
-reference the same source text; see \code{\link[=qlm_segment]{qlm_segment()}} and \code{\link[=as_qlm_coded]{as_qlm_coded()}}
-with \code{qlm_segment = TRUE}.
+\strong{Unitizing (segmentation) reliability}
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+
+When all inputs are segmented corpora — created by \code{\link[=qlm_segment]{qlm_segment()}} or
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} — agreement is measured at
+the character level using Krippendorff's alpha for unitizing continua
+(Krippendorff, 2019, section 12.6). This accounts for segments of
+unequal length and partial overlaps between coders' unitizations. The
+observed and expected coincidence matrices are constructed from the
+lengths of pairwise segment intersections across all observer pairs.
+The output includes a \code{docid} column with per-document and overall
+results. Segmented corpora must reference the same source text.
+
+Four members of the unitizing alpha family are supported:
+\describe{
+\item{\code{alpha_u_binary} (\verb{|_u}alpha)}{Computed when \code{by} is omitted.
+Measures agreement on which character spans are identified as segments
+versus gaps (irrelevant matter). Collapses all segment values to a
+binary distinction. Use this for pure boundary agreement when segments
+carry no codes (section 12.6.4, eq. 35).}
+\item{\code{alpha_u_nominal} (\verb{_u}alpha[nominal])}{Computed when \code{by}
+names a docvar. Measures agreement on both boundary placement and the
+value (code) assigned to each segment. This is the most comprehensive
+measure: low values can reflect boundary disagreement, coding
+disagreement, or both (section 12.6.3, eq. 34).}
+\item{\code{alpha_cu_nominal} (\verb{_cu}alpha[nominal])}{Computed alongside
+\code{alpha_u_nominal} when \code{by} is specified. Measures coding agreement
+\emph{conditional on unitization}, restricting the coincidence matrix to
+intersections of non-gap segments only. This isolates "do the coders
+agree on the codes?" from "do they agree on the boundaries?"
+(section 12.6.5, eqs. 36--37).}
+\item{\code{alpha_u_per_value[k]} (\verb{_(k)u}alpha[nominal])}{Computed
+alongside \code{alpha_u_nominal} when \code{by} is specified. Reports the
+reliability of each individual value \code{k}, showing which codes are
+applied reliably and which are not. Coverage (the percentage of all
+\code{k}-valued matter found in valued intersections) is reported in the
+\code{docid} column (section 12.6.6, eq. 38).}
+}
 }
 \examples{
 # Load example coded objects

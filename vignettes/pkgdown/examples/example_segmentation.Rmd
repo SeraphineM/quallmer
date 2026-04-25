@@ -37,13 +37,13 @@ Aspect-based sentiment analysis (ABSA) asks not just whether a reviewer is posit
 
 ### The data
 
-We draw four reviews from `data_corpus_LMRDsample`, the 200-review subset of the Large Movie Review Dataset bundled with quallmer (Maas et al., 2011): two negative and two positive.
+We draw two reviews from `data_corpus_LMRDsample`, the 200-review subset of the Large Movie Review Dataset bundled with quallmer (Maas et al., 2011): one negative and one positive.
 
 ```{r sample-reviews}
 set.seed(55)
 idx_neg <- which(docvars(data_corpus_LMRDsample)$polarity == "neg")
 idx_pos <- which(docvars(data_corpus_LMRDsample)$polarity == "pos")
-corp_reviews <- data_corpus_LMRDsample[c(sample(idx_neg, 2), sample(idx_pos, 2))]
+corp_reviews <- data_corpus_LMRDsample[c(sample(idx_neg, 1), sample(idx_pos, 1))]
 corp_reviews
 ```
 
@@ -106,7 +106,7 @@ docvars(segs_reviews) |>
 
 ### Sentiment by aspect
 
-Pooling across all four reviews, we can see which aspects attract positive versus negative commentary:
+Pooling across both reviews, we can see which aspects attract positive versus negative commentary:
 
 ```{r plot-absa}
 docvars(segs_reviews) |>
@@ -123,7 +123,7 @@ docvars(segs_reviews) |>
   labs(
     x     = NULL,
     y     = "Number of segments",
-    title = "Aspect-based sentiment across four film reviews",
+    title = "Aspect-based sentiment across two film reviews",
     fill  = "Sentiment"
   ) +
   coord_flip() +
@@ -222,7 +222,7 @@ docvars(segs_inaugural) |>
 
 ## Reliability of aspect-based segmentation
 
-How reproducible is the ABSA segmentation? We re-segment the same four reviews with a second model and compare the two runs using `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing (Krippendorff, 2019, section 12.6).
+How reproducible is the ABSA segmentation? We re-segment the same two reviews with a second model and compare the two runs using `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing (Krippendorff, 2019, section 12.6).
 
 ### A second segmentation
 
@@ -245,7 +245,10 @@ segs_reviews_2 <- readRDS("data/segs_reviews_2.rds")
 `|_u_α_binary` tests whether the two models place segment boundaries in the same locations, ignoring the aspect and sentiment labels:
 
 ```{r compare-binary}
-qlm_compare(segs_reviews, segs_reviews_2)
+alphas <- qlm_compare(segs_reviews, segs_reviews_2)
+print(alphas)
+
+as.data.frame(alphas)
 ```
 
 ### Boundary and sentiment agreement
@@ -253,7 +256,10 @@ qlm_compare(segs_reviews, segs_reviews_2)
 When we pass `by = "sentiment"`, `_u_α_nominal` tests both boundary placement and whether the models agree on the sentiment label assigned to each span:
 
 ```{r compare-nominal}
-qlm_compare(segs_reviews, segs_reviews_2, by = "sentiment")
+alphas_by <- qlm_compare(segs_reviews, segs_reviews_2, by = "sentiment")
+print(alphas_by)
+
+as.data.frame(alphas_by)
 ```
 
 The per-review breakdown shows which texts are more or less consistently segmented, while the overall row is the value to report.
