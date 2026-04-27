@@ -1,9 +1,9 @@
 ---
-title: "Example: Quasi-sentence segmentation"
+title: "Example: Quasi-sentence segmentation (test)"
 subtitle: "Segmenting party manifestos using Manifesto Project rules with `qlm_segment()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Example: Quasi-sentence segmentation}
+  %\VignetteIndexEntry{Example: Quasi-sentence segmentation (test)}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 The [Manifesto Project](https://manifesto-corpus.wzb.eu/) codes party manifestos by segmenting them into *quasi-sentences* — the smallest units carrying a single, complete political statement. A quasi-sentence is at minimum one natural sentence, but a sentence may be split into multiple quasi-sentences when it contains two or more unique arguments. Applying these rules requires judgment: when are two clauses genuinely independent claims versus elaborations of a single point? This is exactly the kind of nuanced, instruction-following task where LLMs can serve as a scalable alternative to human coding.
 
-This article uses `qlm_segment()` to apply the Manifesto Project quasi-sentence rules to the 1972 New Zealand National Party election manifesto, and evaluates how faithfully the model follows the handbook instructions.
+This article uses `qlm_segment()` to apply the Manifesto Project quasi-sentence rules to the 1983 UK Liberal-SDP Alliance election manifesto, and evaluates how faithfully the model follows the handbook instructions.
 
 ## Packages
 
@@ -33,11 +33,11 @@ library(ggplot2)
 
 ## The data
 
-The manifesto text is provided as the `NZ_NP_1972` document in `data_corpus_MPexamples`, a two-document corpus of Manifesto Project example texts included in quallmer.
+The manifesto text is provided as the `Liberal_SDP_1983` document in `data_corpus_MPexamples`, a two-document corpus of Manifesto Project example texts included in quallmer.
 
 ```{r load-text}
-nz_corp <- corpus_subset(data_corpus_MPexamples, country == "NZ")
-cat(substr(nz_corp, 1, 500), "...\n")
+lib_corp <- corpus_subset(data_corpus_MPexamples, country == "UK")
+cat(substr(lib_corp, 1, 500), "...\n")
 ```
 
 ## The codebook
@@ -46,7 +46,7 @@ The codebook instructions are the verbatim text of section 3.2 ("Unitising — C
 
 ```{r codebook}
 qs_instructions <- paste(
-  readLines("data/quasi-sentences/instructions.txt"),
+  readLines("data/quasi-sentences/instructions_test.txt"),
   collapse = "\n"
 )
 
@@ -83,16 +83,16 @@ cb_qs
 
 ```{r segment-manifesto, eval=FALSE}
 segs_manifesto <- qlm_segment(
-  nz_corp,
+  lib_corp,
   codebook = cb_qs,
-  model    = "openai/gpt-5.5",
-  name     = "GPT 5.5"
+  model    = "openai/gpt-5.1",
+  name     = "GPT 5.1"
 )
-saveRDS(segs_manifesto, "data/segs_manifesto_nz.rds")
+saveRDS(segs_manifesto, "data/segs_manifesto_lib.rds")
 ```
 
 ```{r load-segs-manifesto, echo=FALSE}
-segs_manifesto <- readRDS("data/segs_manifesto_nz.rds")
+segs_manifesto <- readRDS("data/segs_manifesto_lib.rds")
 ```
 
 ## Results
@@ -194,10 +194,11 @@ How well does the LLM segmentation agree with the human gold standard? The `data
 
 ### Preparing the gold standard
 
-The `data_corpus_MPexamplesseg` object contains the Manifesto Project's human-coded quasi-sentences for both example manifestos, already converted to a segmented corpus. We subset to the NZ document.
+The `data_corpus_MPexamplesseg` object contains the Manifesto Project's human-coded quasi-sentences for both example manifestos, already converted to a segmented corpus. We subset to the Liberal-SDP document.
 
 ```{r prepare-gold}
-gold_corp <- corpus_subset(data_corpus_MPexamplesseg, docid == "NZ_NP_1972")
+data("data_corpus_MPexamplesseg")
+gold_corp <- corpus_subset(data_corpus_MPexamplesseg, docid == "Liberal_SDP_1983")
 gold_corp
 ```
 

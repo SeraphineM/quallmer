@@ -655,6 +655,7 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
 #' qlm_meta(cb, "name")
 #'
 #' @export
+#' @keywords internal
 codebook <- function(x) {
   UseMethod("codebook")
 }
@@ -732,6 +733,7 @@ codebook.qlm_validation <- function(x) {
 #' texts
 #'
 #' @export
+#' @keywords internal
 inputs <- function(x) {
   UseMethod("inputs")
 }
