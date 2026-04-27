@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 The [Manifesto Project](https://manifesto-corpus.wzb.eu/) codes party manifestos by segmenting them into *quasi-sentences* — the smallest units carrying a single, complete political statement. A quasi-sentence is at minimum one natural sentence, but a sentence may be split into multiple quasi-sentences when it contains two or more unique arguments. Applying these rules requires judgment: when are two clauses genuinely independent claims versus elaborations of a single point? This is exactly the kind of nuanced, instruction-following task where LLMs can serve as a scalable alternative to human coding.
 
-This article uses `qlm_segment()` to apply the Manifesto Project quasi-sentence rules to the 1975 New Zealand National Party election manifesto, and evaluates how faithfully the model follows the handbook instructions.
+This article uses `qlm_segment()` to apply the Manifesto Project quasi-sentence rules to the 1972 New Zealand National Party election manifesto, and evaluates how faithfully the model follows the handbook instructions.
 
 ## Packages
 
@@ -36,9 +36,9 @@ library(ggplot2)
 The manifesto is stored as a plain-text file. We read it in and wrap it in a named character vector so the document identifier appears in the output corpus.
 
 ```{r load-text}
-manifesto_path <- "data/quasi-sentences/NZ_NP_1966.txt"
+manifesto_path <- "data/quasi-sentences/NZ_NP_1972.txt"
 manifesto_text <- paste(readLines(manifesto_path), collapse = "\n")
-manifesto <- c(NZ_NP_1975 = manifesto_text)
+manifesto <- c(NZ_NP_1972 = manifesto_text)
 cat(substr(manifesto_text, 1, 500), "...\n")
 ```
 
@@ -202,12 +202,12 @@ The `quasisentences` dataset contains the Manifesto Project's human-coded quasi-
 load("data/quasi-sentences/quasisentences.rda")
 
 gold_nz <- quasisentences[quasisentences$manifesto == "NP 1972", ]
-gold_nz$docid <- "NZ_NP_1975"
+gold_nz$docid <- "NZ_NP_1972"
 
 gold_corp <- as_qlm_coded(
   gold_nz,
   qlm_segment = TRUE,
-  source_text = c(NZ_NP_1975 = manifesto_text),
+  source_text = c(NZ_NP_1972 = manifesto_text),
   name        = "Manifesto Project",
   is_gold     = TRUE
 )
