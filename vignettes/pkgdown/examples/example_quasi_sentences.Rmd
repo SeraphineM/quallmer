@@ -33,13 +33,11 @@ library(ggplot2)
 
 ## The data
 
-The manifesto is stored as a plain-text file. We read it in and wrap it in a named character vector so the document identifier appears in the output corpus.
+The manifesto text is provided as the `NZ_NP_1972` document in `data_corpus_MPexamples`, a two-document corpus of Manifesto Project example texts included in quallmer.
 
 ```{r load-text}
-manifesto_path <- "data/quasi-sentences/NZ_NP_1972.txt"
-manifesto_text <- paste(readLines(manifesto_path), collapse = "\n")
-manifesto <- c(NZ_NP_1972 = manifesto_text)
-cat(substr(manifesto_text, 1, 500), "...\n")
+nz_corp <- corpus_subset(data_corpus_MPexamples, country == "NZ")
+cat(substr(nz_corp, 1, 500), "...\n")
 ```
 
 ## The codebook
@@ -85,10 +83,10 @@ cb_qs
 
 ```{r segment-manifesto, eval=FALSE}
 segs_manifesto <- qlm_segment(
-  manifesto,
+  nz_corp,
   codebook = cb_qs,
-  model    = "anthropic/claude-opus-4-6",
-  name     = "Claude Opus 4.6"
+  model    = "openai/gpt-5.5",
+  name     = "GPT 5.5"
 )
 saveRDS(segs_manifesto, "data/segs_manifesto_nz.rds")
 ```
@@ -192,26 +190,14 @@ near_cuts |>
 
 ## Inter-coder reliability of segmentation
 
-How well does the LLM segmentation agree with the human gold standard? The `quasisentences` dataset includes the NZ National Party manifesto segmented by Manifesto Project coders. We can convert both the gold standard and the LLM output to segmented corpora and compare them with `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing — the standard reliability measure for segmented text (Krippendorff, 2019, section 12.6).
+How well does the LLM segmentation agree with the human gold standard? The `data_corpus_MPexamplesseg` object provides the Manifesto Project's human coding as a ready-to-use segmented corpus. We can compare it directly against the LLM output with `qlm_compare()`, which computes Krippendorff's `_u_α` for unitizing — the standard reliability measure for segmented text (Krippendorff, 2019, section 12.6).
 
 ### Preparing the gold standard
 
-The `quasisentences` dataset contains the Manifesto Project's human-coded quasi-sentences. We filter to the NZ manifesto, set a `docid` matching the LLM corpus, and convert to a segmented corpus with `as_qlm_coded()`.
+The `data_corpus_MPexamplesseg` object contains the Manifesto Project's human-coded quasi-sentences for both example manifestos, already converted to a segmented corpus. We subset to the NZ document.
 
 ```{r prepare-gold}
-load("data/quasi-sentences/quasisentences.rda")
-
-gold_nz <- quasisentences[quasisentences$manifesto == "NP 1972", ]
-gold_nz$docid <- "NZ_NP_1972"
-
-gold_corp <- as_qlm_coded(
-  gold_nz,
-  qlm_segment = TRUE,
-  source_text = c(NZ_NP_1972 = manifesto_text),
-  name        = "Manifesto Project",
-  is_gold     = TRUE
-)
-
+gold_corp <- corpus_subset(data_corpus_MPexamplesseg, docid == "NZ_NP_1972")
 gold_corp
 ```
 
