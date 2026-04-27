@@ -13,7 +13,7 @@ coded data alongside LLM-coded results."><meta property="og:image" content="http
 
     <a class="navbar-brand me-2" href="../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,8 @@ coded data alongside LLM-coded results."><meta property="og:image" content="http
   <ul class="dropdown-menu" aria-labelledby="dropdown-examples"><li><a class="dropdown-item" href="../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_images.html">Image analysis of campaign posters</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_audio.html">Audio transcription and analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_segmentation.html">Text segmentation</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_quasi_sentences.html">Quasi-sentence segmentation</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -73,7 +75,9 @@ coded data alongside LLM-coded results.</p>
 <span>  codebook <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  texts <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  notes <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  qlm_segment <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  source_text <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'data.frame'</span></span>
@@ -85,7 +89,9 @@ coded data alongside LLM-coded results.</p>
 <span>  codebook <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  texts <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  notes <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  qlm_segment <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  source_text <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Default S3 method</span></span>
@@ -97,7 +103,9 @@ coded data alongside LLM-coded results.</p>
 <span>  codebook <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  texts <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  notes <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  metadata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  qlm_segment <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  source_text <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -177,6 +185,20 @@ include any relevant information such as:</p><dl><dt><code>coder_name</code></dt
 
 </dl><p>The function automatically adds <code>timestamp</code>, <code>n_units</code>, <code>notes</code>, and
 <code>source = "human"</code>.</p></dd>
+
+
+<dt id="arg-qlm-segment">qlm_segment<a class="anchor" aria-label="anchor" href="#arg-qlm-segment"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, converts the data to a segmented
+quanteda corpus suitable for unitizing comparison with <code><a href="qlm_compare.html">qlm_compare()</a></code>.
+Requires a <code>text</code> column in <code>x</code> and a <code>source_text</code> argument. Default
+is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-source-text">source_text<a class="anchor" aria-label="anchor" href="#arg-source-text"></a></dt>
+<dd><p>A named character vector of source texts. Required when
+<code>qlm_segment = TRUE</code>. Names must match <code>docid</code> values in <code>x</code> (or a
+single unnamed string for single-document data). Used to compute
+character-level segment positions for unitizing reliability.</p></dd>
 
 </dl></div>
     <div class="section level2">

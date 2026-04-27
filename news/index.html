@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,8 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-examples"><li><a class="dropdown-item" href="../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_images.html">Image analysis of campaign posters</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_audio.html">Audio transcription and analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_segmentation.html">Text segmentation</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/examples/example_quasi_sentences.html">Quasi-sentence segmentation</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -49,6 +51,23 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.0" id="quallmer-040-forthcoming">quallmer 0.4.0 (forthcoming)<a class="anchor" aria-label="anchor" href="#quallmer-040-forthcoming"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-4-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-4-0"></a></h3>
+<ul><li><p>New <code><a href="../reference/qlm_segment.html">qlm_segment()</a></code> segments a corpus into thematic or conceptual units using an LLM, returning a quanteda corpus analogous to <code><a href="https://quanteda.io/reference/corpus_segment.html" class="external-link">quanteda::corpus_segment()</a></code> output. Schema fields become docvars; <code>docid_</code> and <code>segid_</code> track provenance. Enables aspect-based sentiment analysis, thematic coding, and other applications requiring variable-length segmentation (#96).</p></li>
+<li>
+<p><code><a href="../reference/qlm_compare.html">qlm_compare()</a></code> now supports inter-coder reliability for segmentation tasks. When all inputs are segmented corpora produced by <code><a href="../reference/qlm_segment.html">qlm_segment()</a></code>, it automatically computes Krippendorff’s alpha for unitizing (Krippendorff, 2019, section 12.6), an extension of alpha designed for variable-length text segmentation. Three measures are reported (marked experimental):</p>
+<ul><li>
+<code>u_alpha_nominal</code> and <code>u_alpha_binary</code> measure joint boundary and coding reliability across the full segmented continuum.</li>
+<li>
+<code>cu_alpha_nominal</code> measures coding reliability <em>conditional on</em> unitization, isolating coding disagreement from boundary disagreement.</li>
+<li>Per-value <code>(k)u_alpha_nominal</code> reports reliability and coverage for each individual code, enabling diagnosis of which codes are applied consistently. Results include both per-document and overall (concatenated continuum) alpha.</li>
+</ul></li>
+<li><p><code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> gains <code>qlm_segment</code> and <code>source_text</code> arguments for converting gold-standard data frames to segmented corpora with character positions, enabling ICR comparison of LLM segmentation against human-coded reference data.</p></li>
+<li><p><code><a href="../reference/qlm_segment.html">qlm_segment()</a></code> now accepts a <code>name</code> argument stored in corpus metadata for rater identification when comparing multiple segmenters via <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code>.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="quallmer-030">quallmer 0.3.0<a class="anchor" aria-label="anchor" href="#quallmer-030"></a></h2><p class="text-muted">CRAN release: 2026-02-16</p>
 <div class="section level3">
