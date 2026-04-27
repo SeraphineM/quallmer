@@ -180,6 +180,77 @@
 "data_codebook_immigration"
 
 
+#' Manifesto Project example manifestos and gold-standard segmentation
+#'
+#' @description Two datasets derived from Appendix 2 of Klingemann et al.
+#'   (2006), which provides worked examples of the Manifesto Project
+#'   quasi-sentence coding scheme.
+#'
+#' `data_corpus_MPexamples` is a two-document corpus containing the full source
+#' texts of the Liberal-SDP Alliance 1983 UK election manifesto and the New
+#' Zealand National Party 1972 election manifesto, reconstructed by joining
+#' the quasi-sentences from the gold-standard annotation.
+#'
+#' `data_corpus_MPexamplesseg` is the corresponding gold-standard segmented
+#' corpus, produced by converting the Manifesto Project's human-coded
+#' quasi-sentences via [as_qlm_coded()] with `qlm_segment = TRUE`. It is marked
+#' as a gold standard (`is_gold = TRUE`) and can be passed directly to
+#' [qlm_compare()] alongside output from [qlm_segment()] to compute
+#' Krippendorff's alpha for unitizing.
+#'
+#' @name data_corpus_MPexamples
+#'
+#' @format
+#' **`data_corpus_MPexamples`**: A [corpus][quanteda::corpus] with 2 documents
+#' and the following document-level variables:
+#' \describe{
+#'   \item{country}{Character. Country of origin: `"UK"` or `"NZ"`.}
+#'   \item{party}{Character. Party name: `"Liberal-SDP Alliance"` or
+#'     `"National Party"`.}
+#'   \item{year}{Integer. Election year: `1983` or `1972`.}
+#' }
+#'
+#' **`data_corpus_MPexamplesseg`**: A segmented [corpus][quanteda::corpus] with
+#' 178 quasi-sentences (107 Liberal-SDP, 71 NZ National Party) and the
+#' following document-level variables:
+#' \describe{
+#'   \item{docid}{Character. Source document identifier (`"Liberal_SDP_1983"`
+#'     or `"NZ_NP_1972"`).}
+#'   \item{segid}{Integer. Quasi-sentence index within the source document.}
+#'   \item{char_start}{Integer. Start character position in the source text.}
+#'   \item{char_end}{Integer. End character position in the source text.}
+#'   \item{manifesto}{Character. Manifesto Project manifesto label
+#'     (`"Liberal-SDP 1983"` or `"NP 1972"`).}
+#'   \item{country}{Character. Country of origin: `"UK"` or `"NZ"`.}
+#'   \item{per}{Integer. Manifesto Project policy category code.}
+#' }
+#'
+#' @references
+#' Klingemann, H. D., Volkens, A., Bara, J., Budge, I., & McDonald, M. D.
+#' (2006). \emph{Mapping Policy Preferences II: Estimates for Parties,
+#' Electors, and Governments in Eastern Europe, European Union, and OECD
+#' 1990--2003}. Oxford University Press.
+#'
+#' @seealso [qlm_segment()], [as_qlm_coded()], [qlm_compare()]
+#' @keywords data
+#' @examples
+#' if (requireNamespace("quanteda", quietly = TRUE)) {
+#'   # Inspect the source texts
+#'   summary(data_corpus_MPexamples)
+#'
+#'   # Subset to one manifesto
+#'   quanteda::corpus_subset(data_corpus_MPexamples, country == "NZ")
+#'
+#'   # Gold-standard segmentation for the NZ manifesto
+#'   quanteda::corpus_subset(data_corpus_MPexamplesseg,
+#'                           quanteda::docvars(data_corpus_MPexamplesseg,
+#'                                            "docid") == "NZ_NP_1972")
+#' }
+"data_corpus_MPexamples"
+
+#' @rdname data_corpus_MPexamples
+"data_corpus_MPexamplesseg"
+
 #' Sample corpus of political speeches from Maerz & Schneider (2020)
 #'
 #' A corpus of 100 speeches from the Maerz & Schneider (2020) corpus,
