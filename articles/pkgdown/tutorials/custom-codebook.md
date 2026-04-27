@@ -22,6 +22,7 @@ that match your specific needs.
 ### Loading packages and data
 
 ``` r
+
 # We will use the quanteda package 
 # for loading a sample corpus of innaugural speeches
 # If you have not yet installed the quanteda package, you can do so by:
@@ -30,20 +31,22 @@ library(quanteda)
 ```
 
     ## Package version: 4.3.1
-    ## Unicode version: 15.1
-    ## ICU version: 74.2
+    ## Unicode version: 14.0
+    ## ICU version: 71.1
 
     ## Parallel computing: disabled
 
     ## See https://quanteda.io for tutorials and examples.
 
 ``` r
+
 library(quallmer)
 ```
 
     ## Loading required package: ellmer
 
 ``` r
+
 # For educational purposes, 
 # we will use a subset of the inaugural speeches corpus
 # The ten most recent speeches in the corpus
@@ -56,6 +59,7 @@ Before creating a custom codebook, let’s inspect the built-in
 `data_codebook_sentiment` to understand the structure:
 
 ``` r
+
 # View the codebook
 data_codebook_sentiment
 ```
@@ -65,11 +69,9 @@ data_codebook_sentiment
     ##   Role:         You are a political communication analyst evaluating public ...
     ##   Instructions: Analyze the sentiment of this text, on both a 1-10 scale and...
     ##   Output schema:ellmer::TypeObject
-    ##   Levels:
-    ##     sentiment: nominal
-    ##     rating: ordinal
 
 ``` r
+
 # Inspect the role
 data_codebook_sentiment$role
 ```
@@ -77,20 +79,18 @@ data_codebook_sentiment$role
     ## [1] "You are a political communication analyst evaluating public statements."
 
 ``` r
+
 # Inspect the instructions
 data_codebook_sentiment$instructions
 ```
 
     ## [1] "Analyze the sentiment of this text, on both a 1-10 scale and as a polarity of negative or positive."
 
-This shows us:
-
-- The input type is text
-- The role defines the model as a political communication analyst
-- The instructions guide the model to analyze sentiment on a 1-10 scale
-  and classify polarity
-- The schema specifies the expected output structure with fields for
-  polarity and rating
+This shows us: - The input type is text - The role defines the model as
+a political communication analyst - The instructions guide the model to
+analyze sentiment on a 1-10 scale and classify polarity - The schema
+specifies the expected output structure with fields for polarity and
+rating
 
 Now let’s create a custom codebook for our specific research question.
 
@@ -106,6 +106,7 @@ should be clear and specific to ensure that the LLM understands the task
 requirements.
 
 ``` r
+
 instructions <- "Score the following document on a scale of how much it aligns
 with the political left. The political left is defined as groups which
 advocate for social equality, government intervention in the economy,
@@ -144,6 +145,7 @@ refer to the [ellmer documentation on type
 specifications](https://ellmer.tidyverse.org/reference/type_boolean.html).
 
 ``` r
+
 # Define the custom codebook using qlm_codebook()
 ideology_codebook <- qlm_codebook(
   name = "Score Political Left Alignment",
@@ -176,6 +178,7 @@ prints as a tibble and can be used directly in data manipulation
 workflows.
 
 ``` r
+
 # Apply the custom codebook to the inaugural speeches corpus
 coded <- qlm_code(data_corpus_inaugural,
                   codebook = ideology_codebook,
@@ -185,15 +188,18 @@ coded <- qlm_code(data_corpus_inaugural,
 
     ## [working] (0 + 0) -> 10 -> 1 | ■■■■                               9%
 
+    ## [working] (0 + 0) -> 3 -> 8 | ■■■■■■■■■■■■■■■■■■■■■■■           73%
+
     ## [working] (0 + 0) -> 0 -> 11 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
 ``` r
+
 # View the results
 coded
 ```
 
     ## # quallmer coded object
-    ## # Run:      
+    ## # Run:      original
     ## # Codebook: Score Political Left Alignment
     ## # Model:    openai/gpt-4o
     ## # Units:    11
@@ -205,27 +211,27 @@ coded
     ##  2 1989-Bush        0 "The document emphasizes themes such as free markets, lim…
     ##  3 1993-Clinton     1 "The document contains elements that align slightly with …
     ##  4 1997-Clinton     1 "The document contains elements that align slightly with …
-    ##  5 2001-Bush        1 "The document contains elements that align slightly with …
-    ##  6 2005-Bush        0 "The document emphasizes themes of freedom, democracy, an…
-    ##  7 2009-Obama       2 "The document aligns very well with the political left, e…
+    ##  5 2001-Bush        0 "The document is an inaugural address that emphasizes uni…
+    ##  6 2005-Bush        0 "The document primarily emphasizes themes of freedom, dem…
+    ##  7 2009-Obama       2 "The speech aligns very well with the political left due …
     ##  8 2013-Obama       2 "The document aligns very well with the political left, e…
     ##  9 2017-Trump       0 "The document emphasizes nationalism, protectionism, and …
-    ## 10 2021-Biden       2 "The document aligns very well with the political left, s…
-    ## 11 2025-Trump       0 "The document emphasizes nationalism, border security, mi…
+    ## 10 2021-Biden       2 "The document aligns very well with the political left, e…
+    ## 11 2025-Trump       0 "The document emphasizes nationalism, sovereignty, and a …
 
-| .id          | score | explanation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-|:-------------|------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1985-Reagan  |     0 | The document emphasizes reducing government intervention, lowering taxes, and promoting free enterprise, which align with conservative principles rather than the political left. It advocates for limiting the size and power of the federal government, which contrasts with the left’s preference for government intervention in the economy and social equality. The focus on individual freedom, reducing dependency, and economic growth through free market principles further aligns with right-leaning ideologies.                  |
-| 1989-Bush    |     0 | The document emphasizes themes such as free markets, limited government intervention, and individual responsibility, which align more with conservative or right-leaning ideologies. It critiques reliance on public money to solve social issues and promotes private initiative and community involvement. These elements do not align with the political left’s focus on government intervention and social equality.                                                                                                                     |
-| 1993-Clinton |     1 | The document contains elements that align slightly with the political left, such as advocating for investment in people, addressing economic inequality, and reforming politics to reduce the influence of power and privilege. However, it also emphasizes personal responsibility, competition, and a strong national defense, which are not typically left-leaning positions. The overall tone is more centrist, with a focus on unity and renewal rather than explicitly progressive policies.                                           |
-| 1997-Clinton |     1 | The document contains elements that align slightly with the political left, such as references to social equality, civil rights, and the importance of community and education. However, it also emphasizes personal responsibility, a smaller government, and free enterprise, which are not typically associated with leftist ideology. The balance between these elements suggests a slightly left alignment.                                                                                                                             |
-| 2001-Bush    |     1 | The document contains elements that align slightly with the political left, such as advocating for social justice, addressing poverty, and reforming social programs like Social Security and Medicare. However, it also emphasizes personal responsibility, private character, and reducing taxes, which are more centrist or right-leaning positions. The focus on national defense and a strong military presence further moderates its alignment with the left.                                                                          |
-| 2005-Bush    |     0 | The document emphasizes themes of freedom, democracy, and individual responsibility, which are more aligned with conservative and neoconservative ideologies. It focuses on spreading democracy globally, national security, and individual character, rather than advocating for social equality or government intervention in the economy, which are key aspects of the political left. The mention of an ‘ownership society’ and economic independence further aligns with right-leaning principles.                                      |
-| 2009-Obama   |     2 | The document aligns very well with the political left, emphasizing themes of social equality, government intervention, and progressive policies. It advocates for addressing economic inequality, reforming healthcare, investing in infrastructure, and promoting renewable energy. The speech also calls for international cooperation and a focus on common humanity, which are consistent with leftist ideals. However, it balances these with appeals to traditional values and national unity, which slightly moderates its alignment. |
-| 2013-Obama   |     2 | The document aligns very well with the political left, emphasizing social equality, government intervention, and progressive policies. It advocates for collective action, economic equality, environmental responsibility, and social justice, all of which are key tenets of leftist ideology. However, it also acknowledges the importance of personal responsibility and skepticism of central authority, which tempers its alignment slightly.                                                                                          |
-| 2017-Trump   |     0 | The document emphasizes nationalism, protectionism, and a focus on “America first” policies, which are not aligned with the political left. It lacks advocacy for social equality, government intervention in the economy, or progressive policies typically associated with the left. Instead, it focuses on reducing government power in favor of populist rhetoric and national pride.                                                                                                                                                    |
-| 2021-Biden   |     2 | The document aligns very well with the political left, scoring a 2 on the scale. It emphasizes themes of social equality, racial justice, and government intervention in addressing economic challenges and the pandemic. The call for unity, healing, and addressing systemic racism aligns with progressive policies. However, the focus on unity and bipartisanship tempers the extremity of left alignment, preventing a score of 3.                                                                                                     |
-| 2025-Trump   |     0 | The document emphasizes nationalism, border security, military strength, and economic independence, which are typically associated with right-wing ideologies. It criticizes government intervention and promotes deregulation, particularly in energy and trade, which contrasts with leftist advocacy for government intervention in the economy and progressive policies. The focus on national sovereignty and traditional values further aligns with right-wing perspectives.                                                           |
+| .id | score | explanation |
+|:---|---:|:---|
+| 1985-Reagan | 0 | The document emphasizes reducing government intervention, lowering taxes, and promoting free enterprise, which align with conservative principles rather than the political left. It advocates for limiting the size and power of the federal government, which contrasts with the left’s preference for government intervention in the economy and social equality. The focus on individual freedom, reducing dependency, and a strong national defense further aligns with right-leaning ideologies. |
+| 1989-Bush | 0 | The document emphasizes themes such as free markets, limited government intervention, and individual responsibility, which align more with conservative or right-leaning ideologies. It critiques reliance on public money to solve social issues and stresses the importance of personal and community involvement. The focus on reducing the deficit and balancing the budget also reflects a fiscally conservative stance. Overall, the speech does not advocate for the progressive policies or government intervention typically associated with the political left. |
+| 1993-Clinton | 1 | The document contains elements that align slightly with the political left, such as advocating for investment in people, addressing economic inequality, and reforming politics to reduce the influence of power and privilege. However, it also emphasizes personal responsibility, competition, and a strong national defense, which are not typically associated with leftist ideology. The overall tone is more centrist, with a focus on unity and renewal rather than explicitly progressive policies. |
+| 1997-Clinton | 1 | The document contains elements that align slightly with the political left, such as advocating for civil rights, social equality, and educational opportunities for all. However, it also emphasizes personal responsibility, a smaller government, and free enterprise, which are not typically associated with the political left. The balance between these elements suggests a slightly left alignment. |
+| 2001-Bush | 0 | The document is an inaugural address that emphasizes unity, personal responsibility, and traditional values. It mentions reducing taxes and building strong defenses, which align more with conservative principles. While it acknowledges social issues like poverty and education, it emphasizes community and individual action over government intervention, which is not characteristic of the political left. |
+| 2005-Bush | 0 | The document primarily emphasizes themes of freedom, democracy, and national security, with a focus on promoting liberty globally. It does not advocate for social equality, government intervention in the economy, or progressive policies typically associated with the political left. Instead, it aligns more with conservative values, such as individual responsibility and limited government intervention. |
+| 2009-Obama | 2 | The speech aligns very well with the political left due to its emphasis on social equality, government intervention, and progressive policies. It advocates for addressing economic inequality, reforming healthcare, investing in infrastructure, and promoting renewable energy. The call for international cooperation and addressing climate change also reflects left-leaning values. However, it balances these with appeals to traditional American values and bipartisan unity, which slightly moderates its alignment. |
+| 2013-Obama | 2 | The document aligns very well with the political left, emphasizing social equality, government intervention, and progressive policies. It advocates for collective action, economic equality, environmental responsibility, and social justice, all of which are key tenets of leftist ideology. However, it also acknowledges the importance of personal responsibility and skepticism of central authority, which slightly moderates its alignment. |
+| 2017-Trump | 0 | The document emphasizes nationalism, protectionism, and a focus on “America first” policies, which are not typically aligned with the political left. It lacks advocacy for social equality, government intervention in the economy, or progressive policies, which are key characteristics of the political left. Instead, it focuses on reducing government power in favor of populist rhetoric and national pride. |
+| 2021-Biden | 2 | The document aligns very well with the political left, emphasizing themes of social equality, racial justice, and government intervention in addressing economic and health crises. It calls for unity and collective action to tackle systemic racism, climate change, and economic inequality, which are key progressive priorities. However, it also appeals to broader American values and unity, which slightly moderates its alignment with the extreme left. |
+| 2025-Trump | 0 | The document emphasizes nationalism, sovereignty, and a strong military, which are typically associated with right-wing ideologies. It criticizes government intervention in areas like education and public health, opposes progressive policies like the Green New Deal, and focuses on border security and energy independence. These positions do not align with the political left’s advocacy for social equality, government intervention in the economy, and progressive policies. |
 
 ## Summary
 

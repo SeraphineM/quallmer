@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../../../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,6 +54,10 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-examples">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_images.html">Image analysis of campaign posters</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_audio.html">Audio transcription and analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_segmentation.html">Text segmentation</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_quasi_sentences.html">Quasi-sentence segmentation</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
@@ -402,7 +406,7 @@ unity and traditional values which aligns with illiberal themes.</td>
 <p>The original study aggregates speech-level dictionary counts to
 speaker-level scores using a log-odds transformation (Lowe et al.,
 2011):</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>μ</mi><mo>=</mo><mo>log</mo><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>L</mi><mo>+</mo><mi>a</mi></mrow><mrow><mi>I</mi><mo>+</mo><mi>a</mi></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mu = \log\left(\frac{L + a}{I + a}\right)</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>μ</mi><mo>=</mo><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>L</mi><mo>+</mo><mi>a</mi></mrow><mrow><mi>I</mi><mo>+</mo><mi>a</mi></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mu = \log\left(\frac{L + a}{I + a}\right)</annotation></semantics></math></p>
 <p>where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
 and
@@ -476,10 +480,10 @@ between the two approaches at the speaker level:</p>
 <span><span class="co">#&gt; Raters: 2</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── score (interval)</span></span>
-<span><span class="co">#&gt; Percent agreement: 0.9500</span></span>
-<span><span class="co">#&gt; Krippendorff's alpha: 0.8496</span></span>
-<span><span class="co">#&gt; ICC: 0.8509</span></span>
-<span><span class="co">#&gt; Pearson's r: 0.8477</span></span>
+<span><span class="co">#&gt; Percent agreement     0.9500 </span></span>
+<span><span class="co">#&gt; Krippendorff's alpha  0.8496 </span></span>
+<span><span class="co">#&gt; ICC                   0.8509 </span></span>
+<span><span class="co">#&gt; Pearson's r           0.8477</span></span>
 <span><span class="co">#&gt; </span></span></code></pre></div>
 <p>The comparison reveals a strong positive correlation between the
 dictionary-based and LLM-based approaches. The Pearson’s <em>r</em> and
@@ -543,7 +547,7 @@ using standardized scores:</p>
 <span>    legend.box <span class="op">=</span> <span class="st">"vertical"</span>,</span>
 <span>    panel.grid.major.y <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_blank</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="example_illiberalism_files/figure-html/figure1-comparison-1.png" class="r-plt" width="960"></p>
+<p><img src="example_illiberalism_files/figure-html/figure1-comparison-1.png" class="r-plt" alt="" width="960"></p>
 <p><em>Note:</em> Regime classifications are based on V-Dem’s
 <code>v2x_regime</code> variable and correspond to the years mostly
 covered by the speeches for each speaker. For more details, see the <a href="https://doi.org/10.1007/s11135-019-00885-7" class="external-link">original
@@ -572,7 +576,7 @@ scores:</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"bottom"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `geom_smooth()` using formula = 'y ~ x'</span></span></code></pre></div>
-<p><img src="example_illiberalism_files/figure-html/scatter-1.png" class="r-plt" width="768"></p>
+<p><img src="example_illiberalism_files/figure-html/scatter-1.png" class="r-plt" alt="" width="768"></p>
 <p>The scatter plot shows the relationship between the two scoring
 methods at the speaker level. Points close to the dotted diagonal line
 indicate strong agreement between methods. The color separation confirms

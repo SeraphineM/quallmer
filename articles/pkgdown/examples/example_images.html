@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../../../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,6 +56,8 @@
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_images.html">Image analysis of campaign posters</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_audio.html">Audio transcription and analysis</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_segmentation.html">Text segmentation</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_quasi_sentences.html">Quasi-sentence segmentation</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
@@ -96,15 +98,11 @@ content that would traditionally require manual human coding.</p>
 <h2 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quallmer.github.io/quallmer/">quallmer</a></span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Warning: package 'ellmer' was built under R version 4.5.2</span></span></code></pre>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Warning: package 'dplyr' was built under R version 4.5.2</span></span></code></pre>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://yihui.org/knitr/" class="external-link">knitr</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quallmer.github.io/quallmer/">quallmer</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://yihui.org/knitr/" class="external-link">knitr</a></span><span class="op">)</span></span></code></pre></div>
 <p>First, we identify the image files to analyze:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Get all image files from the data folder</span></span>
 <span><span class="va">image_files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="st">"data/images/"</span>,</span>
 <span>                          pattern <span class="op">=</span> <span class="st">"\\.jpg$"</span>,</span>
@@ -112,19 +110,19 @@ content that would traditionally require manual human coding.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Found"</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">image_files</span><span class="op">)</span>, <span class="st">"campaign poster images:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Found 5 campaign poster images:</span></span></code></pre>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="va">image_files</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Bahdin.jpg"        "maulana.jpg"       "Sigit_Pramono.jpg"</span></span>
 <span><span class="co">## [4] "Sofyan_tan.jpg"    "Usman_Siregar.jpg"</span></span></code></pre>
 <p>Let’s preview one of the campaign posters:</p>
-<p><img src="data/images/Bahdin.jpg" class="r-plt" width="60%" style="display: block; margin: auto;"></p>
+<p><img src="data/images/Bahdin.jpg" class="r-plt" alt="" width="60%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level2">
 <h2 id="defining-the-image-analysis-codebook">Defining the image analysis codebook<a class="anchor" aria-label="anchor" href="#defining-the-image-analysis-codebook"></a>
 </h2>
 <p>We create a codebook that operationalizes the annotation task. The
 schema defines what information to extract from each poster:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define a comprehensive image analysis codebook</span></span>
 <span><span class="va">codebook_posters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Campaign Poster Analysis"</span>,</span>
@@ -197,7 +195,7 @@ expressions</p>
 <p>Multimodal models like Gemini 3 Pro Preview can analyze images and
 extract structured information. We use <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code> with
 image file paths:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply image analysis using qlm_code()</span></span>
 <span><span class="va">coded_posters</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
 <span>  <span class="va">image_files</span>,</span>
@@ -218,7 +216,7 @@ image file paths:</p>
 <h2 id="examining-the-results">Examining the results<a class="anchor" aria-label="anchor" href="#examining-the-results"></a>
 </h2>
 <p>Let’s view the extracted information in a table:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display key results</span></span>
 <span><span class="va">coded_posters</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.filename</span>, <span class="va">mayoral_candidate</span>, <span class="va">deputy_candidate</span>, <span class="va">facial_expression</span>,</span>
@@ -298,14 +296,14 @@ image file paths:</p>
 </table>
 <p>Total cost for analyzing 5 images: (May not display correctly for a
 preview model)</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Total cost: $"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">cost</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Total cost: $0</span></span></code></pre>
 <div class="section level3">
 <h3 id="text-translations">Text translations<a class="anchor" aria-label="anchor" href="#text-translations"></a>
 </h3>
 <p>The LLM can translate Indonesian text found in the posters:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">coded_posters</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.filename</span>, <span class="va">text_translation</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
@@ -364,35 +362,35 @@ Your ID Card, Now! at Jl. Ismailiyah No. 17/25C Komat I - Medan</td>
 <h3 id="visual-elements">Visual elements<a class="anchor" aria-label="anchor" href="#visual-elements"></a>
 </h3>
 <p>Summary of visual elements across all posters:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Summarize visual elements</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Indonesian flag elements:"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">indonesian_flag</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>    <span class="st">"of"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">)</span>, <span class="st">"posters\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Indonesian flag elements: 3 of 5 posters</span></span></code></pre>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Party logos present:"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">party_logos</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>    <span class="st">"of"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">)</span>, <span class="st">"posters\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Party logos present: 2 of 5 posters</span></span></code></pre>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nFacial expressions:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Facial expressions:</span></span></code></pre>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">facial_expression</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## smiling serious neutral   mixed </span></span>
 <span><span class="co">##       3       0       2       0</span></span></code></pre>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nCandidate prominence (% of poster):\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Candidate prominence (% of poster):</span></span></code></pre>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Range:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">candidate_percentage</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="st">"-"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">candidate_percentage</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="st">"%\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Range: 35 - 65 %</span></span></code></pre>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Mean:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">coded_posters</span><span class="op">$</span><span class="va">candidate_percentage</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span>, <span class="st">"%\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Mean: 52 %</span></span></code></pre>
 </div>
@@ -401,50 +399,50 @@ Your ID Card, Now! at Jl. Ismailiyah No. 17/25C Komat I - Medan</td>
 <h2 id="detailed-view-of-one-poster">Detailed view of one poster<a class="anchor" aria-label="anchor" href="#detailed-view-of-one-poster"></a>
 </h2>
 <p>Let’s examine the complete analysis for one poster:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Select the first poster for detailed view</span></span>
 <span><span class="va">poster_detail</span> <span class="op">&lt;-</span> <span class="va">coded_posters</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== Detailed Analysis ===\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## === Detailed Analysis ===</span></span></code></pre>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"File:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">.filename</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## File: Bahdin.jpg</span></span></code></pre>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Mayoral candidate:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">mayoral_candidate</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Mayoral candidate: Bahdin</span></span></code></pre>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Deputy candidate:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">deputy_candidate</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Deputy candidate: Kasim</span></span></code></pre>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Text translation:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">text_translation</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Text translation: Candidate for Mayor and Deputy Mayor of Medan City Period 2010-2015. Bahdin-Kasim. Joining hands to build Medan.</span></span></code></pre>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Clothing:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">clothing_description</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Clothing: Both candidates are wearing dark formal suits, ties, and black peci caps.</span></span></code></pre>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Religious buildings:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">religious_buildings</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Religious buildings: Great Mosque of Medan (Islamic)</span></span></code></pre>
-<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Indonesian flag present:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">indonesian_flag</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Indonesian flag present: TRUE</span></span></code></pre>
-<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Party logos present:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">party_logos</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Party logos present: FALSE</span></span></code></pre>
-<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Candidate percentage:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">candidate_percentage</span>, <span class="st">"%\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Candidate percentage: 35 %</span></span></code></pre>
-<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Facial expression:"</span>, <span class="va">poster_detail</span><span class="op">$</span><span class="va">facial_expression</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Facial expression: 3</span></span></code></pre>
-<p><img src="data/images/Bahdin.jpg" class="r-plt" width="60%" style="display: block; margin: auto;"></p>
+<p><img src="data/images/Bahdin.jpg" class="r-plt" alt="" width="60%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level2">
 <h2 id="comparing-to-other-models-optional">Comparing to other models (optional)<a class="anchor" aria-label="anchor" href="#comparing-to-other-models-optional"></a>
 </h2>
 <p>You can code the same images with different models to compare
 results:</p>
-<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Try with GPT-4o for comparison</span></span>
 <span><span class="va">coded_gpt4o</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
 <span>  <span class="va">image_files</span>,</span>
@@ -465,7 +463,7 @@ results:</p>
 <h2 id="creating-an-audit-trail">Creating an audit trail<a class="anchor" aria-label="anchor" href="#creating-an-audit-trail"></a>
 </h2>
 <p>Document the complete analysis:</p>
-<div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded_posters</span>, path <span class="op">=</span> <span class="st">"poster_analysis"</span><span class="op">)</span></span></code></pre></div>
 <p>This creates two files:</p>
 <ul>

@@ -3,7 +3,7 @@
 In this tutorial, we will explore how to create custom annotation tasks
 using the `quallmer` package. Custom tasks allow you to tailor the LLM’s
 output to your specific research questions and data types using the
-[`task()`](https://seraphinem.github.io/quallmer/reference/task.md)
+[`task()`](https://quallmer.github.io/quallmer/reference/task.md)
 function, providing greater flexibility and control over the annotation
 process.
 
@@ -12,15 +12,16 @@ task for scoring documents based on their alignment with political left
 ideologies. For this, we formulate a prompt that asks the LLM to score
 documents on a scale of political left alignment. We then define the
 expected response structure using the
-[`task()`](https://seraphinem.github.io/quallmer/reference/task.md)
+[`task()`](https://quallmer.github.io/quallmer/reference/task.md)
 function. Finally, we will use the
-[`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
+[`annotate()`](https://quallmer.github.io/quallmer/reference/annotate.md)
 function to apply this custom task to a sample corpus of inaugural
 speeches from US presidents.
 
 ### Loading packages and data
 
 ``` r
+
 # We will use the quanteda package 
 # for loading a sample corpus of innaugural speeches
 # If you have not yet installed the quanteda package, you can do so by:
@@ -29,20 +30,22 @@ library(quanteda)
 ```
 
     ## Package version: 4.3.1
-    ## Unicode version: 15.1
-    ## ICU version: 74.2
+    ## Unicode version: 14.0
+    ## ICU version: 71.1
 
     ## Parallel computing: disabled
 
     ## See https://quanteda.io for tutorials and examples.
 
 ``` r
+
 library(quallmer)
 ```
 
     ## Loading required package: ellmer
 
 ``` r
+
 # For educational purposes, 
 # we will use a subset of the inaugural speeches corpus
 # The three most recent speeches in the corpus
@@ -60,6 +63,7 @@ depending on the task at hand. Prompts should be clear and specific to
 ensure that the LLM understands the task requirements.
 
 ``` r
+
 prompt <- "Score the following document on a scale of how much it aligns
 with the political left. The political left is defined as groups which
 advocate for social equality, government intervention in the economy,
@@ -73,7 +77,7 @@ SCORING METRIC:
 
 ### Defining the structure of the response with define_task()
 
-The [`task()`](https://seraphinem.github.io/quallmer/reference/task.md)
+The [`task()`](https://quallmer.github.io/quallmer/reference/task.md)
 function allows us to specify the expected structure of the LLM’s
 response. It has the following important arguments which users need to
 specify:
@@ -94,6 +98,7 @@ refer to the [ellmer documentation on type
 specifications](https://ellmer.tidyverse.org/reference/type_boolean.html).
 
 ``` r
+
 # Define the custom task using task()
 ideology_scores <- task(
   name = "Score Political Left Alignment",
@@ -109,9 +114,9 @@ ideology_scores <- task(
 ### Applying the custom task to the corpus
 
 This step is similar to applying predefined tasks using the
-[`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
+[`annotate()`](https://quallmer.github.io/quallmer/reference/annotate.md)
 function. Here, we will use the
-[`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
+[`annotate()`](https://quallmer.github.io/quallmer/reference/annotate.md)
 function to apply our custom task to the sample corpus of inaugural
 speeches. We will specify the model to use via `model_name` (in this
 case, `"openai/gpt-4o"`) and any additional parameters as needed. For
@@ -120,6 +125,7 @@ deterministic outputs, improving consistency in scoring across multiple
 runs and therefore increasing reliability.
 
 ``` r
+
 # Apply the custom task to the inaugural speeches corpus
 result <- annotate(data_corpus_inaugural, task = ideology_scores,
                    model_name = "openai/gpt-4o",
@@ -128,14 +134,16 @@ result <- annotate(data_corpus_inaugural, task = ideology_scores,
 
     ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
 
+    ## [working] (0 + 0) -> 2 -> 2 | ■■■■■■■■■■■■■■■■                  50%
+
     ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
 
-| id         | score | explanation                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-|:-----------|------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 2013-Obama |     2 | The document aligns very well with the political left, emphasizing social equality, government intervention, and progressive policies. It advocates for collective action, economic equality, climate change response, and social justice, all of which are key tenets of leftist ideology. However, it also acknowledges skepticism of central authority and the importance of personal responsibility, which slightly moderates its alignment.                    |
-| 2017-Trump |     0 | The document emphasizes nationalism, protectionism, and a focus on American interests, which are not typically aligned with the political left. It lacks advocacy for social equality, government intervention in the economy, or progressive policies, which are key aspects of leftist ideology. Therefore, it scores 0 for alignment with the political left.                                                                                                    |
-| 2021-Biden |     2 | The document aligns very well with the political left, emphasizing themes of social equality, racial justice, and government intervention in addressing economic challenges. It calls for unity, healing, and addressing systemic racism and climate change, which are typically progressive priorities. However, it also emphasizes unity and bipartisanship, which slightly moderates its alignment with the extreme left.                                        |
-| 2025-Trump |     0 | The document emphasizes nationalism, border security, military strength, and economic independence, which are typically associated with right-wing ideologies. It criticizes government intervention and progressive policies like the Green New Deal, and promotes traditional values and a merit-based society. These elements do not align with the political left’s focus on social equality, government intervention in the economy, and progressive policies. |
+| id | score | explanation |
+|:---|---:|:---|
+| 2013-Obama | 2 | The document aligns very well with the political left, emphasizing social equality, government intervention, and progressive policies. It advocates for collective action, economic equality, climate change response, and social justice, all of which are key tenets of leftist ideology. However, it also acknowledges skepticism of central authority and the importance of personal responsibility, which slightly moderates its alignment. |
+| 2017-Trump | 0 | The document emphasizes nationalism, protectionism, and a focus on American interests, which are not typically aligned with the political left. It lacks advocacy for social equality, government intervention in the economy, or progressive policies, which are key aspects of leftist ideology. |
+| 2021-Biden | 2 | The document aligns very well with the political left, emphasizing themes of social equality, racial justice, and government intervention in addressing economic challenges. It calls for unity, healing, and progressive change, such as rebuilding the middle class, securing healthcare for all, and addressing climate change. However, it also appeals to broader American values and unity, which tempers its alignment slightly. |
+| 2025-Trump | 0 | The document emphasizes nationalism, border security, military strength, and economic independence, which are typically associated with right-wing ideologies. It criticizes government intervention in areas like education and public health, opposes progressive policies like the Green New Deal, and promotes traditional values. These elements do not align with the political left’s focus on social equality, government intervention in the economy, and progressive policies. |
 
 Now you have successfully created and applied a custom annotation task
 using the `quallmer` package! You can further modify the prompt and

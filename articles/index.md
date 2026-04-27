@@ -2,8 +2,16 @@
 
 ### All vignettes
 
+- [Example: Audio transcription and
+  analysis](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_audio.md):
 - [Example: Illiberalism in political
   speeches](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_illiberalism.md):
+- [Example: Image analysis of campaign
+  posters](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_images.md):
+- [Example: Quasi-sentence
+  segmentation](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_quasi_sentences.md):
+- [Example: Text
+  segmentation](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_segmentation.md):
 - [Example: Sentiment
   analysis](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_sentiment.md):
 - [Getting started with

@@ -47,8 +47,8 @@
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/ollama.html">Working with an open-source Ollama model</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/custom-codebook.html">Creating codebooks</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/compare.html">Comparing and replicating coded results</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
-    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trail.html">The quallmer trail</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/validate.html">Using the Validate App (quallmer.app)</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
@@ -150,7 +150,7 @@ background. Here is a set of commands to open the .Renviron file for
 modification:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://usethis.r-lib.org" class="external-link">usethis</a></span><span class="op">)</span></span>
-<span><span class="fu">edit_r_environ</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://usethis.r-lib.org/reference/edit.html" class="external-link">edit_r_environ</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Add the following line to .Renviron, replacing “APIKEY” with your
 actual API key: OPENAI_API_KEY=“APIKEY”. You need to restart your R
 session for the changes to take effect. You can do this by clicking on
@@ -163,7 +163,7 @@ data when using gptstudio, do not highlight, include in a prompt, or
 otherwise upload any sensitive data, code, or text that should remain
 confidential.</p>
 <p>Now you are ready to use openai models with the <code>quallmer</code>
-package! For example, you can <a href="https://quallmer.github.io/quallmer/articles/pkgdown/examples/sentiment.html">test
+package! For example, you can <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/examples/sentiment.html">test
 the setup by running the example on sentiment analysis.</a></p>
 </div>
 </div>

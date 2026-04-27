@@ -86,6 +86,7 @@ Pass any quallmer objects to
 [`qlm_trail()`](https://quallmer.github.io/quallmer/reference/qlm_trail.md):
 
 ``` r
+
 library(quallmer)
 
 # After your analysis...
@@ -123,6 +124,7 @@ The print output shows:
 Add a `path` argument to save permanent files:
 
 ``` r
+
 qlm_trail(coded1, coded2, comparison, path = "my_analysis")
 ```
 
@@ -144,6 +146,7 @@ The generated `.qmd` file contains:
 Render it with:
 
 ``` r
+
 quarto::quarto_render("my_analysis.qmd")
 ```
 
@@ -152,6 +155,7 @@ quarto::quarto_render("my_analysis.qmd")
 Reload a trail to access the data:
 
 ``` r
+
 trail <- readRDS("my_analysis.rds")
 
 # Access runs

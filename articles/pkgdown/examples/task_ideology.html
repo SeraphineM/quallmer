@@ -103,8 +103,8 @@ dimension (optional).</p>
 <span><span class="co"># install.packages("quanteda")</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://quanteda.io" class="external-link">quanteda</a></span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Package version: 4.3.1</span></span>
-<span><span class="co">## Unicode version: 15.1</span></span>
-<span><span class="co">## ICU version: 74.2</span></span></code></pre>
+<span><span class="co">## Unicode version: 14.0</span></span>
+<span><span class="co">## ICU version: 71.1</span></span></code></pre>
 <pre><code><span><span class="co">## Parallel computing: disabled</span></span></code></pre>
 <pre><code><span><span class="co">## See https://quanteda.io for tutorials and examples.</span></span></code></pre>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -131,6 +131,7 @@ dimension (optional).</p>
 <span>                   model_name <span class="op">=</span> <span class="st">"openai/gpt-4o"</span>,</span>
 <span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 2 -&gt; 2 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■                </span>  50%</span></span></code></pre>
 <pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
@@ -154,12 +155,11 @@ explanation
 </td>
 <td style="text-align:left;">
 The text emphasizes inclusivity, highlighting themes of equality,
-diversity, and collective action. It references the importance of equal
-rights for women, LGBTQ+ individuals, and immigrants, and stresses the
-need for unity and shared responsibility. Phrases like ‘all men are
-created equal,’ ‘our journey is not complete until our gay brothers and
-sisters are treated like anyone else under the law,’ and ‘a better way
-to welcome the striving, hopeful immigrants’ underscore an inclusive
+diversity, and collective action. It references historical struggles for
+civil rights and equality, and calls for unity across differences.
+Phrases like ‘all men are created equal,’ ‘diversity and openness,’ and
+‘our journey is not complete until our gay brothers and sisters are
+treated like anyone else under the law’ strongly support an inclusive
 ideology.
 </td>
 </tr>
@@ -176,9 +176,7 @@ interests with phrases like “America first” and “buy American and hire
 American.” It highlights protectionism and a focus on American workers
 and borders, suggesting an exclusive stance. However, it also includes
 some inclusive elements, such as unity and equality among Americans,
-regardless of race, with statements like “we all bleed the same red
-blood of patriots.” Overall, the emphasis on national interests and
-protectionism leans towards exclusivity.
+regardless of race, which slightly moderates the exclusivity.
 </td>
 </tr>
 <tr>
@@ -190,11 +188,10 @@ protectionism leans towards exclusivity.
 </td>
 <td style="text-align:left;">
 The text emphasizes unity, inclusion, and addressing systemic issues
-like racial justice and political extremism. It calls for treating each
-other with dignity and respect, and highlights the importance of
-diversity and pluralism. Phrases like ‘uniting our people,’ ‘delivering
-racial justice,’ and ‘rejecting a culture in which facts themselves are
-manipulated’ support an inclusive ideology.
+like racial justice and political extremism. It calls for seeing each
+other as neighbors, treating each other with dignity, and uniting
+against common challenges. These elements strongly align with inclusive
+language.
 </td>
 </tr>
 <tr>
@@ -205,13 +202,13 @@ manipulated’ support an inclusive ideology.
 8
 </td>
 <td style="text-align:left;">
-The text emphasizes national sovereignty, exclusion of certain groups,
-and a focus on national homogeneity. Phrases like “put America first,”
-“reclaim our sovereignty,” and “halt illegal entry” suggest an exclusive
-stance. The mention of “only two genders” and ending “socially
-engineered race and gender” policies further supports exclusivity. While
-there are mentions of unity and diversity, the overall tone and policy
-proposals lean towards exclusivity.
+The text emphasizes national sovereignty, exclusion of ‘criminal
+aliens,’ and a focus on American exceptionalism, which aligns with
+exclusive language. Phrases like ‘put America first,’ ‘reclaim our
+sovereignty,’ and ‘halt illegal entry’ suggest a restrictive stance on
+immigration and national identity. The mention of ‘only two genders’ and
+ending ‘socially engineered race and gender’ policies further indicates
+exclusivity.
 </td>
 </tr>
 </tbody>
@@ -224,7 +221,7 @@ proposals lean towards exclusivity.
 task with <code><a href="../../../reference/task.html">task()</a></code> (for a more detailed explanation, <a href="https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html">see
 our “Defining custom tasks” tutorial</a>). For example, you might like
 to change the scale from 0-10 to -5 to +5.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_ideology</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>    name <span class="op">=</span> <span class="st">"Ideological scaling"</span>,</span>
 <span>    system_prompt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
@@ -269,11 +266,12 @@ explanation
 </td>
 <td style="text-align:left;">
 The text strongly emphasizes inclusivity, highlighting themes of
-equality, diversity, and collective action. It advocates for equal
-rights across gender, sexual orientation, and socioeconomic status, and
-stresses the importance of welcoming immigrants and supporting
-marginalized groups. The language consistently promotes pluralism and
-the protection of minorities, aligning with an inclusive ideology.
+equality, diversity, and collective action. It references historical
+struggles for civil rights and equality, and advocates for the
+protection and empowerment of marginalized groups, such as immigrants,
+women, and the LGBTQ+ community. The language consistently supports
+pluralism and the idea that America’s strength lies in its diversity and
+commitment to equal rights for all citizens.
 </td>
 </tr>
 <tr>
@@ -286,10 +284,10 @@ the protection of minorities, aligning with an inclusive ideology.
 <td style="text-align:left;">
 The text emphasizes national homogeneity and prioritizes American
 interests with phrases like “America first” and “protect our borders.”
-It highlights exclusionary themes by focusing on protecting American
-jobs and industries from foreign influence. However, it also includes
-some inclusive elements, such as unity among Americans regardless of
-race, which moderates the exclusivity slightly.
+It also highlights exclusionary economic policies such as “buy American
+and hire American.” While there are inclusive elements, such as unity
+and shared national identity, the overall tone leans towards
+exclusivity.
 </td>
 </tr>
 <tr>
@@ -301,11 +299,11 @@ race, which moderates the exclusivity slightly.
 </td>
 <td style="text-align:left;">
 The text emphasizes unity, inclusion, and the protection of democracy,
-highlighting themes of racial justice, equality, and the rejection of
-division. It calls for overcoming political extremism and systemic
-racism, and promotes a vision of America that is inclusive and united.
-The language is inclusive, focusing on bringing people together and
-addressing common challenges collectively.
+highlighting the importance of diversity, racial justice, and overcoming
+division. It calls for collective action and respect for all Americans,
+regardless of differences, and explicitly rejects exclusionary
+ideologies like white supremacy. The language is inclusive, focusing on
+healing, unity, and equal rights.
 </td>
 </tr>
 <tr>
@@ -316,13 +314,12 @@ addressing common challenges collectively.
 -3
 </td>
 <td style="text-align:left;">
-The text emphasizes national sovereignty, border control, and exclusion
-of ‘criminal aliens,’ which aligns with exclusive language. It also
-mentions ending policies that socially engineer race and gender,
-suggesting a move away from diversity and inclusion efforts. While there
-are mentions of unity and support for various communities, the overall
-focus on national homogeneity and restrictive policies places it towards
-the exclusive end of the scale.
+The speech emphasizes national sovereignty, protection of borders, and
+exclusionary policies such as halting illegal entry and returning
+‘criminal aliens.’ It also includes language about national pride and
+reclaiming American greatness, which aligns with exclusive rhetoric.
+However, there are mentions of unity and support for diverse
+communities, which slightly moderates the exclusivity.
 </td>
 </tr>
 </tbody>

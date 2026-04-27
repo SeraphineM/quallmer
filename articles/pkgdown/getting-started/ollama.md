@@ -13,6 +13,7 @@ the model `llama3.2:1b`. Although it is a comparatively small LLM, this
 can take some time, depending on your machine.
 
 ``` r
+
 # Do not forget to run the ollama app (outside of R) first!
 # If you installed Ollama using the Windows/Mac installer, 
 # you can simply start Ollama from your start menu/by clicking on the app icon.

@@ -114,6 +114,8 @@ texts<a class="anchor" aria-label="anchor" href="#using-annotate-for-predefined-
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="fu"><a href="../../../reference/task_sentiment.html">task_sentiment</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>                   model_name <span class="op">=</span> <span class="st">"openai/gpt-4o"</span>,</span>
 <span>                   params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -135,8 +137,8 @@ explanation
 0.9
 </td>
 <td style="text-align:left;">
-The sentiment is very positive due to the use of the word ‘wonderful,’
-which expresses strong approval and delight.
+The word ‘wonderful’ conveys a very positive sentiment, indicating
+happiness or satisfaction.
 </td>
 </tr>
 <tr>
@@ -171,8 +173,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 0.9
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using strong words like ‘absolutely’ and
-‘fantastic’ to express admiration and approval.
+The phrase is highly positive, using strong words like “absolutely” and
+“fantastic” to express admiration and approval.
 </td>
 </tr>
 </tbody>
@@ -186,7 +188,7 @@ task with <code><a href="../../../reference/task.html">task()</a></code> (for a 
 our “Defining custom tasks” tutorial</a>).</p>
 <p>For example, you might want to include an additional field for
 confidence level.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">custom_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Custom sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive), briefly explain why, and provide a confidence level from 0 to 1."</span>,</span>
@@ -225,7 +227,7 @@ confidence
 0.9
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a strong positive sentiment.
+The word ‘wonderful’ conveys a very positive sentiment.
 </td>
 <td style="text-align:right;">
 0.95
@@ -243,7 +245,7 @@ The word ‘dislike’ indicates a strong negative sentiment towards the
 approach.
 </td>
 <td style="text-align:right;">
-0.90
+0.95
 </td>
 </tr>
 <tr>
@@ -255,7 +257,7 @@ approach.
 </td>
 <td style="text-align:left;">
 The word ‘disappointing’ indicates a negative sentiment, though
-‘somewhat’ softens the impact.
+‘somewhat’ softens it slightly.
 </td>
 <td style="text-align:right;">
 0.90
@@ -269,8 +271,8 @@ The word ‘disappointing’ indicates a negative sentiment, though
 0.9
 </td>
 <td style="text-align:left;">
-The phrase is highly positive, using strong positive adjectives like
-‘absolutely fantastic.’
+The phrase “Absolutely fantastic work!” is highly positive, expressing
+strong approval and admiration.
 </td>
 <td style="text-align:right;">
 0.95
@@ -280,7 +282,7 @@ The phrase is highly positive, using strong positive adjectives like
 </table>
 <p>Or, you might want to change the scoring scale to a 5-point Likert
 scale.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">likert_sentiment</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/task.html">task</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Likert scale sentiment analysis"</span>,</span>
 <span>  system_prompt <span class="op">=</span> <span class="st">"You are an expert annotator. Rate the sentiment of each text on a scale from 1 (very negative) to 5 (very positive) and briefly explain why."</span>,</span>
@@ -294,6 +296,8 @@ scale.</p>
 <span><span class="va">likert_result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/annotate.html">annotate</a></span><span class="op">(</span><span class="va">texts</span>, task <span class="op">=</span> <span class="va">likert_sentiment</span>,</span>
 <span>                          model_name <span class="op">=</span> <span class="st">"openai/gpt-4o"</span>,</span>
 <span>                          params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>temperature <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 3 -&gt; 1 | <span style="color: #00BB00;">■■■■■■■■■                       </span>  25%</span></span></code></pre>
+<pre><code><span><span class="co">## [working] (0 + 0) -&gt; 0 -&gt; 4 | <span style="color: #00BB00;">■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■ </span> 100%</span></span></code></pre>
 <table class="table table table-striped table-hover" style="margin-left: auto; margin-right: auto;">
 <thead><tr>
 <th style="text-align:right;">
@@ -315,8 +319,7 @@ explanation
 5
 </td>
 <td style="text-align:left;">
-The word ‘wonderful’ conveys a very positive sentiment, indicating
-delight or admiration.
+The word ‘wonderful’ conveys a very positive sentiment.
 </td>
 </tr>
 <tr>

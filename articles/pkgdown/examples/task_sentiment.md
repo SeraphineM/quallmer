@@ -1,7 +1,7 @@
 # Example: Sentiment analysis
 
 The
-[`annotate()`](https://seraphinem.github.io/quallmer/reference/annotate.md)
+[`annotate()`](https://quallmer.github.io/quallmer/reference/annotate.md)
 function with a predefined `sentiment()` task allows you to rate the
 sentiment of texts using an LLM. The predefined `sentiment()` object
 structures the response with a numeric sentiment score from -1 (very
@@ -10,12 +10,14 @@ negative) to 1 (very positive) and a brief explanation.
 ### Loading packages and data
 
 ``` r
+
 library(quallmer)
 ```
 
     ## Loading required package: ellmer
 
 ``` r
+
 #Example texts
 texts <- c(
 "This is wonderful!",
@@ -28,23 +30,28 @@ texts <- c(
 ### Using `annotate()` for predefined sentiment analysis of texts
 
 ``` r
+
 # Apply predefined sentiment task with task_sentiment() in the annotate() function
 result <- annotate(texts, task = task_sentiment(),
                    model_name = "openai/gpt-4o",
                    params = list(temperature = 0))
 ```
 
-|  id | score | explanation                                                                                                             |
-|----:|------:|:------------------------------------------------------------------------------------------------------------------------|
-|   1 |   0.9 | The sentiment is very positive due to the use of the word ‘wonderful,’ which expresses strong approval and delight.     |
-|   2 |  -0.8 | The word ‘dislike’ indicates a strong negative sentiment towards the approach.                                          |
-|   3 |  -0.5 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ softens it slightly.                         |
-|   4 |   0.9 | The phrase is highly positive, using strong words like ‘absolutely’ and ‘fantastic’ to express admiration and approval. |
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
+
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+
+| id | score | explanation |
+|---:|---:|:---|
+| 1 | 0.9 | The word ‘wonderful’ conveys a very positive sentiment, indicating happiness or satisfaction. |
+| 2 | -0.8 | The word ‘dislike’ indicates a strong negative sentiment towards the approach. |
+| 3 | -0.5 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ softens it slightly. |
+| 4 | 0.9 | The phrase is highly positive, using strong words like “absolutely” and “fantastic” to express admiration and approval. |
 
 ### Adjusting the sentiment task
 
 You can customize the sentiment analysis task by defining your own task
-with [`task()`](https://seraphinem.github.io/quallmer/reference/task.md)
+with [`task()`](https://quallmer.github.io/quallmer/reference/task.md)
 (for a more detailed explanation, [see our “Defining custom tasks”
 tutorial](https://seraphinem.github.io/quallmer/articles/pkgdown/tutorials/customtask.html)).
 
@@ -52,6 +59,7 @@ For example, you might want to include an additional field for
 confidence level.
 
 ``` r
+
 custom_sentiment <- task(
   name = "Custom sentiment analysis",
   system_prompt = "You are an expert annotator. Rate the sentiment of each text from -1 (very negative) to 1 (very positive), briefly explain why, and provide a confidence level from 0 to 1.",
@@ -68,17 +76,18 @@ custom_result <- annotate(texts, task = custom_sentiment,
                           params = list(temperature = 0))
 ```
 
-|  id | score | explanation                                                                                    | confidence |
-|----:|------:|:-----------------------------------------------------------------------------------------------|-----------:|
-|   1 |   0.9 | The word ‘wonderful’ conveys a strong positive sentiment.                                      |       0.95 |
-|   2 |  -0.8 | The word ‘dislike’ indicates a strong negative sentiment towards the approach.                 |       0.90 |
-|   3 |  -0.5 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ softens the impact. |       0.90 |
-|   4 |   0.9 | The phrase is highly positive, using strong positive adjectives like ‘absolutely fantastic.’   |       0.95 |
+| id | score | explanation | confidence |
+|---:|---:|:---|---:|
+| 1 | 0.9 | The word ‘wonderful’ conveys a very positive sentiment. | 0.95 |
+| 2 | -0.8 | The word ‘dislike’ indicates a strong negative sentiment towards the approach. | 0.95 |
+| 3 | -0.5 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ softens it slightly. | 0.90 |
+| 4 | 0.9 | The phrase “Absolutely fantastic work!” is highly positive, expressing strong approval and admiration. | 0.95 |
 
 Or, you might want to change the scoring scale to a 5-point Likert
 scale.
 
 ``` r
+
 likert_sentiment <- task(
   name = "Likert scale sentiment analysis",
   system_prompt = "You are an expert annotator. Rate the sentiment of each text on a scale from 1 (very negative) to 5 (very positive) and briefly explain why.",
@@ -94,12 +103,16 @@ likert_result <- annotate(texts, task = likert_sentiment,
                           params = list(temperature = 0))
 ```
 
-|  id | score | explanation                                                                                                          |
-|----:|------:|:---------------------------------------------------------------------------------------------------------------------|
-|   1 |     5 | The word ‘wonderful’ conveys a very positive sentiment, indicating delight or admiration.                            |
-|   2 |     2 | The sentiment is negative due to the use of the word ‘dislike,’ indicating dissatisfaction or disapproval.           |
-|   3 |     2 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ suggests it’s not extremely negative.     |
-|   4 |     5 | The phrase expresses strong positive sentiment with words like ‘absolutely’ and ‘fantastic,’ indicating high praise. |
+    ## [working] (0 + 0) -> 3 -> 1 | ■■■■■■■■■                         25%
+
+    ## [working] (0 + 0) -> 0 -> 4 | ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  100%
+
+| id | score | explanation |
+|---:|---:|:---|
+| 1 | 5 | The word ‘wonderful’ conveys a very positive sentiment. |
+| 2 | 2 | The sentiment is negative due to the use of the word ‘dislike,’ indicating dissatisfaction or disapproval. |
+| 3 | 2 | The word ‘disappointing’ indicates a negative sentiment, though ‘somewhat’ suggests it’s not extremely negative. |
+| 4 | 5 | The phrase expresses strong positive sentiment with words like ‘absolutely’ and ‘fantastic,’ indicating high praise. |
 
 In this way, you can easily adapt the sentiment analysis task to fit
 your specific research needs!

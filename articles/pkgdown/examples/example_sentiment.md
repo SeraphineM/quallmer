@@ -10,14 +10,13 @@ people who left these reviews, from the original dataset.
 ## Loading packages and data
 
 ``` r
+
 library(quanteda.tidy)
 ```
 
-    ## Warning: package 'quanteda.tidy' was built under R version 4.5.2
-
     ## Loading required package: quanteda
 
-    ## Package version: 4.3.1
+    ## Package version: 4.4
     ## Unicode version: 14.0
     ## ICU version: 71.1
 
@@ -33,10 +32,9 @@ library(quanteda.tidy)
     ##     filter
 
 ``` r
+
 library(dplyr)
 ```
-
-    ## Warning: package 'dplyr' was built under R version 4.5.2
 
     ## 
     ## Attaching package: 'dplyr'
@@ -54,20 +52,15 @@ library(dplyr)
     ##     intersect, setdiff, setequal, union
 
 ``` r
+
 library(tidyr)
-```
-
-    ## Warning: package 'tidyr' was built under R version 4.5.2
-
-``` r
 library(quallmer)
 ```
 
     ## Loading required package: ellmer
 
-    ## Warning: package 'ellmer' was built under R version 4.5.2
-
 ``` r
+
 # inspect the labelled data
 convert(data_corpus_LMRDsample) %>%
   count(polarity, rating) %>%
@@ -92,6 +85,7 @@ The `data_codebook_sentiment` codebook provides structured sentiment
 analysis. Let’s examine its components:
 
 ``` r
+
 # View the codebook name and role
 cat("Codebook name:", data_codebook_sentiment$name, "\n\n")
 ```
@@ -99,12 +93,14 @@ cat("Codebook name:", data_codebook_sentiment$name, "\n\n")
     ## Codebook name: Sentiment analysis
 
 ``` r
+
 cat("Role:", data_codebook_sentiment$role, "\n\n")
 ```
 
     ## Role: You are a political communication analyst evaluating public statements.
 
 ``` r
+
 # View the instructions
 cat("Instructions:\n", data_codebook_sentiment$instructions, "\n\n")
 ```
@@ -113,6 +109,7 @@ cat("Instructions:\n", data_codebook_sentiment$instructions, "\n\n")
     ##  Analyze the sentiment of this text, on both a 1-10 scale and as a polarity of negative or positive.
 
 ``` r
+
 # View the schema structure
 cat("Schema:\n")
 ```
@@ -120,6 +117,7 @@ cat("Schema:\n")
     ## Schema:
 
 ``` r
+
 print(data_codebook_sentiment$schema)
 ```
 
@@ -144,6 +142,7 @@ negative) to 10 (most positive)
 ## Coding movie reviews using Gemini 2.5 Flash
 
 ``` r
+
 # Apply sentiment analysis using qlm_code()
 coded_g2.5_flash <- qlm_code(
   data_corpus_LMRDsample,
@@ -158,6 +157,7 @@ coded_g2.5_flash <- qlm_code(
 Total cost:
 
 ``` r
+
 cat("Total cost: $", round(sum(coded_g2.5_flash$cost), 4), sep = "")
 ```
 
@@ -171,6 +171,7 @@ use
 to assess the LLM’s performance:
 
 ``` r
+
 # Extract gold standard labels from corpus docvars
 # The docvars include both 'polarity' (neg/pos) and 'rating' (1-10)
 gold_standard <- data_corpus_LMRDsample |>
@@ -190,6 +191,7 @@ polarity_validation <- qlm_validate(
     ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
 
 ``` r
+
 print(polarity_validation)
 ```
 
@@ -209,6 +211,7 @@ print(polarity_validation)
     ## Cohen's kappa: 0.9000
 
 ``` r
+
 # Validate rating predictions (ordinal data)
 rating_validation <- qlm_validate(
   coded_g2.5_flash,
@@ -222,6 +225,7 @@ rating_validation <- qlm_validate(
     ## ℹ Use `as_qlm_coded()` directly to provide coder names and metadata.
 
 ``` r
+
 print(rating_validation)
 ```
 
@@ -240,6 +244,7 @@ If we were to treat the `rating` variable as interval, then we get these
 validation metrics:
 
 ``` r
+
 qlm_validate(
   coded_g2.5_flash,
   gold = gold_standard,
@@ -282,6 +287,7 @@ to try a more advanced model, to see how this changes things, comparing
 its performance to the previous model, and also to the gold standard.
 
 ``` r
+
 # Apply sentiment analysis using qlm_code()
 coded_gpt5.1 <- qlm_code(
   data_corpus_LMRDsample,
@@ -297,6 +303,7 @@ Now we can compare the agreement between the two LLM codings, for
 polarity:
 
 ``` r
+
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "polarity", level = "nominal")
 ```
 
@@ -314,11 +321,9 @@ qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "polarity", level = "nominal")
 
     ## ── polarity (nominal)
 
-    ## Percent agreement: 0.9750
-
-    ## Krippendorff's alpha: 0.9501
-
-    ## Kappa: 0.9500
+    ## Percent agreement     0.9750 
+    ## Krippendorff's alpha  0.9501 
+    ## Kappa                 0.9500
 
     ## 
 
@@ -326,6 +331,7 @@ For the numerical (1-10) variable for rating, we can specify the level
 as ordinal:
 
 ``` r
+
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "ordinal")
 ```
 
@@ -343,15 +349,11 @@ qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "ordinal")
 
     ## ── rating (ordinal)
 
-    ## Percent agreement: 0.5900
-
-    ## Krippendorff's alpha: 0.9443
-
-    ## Weighted kappa: 0.7525
-
-    ## Kendall's W: 0.9538
-
-    ## Spearman's rho: 0.9609
+    ## Percent agreement     0.5900 
+    ## Krippendorff's alpha  0.9443 
+    ## Weighted kappa        0.7525 
+    ## Kendall's W           0.9538 
+    ## Spearman's rho        0.9609
 
     ## 
 
@@ -359,6 +361,7 @@ If we change the tolerance for agreement, we see that agreement changes
 but that no other measures do:
 
 ``` r
+
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "ordinal",
             tolerance = 1)
 ```
@@ -377,21 +380,18 @@ qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "ordinal",
 
     ## ── rating (ordinal)
 
-    ## Percent agreement: 0.9700
-
-    ## Krippendorff's alpha: 0.9443
-
-    ## Weighted kappa: 0.7525
-
-    ## Kendall's W: 0.9538
-
-    ## Spearman's rho: 0.9609
+    ## Percent agreement     0.9700 
+    ## Krippendorff's alpha  0.9443 
+    ## Weighted kappa        0.7525 
+    ## Kendall's W           0.9538 
+    ## Spearman's rho        0.9609
 
     ## 
 
 If we treat the 1-10 ratings as interval, then we see:
 
 ``` r
+
 qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "interval")
 ```
 
@@ -409,13 +409,10 @@ qlm_compare(coded_g2.5_flash, coded_gpt5.1, by = "rating", level = "interval")
 
     ## ── rating (interval)
 
-    ## Percent agreement: 0.5900
-
-    ## Krippendorff's alpha: 0.9743
-
-    ## ICC: 0.9744
-
-    ## Pearson's r: 0.9793
+    ## Percent agreement     0.5900 
+    ## Krippendorff's alpha  0.9743 
+    ## ICC                   0.9744 
+    ## Pearson's r           0.9793
 
     ## 
 
@@ -425,6 +422,7 @@ Finally, we can compare the new LLM scoring to the gold standard, for
 polarity:
 
 ``` r
+
 qlm_validate(
   coded_gpt5.1,
   gold = gold_standard,
@@ -500,6 +498,7 @@ That’s only a tiny improvement.
 For the interval rating:
 
 ``` r
+
 qlm_validate(
   coded_gpt5.1,
   gold = gold_standard,
