@@ -49,3 +49,4 @@ qlm_meta(cb, "name")
 \item \code{\link[=inputs]{inputs()}} for extracting input data
 }
 }
+\keyword{internal}

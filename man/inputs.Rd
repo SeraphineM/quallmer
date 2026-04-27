@@ -46,3 +46,4 @@ texts
 \item \code{\link[=qlm_meta]{qlm_meta()}} for extracting metadata
 }
 }
+\keyword{internal}
