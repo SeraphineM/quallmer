@@ -24,3 +24,6 @@
 ^repomix-output\.xml$
 ^LICENSE\.md$
 ^joss_paper$
+^CITATION\.cff$
+^\.positai$
+^quallmer-context\.xml$

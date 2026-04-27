@@ -45,6 +45,10 @@ navbar:
         href: articles/pkgdown/examples/example_images.html
       - text: Audio transcription and analysis
         href: articles/pkgdown/examples/example_audio.html
+      - text: Text segmentation
+        href: articles/pkgdown/examples/example_segmentation.html
+      - text: Quasi-sentence segmentation
+        href: articles/pkgdown/examples/example_quasi_sentences.html
     reference:
       text: Reference
       href: reference/index.html
@@ -67,6 +71,7 @@ reference:
       - qlm_code
       - qlm_replicate
       - qlm_codebook
+      - qlm_segment
 
   - title: Human-coded data
     desc: Convert and work with human-coded or externally coded data
