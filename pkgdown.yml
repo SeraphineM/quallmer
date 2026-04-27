@@ -5,6 +5,7 @@ articles:
   pkgdown/examples/example_audio: pkgdown/examples/example_audio.html
   pkgdown/examples/example_illiberalism: pkgdown/examples/example_illiberalism.html
   pkgdown/examples/example_images: pkgdown/examples/example_images.html
+  pkgdown/examples/example_quasi_sentences_test: pkgdown/examples/example_quasi_sentences_test.html
   pkgdown/examples/example_quasi_sentences: pkgdown/examples/example_quasi_sentences.html
   pkgdown/examples/example_segmentation: pkgdown/examples/example_segmentation.html
   pkgdown/examples/example_sentiment: pkgdown/examples/example_sentiment.html
@@ -14,7 +15,7 @@ articles:
   pkgdown/tutorials/trail: pkgdown/tutorials/trail.html
   pkgdown/tutorials/validate: pkgdown/tutorials/validate.html
   pkgdown/getting-started/workflow: pkgdown/getting-started/workflow.html
-last_built: 2026-04-27T08:17Z
+last_built: 2026-04-27T22:59Z
 urls:
   reference: https://quallmer.github.io/quallmer/reference
   article: https://quallmer.github.io/quallmer/articles
