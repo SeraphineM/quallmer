@@ -10,7 +10,6 @@ other audio content.
 ## Loading packages and data
 
 ``` r
-
 library(quallmer)
 library(dplyr)
 library(purrr)
@@ -20,7 +19,6 @@ library(knitr)
 First, we identify the audio files to analyze:
 
 ``` r
-
 # Get all audio files from the data folder
 audio_files <- list.files("data/audio/",
                           pattern = "\\.(wav|mp3)$",
@@ -32,7 +30,6 @@ cat("Found", length(audio_files), "audio files:\n")
     ## Found 6 audio files:
 
 ``` r
-
 for (f in audio_files) {
   size_mb <- file.size(f) / 1024^2
   duration_sec <- NA  # Would require audio package to calculate
@@ -57,7 +54,6 @@ transcription. We use the `openai` package to transcribe each audio
 file:
 
 ``` r
-
 library(openai)
 
 # Transcribe all audio files
@@ -84,7 +80,6 @@ saveRDS(transcriptions, "data/transcriptions_whisper.rds")
 Let’s examine the transcribed content:
 
 ``` r
-
 # Display each transcription (truncated for readability)
 for (i in seq_along(transcriptions)) {
   cat("=== File:", names(transcriptions)[i], "===\n")
@@ -117,7 +112,6 @@ for (i in seq_along(transcriptions)) {
     ## शालिनी के पास सौ रुपए हैं। सीता और सुनील का लड़का बहुत होशयार है। तुम्हारी कविता लिठने का शौक कब से शुरू हुआ। सोते हुए शेर को जगाना उच्चित नहीं है। शोर मत करो नहीं तो सुहासिनी जाग जाएगी। काम शुरू होने...
 
 ``` r
-
 # Word counts
 word_counts <- map_int(transcriptions, ~length(strsplit(.x, "\\s+")[[1]]))
 cat("Word count statistics:\n")
@@ -126,14 +120,12 @@ cat("Word count statistics:\n")
     ## Word count statistics:
 
 ``` r
-
 cat("  Range:", min(word_counts), "-", max(word_counts), "words\n")
 ```
 
     ##   Range: 2 - 119 words
 
 ``` r
-
 cat("  Mean:", round(mean(word_counts)), "words\n")
 ```
 
@@ -145,7 +137,6 @@ Now we create a codebook to extract structured information from the
 transcripts. This codebook analyzes language, topics, tone, and content:
 
 ``` r
-
 # Define a comprehensive transcript analysis codebook
 codebook_transcripts <- qlm_codebook(
   name = "Speech Transcript Analysis",
@@ -213,7 +204,6 @@ We use Gemini 2.5 Flash to analyze the transcripts. This model is fast
 and cost-effective for text analysis:
 
 ``` r
-
 # Apply transcript analysis using qlm_code()
 coded_transcripts <- qlm_code(
   transcriptions,
@@ -236,7 +226,6 @@ saveRDS(coded_transcripts, "data/coded_transcripts_gemini.rds")
 Let’s view the extracted information:
 
 ``` r
-
 # Display key results
 coded_transcripts %>%
   select(.filename, language, language_confidence, speech_type,
@@ -256,12 +245,11 @@ coded_transcripts %>%
 | OSR_fr_000_0041_8k.wav | French | high | spontaneous | neutral | mixed |
 | OSR_in_000_0064_8k.wav | Hindi | high | spontaneous | neutral | mixed |
 
-Transcript Analysis Results {.table}
+Transcript Analysis Results
 
 Total cost for analyzing 6 transcripts:
 
 ``` r
-
 cat("Transcription cost (Whisper): ~$",
     round(sum(word_counts) * 0.006 / 100, 4), " (estimated)\n", sep = "")
 ```
@@ -269,7 +257,6 @@ cat("Transcription cost (Whisper): ~$",
     ## Transcription cost (Whisper): ~$0.0177 (estimated)
 
 ``` r
-
 cat("Analysis cost (Gemini): $",
     round(sum(coded_transcripts$cost, na.rm = TRUE), 4), "\n", sep = "")
 ```
@@ -279,14 +266,12 @@ cat("Analysis cost (Gemini): $",
 ### Language distribution
 
 ``` r
-
 cat("Languages detected:\n")
 ```
 
     ## Languages detected:
 
 ``` r
-
 language_table <- table(coded_transcripts$language)
 print(language_table)
 ```
@@ -296,7 +281,6 @@ print(language_table)
     ##        2        1        1        2
 
 ``` r
-
 cat("\nLanguage confidence levels:\n")
 ```
 
@@ -304,7 +288,6 @@ cat("\nLanguage confidence levels:\n")
     ## Language confidence levels:
 
 ``` r
-
 print(table(coded_transcripts$language_confidence))
 ```
 
@@ -315,7 +298,6 @@ print(table(coded_transcripts$language_confidence))
 ### Topics and themes
 
 ``` r
-
 # Display topics for each transcript
 coded_transcripts %>%
   select(.filename, main_topics) %>%
@@ -334,14 +316,13 @@ coded_transcripts %>%
 | OSR_fr_000_0041_8k.wav | daily observations, human emotions, nature, idiomatic expressions, everyday situations |
 | OSR_in_000_0064_8k.wav | personal characteristics, daily observations, advice, interpersonal interactions, hobbies |
 
-Topics Identified in Each Transcript {.table}
+Topics Identified in Each Transcript
 
 ### Detailed view of one transcript
 
 Let’s examine the complete analysis for one transcript:
 
 ``` r
-
 # Select the first transcript for detailed view
 transcript_detail <- coded_transcripts[1, ]
 
@@ -351,14 +332,12 @@ cat("=== Detailed Analysis ===\n\n")
     ## === Detailed Analysis ===
 
 ``` r
-
 cat("File:", transcript_detail$.filename, "\n\n")
 ```
 
     ## File: F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3
 
 ``` r
-
 cat("Language:", transcript_detail$language,
     "(", transcript_detail$language_confidence, "confidence )\n")
 ```
@@ -366,56 +345,48 @@ cat("Language:", transcript_detail$language,
     ## Language: English ( 1 confidence )
 
 ``` r
-
 cat("Speech type:", transcript_detail$speech_type, "\n")
 ```
 
     ## Speech type: 1
 
 ``` r
-
 cat("Tone:", transcript_detail$tone, "\n")
 ```
 
     ## Tone: 5
 
 ``` r
-
 cat("Sentiment:", transcript_detail$sentiment, "\n\n")
 ```
 
     ## Sentiment: 2
 
 ``` r
-
 cat("Main topics:", transcript_detail$main_topics, "\n\n")
 ```
 
     ## Main topics: societal tension, stress, negative news, impatience
 
 ``` r
-
 cat("Key phrases:", transcript_detail$key_phrases, "\n\n")
 ```
 
     ## Key phrases: tension in the air, stressed out, negative news, impatience of people
 
 ``` r
-
 cat("Summary:", transcript_detail$summary, "\n\n")
 ```
 
     ## Summary: The speaker observes a pervasive tension in society, suggesting it stems from headlines, general stress, or negative news. This tension is evident in the impatience displayed by people.
 
 ``` r
-
 cat("=== Original Transcription (first 300 chars) ===\n")
 ```
 
     ## === Original Transcription (first 300 chars) ===
 
 ``` r
-
 cat(substr(transcriptions[1], 1, 300), "...\n")
 ```
 
@@ -424,7 +395,6 @@ cat(substr(transcriptions[1], 1, 300), "...\n")
 ## Summary statistics
 
 ``` r
-
 # Speech type distribution
 cat("Speech types:\n")
 ```
@@ -432,7 +402,6 @@ cat("Speech types:\n")
     ## Speech types:
 
 ``` r
-
 print(table(coded_transcripts$speech_type))
 ```
 
@@ -441,7 +410,6 @@ print(table(coded_transcripts$speech_type))
     ##              1              0              0              3              2
 
 ``` r
-
 # Tone distribution
 cat("\nTone distribution:\n")
 ```
@@ -450,7 +418,6 @@ cat("\nTone distribution:\n")
     ## Tone distribution:
 
 ``` r
-
 print(table(coded_transcripts$tone))
 ```
 
@@ -459,7 +426,6 @@ print(table(coded_transcripts$tone))
     ##              0              0              5              0              1
 
 ``` r
-
 # Sentiment distribution
 cat("\nSentiment distribution:\n")
 ```
@@ -468,7 +434,6 @@ cat("\nSentiment distribution:\n")
     ## Sentiment distribution:
 
 ``` r
-
 print(table(coded_transcripts$sentiment))
 ```
 
@@ -481,7 +446,6 @@ print(table(coded_transcripts$sentiment))
 Document the complete analysis:
 
 ``` r
-
 qlm_trail(coded_transcripts, path = "audio_analysis")
 ```
 

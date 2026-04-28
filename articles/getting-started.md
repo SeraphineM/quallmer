@@ -27,7 +27,6 @@ To get started with `quallmer`, you first need to install the package
 from GitHub.
 
 ``` r
-
 # If you don't have pak installed yet, uncomment and run the following line:
 # install.packages("pak")
 # Then, install quallmer using pak:
@@ -37,7 +36,6 @@ pak::pak("quallmer/quallmer")
 Then, you can load the package and begin using its functions.
 
 ``` r
-
 library(quallmer)
 #> Loading required package: ellmer
 ```

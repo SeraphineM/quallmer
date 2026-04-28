@@ -8,6 +8,8 @@
   speeches](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_illiberalism.md):
 - [Example: Image analysis of campaign
   posters](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_images.md):
+- [Example: Quasi-sentence segmentation
+  (test)](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_quasi_sentences_test.md):
 - [Example: Quasi-sentence
   segmentation](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_quasi_sentences.md):
 - [Example: Text
@@ -26,3 +28,4 @@
   app](https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.md):
 - [The quallmer
   workflow](https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.md):
+- [Workshops](https://quallmer.github.io/quallmer/articles/pkgdown/workshops.md):

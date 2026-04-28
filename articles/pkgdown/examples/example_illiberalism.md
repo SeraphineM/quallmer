@@ -21,7 +21,6 @@ with regime type, with autocratic leaders using more illiberal language.
 ## Loading packages and data
 
 ``` r
-
 library(quallmer)
 library(dplyr)
 library(ggplot2)
@@ -31,7 +30,6 @@ We first load the full corpus of 4,740 speeches (a 100-speech sample is
 available in the package as `data_corpus_ms2020sample`):
 
 ``` r
-
 # Load full corpus from examples folder
 data_speeches_ms2020 <- readRDS("data/data_speeches_ms2020.rds")
 
@@ -63,9 +61,8 @@ We create a codebook that operationalizes the liberal-illiberal concept
 from the original study:
 
 ``` r
-
 codebook_ideology <- qlm_codebook(
-  name = "Liberal-illiberal rhetoric",
+  name = "Liberal-illiberal segments",
   instructions = paste(
     "Analyze the rhetorical style of this political speech.",
     "",
@@ -83,14 +80,16 @@ codebook_ideology <- qlm_codebook(
     "- Democratic values and rule of law",
     "- Open society principles",
     "",
-    "A score of 0 indicates neutral or mixed rhetoric."
+    "Split into illiberal and liberal segments."
   ),
   schema = ellmer::type_object(
-    score = ellmer::type_integer(
-      description = "Rhetoric score from -10 (illiberal) to +10 (liberal)"
+    aspect    = ellmer::type_enum(
+      c("rhetoric_style"),
+      description = "Ideology discussed in this segment"
     ),
-    explanation = ellmer::type_string(
-      description = "Brief explanation of the assigned score"
+    sentiment = ellmer::type_enum(
+      c("liberal", "illiberal"),
+      description = "Ideology expressed"
     )
   ),
   role = "You are an expert political scientist analyzing political rhetoric.",
@@ -98,14 +97,14 @@ codebook_ideology <- qlm_codebook(
 )
 
 codebook_ideology
-#> quallmer codebook: Liberal-illiberal rhetoric 
+#> quallmer codebook: Liberal-illiberal segments 
 #>   Input type:   text
 #>   Role:         You are an expert political scientist analyzing political rh...
 #>   Instructions: Analyze the rhetorical style of this political speech.  ILLI...
 #>   Output schema:ellmer::TypeObject
 #>   Levels:
-#>     score: ordinal
-#>     explanation: nominal
+#>     aspect: nominal
+#>     sentiment: nominal
 ```
 
 ## Running the LLM analysis
@@ -113,9 +112,8 @@ codebook_ideology
 We code all 4,740 speeches using GPT-4o-mini:
 
 ``` r
-
-coded_speeches <- qlm_code(
-  data_speeches_ms2020$text,
+coded_speeches <- qlm_segment(
+  data_speeches_ms2020$text[1:20],
   codebook = codebook_ideology,
   model = "openai/gpt-4o-mini",
   name = "gpt4o_mini_ideology",
@@ -129,7 +127,6 @@ saveRDS(coded_speeches, "data/coded_ideology_gpt4o.rds")
 Here’s a random sample of 10 coded speeches with metadata:
 
 ``` r
-
 set.seed(42)
 sample_ids <- sample(data_speeches_ms2020$.id, 10)
 
@@ -159,7 +156,7 @@ data_speeches_ms2020 %>%
 | 4069 | Vladimir Putin | Russia | Autocracy | -8 | The speech predominantly features illiberal rhetoric, emphasizing national security, military strength, and threats from international terrorism, reflecting a strong nationalist perspective. There are appeals to stability, order, and a paternalistic view of governance, with a clear distinction between ‘in-groups’ (the military and Russian citizens) and ‘out-groups’ (terrorists and foreign groups). The focus is on state security, military success, and a strong authoritarian leadership, which undermines individual rights and pluralism. |
 | 4261 | Vladimir Putin | Russia | Autocracy | -5 | The speech exhibits several characteristics of illiberal rhetoric: a strong emphasis on national pride, traditional values, and a focus on collective achievements over individual rights. The speaker praises cultural and scientific contributions in a manner that underscores patriotism and stability, while framing individual accomplishments within the context of national interest. There are notable in-group distinctions made by celebrating ‘laureates’ who advance Russia’s defense and cultural heritage, promoting a narrative of unity and traditional values which aligns with illiberal themes. |
 
-Random sample of 10 coded speeches {.table}
+Random sample of 10 coded speeches
 
 ## Aggregating to speaker level
 
@@ -176,7 +173,6 @@ terms, and $`a = 0.5`$ is a Jeffreys prior. Since the LLM uses a -10 to
 +10 scale, we standardize both to z-scores for comparison:
 
 ``` r
-
 # Combine coded results with metadata
 coded_with_meta <- data_speeches_ms2020 %>%
   select(.id, speaker, country, regime, dictionary_score = score) %>%
@@ -222,7 +218,6 @@ to assess inter-rater reliability between the two approaches at the
 speaker level:
 
 ``` r
-
 # Create qlm_coded objects for comparison (using z-scores)
 dictionary_coded <- as_qlm_coded(
   speaker_scores %>% select(.id = speaker, score = dictionary_z),
@@ -236,7 +231,6 @@ llm_coded <- as_qlm_coded(
 ```
 
 ``` r
-
 # Compare the two approaches
 # Set tolerance to 1 since the scales are different (z-scores) and we want to assess correlation rather than exact agreement (this affects the percent agreement metric)
 comparison <- qlm_compare(dictionary_coded, llm_coded, by = "score", level = "interval", tolerance = 1)
@@ -276,7 +270,6 @@ illiberal-liberal scale. We create a comparison showing both approaches
 using standardized scores:
 
 ``` r
-
 # Prepare data for plotting (using z-scores for comparability)
 plot_data <- speaker_scores %>%
   tidyr::pivot_longer(
@@ -333,7 +326,6 @@ A direct comparison of the two scoring methods using standardized
 scores:
 
 ``` r
-
 ggplot(speaker_scores, aes(x = dictionary_z, y = llm_z, color = regime)) +
   geom_point(size = 4, alpha = 0.8) +
   geom_smooth(method = "lm", se = TRUE, color = "gray40", linetype = "dashed") +
@@ -375,7 +367,6 @@ discrepancy.
 Document the complete analysis:
 
 ``` r
-
 qlm_trail(coded_speeches, path = "ideology_replication")
 ```
 

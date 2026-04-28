@@ -62,7 +62,6 @@ across all your R sessions as the Shiny app runs in the background. Here
 is a set of commands to open the .Renviron file for modification:
 
 ``` r
-
 require(usethis)
 edit_r_environ()
 ```

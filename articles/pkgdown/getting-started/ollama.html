@@ -60,6 +60,7 @@
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_quasi_sentences.html">Quasi-sentence segmentation</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../../../articles/pkgdown/workshops.html">Workshops</a></li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../../../news/index.html">Changelog</a></li>
       </ul>
@@ -110,7 +111,7 @@ can take some time, depending on your machine.</p>
 <span></span>
 <span><span class="co"># Load the rollama package and ping Ollama to ensure connectivity.</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://jbgruber.github.io/rollama/" class="external-link">rollama</a></span><span class="op">)</span></span>
-<span><span class="fu">ping_ollama</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://jbgruber.github.io/rollama/reference/ping_ollama.html" class="external-link">ping_ollama</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># if everything works as it should, </span></span>
 <span><span class="co"># you should see the following in your console:</span></span>
 <span><span class="co"># Ollama (v0.4.2) is running at &lt;http://localhost:11434&gt;!</span></span>
@@ -126,7 +127,7 @@ can take some time, depending on your machine.</p>
 <span><span class="co"># which you can pull with the command pull_model("model_name")</span></span>
 <span></span>
 <span><span class="co"># let's do a simple test with the model</span></span>
-<span><span class="fu">query</span><span class="op">(</span><span class="st">"What is the capital of Australia."</span>, model <span class="op">=</span> <span class="st">"llama3.2:1b"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://jbgruber.github.io/rollama/reference/query.html" class="external-link">query</a></span><span class="op">(</span><span class="st">"What is the capital of Australia."</span>, model <span class="op">=</span> <span class="st">"llama3.2:1b"</span><span class="op">)</span></span></code></pre></div>
 <p>Now that we have set up the Ollama model, we can use it with the
 <code>quallmer</code> package for qualitative coding tasks. To use an
 Ollama model, simply specify the <code>model</code> parameter in the

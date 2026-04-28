@@ -60,6 +60,7 @@
     <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_quasi_sentences.html">Quasi-sentence segmentation</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../../../articles/pkgdown/workshops.html">Workshops</a></li>
 <li class="nav-item"><a class="nav-link" href="../../../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../../../news/index.html">Changelog</a></li>
       </ul>
@@ -151,7 +152,7 @@ is available in the package as
 concept from the original study:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">codebook_ideology</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span>
-<span>  name <span class="op">=</span> <span class="st">"Liberal-illiberal rhetoric"</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"Liberal-illiberal segments"</span>,</span>
 <span>  instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Analyze the rhetorical style of this political speech."</span>,</span>
 <span>    <span class="st">""</span>,</span>
@@ -169,14 +170,16 @@ concept from the original study:</p>
 <span>    <span class="st">"- Democratic values and rule of law"</span>,</span>
 <span>    <span class="st">"- Open society principles"</span>,</span>
 <span>    <span class="st">""</span>,</span>
-<span>    <span class="st">"A score of 0 indicates neutral or mixed rhetoric."</span></span>
+<span>    <span class="st">"Split into illiberal and liberal segments."</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  schema <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    score <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_integer</a></span><span class="op">(</span></span>
-<span>      description <span class="op">=</span> <span class="st">"Rhetoric score from -10 (illiberal) to +10 (liberal)"</span></span>
+<span>    aspect    <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rhetoric_style"</span><span class="op">)</span>,</span>
+<span>      description <span class="op">=</span> <span class="st">"Ideology discussed in this segment"</span></span>
 <span>    <span class="op">)</span>,</span>
-<span>    explanation <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
-<span>      description <span class="op">=</span> <span class="st">"Brief explanation of the assigned score"</span></span>
+<span>    sentiment <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"liberal"</span>, <span class="st">"illiberal"</span><span class="op">)</span>,</span>
+<span>      description <span class="op">=</span> <span class="st">"Ideology expressed"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  role <span class="op">=</span> <span class="st">"You are an expert political scientist analyzing political rhetoric."</span>,</span>
@@ -184,22 +187,22 @@ concept from the original study:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">codebook_ideology</span></span>
-<span><span class="co">#&gt; quallmer codebook: Liberal-illiberal rhetoric </span></span>
+<span><span class="co">#&gt; quallmer codebook: Liberal-illiberal segments </span></span>
 <span><span class="co">#&gt;   Input type:   text</span></span>
 <span><span class="co">#&gt;   Role:         You are an expert political scientist analyzing political rh...</span></span>
 <span><span class="co">#&gt;   Instructions: Analyze the rhetorical style of this political speech.  ILLI...</span></span>
 <span><span class="co">#&gt;   Output schema:ellmer::TypeObject</span></span>
 <span><span class="co">#&gt;   Levels:</span></span>
-<span><span class="co">#&gt;     score: ordinal</span></span>
-<span><span class="co">#&gt;     explanation: nominal</span></span></code></pre></div>
+<span><span class="co">#&gt;     aspect: nominal</span></span>
+<span><span class="co">#&gt;     sentiment: nominal</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="running-the-llm-analysis">Running the LLM analysis<a class="anchor" aria-label="anchor" href="#running-the-llm-analysis"></a>
 </h2>
 <p>We code all 4,740 speeches using GPT-4o-mini:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">coded_speeches</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
-<span>  <span class="va">data_speeches_ms2020</span><span class="op">$</span><span class="va">text</span>,</span>
+<code class="sourceCode R"><span><span class="va">coded_speeches</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_segment.html">qlm_segment</a></span><span class="op">(</span></span>
+<span>  <span class="va">data_speeches_ms2020</span><span class="op">$</span><span class="va">text</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span><span class="op">]</span>,</span>
 <span>  codebook <span class="op">=</span> <span class="va">codebook_ideology</span>,</span>
 <span>  model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"gpt4o_mini_ideology"</span>,</span>
@@ -406,7 +409,7 @@ unity and traditional values which aligns with illiberal themes.</td>
 <p>The original study aggregates speech-level dictionary counts to
 speaker-level scores using a log-odds transformation (Lowe et al.,
 2011):</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>μ</mi><mo>=</mo><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>L</mi><mo>+</mo><mi>a</mi></mrow><mrow><mi>I</mi><mo>+</mo><mi>a</mi></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mu = \log\left(\frac{L + a}{I + a}\right)</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>μ</mi><mo>=</mo><mo>log</mo><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>L</mi><mo>+</mo><mi>a</mi></mrow><mrow><mi>I</mi><mo>+</mo><mi>a</mi></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mu = \log\left(\frac{L + a}{I + a}\right)</annotation></semantics></math></p>
 <p>where
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>L</mi><annotation encoding="application/x-tex">L</annotation></semantics></math>
 and
@@ -547,7 +550,7 @@ using standardized scores:</p>
 <span>    legend.box <span class="op">=</span> <span class="st">"vertical"</span>,</span>
 <span>    panel.grid.major.y <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_blank</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="example_illiberalism_files/figure-html/figure1-comparison-1.png" class="r-plt" alt="" width="960"></p>
+<p><img src="example_illiberalism_files/figure-html/figure1-comparison-1.png" class="r-plt" width="960"></p>
 <p><em>Note:</em> Regime classifications are based on V-Dem’s
 <code>v2x_regime</code> variable and correspond to the years mostly
 covered by the speeches for each speaker. For more details, see the <a href="https://doi.org/10.1007/s11135-019-00885-7" class="external-link">original
@@ -576,7 +579,7 @@ scores:</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>legend.position <span class="op">=</span> <span class="st">"bottom"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `geom_smooth()` using formula = 'y ~ x'</span></span></code></pre></div>
-<p><img src="example_illiberalism_files/figure-html/scatter-1.png" class="r-plt" alt="" width="768"></p>
+<p><img src="example_illiberalism_files/figure-html/scatter-1.png" class="r-plt" width="768"></p>
 <p>The scatter plot shows the relationship between the two scoring
 methods at the speaker level. Points close to the dotted diagonal line
 indicate strong agreement between methods. The color separation confirms

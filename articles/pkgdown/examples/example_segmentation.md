@@ -14,7 +14,6 @@ presidential inaugural addresses.
 ## Packages
 
 ``` r
-
 library(quallmer)
 library(quanteda)
 library(dplyr)
@@ -36,7 +35,6 @@ of the Large Movie Review Dataset bundled with quallmer (Maas et al.,
 2011): one negative and one positive.
 
 ``` r
-
 set.seed(55)
 idx_neg <- which(docvars(data_corpus_LMRDsample)$polarity == "neg")
 idx_pos <- which(docvars(data_corpus_LMRDsample)$polarity == "pos")
@@ -53,7 +51,6 @@ corp_reviews
 ### The codebook
 
 ``` r
-
 cb_absa <- qlm_codebook(
   name = "Aspect-based sentiment",
   instructions = paste(
@@ -92,7 +89,6 @@ cb_absa
 ### Segmenting the reviews
 
 ``` r
-
 segs_reviews <- qlm_segment(
   corp_reviews,
   codebook = cb_absa,
@@ -109,7 +105,6 @@ carries `docid`, `segid`, `aspect`, and `sentiment`, plus the `polarity`
 and `rating` docvars inherited from the source corpus:
 
 ``` r
-
 docvars(segs_reviews) |>
   mutate(text = as.character(segs_reviews)) |>
   select(docid, segid, aspect, sentiment, polarity, rating, text) |>
@@ -143,7 +138,6 @@ Pooling across both reviews, we can see which aspects attract positive
 versus negative commentary:
 
 ``` r
-
 docvars(segs_reviews) |>
   count(aspect, sentiment) |>
   mutate(
@@ -182,7 +176,6 @@ We use the two most recent speeches in
 [`quanteda::data_corpus_inaugural`](https://quanteda.io/reference/data_corpus_inaugural.html):
 
 ``` r
-
 corp_inaugural <- tail(data_corpus_inaugural, 2)
 corp_inaugural
 #> Corpus consisting of 2 documents and 4 docvars.
@@ -196,7 +189,6 @@ corp_inaugural
 ### The codebook
 
 ``` r
-
 cb_inaugural <- qlm_codebook(
   name = "Thematic segmentation of inaugural addresses",
   instructions = paste(
@@ -238,7 +230,6 @@ cb_inaugural
 ### Segmenting the speeches
 
 ``` r
-
 segs_inaugural <- qlm_segment(
   corp_inaugural,
   codebook = cb_inaugural,
@@ -250,7 +241,6 @@ saveRDS(segs_inaugural, "data/segs_inaugural.rds")
 ### Summary of themes
 
 ``` r
-
 docvars(segs_inaugural) |>
   count(docid, theme) |>
   tidyr::pivot_wider(names_from = docid, values_from = n, values_fill = 0L) |>
@@ -268,12 +258,11 @@ docvars(segs_inaugural) |>
 | other                |          2 |          2 |
 | military_security    |          0 |          4 |
 
-Number of segments by theme and speech {.table}
+Number of segments by theme and speech
 
 ### Theme distribution by speech
 
 ``` r
-
 docvars(segs_inaugural) |>
   count(docid, theme) |>
   mutate(theme = tools::toTitleCase(gsub("_", " ", theme))) |>
@@ -303,7 +292,6 @@ section 12.6).
 ### A second segmentation
 
 ``` r
-
 segs_reviews_2 <- qlm_segment(
   corp_reviews,
   codebook = cb_absa,
@@ -319,7 +307,6 @@ saveRDS(segs_reviews_2, "data/segs_reviews_2.rds")
 the same locations, ignoring the aspect and sentiment labels:
 
 ``` r
-
 alphas <- qlm_compare(segs_reviews, segs_reviews_2)
 print(alphas)
 #> 
@@ -352,7 +339,6 @@ placement and whether the models agree on the sentiment label assigned
 to each span:
 
 ``` r
-
 alphas_by <- qlm_compare(segs_reviews, segs_reviews_2, by = "sentiment")
 print(alphas_by)
 #> 

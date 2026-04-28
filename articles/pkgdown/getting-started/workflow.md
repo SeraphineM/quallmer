@@ -22,7 +22,6 @@ addresses to demonstrate the core functions.
 We’ll use the inaugural addresses from the quanteda package:
 
 ``` r
-
 library(quallmer)
 library(quanteda)
 
@@ -36,7 +35,6 @@ texts
 A codebook specifies what the LLM should extract from your texts:
 
 ``` r
-
 my_codebook <- qlm_codebook(
   name = "Tone analysis",
   instructions = "Classify the overall tone of this political speech.",
@@ -57,7 +55,6 @@ my_codebook
 Apply the codebook to your texts using an LLM:
 
 ``` r
-
 coded <- qlm_code(
   texts,
   my_codebook,
@@ -73,7 +70,6 @@ coded
 Test reliability by coding again with a different model:
 
 ``` r
-
 coded2 <- qlm_replicate(
   coded,
   model = "openai/gpt-4o",
@@ -88,7 +84,6 @@ coded2
 Assess inter-rater reliability between the two coding runs:
 
 ``` r
-
 comparison <- qlm_compare(coded, coded2)
 comparison
 ```
@@ -103,7 +98,6 @@ Document your complete workflow, including models, parameters, and
 results and a Quarto report with replication instructions:
 
 ``` r
-
 # View the trail
 trail <- qlm_trail(coded, coded2, comparison)
 trail

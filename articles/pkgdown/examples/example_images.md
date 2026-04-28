@@ -10,7 +10,6 @@ traditionally require manual human coding.
 ## Loading packages and data
 
 ``` r
-
 library(quallmer)
 library(dplyr)
 library(knitr)
@@ -19,7 +18,6 @@ library(knitr)
 First, we identify the image files to analyze:
 
 ``` r
-
 # Get all image files from the data folder
 image_files <- list.files("data/images/",
                           pattern = "\\.jpg$",
@@ -31,7 +29,6 @@ cat("Found", length(image_files), "campaign poster images:\n")
     ## Found 5 campaign poster images:
 
 ``` r
-
 print(basename(image_files))
 ```
 
@@ -48,7 +45,6 @@ We create a codebook that operationalizes the annotation task. The
 schema defines what information to extract from each poster:
 
 ``` r
-
 # Define a comprehensive image analysis codebook
 codebook_posters <- qlm_codebook(
   name = "Campaign Poster Analysis",
@@ -125,7 +121,6 @@ extract structured information. We use
 with image file paths:
 
 ``` r
-
 # Apply image analysis using qlm_code()
 coded_posters <- qlm_code(
   image_files,
@@ -148,7 +143,6 @@ saveRDS(coded_posters, "data/coded_posters_gemini3pro.rds")
 Let’s view the extracted information in a table:
 
 ``` r
-
 # Display key results
 coded_posters %>%
   select(.filename, mayoral_candidate, deputy_candidate, facial_expression,
@@ -168,13 +162,12 @@ coded_posters %>%
 | Sofyan_tan.jpg | dr. Sofyan Tan | Nelly Armayanti, SP, MSP | smiling | TRUE | TRUE | 65 |
 | Usman_Siregar.jpg | Usman Su ‘Jabrik’ Siregar | Ir Gunawan Ang SH | neutral | FALSE | FALSE | 50 |
 
-Campaign Poster Analysis Results {.table}
+Campaign Poster Analysis Results
 
 Total cost for analyzing 5 images: (May not display correctly for a
 preview model)
 
 ``` r
-
 cat("Total cost: $", round(sum(coded_posters$cost, na.rm = TRUE), 4), sep = "")
 ```
 
@@ -185,7 +178,6 @@ cat("Total cost: $", round(sum(coded_posters$cost, na.rm = TRUE), 4), sep = "")
 The LLM can translate Indonesian text found in the posters:
 
 ``` r
-
 coded_posters %>%
   select(.filename, text_translation) %>%
   kable(
@@ -202,14 +194,13 @@ coded_posters %>%
 | Sofyan_tan.jpg | WE CAN TOO..!! dr. Sofyan Tan, Nelly Armayanti, SP, MSP. Candidate for Mayor & Deputy Mayor of Medan, Period 2010-2015. Building an Organized, Humane, Prosperous and Modern Medan City. Asking for Blessings & Support. |
 | Usman_Siregar.jpg | We are ‘Medan Kids’ Uncle, Want to be the PEOPLE’S MAYOR Pair from Independent. Usman Su ‘Jabrik’ Siregar Prospective Mayor of Medan 2010-2015 & Ir Gunawan Ang SH Prospective Deputy Mayor of Medan 2010-2015. Bored with nonsense talkers? Support Us Uncle! ‘Medan Kids’ who were born and raised in Medan…! We Wait for a Photocopy of Your ID Card, Now! at Jl. Ismailiyah No. 17/25C Komat I - Medan |
 
-Translated Text from Posters {.table}
+Translated Text from Posters
 
 ### Visual elements
 
 Summary of visual elements across all posters:
 
 ``` r
-
 # Summarize visual elements
 cat("Indonesian flag elements:",
     sum(coded_posters$indonesian_flag, na.rm = TRUE),
@@ -219,7 +210,6 @@ cat("Indonesian flag elements:",
     ## Indonesian flag elements: 3 of 5 posters
 
 ``` r
-
 cat("Party logos present:",
     sum(coded_posters$party_logos, na.rm = TRUE),
     "of", nrow(coded_posters), "posters\n")
@@ -228,7 +218,6 @@ cat("Party logos present:",
     ## Party logos present: 2 of 5 posters
 
 ``` r
-
 cat("\nFacial expressions:\n")
 ```
 
@@ -236,7 +225,6 @@ cat("\nFacial expressions:\n")
     ## Facial expressions:
 
 ``` r
-
 print(table(coded_posters$facial_expression))
 ```
 
@@ -245,7 +233,6 @@ print(table(coded_posters$facial_expression))
     ##       3       0       2       0
 
 ``` r
-
 cat("\nCandidate prominence (% of poster):\n")
 ```
 
@@ -253,7 +240,6 @@ cat("\nCandidate prominence (% of poster):\n")
     ## Candidate prominence (% of poster):
 
 ``` r
-
 cat("Range:", min(coded_posters$candidate_percentage, na.rm = TRUE), "-",
     max(coded_posters$candidate_percentage, na.rm = TRUE), "%\n")
 ```
@@ -261,7 +247,6 @@ cat("Range:", min(coded_posters$candidate_percentage, na.rm = TRUE), "-",
     ## Range: 35 - 65 %
 
 ``` r
-
 cat("Mean:", round(mean(coded_posters$candidate_percentage, na.rm = TRUE), 1), "%\n")
 ```
 
@@ -272,7 +257,6 @@ cat("Mean:", round(mean(coded_posters$candidate_percentage, na.rm = TRUE), 1), "
 Let’s examine the complete analysis for one poster:
 
 ``` r
-
 # Select the first poster for detailed view
 poster_detail <- coded_posters[1, ]
 
@@ -282,70 +266,60 @@ cat("=== Detailed Analysis ===\n\n")
     ## === Detailed Analysis ===
 
 ``` r
-
 cat("File:", poster_detail$.filename, "\n\n")
 ```
 
     ## File: Bahdin.jpg
 
 ``` r
-
 cat("Mayoral candidate:", poster_detail$mayoral_candidate, "\n")
 ```
 
     ## Mayoral candidate: Bahdin
 
 ``` r
-
 cat("Deputy candidate:", poster_detail$deputy_candidate, "\n")
 ```
 
     ## Deputy candidate: Kasim
 
 ``` r
-
 cat("Text translation:", poster_detail$text_translation, "\n\n")
 ```
 
     ## Text translation: Candidate for Mayor and Deputy Mayor of Medan City Period 2010-2015. Bahdin-Kasim. Joining hands to build Medan.
 
 ``` r
-
 cat("Clothing:", poster_detail$clothing_description, "\n")
 ```
 
     ## Clothing: Both candidates are wearing dark formal suits, ties, and black peci caps.
 
 ``` r
-
 cat("Religious buildings:", poster_detail$religious_buildings, "\n\n")
 ```
 
     ## Religious buildings: Great Mosque of Medan (Islamic)
 
 ``` r
-
 cat("Indonesian flag present:", poster_detail$indonesian_flag, "\n")
 ```
 
     ## Indonesian flag present: TRUE
 
 ``` r
-
 cat("Party logos present:", poster_detail$party_logos, "\n")
 ```
 
     ## Party logos present: FALSE
 
 ``` r
-
 cat("Candidate percentage:", poster_detail$candidate_percentage, "%\n")
 ```
 
     ## Candidate percentage: 35 %
 
 ``` r
-
 cat("Facial expression:", poster_detail$facial_expression, "\n")
 ```
 
@@ -358,7 +332,6 @@ cat("Facial expression:", poster_detail$facial_expression, "\n")
 You can code the same images with different models to compare results:
 
 ``` r
-
 # Try with GPT-4o for comparison
 coded_gpt4o <- qlm_code(
   image_files,
@@ -381,7 +354,6 @@ qlm_compare(
 Document the complete analysis:
 
 ``` r
-
 qlm_trail(coded_posters, path = "poster_analysis")
 ```
 

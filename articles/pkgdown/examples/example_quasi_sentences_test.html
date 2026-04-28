@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Example: Quasi-sentence segmentation • quallmer</title>
+<title>Example: Quasi-sentence segmentation (test) • quallmer</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../../../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../../../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../../../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../../../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../../../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../../../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Quasi-sentence segmentation">
+<script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Quasi-sentence segmentation (test)">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -50,7 +50,7 @@
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul>
 </li>
-<li class="active nav-item dropdown">
+<li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-examples">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/examples/example_illiberalism.html">Illiberalism in political speeches</a></li>
@@ -81,7 +81,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Quasi-sentence segmentation</h1>
+      <img src="../../../logo.png" class="logo" alt=""><h1>Example: Quasi-sentence segmentation (test)</h1>
             <h3 data-toc-skip class="subtitle">Segmenting party
 manifestos using Manifesto Project rules with
 <code>qlm_segment()</code>
@@ -89,7 +89,7 @@ manifestos using Manifesto Project rules with
             
       
 
-      <div class="d-none name"><code>example_quasi_sentences.Rmd</code></div>
+      <div class="d-none name"><code>example_quasi_sentences_test.Rmd</code></div>
     </div>
 
     
@@ -104,7 +104,7 @@ genuinely independent claims versus elaborations of a single point? This
 is exactly the kind of nuanced, instruction-following task where LLMs
 can serve as a scalable alternative to human coding.</p>
 <p>This article uses <code><a href="../../../reference/qlm_segment.html">qlm_segment()</a></code> to apply the Manifesto
-Project quasi-sentence rules to the 1972 New Zealand National Party
+Project quasi-sentence rules to the 1983 UK Liberal-SDP Alliance
 election manifesto, and evaluates how faithfully the model follows the
 handbook instructions.</p>
 <div class="section level2">
@@ -119,19 +119,13 @@ handbook instructions.</p>
 <div class="section level2">
 <h2 id="the-data">The data<a class="anchor" aria-label="anchor" href="#the-data"></a>
 </h2>
-<p>The manifesto text is provided as the <code>NZ_NP_1972</code>
+<p>The manifesto text is provided as the <code>Liberal_SDP_1983</code>
 document in <code>data_corpus_MPexamples</code>, a two-document corpus
 of Manifesto Project example texts included in quallmer.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nz_corp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://quanteda.io/reference/corpus_subset.html" class="external-link">corpus_subset</a></span><span class="op">(</span><span class="va">data_corpus_MPexamples</span>, <span class="va">country</span> <span class="op">==</span> <span class="st">"NZ"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">nz_corp</span>, <span class="fl">1</span>, <span class="fl">500</span><span class="op">)</span>, <span class="st">"...\n"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; A Guide to what the next National Government will do for New Zealand</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; THE ECONOMY</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; In 1972 New Zealand had, for the first time, more overseas reserves than total overseas debt. Labour has dissipated these reserves, borrowed about $200 million overseas and incurred annual interest charges mortgaging almost our total export earnings from butter and cheese.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Inflation in 1972 was about 5 per cent, the second lowest of the Organisation for Economic Co-operation and Development (OECD) nations. Today  ...</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">lib_corp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://quanteda.io/reference/corpus_subset.html" class="external-link">corpus_subset</a></span><span class="op">(</span><span class="va">data_corpus_MPexamples</span>, <span class="va">country</span> <span class="op">==</span> <span class="st">"UK"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">lib_corp</span>, <span class="fl">1</span>, <span class="fl">500</span><span class="op">)</span>, <span class="st">"...\n"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ‘Working together for Britain' The General Election on June 9th, 1983 will be seen as a watershed in British politics. It may be recalled as the fateful day when depression became hopelessness and the slide of the post-war years accelerated into the depths of decline. Alternatively it may be remembered as the turning point when the people of this country, at the eleventh hour, decided to turn their backs on dogma and bitterness and chose a new road of partnership and progress. It is to offer rea ...</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="the-codebook">The codebook<a class="anchor" aria-label="anchor" href="#the-codebook"></a>
@@ -144,7 +138,7 @@ output. We load the file at runtime and append a short tail telling the
 model how to format its output.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qs_instructions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="st">"data/quasi-sentences/instructions.txt"</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines</a></span><span class="op">(</span><span class="st">"data/quasi-sentences/instructions_test.txt"</span><span class="op">)</span>,</span>
 <span>  collapse <span class="op">=</span> <span class="st">"\n"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -191,12 +185,12 @@ model how to format its output.</p>
 </h2>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">segs_manifesto</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_segment.html">qlm_segment</a></span><span class="op">(</span></span>
-<span>  <span class="va">nz_corp</span>,</span>
+<span>  <span class="va">lib_corp</span>,</span>
 <span>  codebook <span class="op">=</span> <span class="va">cb_qs</span>,</span>
-<span>  model    <span class="op">=</span> <span class="st">"openai/gpt-5.5"</span>,</span>
-<span>  name     <span class="op">=</span> <span class="st">"GPT 5.5"</span></span>
+<span>  model    <span class="op">=</span> <span class="st">"openai/gpt-5.1"</span>,</span>
+<span>  name     <span class="op">=</span> <span class="st">"GPT 5.1"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">segs_manifesto</span>, <span class="st">"data/segs_manifesto_nz.rds"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">segs_manifesto</span>, <span class="st">"data/segs_manifesto_lib.rds"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
@@ -204,7 +198,7 @@ model how to format its output.</p>
 <div class="section level3">
 <h3 id="all-quasi-sentences">All quasi-sentences<a class="anchor" aria-label="anchor" href="#all-quasi-sentences"></a>
 </h3>
-<p>The model produced 81 quasi-sentences from the manifesto. The full
+<p>The model produced 70 quasi-sentences from the manifesto. The full
 segmentation is shown below. Each quasi-sentence is numbered, labelled
 by type (<code>complete</code> or <code>fragment</code>), and displayed
 on its own line.</p>
@@ -213,221 +207,233 @@ on its own line.</p>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">segs_manifesto</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"**%d.** _%s_\n&gt; %s\n\n"</span>, <span class="va">dv</span><span class="op">$</span><span class="va">segid</span>, <span class="va">dv</span><span class="op">$</span><span class="va">sentence_type</span>, <span class="va">dv</span><span class="op">$</span><span class="va">text</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><strong>1.</strong> <em>complete</em> &gt; A Guide to what the next
-National Government will do for New Zealand</p>
-<p>THE ECONOMY</p>
-<p>In 1972 New Zealand had, for the first time, more overseas reserves
-than total overseas debt.</p>
-<p><strong>2.</strong> <em>complete</em> &gt; Labour has dissipated
-these reserves, borrowed about $200 million overseas and incurred annual
-interest charges mortgaging almost our total export earnings from butter
-and cheese.</p>
-<p><strong>3.</strong> <em>complete</em> &gt; Inflation in 1972 was
-about 5 per cent, the second lowest of the Organisation for Economic
-Co-operation and Development (OECD) nations.</p>
-<p><strong>4.</strong> <em>fragment</em> &gt; Today it is about 15 per
-cent, well above the OECD average,</p>
-<p><strong>5.</strong> <em>fragment</em> &gt; and New Zealand has an
-external deficit per head of population second only to Iceland.</p>
-<p><strong>6.</strong> <em>complete</em> &gt; The first three years of
-the coming National Government will be very largely devoted to restoring
-New Zealand’s shattered economy.</p>
-<p><strong>7.</strong> <em>complete</em> &gt; Continuous attention to
-economic trends and problems will replace stop-go and panic
-measures.</p>
-<p><strong>8.</strong> <em>complete</em> &gt; And the taxation system
-will be used to give incentives for desirable economic activity.</p>
-<p><strong>9.</strong> <em>complete</em> &gt; We will take steps to
-stimulate savings.</p>
-<p><strong>10.</strong> <em>complete</em> &gt; Savings accounts, limited
-as to amount, will be established.</p>
-<p><strong>11.</strong> <em>complete</em> &gt; The deposits of
-individuals will earn an interest rate at least equal to the annual rate
-of inflation thus preserving the purchasing power of savings.</p>
-<p><strong>12.</strong> <em>complete</em> &gt; We believe that continued
-double-figure inflation will destroy the basis of the New Zealand
-economy and cause untold misery.</p>
-<p><strong>13.</strong> <em>complete</em> &gt; The fight against
-increases in the cost of living is the most important single issue in
-economic management.</p>
-<p><strong>14.</strong> <em>fragment</em> &gt; People without jobs
-represent waste of productive effort:</p>
-<p><strong>15.</strong> <em>fragment</em> &gt; National supports a
-policy of full employment and the dignity of labour.</p>
-<p><strong>16.</strong> <em>complete</em> &gt; We do not accept
-unemployment as a balancing factor in economic management.</p>
-<p><strong>17.</strong> <em>complete</em> &gt; Finally, the National
-Development Council will be restored and consultation resumed between
-Government departments, academic specialists and private industry,
-including farming and organised labour.</p>
-<p><strong>18.</strong> <em>complete</em> &gt; The vital role of every
-section of productive industry will be recognised.</p>
-<p><strong>19.</strong> <em>complete</em> &gt; It is these moves which
-will put New Zealand on the way to economic recovery.</p>
-<p><strong>20.</strong> <em>complete</em> &gt; And reduce the spiraling
-rate of inflation.</p>
-<p><strong>21.</strong> <em>complete</em> &gt; SUPERANNUATION</p>
-<p>Seldom has any policy released by an opposition party had the impact
-that the National Superannuation scheme has had.</p>
-<p><strong>22.</strong> <em>complete</em> &gt; It is designed to give
-every New Zealander dignity and a decent income in retirement.</p>
-<p><strong>23.</strong> <em>complete</em> &gt; Here’s how it will
-operate:</p>
-<p><strong>24.</strong> <em>complete</em> &gt; Anyone who is 60 years
-old, or more, and who has lived in New Zealand for at least ten years
-will receive National Superannuation, starting next year.</p>
-<p><strong>25.</strong> <em>complete</em> &gt; And with three big annual
-jumps in the rate of benefit it will be fully operating by 1978.</p>
-<p><strong>26.</strong> <em>complete</em> &gt; To guarantee our elderly
-retired folk a decent minimum income, the full rate of National
-Superannuation, for a married couple, will be 80% of the average weekly
-ordinary time wage.</p>
-<p><strong>27.</strong> <em>complete</em> &gt; It will be recalculated
-every six months.</p>
-<p><strong>28.</strong> <em>fragment</em> &gt; In 1976, to start the
-scheme, the rate will be 65% of the average wage;</p>
-<p><strong>29.</strong> <em>fragment</em> &gt; in 1977 it will be raised
-to 70%</p>
-<p><strong>30.</strong> <em>fragment</em> &gt; and in 1978 to the full
-80%.</p>
-<p><strong>31.</strong> <em>complete</em> &gt; The rate for single
-persons, at all times, will be 60% of the married rate.</p>
-<p><strong>32.</strong> <em>complete</em> &gt; The present average
-weekly wage is $99 and so, if there is no increase at all in wage rates
-in the next three years, the rates of National Superannuation will be
-shown in the box* below (*box not shown).</p>
-<p><strong>33.</strong> <em>complete</em> &gt; Next year, under
-National, the age and universal superannuation benefits will merge to
-form National Superannuation.</p>
-<p><strong>34.</strong> <em>fragment</em> &gt; At present both these
-benefits pay $51.26 to a married couple and $30.75 to a single
-person,</p>
-<p><strong>35.</strong> <em>fragment</em> &gt; so even in the first year
-of National Superannuation, a married couple over 60 who have no other
-income will have $6.18 a week more to spend than they do now</p>
-<p><strong>36.</strong> <em>fragment</em> &gt; and a single beneficiary
-will receive, after tax, $3.15 a week more than he now gets by way of
-age benefits, or universal superannuation.</p>
-<p><strong>37.</strong> <em>complete</em> &gt; Of course those with
-other income will receive the benefit too, but they will pay more tax on
-their bigger incomes.</p>
-<p><strong>38.</strong> <em>fragment</em> &gt; By 1978 a married couple
-will receive a net $18.06 a week more than the present age benefit or
-universal annuation</p>
-<p><strong>39.</strong> <em>fragment</em> &gt; and a single person will
-be receiving a net $10.17 a week more.</p>
-<p><strong>40.</strong> <em>complete</em> &gt; For the single person,
-that is a pay rise of more than 33%.</p>
-<p><strong>41.</strong> <em>complete</em> &gt; The big and comforting
-thing about National Superannuation is that everyone gets it, just so
-long as they have lived in New Zealand for ten years or more and are
-aged 60 or over.</p>
-<p><strong>42.</strong> <em>complete</em> &gt; They will not, nor will
-anyone, be expected to make special contributions over a period of
-years, in order to qualify.</p>
-<p><strong>43.</strong> <em>fragment</em> &gt; The scheme is financed
-out of ordinary taxation so there is nothing to be deducted from
-wages;</p>
-<p><strong>44.</strong> <em>fragment</em> &gt; no special payments of
-any kind.</p>
-<p><strong>45.</strong> <em>complete</em> &gt; This means that the
-present age beneficiary will receive National Superannuation next
-year.</p>
-<p><strong>46.</strong> <em>complete</em> &gt; So will the retired
-Government servant, in addition to the pension from the Government
-superannuation fund which he had paid for.</p>
-<p><strong>47.</strong> <em>complete</em> &gt; And so will all the
-people who are drawing pensions from company and other private
-superannuation schemes.</p>
-<p><strong>48.</strong> <em>complete</em> &gt; In recent weeks, the
-Government has been making moves to compensate for the weaknesses
-revealed in their own scheme, when compared with National’s.</p>
-<p><strong>49.</strong> <em>complete</em> &gt; But the fact remains that
-National’s is the only superannuation scheme that offers a fair deal to
-everyone in their years of retirement.</p>
-<p><strong>50.</strong> <em>complete</em> &gt; WOMEN’S RIGHTS</p>
-<p>Since 1975 is International Women’s Year, it can be expected that all
-political parties will talk a great deal about their ‘women’s
-policies’.</p>
-<p><strong>51.</strong> <em>complete</em> &gt; Unfortunately most will
-be little more than window dressing.</p>
-<p><strong>52.</strong> <em>complete</em> &gt; National’s plans go far
-beyond this.</p>
-<p><strong>53.</strong> <em>fragment</em> &gt; We will begin by
-introducing legislation to remove existing legal discrimination relating
-to women,</p>
-<p><strong>54.</strong> <em>fragment</em> &gt; and to prohibit
-discrimination against any person by reason of sex.</p>
-<p><strong>55.</strong> <em>fragment</em> &gt; We will also establish a
-Human Rights Commission which will ensure that equal rights legislation
-is enforced</p>
-<p><strong>56.</strong> <em>fragment</em> &gt; and that women have an
-effective and inexpensive means of redress.</p>
-<p><strong>57.</strong> <em>fragment</em> &gt; The Commission will
-investigate cases of discrimination presented to it</p>
-<p><strong>58.</strong> <em>fragment</em> &gt; and recommend civil
-action to the Attorney-General.</p>
-<p><strong>59.</strong> <em>complete</em> &gt; Full consideration will
-be given to the recommendations of the Select Committee on Women’s
-Rights.</p>
-<p><strong>60.</strong> <em>complete</em> &gt; We will set priorities
-for implementation, in consultation with women’s organisations.</p>
-<p><strong>61.</strong> <em>fragment</em> &gt; We will legislate to
-ensure that all areas of discrimination in employment are removed</p>
-<p><strong>62.</strong> <em>fragment</em> &gt; and that merit is the
-sole criterion in respect of job applications, selection and
-promotion.</p>
-<p><strong>63.</strong> <em>complete</em> &gt; To encourage women who
-wish to enter, return to or remain in employment, National will
-encourage employers to establish flexible working patterns, such as
-glide time, part-time, job sharing, and multi-shift work.</p>
-<p><strong>64.</strong> <em>complete</em> &gt; Thus assisting women who
-undertake the dual role of worker and mother.</p>
-<p><strong>65.</strong> <em>fragment</em> &gt; We will give special
-attention to the problems associated with re-entry to the work force</p>
-<p><strong>66.</strong> <em>fragment</em> &gt; and ensure that greater
-job retraining opportunities are available.</p>
-<p><strong>67.</strong> <em>complete</em> &gt; Maternity leave without
-pay will be available to women for a period of up to 12 weeks, without
-loss of job security, promotion or superannuation rights, providing this
-does not cause undue disruption to a business enterprise.</p>
-<p><strong>68.</strong> <em>fragment</em> &gt; The new National
-Government will appoint women to boards, commissions and tribunals</p>
-<p><strong>69.</strong> <em>fragment</em> &gt; and will give
-consideration to the appointment of women as industrial mediators.</p>
-<p><strong>70.</strong> <em>fragment</em> &gt; We will also support
-increased participation of women in the judicial system</p>
-<p><strong>71.</strong> <em>fragment</em> &gt; and recognise no sex
-barriers in the exercise of any judicial office.</p>
-<p><strong>72.</strong> <em>complete</em> &gt; Suitably qualified women
-will be given exactly the same consideration as men.</p>
-<p><strong>73.</strong> <em>complete</em> &gt; National will ensure that
-early childhood education is generally available, where feasible, as an
-integral part of the education system.</p>
-<p><strong>74.</strong> <em>complete</em> &gt; Priority will be given to
-such areas as new housing suburbs and regenerated inner city areas.</p>
-<p><strong>75.</strong> <em>complete</em> &gt; Financial assistance will
-be provided through approved voluntary agencies to establish centres for
-those children who need day care but whose parents cannot afford to pay
-the full cost.</p>
-<p><strong>76.</strong> <em>fragment</em> &gt; National will also
-promote and encourage job training and retraining, “second chance”
-education</p>
-<p><strong>77.</strong> <em>fragment</em> &gt; and promote a policy of
-life-long education for women.</p>
-<p><strong>78.</strong> <em>complete</em> &gt; We will tackle the
-problems women face with housing.</p>
-<p><strong>79.</strong> <em>complete</em> &gt; Under National the
-Housing Corporation will not differentiate between men and women
-borrowers on grounds of sex.</p>
-<p><strong>80.</strong> <em>complete</em> &gt; We will introduce a
-flexible principal repayment plan to meet those cases where the wife
-works, leaves the work force to raise a family and then returns to
-work.</p>
-<p><strong>81.</strong> <em>complete</em> &gt; The National Party
-believes all women must have the opportunity to participate on the basis
-of full equality in the social, cultural, economic and political spheres
-of New Zealand society.</p>
+<p><strong>1.</strong> <em>complete</em> &gt; ‘Working together for
+Britain’ The General Election on June 9th, 1983 will be seen as a
+watershed in British politics.</p>
+<p><strong>2.</strong> <em>complete</em> &gt; It may be recalled as the
+fateful day when depression became hopelessness and the slide of the
+post-war years accelerated into the depths of decline.</p>
+<p><strong>3.</strong> <em>complete</em> &gt; Alternatively it may be
+remembered as the turning point when the people of this country, at the
+eleventh hour, decided to turn their backs on dogma and bitterness and
+chose a new road of partnership and progress.</p>
+<p><strong>4.</strong> <em>complete</em> &gt; It is to offer real hope
+of a fresh start for Britain that the Alliance between our two parties
+has been created.</p>
+<p><strong>5.</strong> <em>complete</em> &gt; What we have done is
+unique in the history of British parliamentary democracy.</p>
+<p><strong>6.</strong> <em>complete</em> &gt; Two parties, one with a
+proud history, and one born only two years ago out of a frustration with
+the old systems of politics, have come together to offer an alternative
+government pledged to bring the country together again.</p>
+<p><strong>7.</strong> <em>complete</em> &gt; The Conservative and
+Labour parties between them have made an industrial wasteland out of a
+country which was once the workshop of the world.</p>
+<p><strong>8.</strong> <em>complete</em> &gt; Manufacturing output from
+Britain is back to the level of nearly 20 years ago.</p>
+<p><strong>9.</strong> <em>complete</em> &gt; Unemployment is still
+rising and there are now generations of school-leavers who no longer
+even hope for work.</p>
+<p><strong>10.</strong> <em>complete</em> &gt; Mrs Thatcher’s government
+stands idly by, hoping that the blind forces of the marketplace will
+restore the jobs and factories that its indifference has destroyed.</p>
+<p><strong>11.</strong> <em>complete</em> &gt; The Labour Party’s
+response is massive further nationalization, a centralised state
+socialist economy and rigid controls over enterprise.</p>
+<p><strong>12.</strong> <em>complete</em> &gt; The choice which Tories
+and socialists offer at this election is one between neglect and
+interference.</p>
+<p><strong>13.</strong> <em>complete</em> &gt; Neither of them
+understands that it is only by working together in the companies and
+communities of Britain that we can overcome the economic problems which
+beset us.</p>
+<p><strong>14.</strong> <em>complete</em> &gt; Meanwhile the very fabric
+of our common life together deteriorates.</p>
+<p><strong>15.</strong> <em>complete</em> &gt; The record wave of
+violence and crime and increased personal stress are all signs of a
+society at war with itself.</p>
+<p><strong>16.</strong> <em>complete</em> &gt; Rundown cities and
+declining rural services alike tell a story of a warped sense of
+priorities by successive governments.</p>
+<p><strong>17.</strong> <em>complete</em> &gt; Mrs Thatcher promised ‘to
+bring harmony where there is discord’.</p>
+<p><strong>18.</strong> <em>complete</em> &gt; Instead her own example
+of confrontation has inflamed the bitterness so many people feel at what
+has happened to their own lives and local communities.</p>
+<p><strong>19.</strong> <em>complete</em> &gt; Our Alliance wants to
+call a halt to confrontation politics.</p>
+<p><strong>20.</strong> <em>complete</em> &gt; We believe we have set an
+example by working together as two separate parties within an alliance
+of principle.</p>
+<p><strong>21.</strong> <em>complete</em> &gt; Our whole approach is
+based on co-operation: not just between our parties but between
+management and workers, between people of different races and above all
+between government and people.</p>
+<p><strong>22.</strong> <em>complete</em> &gt; Because we are not
+prisoners of ideology we shall listen to the people we represent and
+ensure that the good sense of the voters is allowed to illuminate the
+corridors of Westminster and Whitehall.</p>
+<p><strong>23.</strong> <em>complete</em> &gt; THE IMMEDIATE CRISIS:
+JOBS AND PRICES Our economic crisis demands tough immediate action.</p>
+<p><strong>24.</strong> <em>complete</em> &gt; It also requires a
+Government with the courage to implement those strategic and structural
+reforms which alone can end the civil war between the two sides of
+industry.</p>
+<p><strong>25.</strong> <em>complete</em> &gt; The immediate priority is
+to reduce unemployment.</p>
+<p><strong>26.</strong> <em>complete</em> &gt; Why?</p>
+<p><strong>27.</strong> <em>complete</em> &gt; To the Alliance
+unemployment is a scandal; robbing men and women of their careers;
+blighting the prospects for a quarter of all our young people, wasting
+our national resources, aborting our chances of industrial recovery,
+dividing our nation and fuelling hopelessness and crime.</p>
+<p><strong>28.</strong> <em>complete</em> &gt; Much of the present
+unemployment is a direct result of the civil war in British industry, of
+restrictive practices and low investment.</p>
+<p><strong>29.</strong> <em>complete</em> &gt; But in addition,
+conservative Government policies have caused unemployment to rise.</p>
+<p><strong>30.</strong> <em>complete</em> &gt; An Alliance Government
+would cause unemployment to fall.</p>
+<p><strong>31.</strong> <em>complete</em> &gt; How?</p>
+<p><strong>32.</strong> <em>complete</em> &gt; Can it be done without
+releasing a fresh wave of inflation?</p>
+<p><strong>33.</strong> <em>complete</em> &gt; We believe it can.</p>
+<p><strong>34.</strong> <em>complete</em> &gt; We propose a carefully
+devised and costed jobs programmeme aimed at reducing unemployment by 1
+million over two years.</p>
+<p><strong>35.</strong> <em>complete</em> &gt; This programmeme will be
+supported by immediate measures to help those hardest hit by the slump -
+the disadvantaged, the pensioners, the poor.</p>
+<p><strong>36.</strong> <em>complete</em> &gt; Ours is a programmeme of
+mind, heart and will.</p>
+<p><strong>37.</strong> <em>complete</em> &gt; It is a programme that
+will work!</p>
+<p><strong>38.</strong> <em>complete</em> &gt; The Programmeme has three
+points: Fiscal and Financial Pollicies for Growth; Direct Action to
+provide jobs; An Incomes Strategy that will stick.</p>
+<p><strong>39.</strong> <em>complete</em> &gt; STRATEGY FOR INDUSTRIAL
+SUCCESS The Alliance is alone in recognising that Britain’s industrial
+crisis cannot be solved by short-term measures such as import controls
+or money supply targets.</p>
+<p><strong>40.</strong> <em>complete</em> &gt; Our crisis goes deep.</p>
+<p><strong>41.</strong> <em>complete</em> &gt; Its roots lie in the
+class divisions of our society, in the vested interests of the Tory and
+Labour parties, in the refusal of management and unions to wide
+democracy in industry, in the way profits and risks are shared.</p>
+<p><strong>42.</strong> <em>complete</em> &gt; The policies offered by
+the two class-based parties will further divide the nation North v
+South, Management v Labour.</p>
+<p><strong>43.</strong> <em>complete</em> &gt; Our greatest need is to
+build a sense of belonging to one community.</p>
+<p><strong>44.</strong> <em>complete</em> &gt; We are all in it
+together.</p>
+<p><strong>45.</strong> <em>complete</em> &gt; It is impossible for one
+side or the other in Britain to ‘win’.</p>
+<p><strong>46.</strong> <em>complete</em> &gt; Conflict in industrial
+relations means that we all lose.</p>
+<p><strong>47.</strong> <em>complete</em> &gt; The Alliance is committed
+to policies which will invest resources in the hightechnology industries
+of the future.</p>
+<p><strong>48.</strong> <em>complete</em> &gt; We are committed to a
+major new effort in education and training.</p>
+<p><strong>49.</strong> <em>complete</em> &gt; We are pledged to trade
+union reform to tough anti-monopoly measures.</p>
+<p><strong>50.</strong> <em>complete</em> &gt; PARTERNSHIP IN INDUSTRY
+Britain has made little progress towards industrial democracy, yet
+several of our European partners have long traditions of participation
+and co-operation backed by legislation.</p>
+<p><strong>51.</strong> <em>complete</em> &gt; They do not face the
+obstacles to progress with which our divisive industrial relations
+present us.</p>
+<p><strong>52.</strong> <em>complete</em> &gt; To be fully effective,
+proposals for participation in industry need to be buttressed by action
+on two fronts: a major extension of profit sharing and worker
+share-ownership to give people a real stake where they work as well as
+the ability to participate in decision-taking, and reform of the trade
+unions to make them genuinely representative institutions.</p>
+<p><strong>53.</strong> <em>complete</em> &gt; PARTICIPATION AT WORK We
+propose enabling legislation that will offer a flexible and sensible
+approach: An Industrial Democracy Act to provide for the introduction of
+employee participation at all levels, incentives for employee
+share-ownership, employee rights to information, and an Industrial
+Democracy Agency (IDA) to advise on and monitor the introduction of
+these measures: Employee Councils covering each place of work (subject
+to exemption for small units) for all companies employing over 1,000
+people.</p>
+<p><strong>54.</strong> <em>complete</em> &gt; Smaller companies would
+also be encouraged to introduce Employee Councils.</p>
+<p><strong>55.</strong> <em>complete</em> &gt; GOVERNMENT AND INDUSTRY
+Priority for Industry The role of an Alliance government in relation to
+private industry will be to provide selective assistance taking a number
+of forms: an industrial credit scheme to provide low-interest, long-term
+finance for projects directed at modernising industry; A national
+innovation policy, to provide selective assistance for high-risk
+projects, particularly involving the development of new technologies and
+for research and development in potential growth industries; public
+purchasing policies to stimulate innovation, encourage the introduction
+of crucial technologies and aid small businesses; we will establish a
+Cabinet Committee chaired by the Prime Minster at the centre of
+decision-taking on all policies with a bearing on the performance of
+industry.</p>
+<p><strong>56.</strong> <em>complete</em> &gt; The Alliance will
+strengthen the Monopolies’ and Mergers’ Commission to ensure its ability
+to prevent monopoly and unhealthy concentrations of industrial and
+commercial power.</p>
+<p><strong>57.</strong> <em>complete</em> &gt; The aim is to guarantee
+fair competition and to protect the interests of employers, consumers
+and shareholders.</p>
+<p><strong>58.</strong> <em>complete</em> &gt; New and Small Business To
+encourage the growth of new and small businesses, we will attack red
+tape and provide further financial and management assistance by:
+extending the Loan Guarantee Scheme, in the first instance raising the
+maximum permitted loan to £150,000; and the Business Start-Up Scheme,
+raising the upper limit for investment to £75,000; and introducing Small
+Firm Investment Companies to provide financial and management help;
+zero-rating building repairs and maintenance for VAT purposes and
+reducing commercial rates by 10 per cent; making sure the Department of
+Industry co-ordinates and publicises schemes for small businesses and
+that government aid ceases to discriminate against small businesses;
+tailoring national legislation such as the Health and Safety Regulations
+to the needs of small businesses and amending the statutory sick pay
+scheme to exclude small businesses.</p>
+<p><strong>59.</strong> <em>complete</em> &gt; Agriculture and Fisheries
+Agriculture is an important industry and employer.</p>
+<p><strong>60.</strong> <em>complete</em> &gt; To encourage its further
+development we will: increase Government support for effective
+agricultural marketing at home and abroad and continue support for ‘Food
+from Britain’; ensure that agriculture has access like other industries
+to the industrial credit scheme we propose; encourage greater access to
+farming, especially by young entrants.</p>
+<p><strong>61.</strong> <em>complete</em> &gt; The Alliance is
+determined to safeguard the future of our fishing industry which needs
+help to re-build after years of uncertainty and the drastic consequences
+for the deep-sea fleet of 200-mile limits in the waters they used to
+fish.</p>
+<p><strong>62.</strong> <em>complete</em> &gt; Education and training
+The third basic condition for industrial success is a people with the
+skills and self-confidence that will be needed for the challenges of new
+technology.</p>
+<p><strong>63.</strong> <em>complete</em> &gt; The education and
+training systems are not providing enough people with the skills
+necessary to make them employable and the country successful in
+competition with its rivals.</p>
+<p><strong>64.</strong> <em>complete</em> &gt; We are falling further
+behind.</p>
+<p><strong>65.</strong> <em>complete</em> &gt; Japan on present plans
+will be educating all its young people to the age of 18 by 1990.</p>
+<p><strong>66.</strong> <em>complete</em> &gt; More than 90 per cent of
+the 16-19 age group in Germany gain recognised technical
+qualifications.</p>
+<p><strong>67.</strong> <em>complete</em> &gt; And it is not just a
+matter of school-leavers.</p>
+<p><strong>68.</strong> <em>complete</em> &gt; Our managers are less
+professionally qualified than our main competitors.</p>
+<p><strong>69.</strong> <em>complete</em> &gt; From the bottom to top we
+are underskilled, and this has to be put right if we are to prosper in
+future.</p>
+<p><strong>70.</strong> <em>complete</em> &gt; To do this, to raise
+standards in education and training and to improve their effectiveness
+is the object of proposals set out in the next Section.</p>
 </div>
 <div class="section level3">
 <h3 id="complete-sentences-versus-fragments">Complete sentences versus fragments<a class="anchor" aria-label="anchor" href="#complete-sentences-versus-fragments"></a>
@@ -452,18 +458,11 @@ suggests over-splitting.</p>
 <th align="right">Count</th>
 <th align="right">%</th>
 </tr></thead>
-<tbody>
-<tr class="odd">
+<tbody><tr class="odd">
 <td align="left">complete</td>
-<td align="right">51</td>
-<td align="right">63</td>
-</tr>
-<tr class="even">
-<td align="left">fragment</td>
-<td align="right">30</td>
-<td align="right">37</td>
-</tr>
-</tbody>
+<td align="right">70</td>
+<td align="right">100</td>
+</tr></tbody>
 </table>
 <p>As an additional sanity check, fragments cut from natural sentences
 should tend to be shorter than complete sentences. The distribution of
@@ -485,7 +484,7 @@ segment lengths (in characters) confirms this pattern:</p>
 <span>    subtitle <span class="op">=</span> <span class="st">"Fragments are typically shorter than complete sentences"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><img src="example_quasi_sentences_files/figure-html/plot-lengths-1.png" class="r-plt" width="768"></p>
+<p><img src="example_quasi_sentences_test_files/figure-html/plot-lengths-1.png" class="r-plt" width="768"></p>
 </div>
 <div class="section level3">
 <h3 id="coding-decisions-why-sentences-were-split">Coding decisions: why sentences were split<a class="anchor" aria-label="anchor" href="#coding-decisions-why-sentences-were-split"></a>
@@ -514,388 +513,13 @@ represent a genuinely distinct political claim.</p>
 <table class="table">
 <caption>Split decisions: fragments and the model’s cited
 reason</caption>
-<colgroup>
-<col width="0%">
-<col width="1%">
-<col width="3%">
-<col width="37%">
-<col width="57%">
-</colgroup>
 <thead><tr class="header">
-<th align="left"></th>
 <th align="right">Seg.</th>
 <th align="left">Role</th>
 <th align="left">Reason</th>
 <th align="left">Text</th>
 </tr></thead>
-<tbody>
-<tr class="odd">
-<td align="left">3</td>
-<td align="right">3</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">Inflation in 1972 was about 5 per cent, the second
-lowest of the Organisation for Economic Co-operation and Development
-(OECD) nations.</td>
-</tr>
-<tr class="even">
-<td align="left">4</td>
-<td align="right">4</td>
-<td align="left">fragment</td>
-<td align="left">The natural sentence contains two distinct economic
-indicators; this fragment states the current inflation level.</td>
-<td align="left">Today it is about 15 per cent, well above the OECD
-average,</td>
-</tr>
-<tr class="odd">
-<td align="left">5</td>
-<td align="right">5</td>
-<td align="left">fragment</td>
-<td align="left">Split from the preceding clause because it states a
-separate economic indicator, the external deficit.</td>
-<td align="left">and New Zealand has an external deficit per head of
-population second only to Iceland.</td>
-</tr>
-<tr class="even">
-<td align="left">13</td>
-<td align="right">13</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">The fight against increases in the cost of living is
-the most important single issue in economic management.</td>
-</tr>
-<tr class="odd">
-<td align="left">14</td>
-<td align="right">14</td>
-<td align="left">fragment</td>
-<td align="left">Colon separates a distinct evaluative statement about
-unemployment from the following policy position.</td>
-<td align="left">People without jobs represent waste of productive
-effort:</td>
-</tr>
-<tr class="even">
-<td align="left">15</td>
-<td align="right">15</td>
-<td align="left">fragment</td>
-<td align="left">Split from the preceding evaluative clause; this
-fragment gives the policy position.</td>
-<td align="left">National supports a policy of full employment and the
-dignity of labour.</td>
-</tr>
-<tr class="odd">
-<td align="left">27</td>
-<td align="right">27</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">It will be recalculated every six months.</td>
-</tr>
-<tr class="even">
-<td align="left">28</td>
-<td align="right">28</td>
-<td align="left">fragment</td>
-<td align="left">Semicolon-separated schedule contains distinct annual
-rate statements; this fragment states the 1976 rate.</td>
-<td align="left">In 1976, to start the scheme, the rate will be 65% of
-the average wage;</td>
-</tr>
-<tr class="odd">
-<td align="left">29</td>
-<td align="right">29</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same natural sentence because it states
-a separate 1977 rate.</td>
-<td align="left">in 1977 it will be raised to 70%</td>
-</tr>
-<tr class="even">
-<td align="left">30</td>
-<td align="right">30</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same natural sentence because it states
-a separate 1978 rate.</td>
-<td align="left">and in 1978 to the full 80%.</td>
-</tr>
-<tr class="odd">
-<td align="left">33</td>
-<td align="right">33</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">Next year, under National, the age and universal
-superannuation benefits will merge to form National Superannuation.</td>
-</tr>
-<tr class="even">
-<td align="left">34</td>
-<td align="right">34</td>
-<td align="left">fragment</td>
-<td align="left">The natural sentence combines a current-benefit
-comparison with future gains; this fragment gives the current benefit
-levels.</td>
-<td align="left">At present both these benefits pay $51.26 to a married
-couple and $30.75 to a single person,</td>
-</tr>
-<tr class="odd">
-<td align="left">35</td>
-<td align="right">35</td>
-<td align="left">fragment</td>
-<td align="left">Split because this clause states a distinct gain for
-married couples.</td>
-<td align="left">so even in the first year of National Superannuation, a
-married couple over 60 who have no other income will have $6.18 a week
-more to spend than they do now</td>
-</tr>
-<tr class="even">
-<td align="left">36</td>
-<td align="right">36</td>
-<td align="left">fragment</td>
-<td align="left">Split because this clause states a distinct gain for
-single beneficiaries.</td>
-<td align="left">and a single beneficiary will receive, after tax, $3.15
-a week more than he now gets by way of age benefits, or universal
-superannuation.</td>
-</tr>
-<tr class="odd">
-<td align="left">37</td>
-<td align="right">37</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">Of course those with other income will receive the
-benefit too, but they will pay more tax on their bigger incomes.</td>
-</tr>
-<tr class="even">
-<td align="left">38</td>
-<td align="right">38</td>
-<td align="left">fragment</td>
-<td align="left">The natural sentence contains distinct benefit-gain
-statements for married and single recipients; this fragment gives the
-married-couple gain.</td>
-<td align="left">By 1978 a married couple will receive a net $18.06 a
-week more than the present age benefit or universal annuation</td>
-</tr>
-<tr class="odd">
-<td align="left">39</td>
-<td align="right">39</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it gives a
-distinct single-person gain.</td>
-<td align="left">and a single person will be receiving a net $10.17 a
-week more.</td>
-</tr>
-<tr class="even">
-<td align="left">42</td>
-<td align="right">42</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">They will not, nor will anyone, be expected to make
-special contributions over a period of years, in order to qualify.</td>
-</tr>
-<tr class="odd">
-<td align="left">43</td>
-<td align="right">43</td>
-<td align="left">fragment</td>
-<td align="left">Semicolon separates two related financing statements;
-this fragment states ordinary-tax financing and no wage deduction.</td>
-<td align="left">The scheme is financed out of ordinary taxation so
-there is nothing to be deducted from wages;</td>
-</tr>
-<tr class="even">
-<td align="left">44</td>
-<td align="right">44</td>
-<td align="left">fragment</td>
-<td align="left">Split from the semicolon-separated sentence because it
-states the absence of special payments.</td>
-<td align="left">no special payments of any kind.</td>
-</tr>
-<tr class="odd">
-<td align="left">52</td>
-<td align="right">52</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">National’s plans go far beyond this.</td>
-</tr>
-<tr class="even">
-<td align="left">53</td>
-<td align="right">53</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains two distinct legislative aims;
-this fragment states removal of existing legal discrimination.</td>
-<td align="left">We will begin by introducing legislation to remove
-existing legal discrimination relating to women,</td>
-</tr>
-<tr class="odd">
-<td align="left">54</td>
-<td align="right">54</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate anti-discrimination aim.</td>
-<td align="left">and to prohibit discrimination against any person by
-reason of sex.</td>
-</tr>
-<tr class="even">
-<td align="left">55</td>
-<td align="right">55</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains distinct functions of the
-proposed commission; this fragment states enforcement of equal-rights
-legislation.</td>
-<td align="left">We will also establish a Human Rights Commission which
-will ensure that equal rights legislation is enforced</td>
-</tr>
-<tr class="odd">
-<td align="left">56</td>
-<td align="right">56</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate redress function.</td>
-<td align="left">and that women have an effective and inexpensive means
-of redress.</td>
-</tr>
-<tr class="even">
-<td align="left">57</td>
-<td align="right">57</td>
-<td align="left">fragment</td>
-<td align="left">The sentence lists distinct commission functions; this
-fragment states investigation of discrimination cases.</td>
-<td align="left">The Commission will investigate cases of discrimination
-presented to it</td>
-</tr>
-<tr class="odd">
-<td align="left">58</td>
-<td align="right">58</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate function of recommending civil action.</td>
-<td align="left">and recommend civil action to the
-Attorney-General.</td>
-</tr>
-<tr class="even">
-<td align="left">60</td>
-<td align="right">60</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">We will set priorities for implementation, in
-consultation with women’s organisations.</td>
-</tr>
-<tr class="odd">
-<td align="left">61</td>
-<td align="right">61</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains two distinct employment-equality
-aims; this fragment states removal of discrimination.</td>
-<td align="left">We will legislate to ensure that all areas of
-discrimination in employment are removed</td>
-</tr>
-<tr class="even">
-<td align="left">62</td>
-<td align="right">62</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate merit-based employment criterion.</td>
-<td align="left">and that merit is the sole criterion in respect of job
-applications, selection and promotion.</td>
-</tr>
-<tr class="odd">
-<td align="left">64</td>
-<td align="right">64</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">Thus assisting women who undertake the dual role of
-worker and mother.</td>
-</tr>
-<tr class="even">
-<td align="left">65</td>
-<td align="right">65</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains two distinct labour-market
-support commitments; this fragment states attention to re-entry
-problems.</td>
-<td align="left">We will give special attention to the problems
-associated with re-entry to the work force</td>
-</tr>
-<tr class="odd">
-<td align="left">66</td>
-<td align="right">66</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate commitment to retraining opportunities.</td>
-<td align="left">and ensure that greater job retraining opportunities
-are available.</td>
-</tr>
-<tr class="even">
-<td align="left">67</td>
-<td align="right">67</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">Maternity leave without pay will be available to women
-for a period of up to 12 weeks, without loss of job security, promotion
-or superannuation rights, providing this does not cause undue disruption
-to a business enterprise.</td>
-</tr>
-<tr class="odd">
-<td align="left">68</td>
-<td align="right">68</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains two distinct representation
-commitments; this fragment states appointments to boards, commissions
-and tribunals.</td>
-<td align="left">The new National Government will appoint women to
-boards, commissions and tribunals</td>
-</tr>
-<tr class="even">
-<td align="left">69</td>
-<td align="right">69</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate appointment consideration.</td>
-<td align="left">and will give consideration to the appointment of women
-as industrial mediators.</td>
-</tr>
-<tr class="odd">
-<td align="left">70</td>
-<td align="right">70</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains two distinct judicial-equality
-commitments; this fragment states support for women’s participation in
-the judicial system.</td>
-<td align="left">We will also support increased participation of women
-in the judicial system</td>
-</tr>
-<tr class="even">
-<td align="left">71</td>
-<td align="right">71</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate no-sex-barriers commitment.</td>
-<td align="left">and recognise no sex barriers in the exercise of any
-judicial office.</td>
-</tr>
-<tr class="odd">
-<td align="left">75</td>
-<td align="right">75</td>
-<td align="left">predecessor</td>
-<td align="left"></td>
-<td align="left">Financial assistance will be provided through approved
-voluntary agencies to establish centres for those children who need day
-care but whose parents cannot afford to pay the full cost.</td>
-</tr>
-<tr class="even">
-<td align="left">76</td>
-<td align="right">76</td>
-<td align="left">fragment</td>
-<td align="left">The sentence contains distinct education/training
-commitments; this fragment states training, retraining, and
-second-chance education.</td>
-<td align="left">National will also promote and encourage job training
-and retraining, “second chance” education</td>
-</tr>
-<tr class="odd">
-<td align="left">77</td>
-<td align="right">77</td>
-<td align="left">fragment</td>
-<td align="left">Split from the same sentence because it states a
-separate lifelong-education policy.</td>
-<td align="left">and promote a policy of life-long education for
-women.</td>
-</tr>
-</tbody>
+<tbody></tbody>
 </table>
 </div>
 <div class="section level3">
@@ -930,8 +554,8 @@ reason shows it considered and rejected a split:</p>
 complexity</caption>
 <colgroup>
 <col width="1%">
-<col width="26%">
-<col width="71%">
+<col width="31%">
+<col width="66%">
 </colgroup>
 <thead><tr class="header">
 <th align="right">Seg.</th>
@@ -941,43 +565,44 @@ complexity</caption>
 <tbody>
 <tr class="odd">
 <td align="right">2</td>
-<td align="left">Single sentence presenting one criticism of Labour’s
-economic management.</td>
-<td align="left">Labour has dissipated these reserves, borrowed about
-$200 million overseas and incurred annual interest charges mortgaging
-almost our total export earnings from butter and cheese.</td>
+<td align="left">Single main statement about how the day may be
+recalled.</td>
+<td align="left">It may be recalled as the fateful day when depression
+became hopelessness and the slide of the post-war years accelerated into
+the depths of decline.</td>
 </tr>
 <tr class="even">
 <td align="right">3</td>
-<td align="left">Single sentence with one statement about past
-inflation.</td>
-<td align="left">Inflation in 1972 was about 5 per cent, the second
-lowest of the Organisation for Economic Co-operation and Development
-(OECD) nations.</td>
+<td align="left">Single alternative description of how the day may be
+remembered.</td>
+<td align="left">Alternatively it may be remembered as the turning point
+when the people of this country, at the eleventh hour, decided to turn
+their backs on dogma and bitterness and chose a new road of partnership
+and progress.</td>
 </tr>
 <tr class="odd">
-<td align="right">7</td>
-<td align="left">Single sentence with one statement about economic
-management.</td>
-<td align="left">Continuous attention to economic trends and problems
-will replace stop-go and panic measures.</td>
+<td align="right">6</td>
+<td align="left">Single statement describing composition and aim of the
+two parties.</td>
+<td align="left">Two parties, one with a proud history, and one born
+only two years ago out of a frustration with the old systems of
+politics, have come together to offer an alternative government pledged
+to bring the country together again.</td>
 </tr>
 <tr class="even">
-<td align="right">12</td>
-<td align="left">Single sentence with one argument about the harmful
-effects of inflation.</td>
-<td align="left">We believe that continued double-figure inflation will
-destroy the basis of the New Zealand economy and cause untold
-misery.</td>
+<td align="right">7</td>
+<td align="left">Single claim about effect of Conservative and Labour
+parties.</td>
+<td align="left">The Conservative and Labour parties between them have
+made an industrial wasteland out of a country which was once the
+workshop of the world.</td>
 </tr>
 <tr class="odd">
-<td align="right">17</td>
-<td align="left">Single sentence with one institutional consultation
-policy.</td>
-<td align="left">Finally, the National Development Council will be
-restored and consultation resumed between Government departments,
-academic specialists and private industry, including farming and
-organised labour.</td>
+<td align="right">9</td>
+<td align="left">Second clause elaborates consequences of rising
+unemployment; treated as one argument about unemployment.</td>
+<td align="left">Unemployment is still rising and there are now
+generations of school-leavers who no longer even hope for work.</td>
 </tr>
 </tbody>
 </table>
@@ -998,31 +623,32 @@ segmented text (Krippendorff, 2019, section 12.6).</p>
 </h3>
 <p>The <code>data_corpus_MPexamplesseg</code> object contains the
 Manifesto Project’s human-coded quasi-sentences for both example
-manifestos, already converted to a segmented corpus. We subset to the NZ
-document.</p>
+manifestos, already converted to a segmented corpus. We subset to the
+Liberal-SDP document.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">gold_corp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://quanteda.io/reference/corpus_subset.html" class="external-link">corpus_subset</a></span><span class="op">(</span><span class="va">data_corpus_MPexamplesseg</span>, <span class="va">docid</span> <span class="op">==</span> <span class="st">"NZ_NP_1972"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"data_corpus_MPexamplesseg"</span><span class="op">)</span></span>
+<span><span class="va">gold_corp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://quanteda.io/reference/corpus_subset.html" class="external-link">corpus_subset</a></span><span class="op">(</span><span class="va">data_corpus_MPexamplesseg</span>, <span class="va">docid</span> <span class="op">==</span> <span class="st">"Liberal_SDP_1983"</span><span class="op">)</span></span>
 <span><span class="va">gold_corp</span></span>
-<span><span class="co">#&gt; Corpus consisting of 71 documents and 7 docvars.</span></span>
-<span><span class="co">#&gt; NZ_NP_1972.1 :</span></span>
-<span><span class="co">#&gt; "A Guide to what the next National Government will do for New..."</span></span>
+<span><span class="co">#&gt; Corpus consisting of 107 documents and 7 docvars.</span></span>
+<span><span class="co">#&gt; Liberal_SDP_1983.1 :</span></span>
+<span><span class="co">#&gt; "‘Working together for Britain' The General Election on June ..."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; NZ_NP_1972.2 :</span></span>
-<span><span class="co">#&gt; "Labour has dissipated these reserves, borrowed about $200 mi..."</span></span>
+<span><span class="co">#&gt; Liberal_SDP_1983.2 :</span></span>
+<span><span class="co">#&gt; "It may be recalled as the fateful day when depression became..."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; NZ_NP_1972.3 :</span></span>
-<span><span class="co">#&gt; "Inflation in 1972 was about 5 per cent, the second lowest of..."</span></span>
+<span><span class="co">#&gt; Liberal_SDP_1983.3 :</span></span>
+<span><span class="co">#&gt; "Alternatively it may be remembered as the turning point when..."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; NZ_NP_1972.4 :</span></span>
-<span><span class="co">#&gt; "Today it is about 15 per cent, well above the OECD average,"</span></span>
+<span><span class="co">#&gt; Liberal_SDP_1983.4 :</span></span>
+<span><span class="co">#&gt; "It is to offer real hope of a fresh start for Britain that t..."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; NZ_NP_1972.5 :</span></span>
-<span><span class="co">#&gt; "and New Zealand has an external deficit per head of populati..."</span></span>
+<span><span class="co">#&gt; Liberal_SDP_1983.5 :</span></span>
+<span><span class="co">#&gt; "What we have done is unique in the history of British parlia..."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; NZ_NP_1972.6 :</span></span>
-<span><span class="co">#&gt; "The first three years of the coming National Government will..."</span></span>
+<span><span class="co">#&gt; Liberal_SDP_1983.6 :</span></span>
+<span><span class="co">#&gt; "Two parties, one with a proud history, and one born only two..."</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; [ reached max_ndoc ... 65 more documents ]</span></span></code></pre></div>
+<span><span class="co">#&gt; [ reached max_ndoc ... 101 more documents ]</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="comparing-the-segmentations">Comparing the segmentations<a class="anchor" aria-label="anchor" href="#comparing-the-segmentations"></a>
@@ -1042,8 +668,8 @@ it already carries the character-level positions and metadata that
 <span><span class="co">#&gt; Raters: 2</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── (boundaries) (unitizing)</span></span>
-<span><span class="co">#&gt; Krippendorff's alpha (unitizing, binary) [NZ_NP_1972]  0.9414 </span></span>
-<span><span class="co">#&gt; Krippendorff's alpha (unitizing, binary) [(overall)]   0.9414</span></span>
+<span><span class="co">#&gt; Krippendorff's alpha (unitizing, binary) [Liberal_SDP_1983]  0.7419 </span></span>
+<span><span class="co">#&gt; Krippendorff's alpha (unitizing, binary) [(overall)]         0.7419</span></span>
 <span><span class="co">#&gt; </span></span></code></pre></div>
 </div>
 </div>

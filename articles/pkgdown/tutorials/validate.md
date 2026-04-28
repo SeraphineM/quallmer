@@ -16,7 +16,6 @@ The quallmer app is available in the companion package `quallmer.app`.
 To install it:
 
 ``` r
-
 # install.packages("pak")
 pak::pak("quallmer/quallmer.app")
 ```
@@ -29,7 +28,6 @@ function. This will open the quallmer app in a new window or tab in your
 web browser.
 
 ``` r
-
 library(quallmer.app)
 qlm_app()
 ```
