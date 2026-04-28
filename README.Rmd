@@ -32,13 +32,17 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 
 # The quallmer workflow
 
-## 1. Define codebook 
+## 1. Define codebook and prepare data
 
 #### `qlm_codebook()`
 - Creates custom codebooks tailored to specific research questions and data types.
 - Uses `instructions` and type specifications from [ellmer](https://ellmer.tidyverse.org/reference/type_boolean.html) to define coding instructions and output structure.
 - Example codebook objects (e.g., `data_codebook_sentiment`) demonstrate how to use built-in codebooks for common qualitative coding tasks.
 - Extensible framework allows researchers to define domain-specific coding schemes.
+
+#### `qlm_segment()`
+- Segments texts into thematic or conceptual units using an LLM.
+- Useful for aspect-based analysis, quasi-sentence segmentation, or splitting texts by topic before coding.
 
 ## 2. Code data
 
