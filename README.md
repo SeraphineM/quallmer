@@ -40,7 +40,7 @@ learning.**
 
 # The quallmer workflow
 
-## 1. Define codebook and prepare data
+## 1. Define codebook
 
 #### `qlm_codebook()`
 
@@ -54,12 +54,6 @@ learning.**
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
 
-#### `qlm_segment()`
-
-- Segments texts into thematic or conceptual units using an LLM.
-- Useful for aspect-based analysis, quasi-sentence segmentation, or
-  splitting texts by topic before coding.
-
 ## 2. Code data
 
 #### `qlm_code()`
@@ -69,6 +63,15 @@ learning.**
   [ellmer](https://ellmer.tidyverse.org/index.html).
 - Returns a `qlm_coded` object containing the coded results and metadata
   for reproducibility.
+
+#### `qlm_segment()` (optional)
+
+- Segments texts into thematic or conceptual units using an LLM.
+- Useful for aspect-based analysis, quasi-sentence segmentation, or
+  splitting texts by topic.
+- Returns a corpus of segmented units that can be coded with
+  `qlm_code()` for more granular analysis (in the same pass or as a
+  separate step).
 
 ## 3. Replicate with different settings
 
