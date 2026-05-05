@@ -131,6 +131,16 @@
 <li>Returns a <code>qlm_coded</code> object containing the coded results and metadata for reproducibility.</li>
 </ul>
 </div>
+<div class="section level4">
+<h4 id="qlm_segment-optional">
+<code>qlm_segment()</code> (optional)<a class="anchor" aria-label="anchor" href="#qlm_segment-optional"></a>
+</h4>
+<ul>
+<li>Segments texts into thematic or conceptual units using an LLM.</li>
+<li>Useful for aspect-based analysis, quasi-sentence segmentation, or splitting texts by topic.</li>
+<li>Returns a corpus of segmented units that can be coded with <code><a href="reference/qlm_code.html">qlm_code()</a></code> for more granular analysis (in the same pass or as a separate step).</li>
+</ul>
+</div>
 </div>
 <div class="section level2">
 <h2 id="id_3-replicate-with-different-settings">3. Replicate with different settings<a class="anchor" aria-label="anchor" href="#id_3-replicate-with-different-settings"></a>
@@ -155,7 +165,7 @@
 </h4>
 <ul>
 <li>Compares multiple <code>qlm_coded</code> objects to assess inter-rater reliability.</li>
-<li>Computes agreement metrics including Krippendorff’s alpha, Cohen’s kappa, and Fleiss’ kappa.</li>
+<li>Computes agreement metrics including Krippendorff’s alpha, Cohen’s kappa, and Fleiss’ kappa. When comparing documents that have been segmented, automatically computes all four variants of Krippendorff’s alpha for unitizing (2019, section 12.6) – the only R package to do so.</li>
 <li>Useful for evaluating consistency across different coders, models, or coding runs.</li>
 </ul>
 </div>
@@ -214,6 +224,11 @@
 <h2 id="acknowledgments">Acknowledgments<a class="anchor" aria-label="anchor" href="#acknowledgments"></a>
 </h2>
 <p>Development of this package was assisted by <a href="https://claude.com/claude-code" class="external-link">Claude Code</a>, an AI coding assistant by Anthropic, for code refactoring, documentation updates, and package restructuring.</p>
+</div>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<p>Krippendorff, K. (2019). <em>Content Analysis: An Introduction to Its Methodology</em> (4th ed.). Sage. <a href="doi:10.4135/9781071878781" class="uri">doi:10.4135/9781071878781</a></p>
 </div>
 </div>
 
