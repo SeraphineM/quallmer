@@ -95,7 +95,7 @@
 <h1 id="the-quallmer-workflow">The quallmer workflow<a class="anchor" aria-label="anchor" href="#the-quallmer-workflow"></a>
 </h1>
 <div class="section level2">
-<h2 id="id_1-define-codebook">1. Define codebook<a class="anchor" aria-label="anchor" href="#id_1-define-codebook"></a>
+<h2 id="id_1-define-codebook-and-prepare-data">1. Define codebook and prepare data<a class="anchor" aria-label="anchor" href="#id_1-define-codebook-and-prepare-data"></a>
 </h2>
 <div class="section level4">
 <h4 id="qlm_codebook">
@@ -106,6 +106,15 @@
 <li>Uses <code>instructions</code> and type specifications from <a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">ellmer</a> to define coding instructions and output structure.</li>
 <li>Example codebook objects (e.g., <code>data_codebook_sentiment</code>) demonstrate how to use built-in codebooks for common qualitative coding tasks.</li>
 <li>Extensible framework allows researchers to define domain-specific coding schemes.</li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="qlm_segment">
+<code>qlm_segment()</code><a class="anchor" aria-label="anchor" href="#qlm_segment"></a>
+</h4>
+<ul>
+<li>Segments texts into thematic or conceptual units using an LLM.</li>
+<li>Useful for aspect-based analysis, quasi-sentence segmentation, or splitting texts by topic before coding.</li>
 </ul>
 </div>
 </div>

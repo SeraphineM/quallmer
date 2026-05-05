@@ -93,11 +93,11 @@ Examples: <code>"openai/gpt-4o-mini"</code>, <code>"anthropic/claude-3-5-sonnet-
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>,
-<code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code>, or <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>,
-based on argument name. Arguments recognized by
-<code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code> take priority when there are overlaps.
-Batch-specific arguments (<code>path</code>, <code>wait</code>, <code>ignore_hash</code>) are only used when
-<code>batch = TRUE</code>. Arguments not recognized by any function will generate a warning.</p></dd>
+<code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code>, or <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>.
+Arguments recognized by <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code> or
+<code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code> are routed there; all other arguments
+(including provider-specific arguments like <code>base_url</code>, <code>credentials</code>, or
+<code>api_args</code> for OpenAI-compatible endpoints) are passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.</p></dd>
 
 
 <dt id="arg-batch">batch<a class="anchor" aria-label="anchor" href="#arg-batch"></a></dt>
