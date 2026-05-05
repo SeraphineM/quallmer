@@ -70,6 +70,15 @@ learning.**
 - Returns a `qlm_coded` object containing the coded results and metadata
   for reproducibility.
 
+#### `qlm_segment()` (optional)
+
+- Segments texts into thematic or conceptual units using an LLM.
+- Useful for aspect-based analysis, quasi-sentence segmentation, or
+  splitting texts by topic.
+- Returns a corpus of segmented units that can be coded with
+  `qlm_code()` for more granular analysis (in the same pass or as a
+  separate step).
+
 ## 3. Replicate with different settings
 
 #### `qlm_replicate()`
@@ -88,7 +97,10 @@ learning.**
 - Compares multiple `qlm_coded` objects to assess inter-rater
   reliability.
 - Computes agreement metrics including Krippendorff’s alpha, Cohen’s
-  kappa, and Fleiss’ kappa.
+  kappa, and Fleiss’ kappa. When comparing documents that have been
+  segmented, automatically computes all four variants of Krippendorff’s
+  alpha for unitizing (2019, section 12.6) – the only R package to do
+  so.
 - Useful for evaluating consistency across different coders, models, or
   coding runs.
 
@@ -156,3 +168,8 @@ Development of this package was assisted by [Claude
 Code](https://claude.com/claude-code), an AI coding assistant by
 Anthropic, for code refactoring, documentation updates, and package
 restructuring.
+
+## References
+
+Krippendorff, K. (2019). *Content Analysis: An Introduction to Its
+Methodology* (4th ed.). Sage. <doi:10.4135/9781071878781>
