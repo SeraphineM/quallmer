@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.5.16)  3 APR 2026 12:40
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.5.16)  5 MAY 2026 15:16
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -591,20 +591,27 @@ LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 3
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [2]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 353.
+(Font)              <10> on input line 362.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 353.
+(Font)              <7> on input line 362.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 353.
+(Font)              <5> on input line 362.
 LaTeX Font Info:    Font shape `T1/lmtt/bx/n' in size <10> not available
-(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 361.
+(Font)              Font shape `T1/lmtt/b/n' tried instead on input line 380.
+
+Overfull \vbox (0.43782pt too high) detected at line 394
+ []
 
 
-[3]
+
+[3{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/lo
+cal/texlive/2025/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}]
 
 [4]
 
-[5] (./paper.aux)
+[5]
+
+[6] (./paper.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -614,25 +621,26 @@ LaTeX Warning: There were undefined references.
 
  ) 
 Here is how much of TeX's memory you used:
- 14510 strings out of 473190
- 227235 string characters out of 5715800
- 680102 words of memory out of 5000000
+ 14517 strings out of 473190
+ 227305 string characters out of 5715800
+ 682102 words of memory out of 5000000
  37366 multiletter control sequences out of 15000+600000
- 616991 words of font info for 151 fonts, out of 8000000 for 9000
+ 617157 words of font info for 153 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  83i,7n,93p,1002b,600s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/lo
 cal/texlive/2025/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local/texliv
-e/2025/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/2025/texm
-f-dist/fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2025/texmf-dist/font
-s/type1/public/lm/lmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/pub
-lic/lm/lmri10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmt
-k10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></
-usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtti10.pfb>
-Output written on paper.pdf (5 pages, 252414 bytes).
+e/2025/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></usr/local/texlive/2025/tex
+mf-dist/fonts/type1/public/lm/lmr10.pfb></usr/local/texlive/2025/texmf-dist/fon
+ts/type1/public/lm/lmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/pu
+blic/lm/lmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmr
+i10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></
+usr/local/texlive/2025/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/local/
+texlive/2025/texmf-dist/fonts/type1/public/lm/lmtti10.pfb>
+Output written on paper.pdf (6 pages, 260596 bytes).
 PDF statistics:
- 149 PDF objects out of 1000 (max. 8388607)
- 122 compressed objects within 2 object streams
- 30 named destinations out of 1000 (max. 500000)
+ 164 PDF objects out of 1000 (max. 8388607)
+ 133 compressed objects within 2 object streams
+ 31 named destinations out of 1000 (max. 500000)
  28745 words of extra memory for PDF output out of 29859 (max. 10000000)
 
