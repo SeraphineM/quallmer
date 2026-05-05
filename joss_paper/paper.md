@@ -8,7 +8,7 @@ tags:
 - content analysis
 - reproducibility
 date: "3 April 2026"
-bibliography: paper.bib
+output: pdf_document
 affiliations:
 - index: 1
   name: University of Melbourne, Australia
@@ -23,6 +23,7 @@ authors:
   orcid: "0000-0002-0797-564X"
   equal-contrib: true
   affiliation: 2
+bibliography: paper.bib
 ---
 
 # Summary
@@ -54,7 +55,7 @@ Among R packages, *ellmer* [@ellmer2025], *ollamar* [@Lin2025], and *rollama* [@
 | Step | Function(s) | Purpose |
 |------|-------------|---------|
 | 1. Define codebook | `qlm_codebook()` | Create reusable coding schemes with instructions and structured output schema |
-| 2. Code data | `qlm_code()` | Apply a codebook to texts, images, PDFs, audio, or tabular data using any supported LLM |
+| 2. Code data | `qlm_code()`, `qlm_segment()` | Apply a codebook to texts, images, PDFs, audio, or tabular data using any supported LLM; or segment texts into thematic units and optionally apply codes in the same pass |
 | 3. Replicate | `qlm_replicate()` | Re-run coding with different models or parameter settings, preserving provenance chains |
 | 4. Compare & validate | `qlm_compare()`, `qlm_validate()` | Compute inter-rater reliability metrics; benchmark against human-coded gold standards |
 | 5. Audit trail | `qlm_trail()` | Generate complete audit documentation and an executable replication report |
@@ -64,6 +65,8 @@ Among R packages, *ellmer* [@ellmer2025], *ollamar* [@Lin2025], and *rollama* [@
 The package is built on the *ellmer* framework [@ellmer2025], which provides a flexible interface to a wide range of LLM providers. This design ensures researchers can choose models that fit their research questions and resource constraints without *quallmer* managing LLM connectivity. The architecture is modular and extensible, allowing customization of codebooks, coding procedures, and validation metrics while ensuring all analyses are fully documented.
 
 *quallmer* evolved from an earlier implementation (a draft R package entitled *quanteda.llm* [@quantedallm2025]) that integrated LLM capabilities with the *quanteda* framework [@quanteda2018]. Feedback from workshops and training sessions with social scientists shaped key design decisions: the highly customizable codebook definition, the built-in reliability metrics, and especially the audit trail functionality. A companion package, [*quallmer.app*](https://cran.r-project.org/web/packages/quallmer.app/index.html) (also on CRAN), provides a Shiny application for manual coding, review of LLM-assisted coding, and agreement metric computation, bridging automated and human-in-the-loop workflows.
+
+For analyses requiring variable-length text units, `qlm_segment()` uses an LLM to segment texts into thematic or conceptual units—useful for aspect-based sentiment analysis, quasi-sentence segmentation, or topic-based chunking. Codes can be applied to each segment in the same pass by including them in the codebook schema, making a separate `qlm_code()` call unnecessary. When comparing segmented outputs, `qlm_compare()` computes Krippendorff's alpha for unitizing [@krippendorff2019content, section 12.6], which jointly measures agreement on both where boundaries fall and how segments are coded. The function also reports unitization-conditional alpha, isolating coding disagreement from boundary disagreement, as well as per-code reliability metrics for diagnosing which categories are applied consistently.
 
 ## Worked example: coding political speeches
 
@@ -105,7 +108,7 @@ coded_claude  <- qlm_replicate(coded_speeches, model = "anthropic/claude-3-5-son
 coded_temp07  <- qlm_replicate(coded_speeches, temperature = 0.7)
 ```
 
-**Step 4: Comparison and validation.** `qlm_compare()` computes inter-rater reliability (Krippendorff's alpha, Cohen's kappa, Fleiss' kappa); `qlm_validate()` benchmarks against human-coded gold standards with accuracy, precision, recall, and F1 scores:
+**Step 4: Comparison and validation.** `qlm_compare()` computes inter-rater reliability tailored to measurement level: Krippendorff's alpha, Cohen's/Fleiss' kappa, and percent agreement for nominal data; Krippendorff's alpha, weighted kappa, Kendall's W, Spearman's rho, and percent agreement for ordinal data; and Krippendorff's alpha, ICC, Pearson's r, and percent agreement for interval/ratio data. For segmented corpora, it additionally computes Krippendorff's unitizing alpha (boundary agreement), unitizing alpha with codes (boundary and coding agreement jointly), coding-conditional alpha (coding agreement given shared boundaries), and per-category unitizing alpha. `qlm_validate()` benchmarks against human-coded gold standards, computing accuracy, precision, recall, F1, and Cohen's kappa for nominal data; Spearman's rho, Kendall's tau, and MAE for ordinal data; and ICC, Pearson's r, MAE, and RMSE for interval data:
 
 ```r
 comparison <- qlm_compare(coded_speeches, coded_claude, by = "score", level = "interval")
