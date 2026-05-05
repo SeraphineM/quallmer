@@ -18,8 +18,10 @@
 #'   corpus. Do not include a field named `text`; it is reserved for the
 #'   verbatim segment text and is added automatically.
 #' @param ... Additional arguments passed to [ellmer::chat()] or
-#'   [ellmer::parallel_chat_structured()], based on argument name. Arguments
-#'   not recognized by either function will generate a warning.
+#'   [ellmer::parallel_chat_structured()]. Arguments recognized by
+#'   [ellmer::parallel_chat_structured()] are routed there; all other arguments
+#'   (including provider-specific arguments like `base_url`, `credentials`, or
+#'   `api_args` for OpenAI-compatible endpoints) are passed to [ellmer::chat()].
 #' @param notes Optional character string with descriptive notes about this
 #'   segmentation run. Default is `NULL`.
 #'
@@ -157,20 +159,16 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
   }
 
   # Route ... arguments to chat() or parallel_chat_structured()
-  chat_arg_names <- names(formals(ellmer::chat))
+  # execution_args go to parallel_chat_structured
+  # Everything else (including provider-specific args like base_url) goes to chat()
   pcs_arg_names  <- names(formals(ellmer::parallel_chat_structured))
   dots       <- list(...)
   dot_names  <- names(dots)
-  chat_args      <- dots[dot_names %in% chat_arg_names]
   execution_args <- dots[dot_names %in% pcs_arg_names]
-
-  unknown_names <- setdiff(dot_names, unique(c(chat_arg_names, pcs_arg_names)))
-  if (length(unknown_names) > 0) {
-    cli::cli_warn(c(
-      "The following {cli::qty(length(unknown_names))} argument{?s} {?was/were} not recognized:",
-      "x" = "{.arg {unknown_names}}"
-    ))
-  }
+  # chat_args gets everything NOT destined for execution functions
+  # This allows provider-specific args (base_url, credentials, api_args, etc.)
+  # to pass through to ellmer::chat() which forwards them to the provider
+  chat_args      <- dots[!dot_names %in% pcs_arg_names]
 
   # Build chat object
   chat <- do.call(ellmer::chat, c(
