@@ -23,8 +23,10 @@ Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-202410
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
 \item{...}{Additional arguments passed to \code{\link[ellmer:chat-any]{ellmer::chat()}} or
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, based on argument name. Arguments
-not recognized by either function will generate a warning.}
+\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}. Arguments recognized by
+\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} are routed there; all other arguments
+(including provider-specific arguments like \code{base_url}, \code{credentials}, or
+\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.}
 
 \item{name}{Character string identifying this coding run. Default is \code{NULL}.}
 

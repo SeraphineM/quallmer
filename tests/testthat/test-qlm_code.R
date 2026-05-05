@@ -270,33 +270,31 @@ test_that("new_qlm_coded maintains backward compatibility with pcs_args", {
 })
 
 
-test_that("qlm_code warns about unrecognized arguments", {
+test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
+
   skip_if_not_installed("ellmer")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
 
-  # Mock the chat and execution functions to avoid actual API calls
-  mock_chat <- structure(list(), class = "ellmer_chat")
+  # Track what arguments are passed to ellmer::chat
+  chat_args_received <- NULL
+  mock_chat <- function(...) {
+    chat_args_received <<- list(...)
+    structure(list(), class = "ellmer_chat")
+  }
   mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
 
   mockery::stub(qlm_code, "ellmer::chat", mock_chat)
   mockery::stub(qlm_code, "ellmer::parallel_chat_structured", mock_results)
 
-  # Capture warnings from cli::cli_warn
-  warnings_list <- list()
-  withCallingHandlers(
-    qlm_code(c("text1", "text2"), codebook, model = "test/model",
-             fake_argument = "value"),
-    warning = function(w) {
-      warnings_list <<- c(warnings_list, list(conditionMessage(w)))
-      invokeRestart("muffleWarning")
-    }
-  )
+  # Call with a provider-specific argument (like base_url for openai_compatible)
+  qlm_code(c("text1", "text2"), codebook, model = "test/model",
+           base_url = "https://my-api.com/v1")
 
-  # Verify warning was issued
-  expect_true(any(grepl("fake_argument", unlist(warnings_list))))
-  expect_true(any(grepl("not recognized", unlist(warnings_list))))
+  # Verify the provider-specific argument was passed through to ellmer::chat
+  expect_true("base_url" %in% names(chat_args_received))
+  expect_equal(chat_args_received$base_url, "https://my-api.com/v1")
 })
 
 

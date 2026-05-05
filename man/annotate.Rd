@@ -10,11 +10,11 @@ annotate(.data, task, model_name, ...)
 \item{task}{A task object created with \code{\link[=task]{task()}} or \code{\link[=qlm_codebook]{qlm_codebook()}}.}
 
 \item{...}{Additional arguments passed to \code{\link[ellmer:chat-any]{ellmer::chat()}},
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}},
-based on argument name. Arguments recognized by
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} take priority when there are overlaps.
-Batch-specific arguments (\code{path}, \code{wait}, \code{ignore_hash}) are only used when
-\code{batch = TRUE}. Arguments not recognized by any function will generate a warning.}
+\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}.
+Arguments recognized by \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} or
+\code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}} are routed there; all other arguments
+(including provider-specific arguments like \code{base_url}, \code{credentials}, or
+\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.}
 }
 \value{
 A data frame with one row per input element, containing:

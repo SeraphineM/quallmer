@@ -23,11 +23,11 @@
 #'   cost-effective for large jobs but may have longer turnaround times.
 #'   Default is `FALSE`. See [ellmer::batch_chat_structured()] for details.
 #' @param ... Additional arguments passed to [ellmer::chat()],
-#'   [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()],
-#'   based on argument name. Arguments recognized by
-#'   [ellmer::parallel_chat_structured()] take priority when there are overlaps.
-#'   Batch-specific arguments (`path`, `wait`, `ignore_hash`) are only used when
-#'   `batch = TRUE`. Arguments not recognized by any function will generate a warning.
+#'   [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()].
+#'   Arguments recognized by [ellmer::parallel_chat_structured()] or
+#'   [ellmer::batch_chat_structured()] are routed there; all other arguments
+#'   (including provider-specific arguments like `base_url`, `credentials`, or
+#'   `api_args` for OpenAI-compatible endpoints) are passed to [ellmer::chat()].
 #' @param name Character string identifying this coding run. Default is `NULL`.
 #' @param notes Optional character string with descriptive notes about this
 #'   coding run. Useful for documenting the purpose or rationale when viewing
@@ -104,25 +104,20 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes 
                          "seed", "response_format")
 
   # Route ... arguments
-  # All non-chat arguments go to execution_args (for either parallel or batch execution)
+  # execution_args go to parallel_chat_structured or batch_chat_structured
+  # Everything else (including provider-specific args like base_url) goes to chat()
   dots <- list(...)
   dot_names <- names(dots)
 
-  chat_args <- dots[dot_names %in% chat_arg_names]
-
-  # execution_args contains everything that's for parallel_chat_structured or batch_chat_structured
+  # execution_args contains arguments for parallel_chat_structured or batch_chat_structured
   execution_arg_names <- unique(c(pcs_arg_names, batch_arg_names))
   execution_args <- dots[dot_names %in% execution_arg_names]
 
-  # Warn about unrecognized arguments
-  all_valid_names <- unique(c(chat_arg_names, execution_arg_names))
-  unknown_names <- setdiff(dot_names, all_valid_names)
-  if (length(unknown_names) > 0) {
-    cli::cli_warn(c(
-      "The following {cli::qty(length(unknown_names))} argument{?s} {?was/were} not recognized and {?has/have} been ignored:",
-      "x" = "{.arg {unknown_names}}"
-    ))
-  }
+  # chat_args gets everything NOT destined for execution functions
+
+  # This allows provider-specific args (base_url, credentials, api_args, etc.)
+  # to pass through to ellmer::chat() which forwards them to the provider
+  chat_args <- dots[!dot_names %in% execution_arg_names]
 
   # Build system prompt from role and instructions
   system_prompt <- if (!is.null(codebook$role)) {

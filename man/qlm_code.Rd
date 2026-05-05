@@ -21,11 +21,11 @@ Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-202410
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
 \item{...}{Additional arguments passed to \code{\link[ellmer:chat-any]{ellmer::chat()}},
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}},
-based on argument name. Arguments recognized by
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} take priority when there are overlaps.
-Batch-specific arguments (\code{path}, \code{wait}, \code{ignore_hash}) are only used when
-\code{batch = TRUE}. Arguments not recognized by any function will generate a warning.}
+\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}.
+Arguments recognized by \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} or
+\code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}} are routed there; all other arguments
+(including provider-specific arguments like \code{base_url}, \code{credentials}, or
+\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.}
 
 \item{batch}{Logical. If \code{TRUE}, uses \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}
 instead of \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}. Batch processing is more
