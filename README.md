@@ -40,7 +40,7 @@ learning.**
 
 # The quallmer workflow
 
-## 1. Define codebook
+## 1. Define codebook and prepare data
 
 #### `qlm_codebook()`
 
@@ -53,6 +53,12 @@ learning.**
   how to use built-in codebooks for common qualitative coding tasks.
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
+
+#### `qlm_segment()`
+
+- Segments texts into thematic or conceptual units using an LLM.
+- Useful for aspect-based analysis, quasi-sentence segmentation, or
+  splitting texts by topic before coding.
 
 ## 2. Code data
 
