@@ -12,6 +12,7 @@ navbar:
     - quick-start
     - tutorials
     - examples
+    - workshops
     - reference
     - news
     right:
@@ -47,9 +48,14 @@ navbar:
         href: articles/pkgdown/examples/example_audio.html
       - text: Text segmentation
         href: articles/pkgdown/examples/example_segmentation.html
+      - text: Quasi-sentence segmentation
+        href: articles/pkgdown/examples/example_quasi_sentences.html
     reference:
       text: Reference
       href: reference/index.html
+    workshops:
+      text: Workshops
+      href: articles/pkgdown/workshops.html
     github:
       icon: fab fa-github
       href: https://github.com/quallmer/quallmer

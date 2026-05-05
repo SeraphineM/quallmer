@@ -123,7 +123,9 @@ as_qlm_coded <- function(x,
                           codebook = NULL,
                           texts = NULL,
                           notes = NULL,
-                          metadata = list()) {
+                          metadata = list(),
+                          qlm_segment = FALSE,
+                          source_text = NULL) {
   UseMethod("as_qlm_coded")
 }
 
@@ -164,6 +166,14 @@ as_qlm_coded <- function(x,
 #'   }
 #'   The function automatically adds `timestamp`, `n_units`, `notes`, and
 #'   `source = "human"`.
+#' @param qlm_segment Logical. If `TRUE`, converts the data to a segmented
+#'   quanteda corpus suitable for unitizing comparison with [qlm_compare()].
+#'   Requires a `text` column in `x` and a `source_text` argument. Default
+#'   is `FALSE`.
+#' @param source_text A named character vector of source texts. Required when
+#'   `qlm_segment = TRUE`. Names must match `docid` values in `x` (or a
+#'   single unnamed string for single-document data). Used to compute
+#'   character-level segment positions for unitizing reliability.
 #' @export
 as_qlm_coded.data.frame <- function(
   x,
@@ -173,8 +183,17 @@ as_qlm_coded.data.frame <- function(
   codebook = NULL,
   texts = NULL,
   notes = NULL,
-  metadata = list()
+  metadata = list(),
+  qlm_segment = FALSE,
+  source_text = NULL
 ) {
+  # Segmentation path: return a quanteda corpus with positions
+
+  if (isTRUE(qlm_segment)) {
+    return(as_qlm_coded_segment(x, source_text = source_text, name = name,
+                                 is_gold = is_gold))
+  }
+
   # Handle id parameter with NSE support
   if (missing(id)) {
     id <- ".id"
@@ -274,7 +293,9 @@ as_qlm_coded.corpus <- function(
   codebook = NULL,
   texts = NULL,
   notes = NULL,
-  metadata = list()
+  metadata = list(),
+  qlm_segment = FALSE,
+  source_text = NULL
 ) {
   # Wrap corpus with qlm_corpus class
   x <- as_qlm_corpus(x)
@@ -383,10 +404,119 @@ as_qlm_coded.default <- function(x,
                                   codebook = NULL,
                                   texts = NULL,
                                   notes = NULL,
-                                  metadata = list()) {
+                                  metadata = list(),
+                                  qlm_segment = FALSE,
+                                  source_text = NULL) {
   cli::cli_abort(c(
     "{.arg x} must be a data frame or corpus object.",
     "x" = "You supplied an object of class {.cls {class(x)}}.",
     "i" = "Provide a data frame with an id column and coded variables, or a quanteda corpus with docvars."
   ))
+}
+
+
+#' Convert a data.frame of segments to a segmented corpus
+#'
+#' Internal helper for `as_qlm_coded(qlm_segment = TRUE)`. Converts a
+#' data.frame with a `text` column into a quanteda corpus with character
+#' positions computed by `align_segments()`.
+#'
+#' @param x A data.frame. Must contain a `text` column. All other columns
+#'   become docvars.
+#' @param source_text A named character vector of source texts. Names must
+#'   match values in `x$docid` (if present) or a single unnamed string.
+#' @param name Optional name for provenance.
+#' @param is_gold Logical. Whether this is a gold standard.
+#'
+#' @return A quanteda corpus with `qlm_segment` metadata.
+#' @keywords internal
+#' @noRd
+as_qlm_coded_segment <- function(x, source_text, name = NULL, is_gold = FALSE) {
+  rlang::check_installed(
+    "quanteda",
+    reason = "to create a segmented corpus from {.fn as_qlm_coded}"
+  )
+
+  if (is.null(source_text) || !is.character(source_text)) {
+    cli::cli_abort(c(
+      "{.arg source_text} is required when {.code qlm_segment = TRUE}.",
+      "i" = "Provide the original unsegmented text as a named character vector."
+    ))
+  }
+
+  if (!"text" %in% names(x)) {
+    cli::cli_abort(c(
+      "{.arg x} must contain a {.val text} column when {.code qlm_segment = TRUE}."
+    ))
+  }
+
+  # Determine source document grouping
+  if ("docid" %in% names(x)) {
+    doc_ids <- unique(x$docid)
+  } else {
+    doc_ids <- if (!is.null(names(source_text))) names(source_text) else "text1"
+    x$docid <- doc_ids[1L]
+  }
+
+  # Ensure source_text is named
+  if (is.null(names(source_text))) {
+    if (length(source_text) != 1L || length(doc_ids) != 1L) {
+      cli::cli_abort(c(
+        "{.arg source_text} must be named when {.arg x} contains multiple documents."
+      ))
+    }
+    names(source_text) <- doc_ids[1L]
+  }
+
+  # Process each source document
+  all_texts    <- character(0)
+  all_docnames <- character(0)
+  dvar_rows    <- list()
+
+  non_dv_cols <- c("text", "docid")
+  dv_cols <- setdiff(names(x), non_dv_cols)
+
+  for (doc_id in doc_ids) {
+    rows <- x[x$docid == doc_id, , drop = FALSE]
+    src  <- source_text[[doc_id]]
+
+    if (is.null(src) || is.na(src)) {
+      cli::cli_abort("No source text found for document {.val {doc_id}}.")
+    }
+
+    positions <- align_segments(src, rows$text)
+
+    n_segs <- nrow(rows)
+    all_texts    <- c(all_texts, rows$text)
+    all_docnames <- c(all_docnames, paste0(doc_id, ".", seq_len(n_segs)))
+
+    dv <- data.frame(
+      docid      = rep(doc_id, n_segs),
+      segid      = seq_len(n_segs),
+      char_start = positions$start,
+      char_end   = positions$end,
+      stringsAsFactors = FALSE
+    )
+
+    for (col in dv_cols) {
+      dv[[col]] <- rows[[col]]
+    }
+
+    dvar_rows[[length(dvar_rows) + 1L]] <- dv
+  }
+
+  all_dvars <- do.call(rbind, dvar_rows)
+  out <- quanteda::corpus(all_texts, docnames = all_docnames)
+  quanteda::docvars(out) <- all_dvars
+
+  # Set segmentation metadata
+  quanteda::meta(out, "qlm_segment") <- TRUE
+  quanteda::meta(out, "is_gold") <- is_gold
+  quanteda::meta(out, "name") <- name
+  quanteda::meta(out, "continuum_lengths") <- stats::setNames(
+    nchar(source_text[doc_ids]),
+    doc_ids
+  )
+
+  out
 }

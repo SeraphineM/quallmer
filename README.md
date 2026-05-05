@@ -7,7 +7,7 @@
 
 [![CRAN
 status](https://www.r-pkg.org/badges/version/quallmer)](https://CRAN.R-project.org/package=quallmer)
-[![](https://img.shields.io/badge/devel%20version-0.3.0-royalblue.svg)](https://github.com/quallmer/quallmer)
+[![](https://img.shields.io/badge/devel%20version-0.3.9000-royalblue.svg)](https://github.com/quallmer/quallmer)
 [![R-CMD-check](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/quallmer/quallmer/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/quallmer/quallmer/graph/badge.svg)](https://app.codecov.io/gh/quallmer/quallmer)
