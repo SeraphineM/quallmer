@@ -245,7 +245,7 @@ test_that("qlm_segment warns for documents producing no segments", {
 })
 
 
-test_that("qlm_segment warns about unrecognized arguments", {
+test_that("qlm_segment passes provider-specific arguments to ellmer::chat", {
   skip_if_not_installed("ellmer")
   skip_if_not_installed("quanteda")
 
@@ -254,21 +254,21 @@ test_that("qlm_segment warns about unrecognized arguments", {
     schema = ellmer::type_object(tag = ellmer::type_string("Tag"))
   )
 
-  mock_chat <- structure(list(), class = "ellmer_chat")
+  # Track what arguments are passed to ellmer::chat
+  chat_args_received <- NULL
+  mock_chat <- function(...) {
+    chat_args_received <<- list(...)
+    structure(list(), class = "ellmer_chat")
+  }
   mock_results <- list(tibble::tibble(text = "A.", tag = "a"))
 
   mockery::stub(qlm_segment, "ellmer::chat", mock_chat)
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
-  warnings_seen <- character(0)
-  withCallingHandlers(
-    qlm_segment("Text.", cb, model = "test/model", not_a_real_arg = TRUE),
-    warning = function(w) {
-      warnings_seen <<- c(warnings_seen, conditionMessage(w))
-      invokeRestart("muffleWarning")
-    }
-  )
+  # Call with a provider-specific argument (like base_url for openai_compatible)
+  qlm_segment("Text.", cb, model = "test/model", base_url = "https://my-api.com/v1")
 
-  expect_true(any(grepl("not_a_real_arg", warnings_seen)))
-  expect_true(any(grepl("not recognized", warnings_seen)))
+  # Verify the provider-specific argument was passed through to ellmer::chat
+  expect_true("base_url" %in% names(chat_args_received))
+  expect_equal(chat_args_received$base_url, "https://my-api.com/v1")
 })
