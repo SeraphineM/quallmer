@@ -63,7 +63,7 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 
 #### `qlm_compare()`
 - Compares multiple `qlm_coded` objects to assess inter-rater reliability.
-- Computes agreement metrics including Krippendorff's alpha, Cohen's kappa, and Fleiss' kappa.
+- Computes agreement metrics including Krippendorff's alpha, Cohen's kappa, and Fleiss' kappa.  When comparing documents that have been segmented, automatically computes all four variants of Krippendorff's alpha for unitizing (2019, section 12.6) -- the only R package to do so.
 - Useful for evaluating consistency across different coders, models, or coding runs.
 
 #### `qlm_validate()`
@@ -110,3 +110,7 @@ To learn more about how to use the package, please refer to our [step-by-step tu
 ## Acknowledgments
 
 Development of this package was assisted by [Claude Code](https://claude.com/claude-code), an AI coding assistant by Anthropic, for code refactoring, documentation updates, and package restructuring.
+
+## References
+
+Krippendorff, K. (2019). _Content Analysis: An Introduction to Its Methodology_ (4th ed.). Sage. doi:10.4135/9781071878781
