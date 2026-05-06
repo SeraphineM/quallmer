@@ -30,9 +30,9 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 
 **The quallmer package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.**
 
-# The quallmer workflow
+## The quallmer workflow
 
-## 1. Define codebook and prepare data
+### 1. Define codebook and prepare data
 
 #### `qlm_codebook()`
 - Creates custom codebooks tailored to specific research questions and data types.
@@ -40,11 +40,7 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 - Example codebook objects (e.g., `data_codebook_sentiment`) demonstrate how to use built-in codebooks for common qualitative coding tasks.
 - Extensible framework allows researchers to define domain-specific coding schemes.
 
-#### `qlm_segment()`
-- Segments texts into thematic or conceptual units using an LLM.
-- Useful for aspect-based analysis, quasi-sentence segmentation, or splitting texts by topic before coding.
-
-## 2. Code data
+### 2. Code data
 
 #### `qlm_code()`
 - Applies LLM-based coding to qualitative data using a `qlm_codebook`.
@@ -56,14 +52,14 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 - Useful for aspect-based analysis, quasi-sentence segmentation, or splitting texts by topic.
 - Returns a corpus of segmented units that can be coded with `qlm_code()` for more granular analysis (in the same pass or as a separate step).
 
-## 3. Replicate with different settings
+### 3. Replicate with different settings
 
 #### `qlm_replicate()`
 - Re-executes coding with optional overrides (different models, codebooks, or parameters).
 - Tracks provenance chain for comparing results across different configurations.
 - Enables systematic assessment of coding reliability and sensitivity to model choices.
 
-## 4. Compare and validate results
+### 4. Compare and validate results
 
 #### `qlm_compare()`
 - Compares multiple `qlm_coded` objects to assess inter-rater reliability.
@@ -75,7 +71,7 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 - Computes classification metrics: accuracy, precision, recall, F1-score, and Cohen's kappa.
 - Supports multiple averaging methods (macro, micro, weighted) and per-class breakdowns.
 
-## 5. Document audit trail
+### 5. Document audit trail
 
 #### `qlm_trail()`
 - Creates complete audit trails following Lincoln and Guba's (1985) concept for establishing trustworthiness.
@@ -84,7 +80,6 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 - Reconstructs branching workflows when multiple coded objects are compared or validated.
 - Generates replication materials: environment setup, API configuration, and executable R code.
 - Use `qlm_trail(..., path = "filename")` to save RDS archive and Quarto report.
-
 
 ## Interactive quallmer app
 

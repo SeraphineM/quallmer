@@ -38,9 +38,9 @@ qualitative research.
 without requiring deep expertise in R, programming or machine
 learning.**
 
-# The quallmer workflow
+## The quallmer workflow
 
-## 1. Define codebook and prepare data
+### 1. Define codebook and prepare data
 
 #### `qlm_codebook()`
 
@@ -54,13 +54,7 @@ learning.**
 - Extensible framework allows researchers to define domain-specific
   coding schemes.
 
-#### `qlm_segment()`
-
-- Segments texts into thematic or conceptual units using an LLM.
-- Useful for aspect-based analysis, quasi-sentence segmentation, or
-  splitting texts by topic before coding.
-
-## 2. Code data
+### 2. Code data
 
 #### `qlm_code()`
 
@@ -79,7 +73,7 @@ learning.**
   `qlm_code()` for more granular analysis (in the same pass or as a
   separate step).
 
-## 3. Replicate with different settings
+### 3. Replicate with different settings
 
 #### `qlm_replicate()`
 
@@ -90,7 +84,7 @@ learning.**
 - Enables systematic assessment of coding reliability and sensitivity to
   model choices.
 
-## 4. Compare and validate results
+### 4. Compare and validate results
 
 #### `qlm_compare()`
 
@@ -112,7 +106,7 @@ learning.**
 - Supports multiple averaging methods (macro, micro, weighted) and
   per-class breakdowns.
 
-## 5. Document audit trail
+### 5. Document audit trail
 
 #### `qlm_trail()`
 
