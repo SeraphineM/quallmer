@@ -1,7 +1,7 @@
 Package: quallmer
 Type: Package
 Title: Qualitative Analysis with Large Language Models
-Version: 0.3.9000
+Version: 0.4.0
 Authors@R: c(
     person(
       "Seraphine F.", "Maerz",

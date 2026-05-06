@@ -1,4 +1,4 @@
-# quallmer 0.4.0 (forthcoming)
+# quallmer 0.4.0
 
 ## New features
 
