@@ -1,7 +1,6 @@
 #' @keywords internal
 #' @import ellmer
 #' @import dplyr
-#' @import tidyr
 #' @importFrom irr kripp.alpha kappam.fleiss
 #'
 #' @references

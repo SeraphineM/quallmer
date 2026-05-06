@@ -1,6 +1,5 @@
 #' @keywords internal
 #' @import dplyr
-#' @import tidyr
 #' @importFrom irr kripp.alpha kappam.fleiss kappa2
 #' @importFrom stats na.omit
 NULL
@@ -17,24 +16,35 @@ make_long_icr <- function(df, id, coder_cols) {
   if (!all(coder_cols %in% names(df))) {
     cli::cli_abort("All {.arg coder_cols} must be columns in {.arg df}.")
   }
-  df %>%
-    dplyr::mutate(unit_id = as.character(.data[[id]])) %>%
-    dplyr::select(unit_id, dplyr::all_of(coder_cols)) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(coder_cols),
-      names_to = "coder_id",
-      values_to = "code"
-    ) %>%
-    dplyr::mutate(
-      coder_id = as.character(.data$coder_id),
-      code     = as.character(.data$code)
-    ) %>%
+
+  unit_ids <- as.character(df[[id]])
+  long_df <- data.frame(
+    unit_id  = rep(unit_ids, length(coder_cols)),
+    coder_id = rep(coder_cols, each = length(unit_ids)),
+    code     = as.character(unlist(lapply(coder_cols, function(cc) df[[cc]]), use.names = FALSE)),
+    stringsAsFactors = FALSE
+  )
+
+  long_df %>%
     dplyr::group_by(.data$unit_id, .data$coder_id) %>%
     dplyr::summarise(
       code = dplyr::first(.data$code[!is.na(.data$code)] %||% NA_character_),
       .groups = "drop"
-    ) %>%
-    tidyr::complete(unit_id, coder_id, fill = list(code = NA_character_))
+    )
+}
+
+#' @noRd
+pivot_codes_wide <- function(long_df) {
+  if (nrow(long_df) == 0L) {
+    return(tibble::as_tibble(data.frame()))
+  }
+  unit_ids <- sort(unique(long_df$unit_id))
+  wide <- data.frame(unit_id = unit_ids, stringsAsFactors = FALSE)
+  for (cd in unique(long_df$coder_id)) {
+    keep <- long_df$coder_id == cd
+    wide[[cd]] <- long_df$code[keep][match(unit_ids, long_df$unit_id[keep])]
+  }
+  tibble::as_tibble(wide)
 }
 
 #' @noRd
@@ -49,9 +59,7 @@ filter_units_by_coders <- function(long_df, min_coders = 2L) {
 compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
   output <- match.arg(output)
 
-  wide <- long_df %>%
-    tidyr::pivot_wider(names_from = coder_id, values_from = code) %>%
-    dplyr::arrange(.data$unit_id)
+  wide <- pivot_codes_wide(long_df)
 
   metrics <- c(
     "units_included", "coders", "categories",
@@ -178,9 +186,7 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
 
 #' @noRd
 compute_gold_summary <- function(long_df, gold) {
-  wide <- long_df %>%
-    tidyr::pivot_wider(names_from = coder_id, values_from = code) %>%
-    dplyr::arrange(.data$unit_id)
+  wide <- pivot_codes_wide(long_df)
 
   if (!"unit_id" %in% names(wide)) {
     return(data.frame(
