@@ -29,6 +29,12 @@
 * `qlm_segment()` now accepts a `name` argument stored in corpus metadata for
   rater identification when comparing multiple segmenters via `qlm_compare()`.
 
+## Internal changes
+
+* Removed dependencies on `dplyr` and `tidyr` (#109). Data manipulation now
+  uses base R, `vctrs`, and `tibble`, reducing the install footprint. No
+  user-visible behavior changes.
+
 # quallmer 0.3.0
 
 ## CRAN submission
