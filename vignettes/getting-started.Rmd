@@ -20,7 +20,7 @@ Our tutorials provide a brief introduction to the `quallmer` package, which is d
 
 ## Basic usage
 
-The `quallmer` package is developed for using it in R. Please make sure you have a recent version of [R and RStudio installed](https://posit.co/download/rstudio-desktop/) on your computer. If you are new to R and RStudio, you can find [a great and free-of-charge 1.5h introduction to R and RStudio on instats](https://instats.org/seminar/introduction-to-r-with-rstudio-free-1-h3). 
+The `quallmer` package is developed for using it in R. Please make sure you have a recent version of [R and RStudio installed](https://posit.co/download/rstudio-desktop) on your computer. If you are new to R and RStudio, you can find [a great and free-of-charge 1.5h introduction to R and RStudio on instats](https://instats.org/seminar/introduction-to-r-with-rstudio-free-1-h3). 
 
 To get started with `quallmer`, you first need to install the package from GitHub. 
 
