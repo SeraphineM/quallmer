@@ -1,5 +1,4 @@
 #' @keywords internal
-#' @importFrom irr kripp.alpha kappam.fleiss kappa2
 #' @importFrom stats aggregate ave na.omit
 NULL
 
@@ -114,15 +113,14 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
 
   # Krippendorff's alpha (nominal)
   alpha_val <- tryCatch({
-    rmat <- t(as.matrix(ratings_int))
-    irr::kripp.alpha(rmat, method = "nominal")$value
+    reliability_alpha(as.matrix(ratings_int), method = "nominal")$value
   }, error = function(e) NA_real_)
 
   # Fleiss' kappa (complete cases only)
   fleiss_val <- tryCatch({
     comp <- ratings_int[stats::complete.cases(ratings_int), , drop = FALSE]
     if (nrow(comp) >= 2L && length(all_levels) >= 2L) {
-      irr::kappam.fleiss(comp)$value
+      reliability_kappam_fleiss(comp)$value
     } else {
       NA_real_
     }
@@ -157,7 +155,7 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
     if (sum(keep) >= 2L) {
       pw_agree <- c(pw_agree, mean(as.character(a[keep]) == as.character(b[keep])))
       k2 <- tryCatch({
-        irr::kappa2(data.frame(a = a[keep], b = b[keep]))$value
+        reliability_kappa2(data.frame(a = a[keep], b = b[keep]))$value
       }, error = function(e) NA_real_)
       pw_kappa <- c(pw_kappa, k2)
     }

@@ -25,78 +25,81 @@ make_book_example <- function() {
 }
 
 
-# -- Tests for compute_alpha_u() -----------------------------------------------
+# -- Tests for reliability_alpha_u() -----------------------------------------------
 
-test_that("compute_alpha_u nominal matches book example", {
+test_that("reliability_alpha_u returns uniform list with all variants", {
   obs <- make_book_example()
-  alpha <- compute_alpha_u(
-    list(obs$alex, obs$paul, obs$suzan),
-    L = 60L, type = "nominal"
-  )
-  expect_equal(round(alpha, 3), 0.510)
+  r <- reliability_alpha_u(list(obs$alex, obs$paul, obs$suzan), L = 60L)
+
+  expected_names <- c("method", "value", "binary", "cu_nominal",
+                      "ci_lower", "ci_upper", "per_value", "n_observers", "L")
+  expect_named(r, expected_names)
+  expect_equal(r$method, "alpha_u")
+  expect_equal(r$n_observers, 3L)
+  expect_equal(r$L, 60L)
+  expect_true(is.na(r$ci_lower))
+  expect_true(is.na(r$ci_upper))
 })
 
-test_that("compute_alpha_u binary matches book example", {
+test_that("reliability_alpha_u nominal matches book Figure 12.11", {
   obs <- make_book_example()
-  alpha <- compute_alpha_u(
-    list(obs$alex, obs$paul, obs$suzan),
-    L = 60L, type = "binary"
-  )
-  expect_equal(alpha, 0.413, tolerance = 0.002)
+  r <- reliability_alpha_u(list(obs$alex, obs$paul, obs$suzan), L = 60L)
+  expect_equal(round(r$value, 3), 0.510)
 })
 
-test_that("compute_alpha_u returns 1.0 for identical unitizations", {
+test_that("reliability_alpha_u binary matches book Figure 12.11", {
+  obs <- make_book_example()
+  r <- reliability_alpha_u(list(obs$alex, obs$paul, obs$suzan), L = 60L)
+  expect_equal(r$binary, 0.413, tolerance = 0.002)
+})
+
+test_that("reliability_alpha_u cu_nominal is in expected range", {
+  obs <- make_book_example()
+  r <- reliability_alpha_u(list(obs$alex, obs$paul, obs$suzan), L = 60L)
+  # Slightly higher than 0.724 due to sub-segment structure
+  expect_true(r$cu_nominal > 0.72 && r$cu_nominal < 0.73)
+})
+
+test_that("reliability_alpha_u returns 1.0 for identical unitizations", {
   seg <- data.frame(
     start = c(1L, 11L, 21L),
     end   = c(10L, 20L, 30L),
     value = c("a", "b", "c")
   )
-  alpha <- compute_alpha_u(list(seg, seg), L = 30L, type = "nominal")
-  expect_equal(alpha, 1.0)
+  r <- reliability_alpha_u(list(seg, seg), L = 30L)
+  expect_equal(r$value, 1.0)
+  expect_equal(r$binary, 1.0)
+  expect_equal(r$cu_nominal, 1.0)
 })
 
-test_that("compute_alpha_u cu_nominal matches book example", {
+test_that("reliability_alpha_u per_value matches book Figure 12.11", {
   obs <- make_book_example()
-  alpha <- compute_alpha_u(
-    list(obs$alex, obs$paul, obs$suzan),
-    L = 60L, type = "cu_nominal"
-  )
-  # Slightly higher than 0.724 due to sub-segment structure (same pattern as
-
-  # the nominal and binary measures, verified correct to 3 significant figures)
-  expect_true(alpha > 0.72 && alpha < 0.73)
-})
-
-test_that("compute_alpha_u per_value matches book example", {
-  obs <- make_book_example()
-  pv <- compute_alpha_u(
-    list(obs$alex, obs$paul, obs$suzan),
-    L = 60L, type = "per_value"
-  )
+  r <- reliability_alpha_u(list(obs$alex, obs$paul, obs$suzan), L = 60L)
+  pv <- r$per_value
   expect_true(is.data.frame(pv))
   expect_true(all(c("value", "alpha", "coverage") %in% names(pv)))
 
-  # Values 1, 5, 6 have perfect agreement (alpha = 1.0)
+  # Values 1, 5, 6 have perfect agreement (α = 1.0)
   expect_equal(pv$alpha[pv$value == "1"], 1.0)
   expect_equal(pv$alpha[pv$value == "5"], 1.0)
   expect_equal(pv$alpha[pv$value == "6"], 1.0)
 
-  # Values 2, 3, 4 have zero agreement (each only appears for one observer)
+  # Values 2, 3, 4 each appear for one observer only → α = 0
   expect_equal(pv$alpha[pv$value == "2"], 0.0)
   expect_equal(pv$alpha[pv$value == "3"], 0.0)
   expect_equal(pv$alpha[pv$value == "4"], 0.0)
 
-  # Value 5 coverage is ~44% (only 8 of 18 total "5" chars are in valued intersections)
-  expect_equal(pv$coverage[pv$value == "5"], 8/18, tolerance = 0.01)
+  # Value 5 coverage ≈ 44% (8 of 18 total "5" chars are in valued intersections)
+  expect_equal(pv$coverage[pv$value == "5"], 8 / 18, tolerance = 0.01)
 
-  # Value 7 coverage is 0% (only intersects with gaps)
+  # Value 7 only intersects with gaps → coverage = 0%
   expect_equal(pv$coverage[pv$value == "7"], 0.0)
 })
 
-test_that("compute_alpha_u errors with fewer than 2 unitizations", {
+test_that("reliability_alpha_u errors with fewer than 2 unitizations", {
   seg <- data.frame(start = 1L, end = 10L, value = "a")
   expect_error(
-    compute_alpha_u(list(seg), L = 10L),
+    reliability_alpha_u(list(seg), L = 10L),
     "At least two"
   )
 })
