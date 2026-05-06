@@ -148,10 +148,10 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       }
 
       # ICC
-      if ("icc" %in% metrics_to_compute && requireNamespace("irr", quietly = TRUE)) {
+      if ("icc" %in% metrics_to_compute) {
         icc_result <- tryCatch({
           icc_data <- data.frame(truth = truth_num, estimate = estimate_num)
-          irr::icc(icc_data, model = "twoway", type = "agreement", unit = "single")$value
+          reliability_icc(icc_data, model = "twoway", type = "agreement", unit = "single")$value
         }, error = function(e) NA_real_)
         bootstrap_results$icc <- c(bootstrap_results$icc, icc_result)
       }
@@ -839,25 +839,13 @@ qlm_validate <- function(
         results$rmse <- rmse_result$.estimate
       }
 
-      # Intraclass Correlation Coefficient (using irr package)
+      # Intraclass Correlation Coefficient
       if ("icc" %in% metrics_to_compute) {
-        if (requireNamespace("irr", quietly = TRUE)) {
-          # ICC for two-rater agreement (model = "twoway", type = "agreement")
-          icc_data <- data.frame(truth = truth_num, estimate = estimate_num)
-          icc_result <- irr::icc(icc_data, model = "twoway", type = "agreement", unit = "single")
-          results$icc <- icc_result$value
-          if (ci == "analytic") {
-            cis$icc <- c(lower = icc_result$lbound, upper = icc_result$ubound)
-          }
-        } else {
-          cli::cli_warn(c(
-            "Package {.pkg irr} is required for ICC computation but is not installed.",
-            "i" = "Install it with: {.code install.packages('irr')}"
-          ))
-          results$icc <- NA_real_
-          if (ci == "analytic") {
-            cis$icc <- c(lower = NA_real_, upper = NA_real_)
-          }
+        icc_data <- data.frame(truth = truth_num, estimate = estimate_num)
+        icc_result <- reliability_icc(icc_data, model = "twoway", type = "agreement", unit = "single")
+        results$icc <- icc_result$value
+        if (ci == "analytic") {
+          cis$icc <- c(lower = icc_result$lbound, upper = icc_result$ubound)
         }
       }
     }

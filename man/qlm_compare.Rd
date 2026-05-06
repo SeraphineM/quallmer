@@ -56,8 +56,9 @@ A \code{qlm_comparison} object (a tibble/data frame) with the following columns:
 \item{\code{level}}{Measurement level used}
 \item{\code{measure}}{Name of the reliability metric}
 \item{\code{value}}{Computed value of the metric}
-\item{\code{docid}}{Source document identifier and overall indicator (unitizing
-comparisons only). Absent for predefined-unit comparisons.}
+\item{\code{docid}}{Per-row context: source document identifier and overall
+indicator for unitizing comparisons; marginal \code{(n=X)} for nominal
+per-category alpha rows; \code{NA} otherwise.}
 \item{\code{rater1}, \code{rater2}, ...}{Names of the compared objects (one column per rater)}
 \item{\code{ci_lower}}{Lower bound of confidence interval (only if \code{ci != "none"})}
 \item{\code{ci_upper}}{Upper bound of confidence interval (only if \code{ci != "none"})}
