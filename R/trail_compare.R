@@ -22,8 +22,6 @@
 #'   setting/record. The unit ID column is retained under the name
 #'   \code{id_col}.
 #'
-#' @importFrom dplyr bind_rows
-#' @importFrom tidyr pivot_wider
 #' @keywords internal
 #' @export
 trail_matrix <- function(x,
@@ -70,15 +68,16 @@ trail_matrix <- function(x,
     )
   })
 
-  long_all <- dplyr::bind_rows(df_list)
+  long_all <- do.call(vctrs::vec_rbind, df_list)
 
-  wide <- tidyr::pivot_wider(
-    long_all,
-    names_from  = coder,
-    values_from = code
-  )
+  unit_ids <- unique(long_all$unit_id)
+  wide <- data.frame(unit_id = unit_ids, stringsAsFactors = FALSE)
+  for (cd in unique(long_all$coder)) {
+    keep <- long_all$coder == cd
+    wide[[cd]] <- long_all$code[keep][match(unit_ids, long_all$unit_id[keep])]
+  }
+  wide <- tibble::as_tibble(wide)
 
-  # Expose the ID column under the requested name
   names(wide)[names(wide) == "unit_id"] <- id_col
   wide
 }

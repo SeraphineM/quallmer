@@ -986,8 +986,7 @@ qlm_validate <- function(
     ))
   }
 
-  # Build data frame using dplyr::bind_rows to handle mixed types better
-  result_df <- dplyr::bind_rows(all_results)
+  result_df <- tibble::as_tibble(do.call(vctrs::vec_rbind, lapply(all_results, as.data.frame)))
 
   # Extract parent run names from all objects
   parent_names <- vapply(x_list, function(obj) {

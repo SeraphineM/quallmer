@@ -37,13 +37,13 @@ Depends:
     ellmer (>= 0.4.0)
 Imports:
     cli,
-    dplyr,
-    tidyr,
     digest,
     irr,
     lifecycle,
     rlang,
     stats,
+    tibble,
+    vctrs,
     yardstick
 Encoding: UTF-8
 LazyData: true
@@ -59,7 +59,6 @@ Suggests:
     mockery,
     quanteda,
     quanteda.tidy,
-    tibble,
     withr
 Config/testthat/edition: 3
 VignetteBuilder: knitr

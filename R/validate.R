@@ -1,13 +1,17 @@
 #' @keywords internal
-#' @import dplyr
-#' @import tidyr
 #' @importFrom irr kripp.alpha kappam.fleiss kappa2
-#' @importFrom stats na.omit
+#' @importFrom stats aggregate ave na.omit
 NULL
 
 # -------------------------------
 # Internals for validate()
 # -------------------------------
+
+#' @noRd
+first_non_na <- function(x) {
+  v <- x[!is.na(x)]
+  if (length(v)) v[1] else NA_character_
+}
 
 #' @noRd
 make_long_icr <- function(df, id, coder_cols) {
@@ -17,41 +21,48 @@ make_long_icr <- function(df, id, coder_cols) {
   if (!all(coder_cols %in% names(df))) {
     cli::cli_abort("All {.arg coder_cols} must be columns in {.arg df}.")
   }
-  df %>%
-    dplyr::mutate(unit_id = as.character(.data[[id]])) %>%
-    dplyr::select(unit_id, dplyr::all_of(coder_cols)) %>%
-    tidyr::pivot_longer(
-      cols = dplyr::all_of(coder_cols),
-      names_to = "coder_id",
-      values_to = "code"
-    ) %>%
-    dplyr::mutate(
-      coder_id = as.character(.data$coder_id),
-      code     = as.character(.data$code)
-    ) %>%
-    dplyr::group_by(.data$unit_id, .data$coder_id) %>%
-    dplyr::summarise(
-      code = dplyr::first(.data$code[!is.na(.data$code)] %||% NA_character_),
-      .groups = "drop"
-    ) %>%
-    tidyr::complete(unit_id, coder_id, fill = list(code = NA_character_))
+
+  unit_ids <- as.character(df[[id]])
+  long_df <- data.frame(
+    unit_id  = rep(unit_ids, length(coder_cols)),
+    coder_id = rep(coder_cols, each = length(unit_ids)),
+    code     = as.character(unlist(lapply(coder_cols, function(cc) df[[cc]]), use.names = FALSE)),
+    stringsAsFactors = FALSE
+  )
+
+  collapsed <- aggregate(
+    x = list(code = long_df$code),
+    by = list(unit_id = long_df$unit_id, coder_id = long_df$coder_id),
+    FUN = first_non_na
+  )
+  tibble::as_tibble(collapsed)
+}
+
+#' @noRd
+pivot_codes_wide <- function(long_df) {
+  if (nrow(long_df) == 0L) {
+    return(tibble::as_tibble(data.frame()))
+  }
+  unit_ids <- sort(unique(long_df$unit_id))
+  wide <- data.frame(unit_id = unit_ids, stringsAsFactors = FALSE)
+  for (cd in unique(long_df$coder_id)) {
+    keep <- long_df$coder_id == cd
+    wide[[cd]] <- long_df$code[keep][match(unit_ids, long_df$unit_id[keep])]
+  }
+  tibble::as_tibble(wide)
 }
 
 #' @noRd
 filter_units_by_coders <- function(long_df, min_coders = 2L) {
-  long_df %>%
-    dplyr::group_by(.data$unit_id) %>%
-    dplyr::filter(sum(!is.na(.data$code)) >= min_coders) %>%
-    dplyr::ungroup()
+  n_per_unit <- ave(!is.na(long_df$code), long_df$unit_id, FUN = sum)
+  long_df[n_per_unit >= min_coders, , drop = FALSE]
 }
 
 #' @noRd
 compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
   output <- match.arg(output)
 
-  wide <- long_df %>%
-    tidyr::pivot_wider(names_from = coder_id, values_from = code) %>%
-    dplyr::arrange(.data$unit_id)
+  wide <- pivot_codes_wide(long_df)
 
   metrics <- c(
     "units_included", "coders", "categories",
@@ -74,7 +85,8 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
     }
   }
 
-  ratings_raw <- wide %>% dplyr::select(-.data$unit_id)
+  ratings_raw <- wide
+  ratings_raw$unit_id <- NULL
   n_units  <- nrow(ratings_raw)
   n_coders <- ncol(ratings_raw)
 
@@ -178,9 +190,7 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
 
 #' @noRd
 compute_gold_summary <- function(long_df, gold) {
-  wide <- long_df %>%
-    tidyr::pivot_wider(names_from = coder_id, values_from = code) %>%
-    dplyr::arrange(.data$unit_id)
+  wide <- pivot_codes_wide(long_df)
 
   if (!"unit_id" %in% names(wide)) {
     return(data.frame(
@@ -198,7 +208,8 @@ compute_gold_summary <- function(long_df, gold) {
     cli::cli_abort("Gold-standard coder {.val {gold}} not found among coder columns.")
   }
 
-  ratings_raw <- wide %>% dplyr::select(-.data$unit_id)
+  ratings_raw <- wide
+  ratings_raw$unit_id <- NULL
 
   # Drop units where gold is NA
   truth_all <- ratings_raw[[gold]]
