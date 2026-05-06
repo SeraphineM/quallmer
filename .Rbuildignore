@@ -27,3 +27,4 @@
 ^CITATION\.cff$
 ^\.positai$
 ^quallmer-context\.xml$
+^sources$

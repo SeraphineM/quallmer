@@ -1,6 +1,5 @@
 #' @keywords internal
 #' @import ellmer
-#' @importFrom irr kappam.fleiss
 #'
 #' @references
 #' Krippendorff, K. (2019). Content Analysis: An Introduction to Its

@@ -440,21 +440,30 @@ qlm_compare <- function(...,
       var_cis <- NULL
     }
 
+    # Per-category data.frames from reliability_alpha / reliability_kappa.
+    # Each row becomes its own metric row, with marginal `n` carried in `docid`.
+    per_value_specs <- list(
+      alpha_per_value = list(prefix = "alpha_per_value",
+                             value_col = "alpha"),
+      kappa_per_value = list(prefix = "kappa_per_value",
+                             value_col = "kappa")
+    )
+
     # Convert results to data frame rows (exclude kappa_type which is metadata)
     for (measure_name in names(var_results)) {
       # Skip kappa_type as it's metadata, not a metric
       if (measure_name == "kappa_type") next
 
-      # per_value is a data.frame from reliability_alpha; expand into rows
-      if (measure_name == "per_value") {
-        pv <- var_results$per_value
+      if (measure_name %in% names(per_value_specs)) {
+        spec <- per_value_specs[[measure_name]]
+        pv <- var_results[[measure_name]]
         if (is.null(pv) || nrow(pv) == 0L) next
         for (pi in seq_len(nrow(pv))) {
           row_pv <- list(
             variable = var,
             level    = var_level,
-            measure  = paste0("alpha_per_value[", pv$value[pi], "]"),
-            value    = pv$alpha[pi],
+            measure  = paste0(spec$prefix, "[", pv$value[pi], "]"),
+            value    = pv[[spec$value_col]][pi],
             docid    = paste0("(n=", pv$n[pi], ")")
           )
           for (i in seq_along(object_names)) {
@@ -597,9 +606,9 @@ bootstrap_reliability_ci <- function(ratings, n_raters, level, tolerance, bootst
     # Compute metrics on bootstrap sample
     boot_metrics <- compute_reliability_by_level(boot_ratings, n_raters, level, tolerance, use_ci = FALSE)
 
-    # Store results (skip metadata and per_value data.frame)
+    # Store results (skip metadata and per-value data.frames)
     for (metric_name in names(boot_metrics)) {
-      if (metric_name == "kappa_type" || metric_name == "per_value") next
+      if (metric_name %in% c("kappa_type", "alpha_per_value", "kappa_per_value")) next
       bootstrap_results[[metric_name]] <- c(bootstrap_results[[metric_name]], boot_metrics[[metric_name]])
     }
   }
@@ -666,25 +675,31 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
       ))
       list(value = NA_real_, per_value = NULL)
     })
-    results$alpha_nominal <- alpha_result$value
-    results$per_value     <- alpha_result$per_value
+    results$alpha_nominal   <- alpha_result$value
+    results$alpha_per_value <- alpha_result$per_value
 
-    # Cohen's/Fleiss' kappa
+    # Cohen's (2 raters) / Fleiss' (3+ raters) kappa
     kappa_result <- tryCatch({
       if (n_raters == 2) {
-        reliability_kappa2(ratings_numeric)
+        reliability_kappa(ratings_numeric)
       } else {
-        reliability_kappam_fleiss(ratings_numeric)
+        reliability_kappa_fleiss(ratings_numeric)
       }
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute kappa.",
         "x" = conditionMessage(e)
       ))
-      list(value = NA_real_)
+      list(value = NA_real_, per_value = NULL,
+           ci_lower = NA_real_, ci_upper = NA_real_)
     })
-    results$kappa <- kappa_result$value
-    results$kappa_type <- if (n_raters == 2) "Cohen's" else "Fleiss'"
+    results$kappa           <- kappa_result$value
+    results$kappa_per_value <- kappa_result$per_value
+    results$kappa_type      <- if (n_raters == 2) "Cohen's" else "Fleiss'"
+    if (use_ci == "analytic") {
+      cis$kappa <- c(lower = kappa_result$ci_lower,
+                     upper = kappa_result$ci_upper)
+    }
 
   } else if (level == "ordinal") {
     # Ordinal measures: alpha_ordinal, kappa_weighted, w, rho
@@ -706,7 +721,7 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
     # Weighted kappa (only for 2 raters)
     if (n_raters == 2) {
       kappa_weighted_result <- tryCatch({
-        reliability_kappa2(ratings_numeric, weight = "squared")
+        reliability_kappa(ratings_numeric, weight = "squared")
       }, error = function(e) {
         cli::cli_warn(c(
           "Failed to compute weighted kappa.",
@@ -951,6 +966,10 @@ format_measure_name <- function(measure) {
   if (grepl("^alpha_per_value\\[", measure)) {
     val <- sub("^alpha_per_value\\[(.+)\\]$", "\\1", measure)
     return(paste0("alpha (value=", val, ")"))
+  }
+  if (grepl("^kappa_per_value\\[", measure)) {
+    val <- sub("^kappa_per_value\\[(.+)\\]$", "\\1", measure)
+    return(paste0("kappa (value=", val, ")"))
   }
 
   measure

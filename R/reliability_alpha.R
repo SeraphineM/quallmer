@@ -35,7 +35,6 @@
 #' Methodology* (4th ed.). Sage. \doi{10.4135/9781071878781}
 #'
 #' @keywords internal
-#' @noRd
 reliability_alpha <- function(observations,
                               method = c("nominal", "ordinal", "interval", "ratio")) {
   method <- match.arg(method)
@@ -194,7 +193,6 @@ per_category_alpha <- function(cm, n_c, n_total, values) {
 #'   character positions), one row per segment.
 #'
 #' @keywords internal
-#' @noRd
 align_segments <- function(source_text, segments) {
   if (!is.character(source_text) || length(source_text) != 1L) {
     cli::cli_abort("{.arg source_text} must be a single character string.")
@@ -279,7 +277,6 @@ align_segments <- function(source_text, segments) {
 #' Methodology* (4th ed.). Sage.
 #'
 #' @keywords internal
-#' @noRd
 reliability_alpha_u <- function(unitizations, L) {
   m <- length(unitizations)
   if (m < 2L) {
