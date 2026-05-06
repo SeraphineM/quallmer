@@ -90,13 +90,12 @@
 <p>The <strong>quallmer</strong> package is an <strong>easy-to-use toolbox to quickly apply AI-assisted qualitative coding to large amounts of texts, images, pdfs, tabular data and other structured data.</strong></p>
 <p>Using <code><a href="reference/qlm_code.html">qlm_code()</a></code>, users can apply codebook-based qualitative coding powered by large language models (LLMs) to generate structured, interpretable outputs. The package includes built-in codebooks for common applications and allows researchers to create custom codebooks tailored to their specific research questions using <code><a href="reference/qlm_codebook.html">qlm_codebook()</a></code>. To ensure quality and reliability of AI-generated coding, <strong>quallmer</strong> provides <code><a href="reference/qlm_compare.html">qlm_compare()</a></code> for evaluating inter-rater reliability and <code><a href="reference/qlm_validate.html">qlm_validate()</a></code> for assessing accuracy against gold standards. With <code><a href="reference/qlm_replicate.html">qlm_replicate()</a></code>, researchers can systematically compare results across different models and settings to assess sensitivity and reproducibility. The <code><a href="reference/qlm_trail.html">qlm_trail()</a></code> function creates complete audit trails following Lincoln and Guba’s (1985) concept for establishing trustworthiness in qualitative research.</p>
 <p><strong>The quallmer package makes AI-assisted qualitative coding accessible without requiring deep expertise in R, programming or machine learning.</strong></p>
-</div>
-<div class="section level1">
-<h1 id="the-quallmer-workflow">The quallmer workflow<a class="anchor" aria-label="anchor" href="#the-quallmer-workflow"></a>
-</h1>
 <div class="section level2">
-<h2 id="id_1-define-codebook-and-prepare-data">1. Define codebook and prepare data<a class="anchor" aria-label="anchor" href="#id_1-define-codebook-and-prepare-data"></a>
+<h2 id="the-quallmer-workflow">The quallmer workflow<a class="anchor" aria-label="anchor" href="#the-quallmer-workflow"></a>
 </h2>
+<div class="section level3">
+<h3 id="id_1-define-codebook-and-prepare-data">1. Define codebook and prepare data<a class="anchor" aria-label="anchor" href="#id_1-define-codebook-and-prepare-data"></a>
+</h3>
 <div class="section level4">
 <h4 id="qlm_codebook">
 <code>qlm_codebook()</code><a class="anchor" aria-label="anchor" href="#qlm_codebook"></a>
@@ -108,19 +107,10 @@
 <li>Extensible framework allows researchers to define domain-specific coding schemes.</li>
 </ul>
 </div>
-<div class="section level4">
-<h4 id="qlm_segment">
-<code>qlm_segment()</code><a class="anchor" aria-label="anchor" href="#qlm_segment"></a>
-</h4>
-<ul>
-<li>Segments texts into thematic or conceptual units using an LLM.</li>
-<li>Useful for aspect-based analysis, quasi-sentence segmentation, or splitting texts by topic before coding.</li>
-</ul>
 </div>
-</div>
-<div class="section level2">
-<h2 id="id_2-code-data">2. Code data<a class="anchor" aria-label="anchor" href="#id_2-code-data"></a>
-</h2>
+<div class="section level3">
+<h3 id="id_2-code-data">2. Code data<a class="anchor" aria-label="anchor" href="#id_2-code-data"></a>
+</h3>
 <div class="section level4">
 <h4 id="qlm_code">
 <code>qlm_code()</code><a class="anchor" aria-label="anchor" href="#qlm_code"></a>
@@ -142,9 +132,9 @@
 </ul>
 </div>
 </div>
-<div class="section level2">
-<h2 id="id_3-replicate-with-different-settings">3. Replicate with different settings<a class="anchor" aria-label="anchor" href="#id_3-replicate-with-different-settings"></a>
-</h2>
+<div class="section level3">
+<h3 id="id_3-replicate-with-different-settings">3. Replicate with different settings<a class="anchor" aria-label="anchor" href="#id_3-replicate-with-different-settings"></a>
+</h3>
 <div class="section level4">
 <h4 id="qlm_replicate">
 <code>qlm_replicate()</code><a class="anchor" aria-label="anchor" href="#qlm_replicate"></a>
@@ -156,9 +146,9 @@
 </ul>
 </div>
 </div>
-<div class="section level2">
-<h2 id="id_4-compare-and-validate-results">4. Compare and validate results<a class="anchor" aria-label="anchor" href="#id_4-compare-and-validate-results"></a>
-</h2>
+<div class="section level3">
+<h3 id="id_4-compare-and-validate-results">4. Compare and validate results<a class="anchor" aria-label="anchor" href="#id_4-compare-and-validate-results"></a>
+</h3>
 <div class="section level4">
 <h4 id="qlm_compare">
 <code>qlm_compare()</code><a class="anchor" aria-label="anchor" href="#qlm_compare"></a>
@@ -180,9 +170,9 @@
 </ul>
 </div>
 </div>
-<div class="section level2">
-<h2 id="id_5-document-audit-trail">5. Document audit trail<a class="anchor" aria-label="anchor" href="#id_5-document-audit-trail"></a>
-</h2>
+<div class="section level3">
+<h3 id="id_5-document-audit-trail">5. Document audit trail<a class="anchor" aria-label="anchor" href="#id_5-document-audit-trail"></a>
+</h3>
 <div class="section level4">
 <h4 id="qlm_trail">
 <code>qlm_trail()</code><a class="anchor" aria-label="anchor" href="#qlm_trail"></a>
@@ -195,6 +185,7 @@
 <li>Generates replication materials: environment setup, API configuration, and executable R code.</li>
 <li>Use <code>qlm_trail(..., path = "filename")</code> to save RDS archive and Quarto report.</li>
 </ul>
+</div>
 </div>
 </div>
 <div class="section level2">
@@ -231,7 +222,6 @@
 <p>Krippendorff, K. (2019). <em>Content Analysis: An Introduction to Its Methodology</em> (4th ed.). Sage. <a href="doi:10.4135/9781071878781" class="uri">doi:10.4135/9781071878781</a></p>
 </div>
 </div>
-
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
