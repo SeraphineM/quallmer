@@ -70,7 +70,8 @@ where batch results are cached, \code{wait} controls whether to wait for complet
 and \code{ignore_hash} can force reprocessing of cached results.
 }
 \examples{
-\donttest{
+# Requires API credentials and internet access; not run in package checks.
+\dontrun{
 # Basic sentiment analysis
 texts <- c("I love this product!", "Terrible experience.", "It's okay.")
 coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")

@@ -59,7 +59,9 @@
 #' coding runs, [qlm_compare()] and [qlm_validate()] for assessing reliability.
 #'
 #' @examples
-#' \donttest{
+#' @examples
+#' # Requires API credentials and internet access; not run in package checks.
+#' \dontrun{
 #' # Basic sentiment analysis
 #' texts <- c("I love this product!", "Terrible experience.", "It's okay.")
 #' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
