@@ -1,17 +1,17 @@
 # Tests for reliability_kappa() and reliability_kappa_fleiss().
 #
 # Worked examples:
-# - Cohen (1960) Table 2: 200 subjects, 2 raters, 3 categories. κ = 0.492,
-#   σ_κ = 0.055, 95% CI (0.384, 0.600).
-# - Fleiss (1971) Table 1: 30 subjects, 6 raters, 5 categories. κ = 0.430,
-#   σ_κ ≈ 0.028. Per-category κⱼ = 0.248, 0.248, 0.517, 0.470, 0.565
-#   (book uses 3-decimal rounded pⱼ; native gives 0.245, 0.245, 0.520,
-#   0.471, 0.566 — accept tolerance ~0.005).
-# - Krippendorff §12.3.4.4 (Mary & Dave): hand-calculated κ = 0.750.
+# - Cohen (1960) Table 2: 200 subjects, 2 raters, 3 categories. kappa = 0.492,
+#   sigma_kappa = 0.055, 95% CI (0.384, 0.600).
+# - Fleiss (1971) Table 1: 30 subjects, 6 raters, 5 categories. kappa = 0.430,
+#   sigma_kappa ~= 0.028. Per-category kappa_j = 0.248, 0.248, 0.517, 0.470, 0.565
+#   (book uses 3-decimal rounded p_j; native gives 0.245, 0.245, 0.520,
+#   0.471, 0.566 -- accept tolerance ~0.005).
+# - Krippendorff sec.12.3.4.4 (Mary & Dave): hand-calculated kappa = 0.750.
 
 # -- Cohen (1960) Table 2 ------------------------------------------------------
 
-# Cross-tab from book p. 45 (Judge B rows × Judge A cols):
+# Cross-tab from book p. 45 (Judge B rows x Judge A cols):
 #         A=1  A=2  A=3
 #  B=1    88   14   18    120
 #  B=2    10   40   10     60
@@ -38,17 +38,17 @@ test_that("reliability_kappa matches Cohen (1960) Table 2", {
   expect_equal(r$n_observers, 2L)
   expect_equal(r$n_units, 200L)
 
-  # σ_κ via Eq. 7: book reports 0.055; CI half-width = 1.96 × σ_κ
+  # sigma_kappa via Eq. 7: book reports 0.055; CI half-width = 1.96 x sigma_kappa
   se <- (r$ci_upper - r$value) / 1.96
   expect_equal(round(se, 3), 0.055)
 
   # 95% CI from book: (0.384, 0.600). Native value 0.599 differs by 0.001
-  # because the book carries σ_κ ≈ .055 forward; native uses unrounded SE.
+  # because the book carries sigma_kappa ~= .055 forward; native uses unrounded SE.
   expect_equal(round(r$ci_lower, 3), 0.384)
   expect_equal(round(r$ci_upper, 2), 0.60)
 })
 
-test_that("reliability_kappa matches Mary & Dave (Krippendorff §12.3.4.4)", {
+test_that("reliability_kappa matches Mary & Dave (Krippendorff sec.12.3.4.4)", {
   md <- cbind(
     Mary = c("a", "a", "c", "c", "c", "c", "c", "b", "b", "b", "b", "d"),
     Dave = c("a", "c", "c", "c", "c", "c", "b", "b", "b", "b", "b", "d")
@@ -104,7 +104,7 @@ test_that("reliability_kappa returns uniform output shape", {
 
 # -- Fleiss (1971) Table 1 -----------------------------------------------------
 
-# n_ij counts (subject × category): how many of the 6 raters placed each
+# n_ij counts (subject x category): how many of the 6 raters placed each
 # subject into each category. Categories: 1=Depression, 2=Personality
 # disorder, 3=Schizophrenia, 4=Neurosis, 5=Other.
 make_fleiss_t1 <- function() {
@@ -142,7 +142,7 @@ make_fleiss_t1 <- function() {
   )
 }
 
-# Re-expand n_ij counts back to a subjects × raters matrix. Rater identity
+# Re-expand n_ij counts back to a subjects x raters matrix. Rater identity
 # is irrelevant for Fleiss' kappa; this just gives the function the correct
 # per-subject category multiplicities.
 expand_to_ratings <- function(nij) {
@@ -172,8 +172,8 @@ test_that("reliability_kappa_fleiss matches Fleiss (1971) Table 1", {
   se <- (r$ci_upper - r$value) / 1.96
   expect_equal(round(se, 3), 0.028)
 
-  # Per-category κⱼ — book reports 0.248, 0.248, 0.517, 0.470, 0.565 using
-  # rounded pⱼ; native uses exact pⱼ so values drift up to ~0.003.
+  # Per-category kappa_j -- book reports 0.248, 0.248, 0.517, 0.470, 0.565 using
+  # rounded p_j; native uses exact p_j so values drift up to ~0.003.
   expected_kappa <- c("1" = 0.248, "2" = 0.248, "3" = 0.517,
                       "4" = 0.470, "5" = 0.565)
   observed <- setNames(r$per_value$kappa, r$per_value$value)

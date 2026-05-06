@@ -6,7 +6,7 @@
 #' between two raters (Cohen, 1960). Unweighted (Eq. 1) and weighted
 #' (linear or quadratic) variants are supported.
 #'
-#' @param observations A `subjects × 2 raters` matrix or data.frame.
+#' @param observations A `subjects x 2 raters` matrix or data.frame.
 #'   Rows are units; the two columns are the two raters. Must not
 #'   contain `NA`.
 #' @param weight Weighting scheme for disagreements:
@@ -20,11 +20,11 @@
 #'   `per_value`, `n_observers`, `n_units`, `n_pairable`. `ci_lower` and
 #'   `ci_upper` are populated for unweighted kappa using the asymptotic
 #'   standard error from Cohen (1960, Eq. 7); `NA` for weighted variants.
-#'   `per_value` (unweighted only) gives per-category κ via dichotomisation.
+#'   `per_value` (unweighted only) gives per-category kappa via dichotomisation.
 #'
 #' @references
 #' Cohen, J. (1960). A coefficient of agreement for nominal scales.
-#' *Educational and Psychological Measurement*, 20(1), 37–46.
+#' *Educational and Psychological Measurement*, 20(1), 37-46.
 #' \doi{10.1177/001316446002000104}
 #'
 #' @keywords internal
@@ -70,7 +70,7 @@ reliability_kappa <- function(observations,
   kappa_value <- alpha_from_disagreements(1 - p_o, 1 - p_e)
 
   if (weight == "unweighted") {
-    # Cohen (1960, Eq. 7): σ_κ ≈ sqrt(p_o(1-p_o) / (N(1-p_e)^2))
+    # Cohen (1960, Eq. 7): sigma_kappa ~= sqrt(p_o(1-p_o) / (N(1-p_e)^2))
     se <- if (1 - p_e == 0) NA_real_ else {
       sqrt(p_o * (1 - p_o) / (N * (1 - p_e)^2))
     }
@@ -103,25 +103,25 @@ reliability_kappa <- function(observations,
 #'
 #' `r lifecycle::badge("experimental")`
 #'
-#' Native implementation of Fleiss' generalisation of κ to a constant
+#' Native implementation of Fleiss' generalisation of kappa to a constant
 #' number of raters per subject (Fleiss, 1971), where the raters rating
 #' one subject need not be the same as those rating another. For two
 #' raters use [reliability_kappa()] (Cohen's): the two coefficients
 #' differ even on the same data because Cohen's uses each rater's
 #' marginals while Fleiss' uses pooled marginals.
 #'
-#' @param observations A `subjects × raters` matrix or data.frame.
+#' @param observations A `subjects x raters` matrix or data.frame.
 #'   Rows are units; columns are raters. Must not contain `NA`. The
 #'   number of raters per subject is taken to be `ncol(observations)`.
 #'
 #' @return A list with elements `method`, `value`, `ci_lower`, `ci_upper`,
 #'   `per_value`, `n_observers`, `n_units`, `n_pairable`. CI bounds are
 #'   from the asymptotic SE in Fleiss (1971, Eq. 16). `per_value` gives
-#'   per-category κⱼ from Fleiss (1971, Eqs. 20–21).
+#'   per-category kappa_j from Fleiss (1971, Eqs. 20-21).
 #'
 #' @references
 #' Fleiss, J. L. (1971). Measuring nominal scale agreement among many
-#' raters. *Psychological Bulletin*, 76(5), 378–382.
+#' raters. *Psychological Bulletin*, 76(5), 378-382.
 #' \doi{10.1037/h0031619}
 #'
 #' @keywords internal
@@ -152,7 +152,7 @@ reliability_kappa_fleiss <- function(observations) {
     nij[i, ] <- tabulate(match(observations[i, ], values), nbins = k)
   }
 
-  # Per-subject agreement Pᵢ (Fleiss 1971, Eq. 2)
+  # Per-subject agreement P_i (Fleiss 1971, Eq. 2)
   Pi <- (rowSums(nij^2) - n) / (n * (n - 1))
   P_bar <- mean(Pi)
 
@@ -162,7 +162,7 @@ reliability_kappa_fleiss <- function(observations) {
 
   kappa_value <- alpha_from_disagreements(1 - P_bar, 1 - Pe_bar)
 
-  # Asymptotic variance of κ (Fleiss 1971, Eq. 16)
+  # Asymptotic variance of kappa (Fleiss 1971, Eq. 16)
   if (1 - Pe_bar == 0) {
     se <- NA_real_
   } else {
@@ -187,7 +187,7 @@ reliability_kappa_fleiss <- function(observations) {
 }
 
 
-# Weight matrix for κ (k × k). Diagonal = 1; off-diagonal weight depends
+# Weight matrix for kappa (k x k). Diagonal = 1; off-diagonal weight depends
 # on |i - j| (linear "equal" or quadratic "squared").
 kappa_weights <- function(k, weight) {
   if (weight == "unweighted" || k <= 1L) return(diag(k))
@@ -200,7 +200,7 @@ kappa_weights <- function(k, weight) {
 }
 
 
-# Per-category Cohen's κ: dichotomise each category against all others.
+# Per-category Cohen's kappa: dichotomise each category against all others.
 per_category_kappa_cohen <- function(observations, values) {
   N <- nrow(observations)
   out <- data.frame(
@@ -233,7 +233,7 @@ per_category_kappa_cohen <- function(observations, values) {
 }
 
 
-# Per-category Fleiss' κⱼ (Fleiss 1971, Eqs. 20–21).
+# Per-category Fleiss' kappa_j (Fleiss 1971, Eqs. 20-21).
 per_category_kappa_fleiss <- function(nij, pj, N, n, values) {
   k <- length(values)
   out <- data.frame(

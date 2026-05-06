@@ -6,9 +6,9 @@
 #' issue #112. Computes the intraclass correlation coefficient for
 #' interval/ratio agreement.
 #'
-#' @param ratings A `subjects × raters` matrix or data.frame.
+#' @param ratings A `subjects x raters` matrix or data.frame.
 #' @param model `"oneway"` (raters are random) or `"twoway"` (raters and
-#'   subjects are both random — the more common choice for IRR).
+#'   subjects are both random -- the more common choice for IRR).
 #' @param type `"consistency"` (relative agreement) or `"agreement"`
 #'   (absolute agreement, including rater bias).
 #' @param unit `"single"` (reliability of one rater's score) or

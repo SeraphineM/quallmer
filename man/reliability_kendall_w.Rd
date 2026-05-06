@@ -7,7 +7,7 @@
 reliability_kendall_w(ratings, correct = FALSE)
 }
 \arguments{
-\item{ratings}{A \verb{subjects × raters} matrix or data.frame.}
+\item{ratings}{A \verb{subjects x raters} matrix or data.frame.}
 
 \item{correct}{Logical; apply Kendall's tie correction.}
 }

@@ -17,15 +17,15 @@ and \code{value} (the category assigned to the segment).}
 A list with elements:
 \describe{
 \item{\code{method}}{\code{"alpha_u"}.}
-\item{\code{value}}{Numeric — \verb{_u_alpha_nominal} (overall agreement on
+\item{\code{value}}{Numeric -- \verb{_u_alpha_nominal} (overall agreement on
 both boundaries and codes; section 12.6.3, eq. 34).}
-\item{\code{binary}}{Numeric — \verb{|_u_alpha_binary} (boundary-only;
+\item{\code{binary}}{Numeric -- \verb{|_u_alpha_binary} (boundary-only;
 section 12.6.4, eq. 35).}
-\item{\code{cu_nominal}}{Numeric — \verb{_cu_alpha_nominal} (coding given
+\item{\code{cu_nominal}}{Numeric -- \verb{_cu_alpha_nominal} (coding given
 unitization; section 12.6.5, eqs. 36--37).}
 \item{\code{ci_lower}, \code{ci_upper}}{\code{NA_real_} (uniform shape).}
 \item{\code{per_value}}{Data.frame with columns \code{value}, \code{alpha},
-\code{coverage} — per-value reliability \verb{_(k)u_alpha_nominal}
+\code{coverage} -- per-value reliability \verb{_(k)u_alpha_nominal}
 (section 12.6.6, eq. 38).}
 \item{\code{n_observers}}{Number of observers (\code{m}).}
 \item{\code{L}}{Continuum length.}
@@ -37,7 +37,7 @@ unitization; section 12.6.5, eqs. 36--37).}
 \details{
 Native implementation of the \verb{_u_alpha} family for two or more
 unitizations of a common continuum (Krippendorff, 2019, section 12.6).
-One call computes all variants — overall (\verb{_u_alpha_nominal}),
+One call computes all variants -- overall (\verb{_u_alpha_nominal}),
 boundary-only (\verb{|_u_alpha_binary}), coding-conditional
 (\verb{_cu_alpha_nominal}), and per-value (\verb{_(k)u_alpha_nominal}).
 }

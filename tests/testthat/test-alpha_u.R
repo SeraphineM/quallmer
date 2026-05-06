@@ -3,7 +3,7 @@
 # Book example: Figure 12.11 from Krippendorff (2019, p. 340)
 # Three observers: Alex, Paul, Suzan
 # Continuum of length 60
-# Expected: _u_alpha_nominal ≈ 0.510, |_u_alpha_binary ≈ 0.413
+# Expected: _u_alpha_nominal ~= 0.510, |_u_alpha_binary ~= 0.413
 
 make_book_example <- function() {
   alex <- data.frame(
@@ -79,20 +79,20 @@ test_that("reliability_alpha_u per_value matches book Figure 12.11", {
   expect_true(is.data.frame(pv))
   expect_true(all(c("value", "alpha", "coverage") %in% names(pv)))
 
-  # Values 1, 5, 6 have perfect agreement (α = 1.0)
+  # Values 1, 5, 6 have perfect agreement (alpha = 1.0)
   expect_equal(pv$alpha[pv$value == "1"], 1.0)
   expect_equal(pv$alpha[pv$value == "5"], 1.0)
   expect_equal(pv$alpha[pv$value == "6"], 1.0)
 
-  # Values 2, 3, 4 each appear for one observer only → α = 0
+  # Values 2, 3, 4 each appear for one observer only -> alpha = 0
   expect_equal(pv$alpha[pv$value == "2"], 0.0)
   expect_equal(pv$alpha[pv$value == "3"], 0.0)
   expect_equal(pv$alpha[pv$value == "4"], 0.0)
 
-  # Value 5 coverage ≈ 44% (8 of 18 total "5" chars are in valued intersections)
+  # Value 5 coverage ~= 44% (8 of 18 total "5" chars are in valued intersections)
   expect_equal(pv$coverage[pv$value == "5"], 8 / 18, tolerance = 0.01)
 
-  # Value 7 only intersects with gaps → coverage = 0%
+  # Value 7 only intersects with gaps -> coverage = 0%
   expect_equal(pv$coverage[pv$value == "7"], 0.0)
 })
 

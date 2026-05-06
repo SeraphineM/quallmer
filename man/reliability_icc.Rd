@@ -14,10 +14,10 @@ reliability_icc(
 )
 }
 \arguments{
-\item{ratings}{A \verb{subjects × raters} matrix or data.frame.}
+\item{ratings}{A \verb{subjects x raters} matrix or data.frame.}
 
 \item{model}{\code{"oneway"} (raters are random) or \code{"twoway"} (raters and
-subjects are both random — the more common choice for IRR).}
+subjects are both random -- the more common choice for IRR).}
 
 \item{type}{\code{"consistency"} (relative agreement) or \code{"agreement"}
 (absolute agreement, including rater bias).}

@@ -114,8 +114,8 @@ computed as the mean of all pairwise correlations between raters.
 \strong{Unitizing (segmentation) reliability}
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 
-When all inputs are segmented corpora — created by \code{\link[=qlm_segment]{qlm_segment()}} or
-\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} — agreement is measured at
+When all inputs are segmented corpora -- created by \code{\link[=qlm_segment]{qlm_segment()}} or
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} -- agreement is measured at
 the character level using Krippendorff's alpha for unitizing continua
 (Krippendorff, 2019, section 12.6). This accounts for segments of
 unequal length and partial overlaps between coders' unitizations. The

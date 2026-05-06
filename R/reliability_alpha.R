@@ -5,19 +5,19 @@
 #' Native implementation of Krippendorff's alpha (`_c_alpha`) for the coding
 #' of predefined units, following Krippendorff (2019, section 12.3).
 #'
-#' @param observations A `subjects × raters` (units × observers) matrix or
+#' @param observations A `subjects x raters` (units x observers) matrix or
 #'   data.frame. Rows are predefined units; columns are observers. Cells
 #'   contain the value assigned by each observer to each unit (use `NA`
 #'   for missing values).
-#' @param method One of `"nominal"`, `"ordinal"`, `"interval"`, `"ratio"` —
+#' @param method One of `"nominal"`, `"ordinal"`, `"interval"`, `"ratio"` --
 #'   the metric (difference function) for `delta^2_ck`. See Krippendorff
 #'   (2019, section 12.3.3).
 #'
 #' @return A list with elements:
 #'   \describe{
 #'     \item{`method`}{Character, e.g. `"alpha_nominal"`.}
-#'     \item{`value`}{Numeric — the overall alpha coefficient.}
-#'     \item{`ci_lower`, `ci_upper`}{Numeric — confidence interval bounds
+#'     \item{`value`}{Numeric -- the overall alpha coefficient.}
+#'     \item{`ci_lower`, `ci_upper`}{Numeric -- confidence interval bounds
 #'       (always `NA` for alpha; included for uniform output across
 #'       reliability functions).}
 #'     \item{`per_value`}{For `method = "nominal"`: a data.frame with columns
@@ -47,7 +47,7 @@ reliability_alpha <- function(observations,
     cli::cli_abort("At least two observers (columns) are required.")
   }
 
-  # Internally use observers × units (the canonical form, Figure 12.3)
+  # Internally use observers x units (the canonical form, Figure 12.3)
   x <- t(observations)
   m <- nrow(x)
   N_total <- ncol(x)
@@ -246,7 +246,7 @@ align_segments <- function(source_text, segments) {
 #'
 #' Native implementation of the `_u_alpha` family for two or more
 #' unitizations of a common continuum (Krippendorff, 2019, section 12.6).
-#' One call computes all variants — overall (`_u_alpha_nominal`),
+#' One call computes all variants -- overall (`_u_alpha_nominal`),
 #' boundary-only (`|_u_alpha_binary`), coding-conditional
 #' (`_cu_alpha_nominal`), and per-value (`_(k)u_alpha_nominal`).
 #'
@@ -258,15 +258,15 @@ align_segments <- function(source_text, segments) {
 #' @return A list with elements:
 #'   \describe{
 #'     \item{`method`}{`"alpha_u"`.}
-#'     \item{`value`}{Numeric — `_u_alpha_nominal` (overall agreement on
+#'     \item{`value`}{Numeric -- `_u_alpha_nominal` (overall agreement on
 #'       both boundaries and codes; section 12.6.3, eq. 34).}
-#'     \item{`binary`}{Numeric — `|_u_alpha_binary` (boundary-only;
+#'     \item{`binary`}{Numeric -- `|_u_alpha_binary` (boundary-only;
 #'       section 12.6.4, eq. 35).}
-#'     \item{`cu_nominal`}{Numeric — `_cu_alpha_nominal` (coding given
+#'     \item{`cu_nominal`}{Numeric -- `_cu_alpha_nominal` (coding given
 #'       unitization; section 12.6.5, eqs. 36--37).}
 #'     \item{`ci_lower`, `ci_upper`}{`NA_real_` (uniform shape).}
 #'     \item{`per_value`}{Data.frame with columns `value`, `alpha`,
-#'       `coverage` — per-value reliability `_(k)u_alpha_nominal`
+#'       `coverage` -- per-value reliability `_(k)u_alpha_nominal`
 #'       (section 12.6.6, eq. 38).}
 #'     \item{`n_observers`}{Number of observers (`m`).}
 #'     \item{`L`}{Continuum length.}
@@ -287,7 +287,7 @@ reliability_alpha_u <- function(unitizations, L) {
   }
   L <- as.integer(L)
 
-  phi <- "φ"  # Greek small letter phi (gap marker)
+  phi <- "\u03c6"  # Greek small letter phi (gap marker)
 
   expand_to_partition <- function(df) {
     if (nrow(df) == 0L) {
@@ -386,7 +386,7 @@ reliability_alpha_u <- function(unitizations, L) {
   D_e_full <- sum(eps)  - sum(diag(eps))
   alpha_nominal <- alpha_from_disagreements(D_o_full, D_e_full)
 
-  # |_u_alpha_binary (eq. 35) — collapse to phi vs non-phi
+  # |_u_alpha_binary (eq. 35) -- collapse to phi vs non-phi
   ell_2x2 <- matrix(0, 2, 2, dimnames = list(c(phi, "!phi"), c(phi, "!phi")))
   ell_2x2[1, 1] <- ell[phi, phi]
   ell_2x2[1, 2] <- sum(ell[phi, non_phi])
@@ -401,7 +401,7 @@ reliability_alpha_u <- function(unitizations, L) {
   D_e_bin <- sum(eps_2x2) - sum(diag(eps_2x2))
   alpha_binary <- alpha_from_disagreements(D_o_bin, D_e_bin)
 
-  # _cu_alpha_nominal and _(k)u_alpha — restrict to non-gap (eqs. 36–38)
+  # _cu_alpha_nominal and _(k)u_alpha -- restrict to non-gap (eqs. 36-38)
   alpha_cu  <- NA_real_
   per_value <- data.frame(
     value    = character(0),
@@ -508,7 +508,7 @@ reliability_alpha_u <- function(unitizations, L) {
 
 
 # 1 - D_o / D_e, with the conventional limits for degenerate cases:
-# both zero → perfect reliability (1.0); D_e == 0 with D_o > 0 → undefined (NA).
+# both zero -> perfect reliability (1.0); D_e == 0 with D_o > 0 -> undefined (NA).
 alpha_from_disagreements <- function(D_o, D_e) {
   if (D_e == 0) {
     if (D_o == 0) 1.0 else NA_real_

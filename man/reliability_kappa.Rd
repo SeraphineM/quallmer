@@ -7,7 +7,7 @@
 reliability_kappa(observations, weight = c("unweighted", "equal", "squared"))
 }
 \arguments{
-\item{observations}{A \verb{subjects × 2 raters} matrix or data.frame.
+\item{observations}{A \verb{subjects x 2 raters} matrix or data.frame.
 Rows are units; the two columns are the two raters. Must not
 contain \code{NA}.}
 
@@ -23,7 +23,7 @@ A list with elements \code{method}, \code{value}, \code{ci_lower}, \code{ci_uppe
 \code{per_value}, \code{n_observers}, \code{n_units}, \code{n_pairable}. \code{ci_lower} and
 \code{ci_upper} are populated for unweighted kappa using the asymptotic
 standard error from Cohen (1960, Eq. 7); \code{NA} for weighted variants.
-\code{per_value} (unweighted only) gives per-category κ via dichotomisation.
+\code{per_value} (unweighted only) gives per-category kappa via dichotomisation.
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
@@ -35,7 +35,7 @@ between two raters (Cohen, 1960). Unweighted (Eq. 1) and weighted
 }
 \references{
 Cohen, J. (1960). A coefficient of agreement for nominal scales.
-\emph{Educational and Psychological Measurement}, 20(1), 37–46.
+\emph{Educational and Psychological Measurement}, 20(1), 37-46.
 \doi{10.1177/001316446002000104}
 }
 \keyword{internal}

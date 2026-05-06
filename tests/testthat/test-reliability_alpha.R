@@ -1,10 +1,10 @@
-# Tests for reliability_alpha() — Krippendorff's alpha for predefined units.
+# Tests for reliability_alpha() -- Krippendorff's alpha for predefined units.
 #
 # Worked examples are taken from Krippendorff (2019), Chapter 12, "Reliability".
 # Each test reconstructs the canonical Observers-by-Units form (which we then
 # pass as Units-by-Observers because that's reliability_alpha()'s input shape).
 
-# §12.3.1 (pp. 295–304): 4 observers, 12 units, 5 nominal categories,
+# sec.12.3.1 (pp. 295-304): 4 observers, 12 units, 5 nominal categories,
 # missing data. The 12th unit has only one pairable value and is excluded.
 make_kripp_canonical <- function() {
   # Encoded categories: 1 = book, 2 = mail, 3 = phone, 4 = computer, 5 = file
@@ -22,11 +22,11 @@ make_kripp_canonical <- function() {
     NA, NA, 1, 1,    # unit 11
     NA, 3, NA, NA    # unit 12 (m_u = 1, excluded)
   ), nrow = 4)
-  # Return as units × observers (subjects × raters)
+  # Return as units x observers (subjects x raters)
   t(obs_x_unit)
 }
 
-test_that("reliability_alpha matches Krippendorff §12.3.1 worked example (all metrics)", {
+test_that("reliability_alpha matches Krippendorff sec.12.3.1 worked example (all metrics)", {
   ratings <- make_kripp_canonical()
 
   # Book p. 296, p. 304
@@ -54,8 +54,8 @@ test_that("reliability_alpha matches Krippendorff §12.3.1 worked example (all m
   expect_equal(unname(r$coincidence["1", "2"]), 4 / 3, tolerance = 1e-9)
 })
 
-test_that("reliability_alpha matches Krippendorff §12.3.4.1 (binary, 3 observers)", {
-  # Book p. 306–307: Jon, Han, Lee on 12 newspaper issues. Expected α = 0.234.
+test_that("reliability_alpha matches Krippendorff sec.12.3.4.1 (binary, 3 observers)", {
+  # Book p. 306-307: Jon, Han, Lee on 12 newspaper issues. Expected alpha = 0.234.
   obs_x_unit <- matrix(c(
     0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1,   # Jon
     0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1,   # Han
@@ -73,9 +73,9 @@ test_that("reliability_alpha matches Krippendorff §12.3.4.1 (binary, 3 observer
                r$per_value$alpha[r$per_value$value == "1"])
 })
 
-test_that("reliability_alpha matches Krippendorff §12.3.4.4 (Mary & Dave)", {
+test_that("reliability_alpha matches Krippendorff sec.12.3.4.4 (Mary & Dave)", {
   # Book p. 310: 2 observers, 12 units, 4 nominal categories.
-  # Book reports α_nominal = 0.760 (rounded).
+  # Book reports alpha_nominal = 0.760 (rounded).
   ratings <- cbind(
     Mary = c("a", "a", "c", "c", "c", "c", "c", "b", "b", "b", "b", "d"),
     Dave = c("a", "c", "c", "c", "c", "c", "b", "b", "b", "b", "b", "d")

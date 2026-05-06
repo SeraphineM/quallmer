@@ -10,12 +10,12 @@ reliability_alpha(
 )
 }
 \arguments{
-\item{observations}{A \verb{subjects × raters} (units × observers) matrix or
+\item{observations}{A \verb{subjects x raters} (units x observers) matrix or
 data.frame. Rows are predefined units; columns are observers. Cells
 contain the value assigned by each observer to each unit (use \code{NA}
 for missing values).}
 
-\item{method}{One of \code{"nominal"}, \code{"ordinal"}, \code{"interval"}, \code{"ratio"} —
+\item{method}{One of \code{"nominal"}, \code{"ordinal"}, \code{"interval"}, \code{"ratio"} --
 the metric (difference function) for \verb{delta^2_ck}. See Krippendorff
 (2019, section 12.3.3).}
 }
@@ -23,8 +23,8 @@ the metric (difference function) for \verb{delta^2_ck}. See Krippendorff
 A list with elements:
 \describe{
 \item{\code{method}}{Character, e.g. \code{"alpha_nominal"}.}
-\item{\code{value}}{Numeric — the overall alpha coefficient.}
-\item{\code{ci_lower}, \code{ci_upper}}{Numeric — confidence interval bounds
+\item{\code{value}}{Numeric -- the overall alpha coefficient.}
+\item{\code{ci_lower}, \code{ci_upper}}{Numeric -- confidence interval bounds
 (always \code{NA} for alpha; included for uniform output across
 reliability functions).}
 \item{\code{per_value}}{For \code{method = "nominal"}: a data.frame with columns

@@ -89,8 +89,8 @@
 #' **Unitizing (segmentation) reliability**
 #' `r lifecycle::badge("experimental")`
 #'
-#' When all inputs are segmented corpora — created by [qlm_segment()] or
-#' [as_qlm_coded()] with `qlm_segment = TRUE` — agreement is measured at
+#' When all inputs are segmented corpora -- created by [qlm_segment()] or
+#' [as_qlm_coded()] with `qlm_segment = TRUE` -- agreement is measured at
 #' the character level using Krippendorff's alpha for unitizing continua
 #' (Krippendorff, 2019, section 12.6). This accounts for segments of
 #' unequal length and partial overlaps between coders' unitizations. The

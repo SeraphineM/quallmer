@@ -6,7 +6,7 @@
 #' under issue #112. Computes Kendall's coefficient of concordance for
 #' ordinal agreement among `m` raters across `N` subjects.
 #'
-#' @param ratings A `subjects × raters` matrix or data.frame.
+#' @param ratings A `subjects x raters` matrix or data.frame.
 #' @param correct Logical; apply Kendall's tie correction.
 #'
 #' @return The list returned by [irr::kendall()] (irrlist with elements

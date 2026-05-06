@@ -7,7 +7,7 @@
 reliability_kappa_fleiss(observations)
 }
 \arguments{
-\item{observations}{A \verb{subjects × raters} matrix or data.frame.
+\item{observations}{A \verb{subjects x raters} matrix or data.frame.
 Rows are units; columns are raters. Must not contain \code{NA}. The
 number of raters per subject is taken to be \code{ncol(observations)}.}
 }
@@ -15,13 +15,13 @@ number of raters per subject is taken to be \code{ncol(observations)}.}
 A list with elements \code{method}, \code{value}, \code{ci_lower}, \code{ci_upper},
 \code{per_value}, \code{n_observers}, \code{n_units}, \code{n_pairable}. CI bounds are
 from the asymptotic SE in Fleiss (1971, Eq. 16). \code{per_value} gives
-per-category κⱼ from Fleiss (1971, Eqs. 20–21).
+per-category kappa_j from Fleiss (1971, Eqs. 20-21).
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 }
 \details{
-Native implementation of Fleiss' generalisation of κ to a constant
+Native implementation of Fleiss' generalisation of kappa to a constant
 number of raters per subject (Fleiss, 1971), where the raters rating
 one subject need not be the same as those rating another. For two
 raters use \code{\link[=reliability_kappa]{reliability_kappa()}} (Cohen's): the two coefficients
@@ -30,7 +30,7 @@ marginals while Fleiss' uses pooled marginals.
 }
 \references{
 Fleiss, J. L. (1971). Measuring nominal scale agreement among many
-raters. \emph{Psychological Bulletin}, 76(5), 378–382.
+raters. \emph{Psychological Bulletin}, 76(5), 378-382.
 \doi{10.1037/h0031619}
 }
 \keyword{internal}
