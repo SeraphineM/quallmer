@@ -68,6 +68,10 @@
 <li><p><code><a href="../reference/as_qlm_coded.html">as_qlm_coded()</a></code> gains <code>qlm_segment</code> and <code>source_text</code> arguments for converting gold-standard data frames to segmented corpora with character positions, enabling ICR comparison of LLM segmentation against human-coded reference data.</p></li>
 <li><p><code><a href="../reference/qlm_segment.html">qlm_segment()</a></code> now accepts a <code>name</code> argument stored in corpus metadata for rater identification when comparing multiple segmenters via <code><a href="../reference/qlm_compare.html">qlm_compare()</a></code>.</p></li>
 </ul></div>
+<div class="section level3">
+<h3 id="internal-changes-0-4-0">Internal changes<a class="anchor" aria-label="anchor" href="#internal-changes-0-4-0"></a></h3>
+<ul><li>Removed dependencies on <code>dplyr</code> and <code>tidyr</code> (#109). Data manipulation now uses base R, <code>vctrs</code>, and <code>tibble</code>, reducing the install footprint. No user-visible behavior changes.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="quallmer-030">quallmer 0.3.0<a class="anchor" aria-label="anchor" href="#quallmer-030"></a></h2><p class="text-muted">CRAN release: 2026-02-16</p>
