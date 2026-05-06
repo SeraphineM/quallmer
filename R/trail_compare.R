@@ -22,7 +22,6 @@
 #'   setting/record. The unit ID column is retained under the name
 #'   \code{id_col}.
 #'
-#' @importFrom dplyr bind_rows
 #' @importFrom tidyr pivot_wider
 #' @keywords internal
 #' @export
@@ -70,7 +69,7 @@ trail_matrix <- function(x,
     )
   })
 
-  long_all <- dplyr::bind_rows(df_list)
+  long_all <- do.call(vctrs::vec_rbind, df_list)
 
   wide <- tidyr::pivot_wider(
     long_all,
