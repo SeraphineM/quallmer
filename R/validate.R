@@ -1,12 +1,17 @@
 #' @keywords internal
-#' @import dplyr
 #' @importFrom irr kripp.alpha kappam.fleiss kappa2
-#' @importFrom stats na.omit
+#' @importFrom stats aggregate ave na.omit
 NULL
 
 # -------------------------------
 # Internals for validate()
 # -------------------------------
+
+#' @noRd
+first_non_na <- function(x) {
+  v <- x[!is.na(x)]
+  if (length(v)) v[1] else NA_character_
+}
 
 #' @noRd
 make_long_icr <- function(df, id, coder_cols) {
@@ -25,12 +30,12 @@ make_long_icr <- function(df, id, coder_cols) {
     stringsAsFactors = FALSE
   )
 
-  long_df %>%
-    dplyr::group_by(.data$unit_id, .data$coder_id) %>%
-    dplyr::summarise(
-      code = dplyr::first(.data$code[!is.na(.data$code)] %||% NA_character_),
-      .groups = "drop"
-    )
+  collapsed <- aggregate(
+    x = list(code = long_df$code),
+    by = list(unit_id = long_df$unit_id, coder_id = long_df$coder_id),
+    FUN = first_non_na
+  )
+  tibble::as_tibble(collapsed)
 }
 
 #' @noRd
@@ -49,10 +54,8 @@ pivot_codes_wide <- function(long_df) {
 
 #' @noRd
 filter_units_by_coders <- function(long_df, min_coders = 2L) {
-  long_df %>%
-    dplyr::group_by(.data$unit_id) %>%
-    dplyr::filter(sum(!is.na(.data$code)) >= min_coders) %>%
-    dplyr::ungroup()
+  n_per_unit <- ave(!is.na(long_df$code), long_df$unit_id, FUN = sum)
+  long_df[n_per_unit >= min_coders, , drop = FALSE]
 }
 
 #' @noRd
@@ -82,7 +85,8 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
     }
   }
 
-  ratings_raw <- wide %>% dplyr::select(-.data$unit_id)
+  ratings_raw <- wide
+  ratings_raw$unit_id <- NULL
   n_units  <- nrow(ratings_raw)
   n_coders <- ncol(ratings_raw)
 
@@ -204,7 +208,8 @@ compute_gold_summary <- function(long_df, gold) {
     cli::cli_abort("Gold-standard coder {.val {gold}} not found among coder columns.")
   }
 
-  ratings_raw <- wide %>% dplyr::select(-.data$unit_id)
+  ratings_raw <- wide
+  ratings_raw$unit_id <- NULL
 
   # Drop units where gold is NA
   truth_all <- ratings_raw[[gold]]

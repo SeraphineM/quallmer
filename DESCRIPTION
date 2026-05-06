@@ -37,7 +37,6 @@ Depends:
     ellmer (>= 0.4.0)
 Imports:
     cli,
-    dplyr,
     digest,
     irr,
     lifecycle,
