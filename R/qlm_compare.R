@@ -129,9 +129,16 @@
 #' Krippendorff, K. (2019). *Content Analysis: An Introduction to Its
 #' Methodology* (4th ed.). Sage. \doi{10.4135/9781071878781}
 #'
-#' @seealso [qlm_validate()] for validation of coding against gold standards,
-#' [qlm_code()] for LLM coding, [as_qlm_coded()] for human coding,
-#' [qlm_segment()] for LLM-powered text segmentation.
+#' @seealso
+#' Related workflow functions: [qlm_validate()] for validation of
+#' coding against gold standards, [qlm_code()] for LLM coding,
+#' [as_qlm_coded()] for human coding, [qlm_segment()] for LLM-powered
+#' text segmentation.
+#'
+#' Underlying reliability calculations (internal): [reliability_alpha()]
+#' and [reliability_alpha_u()] for Krippendorff's alpha;
+#' [reliability_kappa()] (Cohen) and [reliability_kappa_fleiss()];
+#' [reliability_kendall_w()]; [reliability_icc()].
 #'
 #' @examples
 #' # Load example coded objects

@@ -176,7 +176,13 @@ Krippendorff, K. (2019). \emph{Content Analysis: An Introduction to Its
 Methodology} (4th ed.). Sage. \doi{10.4135/9781071878781}
 }
 \seealso{
-\code{\link[=qlm_validate]{qlm_validate()}} for validation of coding against gold standards,
-\code{\link[=qlm_code]{qlm_code()}} for LLM coding, \code{\link[=as_qlm_coded]{as_qlm_coded()}} for human coding,
-\code{\link[=qlm_segment]{qlm_segment()}} for LLM-powered text segmentation.
+Related workflow functions: \code{\link[=qlm_validate]{qlm_validate()}} for validation of
+coding against gold standards, \code{\link[=qlm_code]{qlm_code()}} for LLM coding,
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} for human coding, \code{\link[=qlm_segment]{qlm_segment()}} for LLM-powered
+text segmentation.
+
+Underlying reliability calculations (internal): \code{\link[=reliability_alpha]{reliability_alpha()}}
+and \code{\link[=reliability_alpha_u]{reliability_alpha_u()}} for Krippendorff's alpha;
+\code{\link[=reliability_kappa]{reliability_kappa()}} (Cohen) and \code{\link[=reliability_kappa_fleiss]{reliability_kappa_fleiss()}};
+\code{\link[=reliability_kendall_w]{reliability_kendall_w()}}; \code{\link[=reliability_icc]{reliability_icc()}}.
 }
