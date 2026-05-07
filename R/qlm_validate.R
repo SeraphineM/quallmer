@@ -1,7 +1,3 @@
-# Declare global variables used in yardstick functions to avoid R CMD check NOTEs
-utils::globalVariables(c("truth", "estimate"))
-
-
 #' Extract codebook from a qlm_coded object
 #'
 #' @param obj A qlm_coded object
@@ -76,20 +72,23 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
 
       # Precision
       if ("precision" %in% metrics_to_compute) {
-        prec <- yardstick::precision(boot_merged, truth = truth, estimate = estimate, estimator = estimator)
-        bootstrap_results$precision <- c(bootstrap_results$precision, prec$.estimate)
+        prec <- metric_precision(boot_merged$truth, boot_merged$estimate,
+                                  estimator = estimator)
+        bootstrap_results$precision <- c(bootstrap_results$precision, prec)
       }
 
       # Recall
       if ("recall" %in% metrics_to_compute) {
-        rec <- yardstick::recall(boot_merged, truth = truth, estimate = estimate, estimator = estimator)
-        bootstrap_results$recall <- c(bootstrap_results$recall, rec$.estimate)
+        rec <- metric_recall(boot_merged$truth, boot_merged$estimate,
+                              estimator = estimator)
+        bootstrap_results$recall <- c(bootstrap_results$recall, rec)
       }
 
       # F1
       if ("f1" %in% metrics_to_compute) {
-        f1 <- yardstick::f_meas(boot_merged, truth = truth, estimate = estimate, estimator = estimator)
-        bootstrap_results$f1 <- c(bootstrap_results$f1, f1$.estimate)
+        f1 <- metric_f_meas(boot_merged$truth, boot_merged$estimate,
+                             estimator = estimator)
+        bootstrap_results$f1 <- c(bootstrap_results$f1, f1)
       }
 
       # Kappa
@@ -134,7 +133,6 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       estimate_num <- as.numeric(as.character(boot_merged$estimate))
       truth_num <- as.numeric(as.character(boot_merged$truth))
 
-      # Create data frame for yardstick
       numeric_data <- data.frame(truth = truth_num, estimate = estimate_num)
 
       # Pearson's r
@@ -298,11 +296,43 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
 #' Note: The `average` parameter only affects precision, recall, and F1 for
 #' nominal data. For ordinal data, these metrics are not computed.
 #'
+#' @references
+#' Precision, recall, and F-measure (confusion-matrix definitions and
+#' micro / macro averaging):
+#' Sokolova, M., & Lapalme, G. (2009). A systematic analysis of
+#' performance measures for classification tasks. *Information
+#' Processing & Management*, 45(4), 427-437.
+#' \doi{10.1016/j.ipm.2009.03.002}
+#'
+#' Macro F-measure as the arithmetic mean of per-class F-scores
+#' (the convention used here, matching yardstick and scikit-learn):
+#' Manning, C. D., Raghavan, P., & Schutze, H. (2008). *Introduction
+#' to Information Retrieval*, Chapter 13. Cambridge University Press.
+#' Free online: <https://nlp.stanford.edu/IR-book/>
+#'
+#' Cohen's kappa:
+#' Cohen, J. (1960). A coefficient of agreement for nominal scales.
+#' *Educational and Psychological Measurement*, 20(1), 37-46.
+#' \doi{10.1177/001316446002000104}
+#'
+#' Intraclass correlation coefficient:
+#' Shrout, P. E., & Fleiss, J. L. (1979). Intraclass correlations:
+#' Uses in assessing rater reliability. *Psychological Bulletin*,
+#' 86(2), 420-428. \doi{10.1037/0033-2909.86.2.420}
+#'
+#' McGraw, K. O., & Wong, S. P. (1996). Forming inferences about
+#' some intraclass correlation coefficients. *Psychological Methods*,
+#' 1(1), 30-46. \doi{10.1037/1082-989X.1.1.30}
+#'
 #' @seealso
-#' [qlm_compare()] for inter-rater reliability between coded objects,
-#' [qlm_code()] for LLM coding, [as_qlm_coded()] for converting human-coded data,
-#' [yardstick::accuracy()], [yardstick::precision()], [yardstick::recall()],
-#' [yardstick::f_meas()], [yardstick::kap()], [yardstick::conf_mat()]
+#' Related workflow functions: [qlm_compare()] for inter-rater
+#' reliability between coded objects, [qlm_code()] for LLM coding,
+#' [as_qlm_coded()] for converting human-coded data.
+#'
+#' Underlying classification metrics (internal):
+#' [metric_precision()], [metric_recall()], [metric_f_meas()];
+#' Cohen's kappa is computed via [reliability_kappa()] and the ICC
+#' via [reliability_icc()].
 #'
 #' @examples
 #' # Load example coded objects
@@ -727,7 +757,7 @@ qlm_validate <- function(
       merged$truth <- factor(merged$truth, levels = all_levels)
     }
 
-    # Map average to yardstick estimator
+    # Map `average` to the estimator label used by the metric_* functions.
     estimator <- switch(average,
       "macro" = "macro",
       "micro" = "micro",
@@ -760,23 +790,20 @@ qlm_validate <- function(
 
     # Compute precision
     if ("precision" %in% metrics_to_compute) {
-      prec <- yardstick::precision(merged, truth = truth, estimate = estimate,
-                                    estimator = estimator)
-      results$precision <- prec$.estimate
+      results$precision <- metric_precision(merged$truth, merged$estimate,
+                                             estimator = estimator)
     }
 
     # Compute recall
     if ("recall" %in% metrics_to_compute) {
-      rec <- yardstick::recall(merged, truth = truth, estimate = estimate,
-                               estimator = estimator)
-      results$recall <- rec$.estimate
+      results$recall <- metric_recall(merged$truth, merged$estimate,
+                                       estimator = estimator)
     }
 
     # Compute F1
     if ("f1" %in% metrics_to_compute) {
-      f1 <- yardstick::f_meas(merged, truth = truth, estimate = estimate,
-                              estimator = estimator)
-      results$f1 <- f1$.estimate
+      results$f1 <- metric_f_meas(merged$truth, merged$estimate,
+                                   estimator = estimator)
     }
 
     # Compute kappa (only for nominal data)
@@ -819,7 +846,6 @@ qlm_validate <- function(
       estimate_num <- as.numeric(as.character(merged$estimate))
       truth_num <- as.numeric(as.character(merged$truth))
 
-      # Create data frame for yardstick functions
       numeric_data <- data.frame(
         truth = truth_num,
         estimate = estimate_num

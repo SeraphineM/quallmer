@@ -49,11 +49,18 @@
   internally, removing the transpose step previously needed for
   `irr::kripp.alpha`.
 
-* `qlm_validate()` no longer relies on `yardstick` for percent
-  agreement (`accuracy`), `mae`, `rmse`, or the confusion matrix.
-  These are computed inline from base R primitives. `yardstick` is
-  still required for multi-class precision, recall, and `f_meas` --
-  to be replaced in a follow-up.
+* `qlm_validate()` no longer relies on `yardstick`. Accuracy, MAE,
+  RMSE, and the confusion matrix are computed inline from base R;
+  multi-class precision, recall, and F-measure are now provided by
+  internal `metric_precision()`, `metric_recall()`, and
+  `metric_f_meas()` supporting all four standard estimators
+  (`binary`, `macro`, `macro_weighted`, `micro`). Confusion matrix,
+  micro and macro precision/recall follow Sokolova & Lapalme (2009),
+  Tables 1-3; macro F-measure is the arithmetic mean of per-class
+  F-scores (Manning, Raghavan & Schütze 2008, ch. 13), matching the
+  yardstick / scikit-learn convention. Output verified identical to
+  `yardstick`'s on both the binary case and a 4-class noisy
+  multi-class example. `yardstick` removed from `Imports`.
 
 # quallmer 0.4.0
 

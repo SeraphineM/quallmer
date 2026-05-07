@@ -42,8 +42,7 @@ Imports:
     rlang,
     stats,
     tibble,
-    vctrs,
-    yardstick
+    vctrs
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
