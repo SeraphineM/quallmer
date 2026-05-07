@@ -87,7 +87,6 @@ test_that("qlm_compare checks for 'by' variable", {
 
 test_that("qlm_compare works with matching units", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -137,7 +136,6 @@ test_that("qlm_compare works with matching units", {
 
 test_that("qlm_compare handles Cohen's kappa for 2 raters", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   type_obj <- ellmer::type_object(
     category = ellmer::type_string("Category")
@@ -189,7 +187,6 @@ test_that("qlm_compare handles Cohen's kappa for 2 raters", {
 
 test_that("qlm_compare handles Fleiss' kappa for 3+ raters", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   type_obj <- ellmer::type_object(
     category = ellmer::type_string("Category")
@@ -345,7 +342,6 @@ test_that("qlm_compare handles mismatched units", {
 
 test_that("print.qlm_comparison displays correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -393,7 +389,6 @@ test_that("print.qlm_comparison displays correctly", {
 
 test_that("qlm_compare accepts plain data.frames for all arguments", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   # Create two plain data.frames (simulating human coders)
   coder1 <- data.frame(.id = 1:10, category = rep(c("A", "B"), 5))
@@ -410,7 +405,6 @@ test_that("qlm_compare accepts plain data.frames for all arguments", {
 
 test_that("qlm_compare works with plain data.frames and imperfect agreement", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   # Create two plain data.frames with different values
   coder1 <- data.frame(.id = 1:10, category = c(rep("A", 7), rep("B", 3)))
@@ -427,7 +421,6 @@ test_that("qlm_compare works with plain data.frames and imperfect agreement", {
 
 test_that("qlm_compare works with three plain data.frames", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   # Create three plain data.frames
   coder1 <- data.frame(.id = 1:10, category = rep(c("A", "B"), 5))
@@ -443,7 +436,6 @@ test_that("qlm_compare works with three plain data.frames", {
 
 test_that("qlm_compare supports non-standard evaluation for by argument", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("irr")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)

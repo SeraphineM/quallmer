@@ -845,7 +845,7 @@ qlm_validate <- function(
         icc_result <- reliability_icc(icc_data, model = "twoway", type = "agreement", unit = "single")
         results$icc <- icc_result$value
         if (ci == "analytic") {
-          cis$icc <- c(lower = icc_result$lbound, upper = icc_result$ubound)
+          cis$icc <- c(lower = icc_result$ci_lower, upper = icc_result$ci_upper)
         }
       }
     }

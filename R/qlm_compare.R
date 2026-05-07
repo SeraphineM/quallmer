@@ -551,7 +551,7 @@ qlm_compare <- function(...,
 
 #' Convert ratings to numeric format
 #'
-#' Converts categorical (character/factor) ratings to numeric format for irr package.
+#' Converts categorical (character/factor) ratings to numeric format for the reliability functions.
 #' If data is already numeric, returns as-is.
 #'
 #' @param ratings Matrix of ratings
@@ -789,11 +789,11 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
         "Failed to compute ICC.",
         "x" = conditionMessage(e)
       ))
-      list(value = NA_real_, lbound = NA_real_, ubound = NA_real_)
+      list(value = NA_real_, ci_lower = NA_real_, ci_upper = NA_real_)
     })
     results$icc <- icc_result$value
     if (use_ci == "analytic") {
-      cis$icc <- c(lower = icc_result$lbound, upper = icc_result$ubound)
+      cis$icc <- c(lower = icc_result$ci_lower, upper = icc_result$ci_upper)
     }
 
     # Pearson's r (average pairwise correlation)
