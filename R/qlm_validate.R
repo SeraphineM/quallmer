@@ -32,6 +32,18 @@ get_coded_variables <- function(obj) {
 
 #' Compute bootstrap confidence intervals for validation metrics
 #'
+# Combine two factors (truth and estimate) into a 2-column integer matrix
+# usable by reliability_kappa(). Both columns are refactored on the union
+# of their levels so the integer codes line up category-for-category.
+#' @noRd
+factor_pair_to_matrix <- function(truth, estimate) {
+  all_levels <- union(levels(as.factor(truth)), levels(as.factor(estimate)))
+  cbind(
+    as.integer(factor(truth,    levels = all_levels)),
+    as.integer(factor(estimate, levels = all_levels))
+  )
+}
+
 #' @param merged Data frame with 'estimate' and 'truth' columns
 #' @param var_level Measurement level ("nominal", "ordinal", or "interval")
 #' @param metrics_to_compute Character vector of metric names to compute
@@ -83,7 +95,9 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       # Kappa
       if ("kappa" %in% metrics_to_compute) {
         kap <- tryCatch({
-          yardstick::kap(boot_merged, truth = truth, estimate = estimate, weighting = "none")$.estimate
+          reliability_kappa(factor_pair_to_matrix(boot_merged$truth,
+                                                  boot_merged$estimate),
+                            weight = "unweighted")$value
         }, error = function(e) NA_real_)
         bootstrap_results$kappa <- c(bootstrap_results$kappa, kap)
       }
@@ -768,9 +782,10 @@ qlm_validate <- function(
 
     # Compute kappa (only for nominal data)
     if ("kappa" %in% metrics_to_compute) {
-      kap <- yardstick::kap(merged, truth = truth, estimate = estimate,
-                            weighting = "none")
-      results$kappa <- kap$.estimate
+      results$kappa <- reliability_kappa(
+        factor_pair_to_matrix(merged$truth, merged$estimate),
+        weight = "unweighted"
+      )$value
     }
 
     # Ordinal measures (require numeric conversion)
