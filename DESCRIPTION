@@ -57,6 +57,7 @@ Suggests:
     mockery,
     quanteda,
     quanteda.tidy,
-    withr
+    withr,
+    yardstick
 Config/testthat/edition: 3
 VignetteBuilder: knitr

@@ -88,7 +88,6 @@ test_that("qlm_humancoded works with qlm_compare", {
 })
 
 test_that("qlm_humancoded works with qlm_validate", {
-  skip_if_not_installed("yardstick")
 
   data1 <- data.frame(.id = 1:10, category = rep(c("A", "B"), 5))
   data2 <- data.frame(.id = 1:10, category = rep(c("A", "B"), 5))
