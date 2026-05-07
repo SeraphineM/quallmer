@@ -35,9 +35,6 @@ weights recall more.}
 A single numeric value.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of the F-beta score (default beta = 1, the
 harmonic mean of precision and recall). Macro and macro-weighted
 forms compute the (possibly weighted) arithmetic mean of per-class

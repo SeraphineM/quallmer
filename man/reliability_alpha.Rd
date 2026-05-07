@@ -38,9 +38,6 @@ dichotomised against all others) and its marginal count \code{n.c}.
 }
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of Krippendorff's alpha (\verb{_c_alpha}) for the coding
 of predefined units, following Krippendorff (2019, section 12.3).
 }

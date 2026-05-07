@@ -1,7 +1,5 @@
 #' Krippendorff's alpha for predefined units
 #'
-#' `r lifecycle::badge("experimental")`
-#'
 #' Native implementation of Krippendorff's alpha (`_c_alpha`) for the coding
 #' of predefined units, following Krippendorff (2019, section 12.3).
 #'

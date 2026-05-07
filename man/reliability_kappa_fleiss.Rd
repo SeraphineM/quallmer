@@ -18,9 +18,6 @@ from the asymptotic SE in Fleiss (1971, Eq. 16). \code{per_value} gives
 per-category kappa_j from Fleiss (1971, Eqs. 20-21).
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of Fleiss' generalisation of kappa to a constant
 number of raters per subject (Fleiss, 1971), where the raters rating
 one subject need not be the same as those rating another. For two

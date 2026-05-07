@@ -26,9 +26,6 @@ standard error from Cohen (1960, Eq. 7); \code{NA} for weighted variants.
 \code{per_value} (unweighted only) gives per-category kappa via dichotomisation.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of Cohen's \code{kappa} for nominal-scale agreement
 between two raters (Cohen, 1960). Unweighted (Eq. 1) and weighted
 (linear or quadratic) variants are supported.

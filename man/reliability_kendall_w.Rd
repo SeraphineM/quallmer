@@ -30,9 +30,6 @@ A list with elements:
 }
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of Kendall's W (Kendall & Smith, 1939, Eq. 2)
 for assessing concordance among \code{m} rankings of \code{n} objects. Each
 column of \code{observations} is one rater's ordering; values are ranked

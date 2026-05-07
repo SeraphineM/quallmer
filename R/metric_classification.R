@@ -73,8 +73,6 @@ confusion_components <- function(truth, estimate) {
 
 #' Precision
 #'
-#' `r lifecycle::badge("experimental")`
-#'
 #' Native implementation of multi-class precision matching the four
 #' yardstick estimators (`"binary"`, `"macro"`, `"macro_weighted"`,
 #' `"micro"`). Per-class precision is `TP / (TP + FP)`; macro and
@@ -139,8 +137,6 @@ metric_precision <- function(truth, estimate,
 
 #' Recall
 #'
-#' `r lifecycle::badge("experimental")`
-#'
 #' Native implementation of multi-class recall (a.k.a. sensitivity).
 #' Per-class recall is `TP / (TP + FN)`; the four estimators behave as
 #' for [metric_precision()].
@@ -182,8 +178,6 @@ metric_recall <- function(truth, estimate,
 
 
 #' F-measure (F-beta)
-#'
-#' `r lifecycle::badge("experimental")`
 #'
 #' Native implementation of the F-beta score (default beta = 1, the
 #' harmonic mean of precision and recall). Macro and macro-weighted

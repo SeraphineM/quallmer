@@ -1,7 +1,5 @@
 #' Intraclass correlation coefficient
 #'
-#' `r lifecycle::badge("experimental")`
-#'
 #' Native implementation of the intraclass correlation coefficient (ICC)
 #' family for a `subjects x raters` matrix of interval/ratio ratings.
 #' Six forms are exposed via `model`/`type`/`unit`, following the

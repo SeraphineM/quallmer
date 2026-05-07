@@ -52,13 +52,13 @@ ICC.}
 }
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of the intraclass correlation coefficient (ICC)
 family for a \verb{subjects x raters} matrix of interval/ratio ratings.
 Six forms are exposed via \code{model}/\code{type}/\code{unit}, following the
-Shrout-Fleiss naming and the McGraw-Wong calculation tables:\tabular{lllll}{
+Shrout-Fleiss naming and the McGraw-Wong calculation tables:
+}
+\details{
+\tabular{lllll}{
    \code{model} \tab \code{type} \tab \code{unit} \tab Shrout & Fleiss \tab McGraw & Wong \cr
    oneway \tab (n/a) \tab single \tab ICC(1,1) \tab ICC(1) \cr
    oneway \tab (n/a) \tab average \tab ICC(1,k) \tab ICC(k) \cr

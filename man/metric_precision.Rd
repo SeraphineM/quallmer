@@ -30,9 +30,6 @@ positive event, \code{"first"} (default) or \code{"second"}.}
 A single numeric value.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-}
-\details{
 Native implementation of multi-class precision matching the four
 yardstick estimators (\code{"binary"}, \code{"macro"}, \code{"macro_weighted"},
 \code{"micro"}). Per-class precision is \code{TP / (TP + FP)}; macro and

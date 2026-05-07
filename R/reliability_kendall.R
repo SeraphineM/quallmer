@@ -1,7 +1,5 @@
 #' Kendall's W coefficient of concordance
 #'
-#' `r lifecycle::badge("experimental")`
-#'
 #' Native implementation of Kendall's W (Kendall & Smith, 1939, Eq. 2)
 #' for assessing concordance among `m` rankings of `n` objects. Each
 #' column of `observations` is one rater's ordering; values are ranked

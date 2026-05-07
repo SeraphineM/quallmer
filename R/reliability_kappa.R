@@ -1,7 +1,5 @@
 #' Cohen's kappa for two raters
 #'
-#' `r lifecycle::badge("experimental")`
-#'
 #' Native implementation of Cohen's `kappa` for nominal-scale agreement
 #' between two raters (Cohen, 1960). Unweighted (Eq. 1) and weighted
 #' (linear or quadratic) variants are supported.
@@ -100,8 +98,6 @@ reliability_kappa <- function(observations,
 
 
 #' Fleiss' kappa for many raters
-#'
-#' `r lifecycle::badge("experimental")`
 #'
 #' Native implementation of Fleiss' generalisation of kappa to a constant
 #' number of raters per subject (Fleiss, 1971), where the raters rating
