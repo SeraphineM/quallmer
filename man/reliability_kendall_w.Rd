@@ -4,24 +4,49 @@
 \alias{reliability_kendall_w}
 \title{Kendall's W coefficient of concordance}
 \usage{
-reliability_kendall_w(ratings, correct = FALSE)
+reliability_kendall_w(observations)
 }
 \arguments{
-\item{ratings}{A \verb{subjects x raters} matrix or data.frame.}
-
-\item{correct}{Logical; apply Kendall's tie correction.}
+\item{observations}{A \verb{subjects x raters} matrix or data.frame.
+Rows are objects/units being ranked; columns are raters. Must not
+contain \code{NA}.}
 }
 \value{
-The list returned by \code{\link[irr:kendall]{irr::kendall()}} (irrlist with elements
-\code{method}, \code{subjects}, \code{raters}, \code{irr.name}, \code{value}, \code{stat.name},
-\code{statistic}, \code{p.value}, optionally \code{error}).
+A list with elements:
+\describe{
+\item{\code{method}}{\code{"kendall_w"}.}
+\item{\code{value}}{Numeric -- W on the interval \verb{[0, 1]}.}
+\item{\code{ci_lower}, \code{ci_upper}}{\code{NA_real_} (W has no closed-form CI).}
+\item{\code{per_value}}{\code{NULL} (Kendall's W has no per-category breakdown).}
+\item{\code{n_observers}}{Number of raters (m).}
+\item{\code{n_units}}{Number of objects ranked (n).}
+\item{\code{n_pairable}}{\code{m * n}.}
+\item{\code{chi_squared}}{Friedman chi-square statistic, \verb{m(n-1)W}
+(Kendall & Smith 1939, Eq. 5).}
+\item{\code{df}}{Degrees of freedom for the chi-square test (n - 1).}
+\item{\code{p_value}}{Upper-tail p-value from the chi-square distribution.}
+\item{\code{S}}{Sum of squared deviations of rank sums from their mean
+(Kendall & Smith 1939, Eq. 2 numerator / 12).}
+}
 }
 \description{
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 }
 \details{
-Thin wrapper around \code{\link[irr:kendall]{irr::kendall()}}; awaiting native replacement
-under issue #112. Computes Kendall's coefficient of concordance for
-ordinal agreement among \code{m} raters across \code{N} subjects.
+Native implementation of Kendall's W (Kendall & Smith, 1939, Eq. 2)
+for assessing concordance among \code{m} rankings of \code{n} objects. Each
+column of \code{observations} is one rater's ordering; values are ranked
+within each column (\code{rank()} with average ties), so either raw scores
+or already-assigned ranks may be passed. The tie correction (Kendall
+& Smith 1939, footnote on p. 277; modern textbook formula) is applied
+automatically when ties are present.
+}
+\references{
+Kendall, M. G., & Babington Smith, B. (1939). The problem of m
+rankings. \emph{Annals of Mathematical Statistics}, 10(3), 275-287.
+\doi{10.1214/aoms/1177732186}
+
+Kendall, M. G., & Gibbons, J. D. (1990). \emph{Rank Correlation Methods}
+(5th ed.), Chapter 6. Oxford University Press.
 }
 \keyword{internal}
