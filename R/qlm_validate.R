@@ -70,8 +70,8 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
     if (var_level == "nominal") {
       # Accuracy
       if ("accuracy" %in% metrics_to_compute) {
-        acc <- yardstick::accuracy(boot_merged, truth = truth, estimate = estimate)
-        bootstrap_results$accuracy <- c(bootstrap_results$accuracy, acc$.estimate)
+        acc <- mean(boot_merged$truth == boot_merged$estimate, na.rm = TRUE)
+        bootstrap_results$accuracy <- c(bootstrap_results$accuracy, acc)
       }
 
       # Precision
@@ -148,7 +148,7 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       # MAE
       if ("mae" %in% metrics_to_compute) {
         mae_result <- tryCatch({
-          yardstick::mae(numeric_data, truth = truth, estimate = estimate)$.estimate
+          mean(abs(numeric_data$truth - numeric_data$estimate), na.rm = TRUE)
         }, error = function(e) NA_real_)
         bootstrap_results$mae <- c(bootstrap_results$mae, mae_result)
       }
@@ -156,7 +156,7 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       # RMSE
       if ("rmse" %in% metrics_to_compute) {
         rmse_result <- tryCatch({
-          yardstick::rmse(numeric_data, truth = truth, estimate = estimate)$.estimate
+          sqrt(mean((numeric_data$truth - numeric_data$estimate)^2, na.rm = TRUE))
         }, error = function(e) NA_real_)
         bootstrap_results$rmse <- c(bootstrap_results$rmse, rmse_result)
       }
@@ -753,10 +753,9 @@ qlm_validate <- function(
       cis <- bootstrap_validation_ci(merged, var_level, metrics_to_compute, estimator, bootstrap_n)
     }
 
-    # Compute accuracy (no estimator parameter)
+    # Compute accuracy (proportion of exact matches; NA-safe).
     if ("accuracy" %in% metrics_to_compute) {
-      acc <- yardstick::accuracy(merged, truth = truth, estimate = estimate)
-      results$accuracy <- acc$.estimate
+      results$accuracy <- mean(merged$truth == merged$estimate, na.rm = TRUE)
     }
 
     # Compute precision
@@ -842,16 +841,16 @@ qlm_validate <- function(
         }
       }
 
-      # Mean Absolute Error (using yardstick)
+      # Mean Absolute Error
       if ("mae" %in% metrics_to_compute) {
-        mae_result <- yardstick::mae(numeric_data, truth = truth, estimate = estimate)
-        results$mae <- mae_result$.estimate
+        results$mae <- mean(abs(numeric_data$truth - numeric_data$estimate),
+                            na.rm = TRUE)
       }
 
-      # Root Mean Squared Error (using yardstick)
+      # Root Mean Squared Error
       if ("rmse" %in% metrics_to_compute) {
-        rmse_result <- yardstick::rmse(numeric_data, truth = truth, estimate = estimate)
-        results$rmse <- rmse_result$.estimate
+        results$rmse <- sqrt(mean((numeric_data$truth - numeric_data$estimate)^2,
+                                   na.rm = TRUE))
       }
 
       # Intraclass Correlation Coefficient
@@ -901,18 +900,18 @@ qlm_validate <- function(
 
     # Compute per-class metrics if average = "none" and nominal data
     if (average == "none" && var_level == "nominal") {
-      # Compute confusion matrix for this variable
-      conf_mat <- yardstick::conf_mat(merged, truth = truth, estimate = estimate)
-
-      # Extract confusion matrix table
-      cm_table <- conf_mat$table
+      # Confusion matrix: rows = truth, cols = estimate (the natural orientation,
+      # so row sums = truth class counts and column sums = predicted class counts).
+      cm_table <- table(truth = merged$truth, estimate = merged$estimate)
       classes <- rownames(cm_table)
 
       # Compute per-class metrics
       for (i in seq_along(classes)) {
         class_label <- classes[i]
 
-        # Extract TP, FP, FN for this class
+        # TP = correctly predicted as this class.
+        # FP = predicted as this class but truth is not (column sum minus TP).
+        # FN = truth is this class but predicted differently (row sum minus TP).
         TP <- cm_table[class_label, class_label]
         FP <- sum(cm_table[, class_label]) - TP
         FN <- sum(cm_table[class_label, ]) - TP

@@ -1,5 +1,14 @@
 # quallmer 0.4.0.9000 (development version)
 
+## Bug fixes
+
+* `qlm_validate(..., average = "none")` was reporting per-class
+  precision and recall swapped: the helper that derived FP and FN
+  from the confusion matrix had its row and column sums transposed
+  relative to the orientation produced by `yardstick::conf_mat()`.
+  Macro-averaged precision/recall (computed via `yardstick` directly)
+  were correct; only the per-class breakdown was affected.
+
 ## New features
 
 * `qlm_compare()` now reports per-category Krippendorff's alpha
@@ -39,6 +48,12 @@
 * `qlm_compare()` standardises on `subjects × raters` matrix input
   internally, removing the transpose step previously needed for
   `irr::kripp.alpha`.
+
+* `qlm_validate()` no longer relies on `yardstick` for percent
+  agreement (`accuracy`), `mae`, `rmse`, or the confusion matrix.
+  These are computed inline from base R primitives. `yardstick` is
+  still required for multi-class precision, recall, and `f_meas` --
+  to be replaced in a follow-up.
 
 # quallmer 0.4.0
 
