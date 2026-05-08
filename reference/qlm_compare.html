@@ -13,7 +13,7 @@ qlm_segment(), computes Krippendorff's alpha for unitizing (see Details)."><meta
 
     <a class="navbar-brand me-2" href="../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -146,8 +146,9 @@ Default is 1000. Ignored when <code>ci</code> is <code>"none"</code> or <code>"a
 <dd><p>Computed value of the metric</p></dd>
 
 <dt><code>docid</code></dt>
-<dd><p>Source document identifier and overall indicator (unitizing
-comparisons only). Absent for predefined-unit comparisons.</p></dd>
+<dd><p>Per-row context: source document identifier and overall
+indicator for unitizing comparisons; marginal <code>(n=X)</code> for nominal
+per-category alpha rows; <code>NA</code> otherwise.</p></dd>
 
 <dt><code>rater1</code>, <code>rater2</code>, ...</dt>
 <dd><p>Names of the compared objects (one column per rater)</p></dd>
@@ -190,8 +191,8 @@ simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 computed as the mean of all pairwise correlations between raters.</p>
 <p><strong>Unitizing (segmentation) reliability</strong>
 <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="figures/lifecycle-experimental.svg" alt="[Experimental]"></a></p>
-<p>When all inputs are segmented corpora — created by <code><a href="qlm_segment.html">qlm_segment()</a></code> or
-<code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> with <code>qlm_segment = TRUE</code> — agreement is measured at
+<p>When all inputs are segmented corpora – created by <code><a href="qlm_segment.html">qlm_segment()</a></code> or
+<code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> with <code>qlm_segment = TRUE</code> – agreement is measured at
 the character level using Krippendorff's alpha for unitizing continua
 (Krippendorff, 2019, section 12.6). This accounts for segments of
 unequal length and partial overlaps between coders' unitizations. The
@@ -238,9 +239,14 @@ Methodology</em> (4th ed.). Sage. <a href="https://doi.org/10.4135/9781071878781
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="qlm_validate.html">qlm_validate()</a></code> for validation of coding against gold standards,
-<code><a href="qlm_code.html">qlm_code()</a></code> for LLM coding, <code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> for human coding,
-<code><a href="qlm_segment.html">qlm_segment()</a></code> for LLM-powered text segmentation.</p></div>
+    <div class="dont-index"><p>Related workflow functions: <code><a href="qlm_validate.html">qlm_validate()</a></code> for validation of
+coding against gold standards, <code><a href="qlm_code.html">qlm_code()</a></code> for LLM coding,
+<code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> for human coding, <code><a href="qlm_segment.html">qlm_segment()</a></code> for LLM-powered
+text segmentation.</p>
+<p>Underlying reliability calculations (internal): <code><a href="reliability_alpha.html">reliability_alpha()</a></code>
+and <code><a href="reliability_alpha_u.html">reliability_alpha_u()</a></code> for Krippendorff's alpha;
+<code><a href="reliability_kappa.html">reliability_kappa()</a></code> (Cohen) and <code><a href="reliability_kappa_fleiss.html">reliability_kappa_fleiss()</a></code>;
+<code><a href="reliability_kendall_w.html">reliability_kendall_w()</a></code>; <code><a href="reliability_icc.html">reliability_icc()</a></code>.</p></div>
     </div>
 
     <div class="section level2">
@@ -264,9 +270,13 @@ Methodology</em> (4th ed.). Sage. <a href="https://doi.org/10.4135/9781071878781
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── sentiment (nominal) </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Percent agreement     1.0000 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Krippendorff's alpha  1.0000 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Kappa                 1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Percent agreement        1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Krippendorff's alpha     1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> alpha (value=1) [(n=4)]  1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> alpha (value=2) [(n=6)]  1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Kappa                    1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> kappa (value=1) [(n=4)]  1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> kappa (value=2) [(n=6)]  1.0000 </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Compare specific variables with explicit levels</span></span></span>
@@ -283,9 +293,13 @@ Methodology</em> (4th ed.). Sage. <a href="https://doi.org/10.4135/9781071878781
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── sentiment (nominal) </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Percent agreement     1.0000 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Krippendorff's alpha  1.0000 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Kappa                 1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Percent agreement        1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Krippendorff's alpha     1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> alpha (value=1) [(n=4)]  1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> alpha (value=2) [(n=6)]  1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Kappa                    1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> kappa (value=1) [(n=4)]  1.0000 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> kappa (value=2) [(n=6)]  1.0000 </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

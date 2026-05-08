@@ -17,7 +17,7 @@ categories."><meta property="og:image" content="https://quallmer.github.io/quall
 
     <a class="navbar-brand me-2" href="../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -226,11 +226,39 @@ plus per-class breakdown.</p></li>
 nominal data. For ordinal data, these metrics are not computed.</p>
     </div>
     <div class="section level2">
+    <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
+    <p>Precision, recall, and F-measure (confusion-matrix definitions and
+micro / macro averaging):
+Sokolova, M., &amp; Lapalme, G. (2009). A systematic analysis of
+performance measures for classification tasks. <em>Information
+Processing &amp; Management</em>, 45(4), 427-437.
+<a href="https://doi.org/10.1016/j.ipm.2009.03.002" class="external-link">doi:10.1016/j.ipm.2009.03.002</a></p>
+<p>Macro F-measure as the arithmetic mean of per-class F-scores
+(the convention used here, matching yardstick and scikit-learn):
+Manning, C. D., Raghavan, P., &amp; Schutze, H. (2008). <em>Introduction
+to Information Retrieval</em>, Chapter 13. Cambridge University Press.
+Free online: <a href="https://nlp.stanford.edu/IR-book/" class="external-link">https://nlp.stanford.edu/IR-book/</a></p>
+<p>Cohen's kappa:
+Cohen, J. (1960). A coefficient of agreement for nominal scales.
+<em>Educational and Psychological Measurement</em>, 20(1), 37-46.
+<a href="https://doi.org/10.1177/001316446002000104" class="external-link">doi:10.1177/001316446002000104</a></p>
+<p>Intraclass correlation coefficient:
+Shrout, P. E., &amp; Fleiss, J. L. (1979). Intraclass correlations:
+Uses in assessing rater reliability. <em>Psychological Bulletin</em>,
+86(2), 420-428. <a href="https://doi.org/10.1037/0033-2909.86.2.420" class="external-link">doi:10.1037/0033-2909.86.2.420</a></p>
+<p>McGraw, K. O., &amp; Wong, S. P. (1996). Forming inferences about
+some intraclass correlation coefficients. <em>Psychological Methods</em>,
+1(1), 30-46. <a href="https://doi.org/10.1037/1082-989X.1.1.30" class="external-link">doi:10.1037/1082-989X.1.1.30</a></p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="qlm_compare.html">qlm_compare()</a></code> for inter-rater reliability between coded objects,
-<code><a href="qlm_code.html">qlm_code()</a></code> for LLM coding, <code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> for converting human-coded data,
-<code><a href="https://yardstick.tidymodels.org/reference/accuracy.html" class="external-link">yardstick::accuracy()</a></code>, <code><a href="https://yardstick.tidymodels.org/reference/precision.html" class="external-link">yardstick::precision()</a></code>, <code><a href="https://yardstick.tidymodels.org/reference/recall.html" class="external-link">yardstick::recall()</a></code>,
-<code><a href="https://yardstick.tidymodels.org/reference/f_meas.html" class="external-link">yardstick::f_meas()</a></code>, <code><a href="https://yardstick.tidymodels.org/reference/kap.html" class="external-link">yardstick::kap()</a></code>, <code><a href="https://yardstick.tidymodels.org/reference/conf_mat.html" class="external-link">yardstick::conf_mat()</a></code></p></div>
+    <div class="dont-index"><p>Related workflow functions: <code><a href="qlm_compare.html">qlm_compare()</a></code> for inter-rater
+reliability between coded objects, <code><a href="qlm_code.html">qlm_code()</a></code> for LLM coding,
+<code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> for converting human-coded data.</p>
+<p>Underlying classification metrics (internal):
+<code><a href="metric_precision.html">metric_precision()</a></code>, <code><a href="metric_recall.html">metric_recall()</a></code>, <code><a href="metric_f_meas.html">metric_f_meas()</a></code>;
+Cohen's kappa is computed via <code><a href="reliability_kappa.html">reliability_kappa()</a></code> and the ICC
+via <code><a href="reliability_icc.html">reliability_icc()</a></code>.</p></div>
     </div>
 
     <div class="section level2">
