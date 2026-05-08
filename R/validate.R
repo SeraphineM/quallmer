@@ -1,5 +1,4 @@
 #' @keywords internal
-#' @importFrom irr kripp.alpha kappam.fleiss kappa2
 #' @importFrom stats aggregate ave na.omit
 NULL
 
@@ -114,15 +113,14 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
 
   # Krippendorff's alpha (nominal)
   alpha_val <- tryCatch({
-    rmat <- t(as.matrix(ratings_int))
-    irr::kripp.alpha(rmat, method = "nominal")$value
+    reliability_alpha(as.matrix(ratings_int), method = "nominal")$value
   }, error = function(e) NA_real_)
 
   # Fleiss' kappa (complete cases only)
   fleiss_val <- tryCatch({
     comp <- ratings_int[stats::complete.cases(ratings_int), , drop = FALSE]
     if (nrow(comp) >= 2L && length(all_levels) >= 2L) {
-      irr::kappam.fleiss(comp)$value
+      reliability_kappa_fleiss(comp)$value
     } else {
       NA_real_
     }
@@ -157,7 +155,7 @@ compute_icr_summary <- function(long_df, output = c("list", "data.frame")) {
     if (sum(keep) >= 2L) {
       pw_agree <- c(pw_agree, mean(as.character(a[keep]) == as.character(b[keep])))
       k2 <- tryCatch({
-        irr::kappa2(data.frame(a = a[keep], b = b[keep]))$value
+        reliability_kappa(data.frame(a = a[keep], b = b[keep]))$value
       }, error = function(e) NA_real_)
       pw_kappa <- c(pw_kappa, k2)
     }
@@ -386,9 +384,9 @@ compute_gold_summary <- function(long_df, gold) {
 #'
 #' @references
 #' - Krippendorff, K. (2019). Content Analysis: An Introduction to Its Methodology. 4th ed. Thousand Oaks, CA: SAGE. \doi{10.4135/9781071878781}
-#' - Fleiss, J. L. (1971). Measuring nominal scale agreement among many raters. Psychological Bulletin, 76(5), 378–382. \doi{10.1037/h0031619}
-#' - Cohen, J. (1960). A coefficient of agreement for nominal scales. Educational and Psychological Measurement, 20(1), 37–46. \doi{10.1177/001316446002000104}
-#' - Sokolova, M., & Lapalme, G. (2009). A systematic analysis of performance measures for classification tasks. Information Processing & Management, 45(4), 427–437. \doi{10.1016/j.ipm.2009.03.002}
+#' - Fleiss, J. L. (1971). Measuring nominal scale agreement among many raters. Psychological Bulletin, 76(5), 378-382. \doi{10.1037/h0031619}
+#' - Cohen, J. (1960). A coefficient of agreement for nominal scales. Educational and Psychological Measurement, 20(1), 37-46. \doi{10.1177/001316446002000104}
+#' - Sokolova, M., & Lapalme, G. (2009). A systematic analysis of performance measures for classification tasks. Information Processing & Management, 45(4), 427-437. \doi{10.1016/j.ipm.2009.03.002}
 #'
 #' @examples
 #' \dontrun{

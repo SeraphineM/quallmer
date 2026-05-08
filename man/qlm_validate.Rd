@@ -160,9 +160,41 @@ validation2 <- qlm_validate(
 print(validation2)
 
 }
+\references{
+Precision, recall, and F-measure (confusion-matrix definitions and
+micro / macro averaging):
+Sokolova, M., & Lapalme, G. (2009). A systematic analysis of
+performance measures for classification tasks. \emph{Information
+Processing & Management}, 45(4), 427-437.
+\doi{10.1016/j.ipm.2009.03.002}
+
+Macro F-measure as the arithmetic mean of per-class F-scores
+(the convention used here, matching yardstick and scikit-learn):
+Manning, C. D., Raghavan, P., & Schutze, H. (2008). \emph{Introduction
+to Information Retrieval}, Chapter 13. Cambridge University Press.
+Free online: \url{https://nlp.stanford.edu/IR-book/}
+
+Cohen's kappa:
+Cohen, J. (1960). A coefficient of agreement for nominal scales.
+\emph{Educational and Psychological Measurement}, 20(1), 37-46.
+\doi{10.1177/001316446002000104}
+
+Intraclass correlation coefficient:
+Shrout, P. E., & Fleiss, J. L. (1979). Intraclass correlations:
+Uses in assessing rater reliability. \emph{Psychological Bulletin},
+86(2), 420-428. \doi{10.1037/0033-2909.86.2.420}
+
+McGraw, K. O., & Wong, S. P. (1996). Forming inferences about
+some intraclass correlation coefficients. \emph{Psychological Methods},
+1(1), 30-46. \doi{10.1037/1082-989X.1.1.30}
+}
 \seealso{
-\code{\link[=qlm_compare]{qlm_compare()}} for inter-rater reliability between coded objects,
-\code{\link[=qlm_code]{qlm_code()}} for LLM coding, \code{\link[=as_qlm_coded]{as_qlm_coded()}} for converting human-coded data,
-\code{\link[yardstick:accuracy]{yardstick::accuracy()}}, \code{\link[yardstick:precision]{yardstick::precision()}}, \code{\link[yardstick:recall]{yardstick::recall()}},
-\code{\link[yardstick:f_meas]{yardstick::f_meas()}}, \code{\link[yardstick:kap]{yardstick::kap()}}, \code{\link[yardstick:conf_mat]{yardstick::conf_mat()}}
+Related workflow functions: \code{\link[=qlm_compare]{qlm_compare()}} for inter-rater
+reliability between coded objects, \code{\link[=qlm_code]{qlm_code()}} for LLM coding,
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} for converting human-coded data.
+
+Underlying classification metrics (internal):
+\code{\link[=metric_precision]{metric_precision()}}, \code{\link[=metric_recall]{metric_recall()}}, \code{\link[=metric_f_meas]{metric_f_meas()}};
+Cohen's kappa is computed via \code{\link[=reliability_kappa]{reliability_kappa()}} and the ICC
+via \code{\link[=reliability_icc]{reliability_icc()}}.
 }

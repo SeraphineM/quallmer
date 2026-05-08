@@ -41,8 +41,9 @@
 #'     \item{`level`}{Measurement level used}
 #'     \item{`measure`}{Name of the reliability metric}
 #'     \item{`value`}{Computed value of the metric}
-#'     \item{`docid`}{Source document identifier and overall indicator (unitizing
-#'       comparisons only). Absent for predefined-unit comparisons.}
+#'     \item{`docid`}{Per-row context: source document identifier and overall
+#'       indicator for unitizing comparisons; marginal `(n=X)` for nominal
+#'       per-category alpha rows; `NA` otherwise.}
 #'     \item{`rater1`, `rater2`, ...}{Names of the compared objects (one column per rater)}
 #'     \item{`ci_lower`}{Lower bound of confidence interval (only if `ci != "none"`)}
 #'     \item{`ci_upper`}{Upper bound of confidence interval (only if `ci != "none"`)}
@@ -88,8 +89,8 @@
 #' **Unitizing (segmentation) reliability**
 #' `r lifecycle::badge("experimental")`
 #'
-#' When all inputs are segmented corpora — created by [qlm_segment()] or
-#' [as_qlm_coded()] with `qlm_segment = TRUE` — agreement is measured at
+#' When all inputs are segmented corpora -- created by [qlm_segment()] or
+#' [as_qlm_coded()] with `qlm_segment = TRUE` -- agreement is measured at
 #' the character level using Krippendorff's alpha for unitizing continua
 #' (Krippendorff, 2019, section 12.6). This accounts for segments of
 #' unequal length and partial overlaps between coders' unitizations. The
@@ -128,9 +129,16 @@
 #' Krippendorff, K. (2019). *Content Analysis: An Introduction to Its
 #' Methodology* (4th ed.). Sage. \doi{10.4135/9781071878781}
 #'
-#' @seealso [qlm_validate()] for validation of coding against gold standards,
-#' [qlm_code()] for LLM coding, [as_qlm_coded()] for human coding,
-#' [qlm_segment()] for LLM-powered text segmentation.
+#' @seealso
+#' Related workflow functions: [qlm_validate()] for validation of
+#' coding against gold standards, [qlm_code()] for LLM coding,
+#' [as_qlm_coded()] for human coding, [qlm_segment()] for LLM-powered
+#' text segmentation.
+#'
+#' Underlying reliability calculations (internal): [reliability_alpha()]
+#' and [reliability_alpha_u()] for Krippendorff's alpha;
+#' [reliability_kappa()] (Cohen) and [reliability_kappa_fleiss()];
+#' [reliability_kendall_w()]; [reliability_icc()].
 #'
 #' @examples
 #' # Load example coded objects
@@ -439,10 +447,41 @@ qlm_compare <- function(...,
       var_cis <- NULL
     }
 
+    # Per-category data.frames from reliability_alpha / reliability_kappa.
+    # Each row becomes its own metric row, with marginal `n` carried in `docid`.
+    per_value_specs <- list(
+      alpha_per_value = list(prefix = "alpha_per_value",
+                             value_col = "alpha"),
+      kappa_per_value = list(prefix = "kappa_per_value",
+                             value_col = "kappa")
+    )
+
     # Convert results to data frame rows (exclude kappa_type which is metadata)
     for (measure_name in names(var_results)) {
       # Skip kappa_type as it's metadata, not a metric
-      if (measure_name == "kappa_type") {
+      if (measure_name == "kappa_type") next
+
+      if (measure_name %in% names(per_value_specs)) {
+        spec <- per_value_specs[[measure_name]]
+        pv <- var_results[[measure_name]]
+        if (is.null(pv) || nrow(pv) == 0L) next
+        for (pi in seq_len(nrow(pv))) {
+          row_pv <- list(
+            variable = var,
+            level    = var_level,
+            measure  = paste0(spec$prefix, "[", pv$value[pi], "]"),
+            value    = pv[[spec$value_col]][pi],
+            docid    = paste0("(n=", pv$n[pi], ")")
+          )
+          for (i in seq_along(object_names)) {
+            row_pv[[paste0("rater", i)]] <- object_names[i]
+          }
+          if (ci != "none") {
+            row_pv$ci_lower <- NA_real_
+            row_pv$ci_upper <- NA_real_
+          }
+          all_results[[length(all_results) + 1]] <- row_pv
+        }
         next
       }
 
@@ -519,7 +558,7 @@ qlm_compare <- function(...,
 
 #' Convert ratings to numeric format
 #'
-#' Converts categorical (character/factor) ratings to numeric format for irr package.
+#' Converts categorical (character/factor) ratings to numeric format for the reliability functions.
 #' If data is already numeric, returns as-is.
 #'
 #' @param ratings Matrix of ratings
@@ -574,11 +613,10 @@ bootstrap_reliability_ci <- function(ratings, n_raters, level, tolerance, bootst
     # Compute metrics on bootstrap sample
     boot_metrics <- compute_reliability_by_level(boot_ratings, n_raters, level, tolerance, use_ci = FALSE)
 
-    # Store results
+    # Store results (skip metadata and per-value data.frames)
     for (metric_name in names(boot_metrics)) {
-      if (metric_name != "kappa_type") {  # Skip metadata
-        bootstrap_results[[metric_name]] <- c(bootstrap_results[[metric_name]], boot_metrics[[metric_name]])
-      }
+      if (metric_name %in% c("kappa_type", "alpha_per_value", "kappa_per_value")) next
+      bootstrap_results[[metric_name]] <- c(bootstrap_results[[metric_name]], boot_metrics[[metric_name]])
     }
   }
 
@@ -634,45 +672,50 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
 
     # Krippendorff's alpha (nominal)
     ratings_numeric <- convert_to_numeric(ratings)
-    ratings_t <- t(ratings_numeric)
 
     alpha_result <- tryCatch({
-      irr::kripp.alpha(ratings_t, method = "nominal")
+      reliability_alpha(ratings_numeric, method = "nominal")
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute Krippendorff's alpha.",
         "x" = conditionMessage(e)
       ))
-      list(value = NA_real_)
+      list(value = NA_real_, per_value = NULL)
     })
-    results$alpha_nominal <- alpha_result$value
+    results$alpha_nominal   <- alpha_result$value
+    results$alpha_per_value <- alpha_result$per_value
 
-    # Cohen's/Fleiss' kappa
+    # Cohen's (2 raters) / Fleiss' (3+ raters) kappa
     kappa_result <- tryCatch({
       if (n_raters == 2) {
-        irr::kappa2(ratings_numeric)
+        reliability_kappa(ratings_numeric)
       } else {
-        irr::kappam.fleiss(ratings_numeric)
+        reliability_kappa_fleiss(ratings_numeric)
       }
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute kappa.",
         "x" = conditionMessage(e)
       ))
-      list(value = NA_real_)
+      list(value = NA_real_, per_value = NULL,
+           ci_lower = NA_real_, ci_upper = NA_real_)
     })
-    results$kappa <- kappa_result$value
-    results$kappa_type <- if (n_raters == 2) "Cohen's" else "Fleiss'"
+    results$kappa           <- kappa_result$value
+    results$kappa_per_value <- kappa_result$per_value
+    results$kappa_type      <- if (n_raters == 2) "Cohen's" else "Fleiss'"
+    if (use_ci == "analytic") {
+      cis$kappa <- c(lower = kappa_result$ci_lower,
+                     upper = kappa_result$ci_upper)
+    }
 
   } else if (level == "ordinal") {
     # Ordinal measures: alpha_ordinal, kappa_weighted, w, rho
 
     # Krippendorff's alpha (ordinal)
     ratings_numeric <- convert_to_numeric(ratings)
-    ratings_t <- t(ratings_numeric)
 
     alpha_result <- tryCatch({
-      irr::kripp.alpha(ratings_t, method = "ordinal")
+      reliability_alpha(ratings_numeric, method = "ordinal")
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute Krippendorff's alpha (ordinal).",
@@ -685,7 +728,7 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
     # Weighted kappa (only for 2 raters)
     if (n_raters == 2) {
       kappa_weighted_result <- tryCatch({
-        irr::kappa2(ratings_numeric, weight = "squared")
+        reliability_kappa(ratings_numeric, weight = "squared")
       }, error = function(e) {
         cli::cli_warn(c(
           "Failed to compute weighted kappa.",
@@ -700,7 +743,7 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
 
     # Kendall's W
     kendall_result <- tryCatch({
-      irr::kendall(ratings_numeric)
+      reliability_kendall_w(ratings_numeric)
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute Kendall's W.",
@@ -733,10 +776,9 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
 
     # Krippendorff's alpha (interval/ratio)
     ratings_numeric <- convert_to_numeric(ratings)
-    ratings_t <- t(ratings_numeric)
 
     alpha_result <- tryCatch({
-      irr::kripp.alpha(ratings_t, method = if (level == "interval") "interval" else "ratio")
+      reliability_alpha(ratings_numeric, method = if (level == "interval") "interval" else "ratio")
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute Krippendorff's alpha (interval/ratio).",
@@ -748,17 +790,17 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
 
     # ICC
     icc_result <- tryCatch({
-      irr::icc(ratings_numeric, model = "twoway", type = "agreement", unit = "single")
+      reliability_icc(ratings_numeric, model = "twoway", type = "agreement", unit = "single")
     }, error = function(e) {
       cli::cli_warn(c(
         "Failed to compute ICC.",
         "x" = conditionMessage(e)
       ))
-      list(value = NA_real_, lbound = NA_real_, ubound = NA_real_)
+      list(value = NA_real_, ci_lower = NA_real_, ci_upper = NA_real_)
     })
     results$icc <- icc_result$value
     if (use_ci == "analytic") {
-      cis$icc <- c(lower = icc_result$lbound, upper = icc_result$ubound)
+      cis$icc <- c(lower = icc_result$ci_lower, upper = icc_result$ci_upper)
     }
 
     # Pearson's r (average pairwise correlation)
@@ -830,107 +872,6 @@ extract_codebook_from_coded <- function(obj) {
 #' @noRd
 get_coded_variables <- function(obj) {
   setdiff(names(obj), ".id")
-}
-
-
-#' Compute reliability statistic (deprecated, kept for backward compatibility)
-#'
-#' @param ratings Matrix where rows are subjects and columns are raters
-#' @param measure Reliability measure
-#' @param level Measurement level
-#' @param tolerance Tolerance for agreement
-#'
-#' @return List with value and detail
-#' @keywords internal
-#' @noRd
-compute_reliability <- function(ratings, measure, level, tolerance) {
-
-  if (measure == "alpha") {
-    # Krippendorff's alpha - needs raters as rows
-    # Convert to numeric for irr package
-    ratings_numeric <- convert_to_numeric(ratings)
-    ratings_t <- t(ratings_numeric)
-
-    irr_result <- tryCatch({
-      irr::kripp.alpha(ratings_t, method = level)
-    }, error = function(e) {
-      cli::cli_abort(c(
-        "Failed to compute Krippendorff's alpha.",
-        "x" = conditionMessage(e)
-      ))
-    })
-
-    list(value = irr_result$value, detail = irr_result)
-
-  } else if (measure == "kappa") {
-    # Choose kappa based on number of raters
-    # Convert to numeric for irr package
-    ratings_numeric <- convert_to_numeric(ratings)
-    n_raters <- ncol(ratings_numeric)
-
-    if (n_raters == 2) {
-      # Cohen's kappa for 2 raters
-      irr_result <- tryCatch({
-        irr::kappa2(ratings_numeric)
-      }, error = function(e) {
-        cli::cli_abort(c(
-          "Failed to compute Cohen's kappa.",
-          "x" = conditionMessage(e)
-        ))
-      })
-    } else {
-      # Fleiss' kappa for 3+ raters
-      irr_result <- tryCatch({
-        irr::kappam.fleiss(ratings_numeric)
-      }, error = function(e) {
-        cli::cli_abort(c(
-          "Failed to compute Fleiss' kappa.",
-          "x" = conditionMessage(e)
-        ))
-      })
-    }
-
-    list(value = irr_result$value, detail = irr_result)
-
-  } else if (measure == "kendall") {
-    # Kendall's W
-    irr_result <- tryCatch({
-      irr::kendall(ratings)
-    }, error = function(e) {
-      cli::cli_abort(c(
-        "Failed to compute Kendall's W.",
-        "x" = conditionMessage(e)
-      ))
-    })
-
-    list(value = irr_result$value, detail = irr_result)
-
-  } else if (measure == "agreement") {
-    # Simple percent agreement
-    # For each subject, check if all raters agree (within tolerance)
-    agrees <- apply(ratings, 1, function(row) {
-      if (is.numeric(row)) {
-        max(row) - min(row) <= tolerance
-      } else {
-        length(unique(as.character(row))) == 1
-      }
-    })
-
-    pct_agree <- mean(agrees)
-
-    list(
-      value = pct_agree,
-      detail = list(
-        subjects = nrow(ratings),
-        raters = ncol(ratings),
-        agreement = pct_agree,
-        method = "percent agreement"
-      )
-    )
-
-  } else {
-    cli::cli_abort("Unknown measure: {.val {measure}}")
-  }
 }
 
 
@@ -1024,10 +965,18 @@ format_measure_name <- function(measure) {
   result <- name_map[measure]
   if (!is.na(result)) return(unname(result))
 
-  # Handle per-value measures: alpha_u_per_value[X] -> alpha (unitizing, value=X)
+  # Handle per-value measures
   if (grepl("^alpha_u_per_value\\[", measure)) {
     val <- sub("^alpha_u_per_value\\[(.+)\\]$", "\\1", measure)
     return(paste0("alpha (unitizing, value=", val, ")"))
+  }
+  if (grepl("^alpha_per_value\\[", measure)) {
+    val <- sub("^alpha_per_value\\[(.+)\\]$", "\\1", measure)
+    return(paste0("alpha (value=", val, ")"))
+  }
+  if (grepl("^kappa_per_value\\[", measure)) {
+    val <- sub("^kappa_per_value\\[(.+)\\]$", "\\1", measure)
+    return(paste0("kappa (value=", val, ")"))
   }
 
   measure
@@ -1145,10 +1094,15 @@ compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
     row
   }
 
+  # Pick the headline measure: binary (boundaries) when no `by`, nominal otherwise.
+  pick_value <- function(res, is_boundaries) {
+    if (is_boundaries) res$binary else res$value
+  }
+
   for (var in value_vars) {
-    type <- if (is.null(var)) "binary" else "nominal"
-    measure_name  <- if (is.null(var)) "alpha_u_binary" else "alpha_u_nominal"
-    variable_name <- if (is.null(var)) "(boundaries)" else var
+    is_boundaries <- is.null(var)
+    measure_name  <- if (is_boundaries) "alpha_u_binary" else "alpha_u_nominal"
+    variable_name <- if (is_boundaries) "(boundaries)" else var
 
     # Per-document alpha (skip documents where alignment failed)
     skipped_docs <- character(0)
@@ -1159,8 +1113,10 @@ compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
         skipped_docs <- c(skipped_docs, doc_id)
         next
       }
-      alpha_val <- compute_alpha_u(unitizations, L = L, type = type)
-      all_results[[length(all_results) + 1L]] <- make_row(variable_name, measure_name, alpha_val, doc_id)
+      res <- reliability_alpha_u(unitizations, L = L)
+      all_results[[length(all_results) + 1L]] <- make_row(
+        variable_name, measure_name, pick_value(res, is_boundaries), doc_id
+      )
     }
 
     if (length(skipped_docs) > 0L) {
@@ -1190,17 +1146,18 @@ compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
         offset <- offset + L
         total_L <- total_L + L
       }
-      overall_alpha <- compute_alpha_u(combined, L = total_L, type = type)
-      all_results[[length(all_results) + 1L]] <- make_row(variable_name, measure_name, overall_alpha, "(overall)")
+      res <- reliability_alpha_u(combined, L = total_L)
 
-      # For coded segments, also compute cu_nominal and per_value
-      if (!is.null(var)) {
-        cu_alpha <- compute_alpha_u(combined, L = total_L, type = "cu_nominal")
+      all_results[[length(all_results) + 1L]] <- make_row(
+        variable_name, measure_name, pick_value(res, is_boundaries), "(overall)"
+      )
+
+      # For coded segments, also report cu_nominal and per_value
+      if (!is_boundaries) {
         all_results[[length(all_results) + 1L]] <- make_row(
-          variable_name, "alpha_cu_nominal", cu_alpha, "(overall)"
+          variable_name, "alpha_cu_nominal", res$cu_nominal, "(overall)"
         )
-
-        pv <- compute_alpha_u(combined, L = total_L, type = "per_value")
+        pv <- res$per_value
         for (row_i in seq_len(nrow(pv))) {
           all_results[[length(all_results) + 1L]] <- make_row(
             variable_name,

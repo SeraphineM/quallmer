@@ -56,8 +56,9 @@ A \code{qlm_comparison} object (a tibble/data frame) with the following columns:
 \item{\code{level}}{Measurement level used}
 \item{\code{measure}}{Name of the reliability metric}
 \item{\code{value}}{Computed value of the metric}
-\item{\code{docid}}{Source document identifier and overall indicator (unitizing
-comparisons only). Absent for predefined-unit comparisons.}
+\item{\code{docid}}{Per-row context: source document identifier and overall
+indicator for unitizing comparisons; marginal \code{(n=X)} for nominal
+per-category alpha rows; \code{NA} otherwise.}
 \item{\code{rater1}, \code{rater2}, ...}{Names of the compared objects (one column per rater)}
 \item{\code{ci_lower}}{Lower bound of confidence interval (only if \code{ci != "none"})}
 \item{\code{ci_upper}}{Upper bound of confidence interval (only if \code{ci != "none"})}
@@ -113,8 +114,8 @@ computed as the mean of all pairwise correlations between raters.
 \strong{Unitizing (segmentation) reliability}
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 
-When all inputs are segmented corpora — created by \code{\link[=qlm_segment]{qlm_segment()}} or
-\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} — agreement is measured at
+When all inputs are segmented corpora -- created by \code{\link[=qlm_segment]{qlm_segment()}} or
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} with \code{qlm_segment = TRUE} -- agreement is measured at
 the character level using Krippendorff's alpha for unitizing continua
 (Krippendorff, 2019, section 12.6). This accounts for segments of
 unequal length and partial overlaps between coders' unitizations. The
@@ -175,7 +176,13 @@ Krippendorff, K. (2019). \emph{Content Analysis: An Introduction to Its
 Methodology} (4th ed.). Sage. \doi{10.4135/9781071878781}
 }
 \seealso{
-\code{\link[=qlm_validate]{qlm_validate()}} for validation of coding against gold standards,
-\code{\link[=qlm_code]{qlm_code()}} for LLM coding, \code{\link[=as_qlm_coded]{as_qlm_coded()}} for human coding,
-\code{\link[=qlm_segment]{qlm_segment()}} for LLM-powered text segmentation.
+Related workflow functions: \code{\link[=qlm_validate]{qlm_validate()}} for validation of
+coding against gold standards, \code{\link[=qlm_code]{qlm_code()}} for LLM coding,
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} for human coding, \code{\link[=qlm_segment]{qlm_segment()}} for LLM-powered
+text segmentation.
+
+Underlying reliability calculations (internal): \code{\link[=reliability_alpha]{reliability_alpha()}}
+and \code{\link[=reliability_alpha_u]{reliability_alpha_u()}} for Krippendorff's alpha;
+\code{\link[=reliability_kappa]{reliability_kappa()}} (Cohen) and \code{\link[=reliability_kappa_fleiss]{reliability_kappa_fleiss()}};
+\code{\link[=reliability_kendall_w]{reliability_kendall_w()}}; \code{\link[=reliability_icc]{reliability_icc()}}.
 }

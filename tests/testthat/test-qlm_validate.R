@@ -11,7 +11,6 @@ get_metric <- function(result, metric_name, variable = NULL) {
 
 test_that("qlm_validate validates inputs correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   # Create mock qlm_coded object
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
@@ -69,7 +68,6 @@ test_that("qlm_validate validates inputs correctly", {
 
 test_that("qlm_validate handles mismatched IDs", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -100,7 +98,6 @@ test_that("qlm_validate handles mismatched IDs", {
 
 test_that("qlm_validate warns about NA values", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -130,7 +127,6 @@ test_that("qlm_validate warns about NA values", {
 
 test_that("qlm_validate computes metrics correctly - perfect predictions", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -173,7 +169,6 @@ test_that("qlm_validate computes metrics correctly - perfect predictions", {
 
 test_that("qlm_validate computes metrics correctly - imperfect predictions", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -212,7 +207,6 @@ test_that("qlm_validate computes metrics correctly - imperfect predictions", {
 
 test_that("qlm_validate handles average parameter correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -257,7 +251,6 @@ test_that("qlm_validate handles average parameter correctly", {
 
 test_that("qlm_validate handles multiclass correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -293,7 +286,6 @@ test_that("qlm_validate handles multiclass correctly", {
 
 test_that("print.qlm_validation displays correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -329,7 +321,6 @@ test_that("print.qlm_validation displays correctly", {
 
 test_that("print.qlm_validation displays per-class metrics correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -367,7 +358,6 @@ test_that("print.qlm_validation displays per-class metrics correctly", {
 
 test_that("qlm_validate handles partial overlap of IDs", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -397,7 +387,6 @@ test_that("qlm_validate handles partial overlap of IDs", {
 
 test_that("qlm_validate handles all NAs error", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -427,7 +416,6 @@ test_that("qlm_validate handles all NAs error", {
 
 test_that("qlm_validate accepts qlm_coded object as gold standard", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -472,7 +460,6 @@ test_that("qlm_validate accepts qlm_coded object as gold standard", {
 
 test_that("qlm_validate with qlm_coded gold handles imperfect predictions", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -527,7 +514,6 @@ test_that("qlm_validate with qlm_coded gold handles imperfect predictions", {
 
 test_that("qlm_validate ordinal level computes only appropriate metrics", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(rating = ellmer::type_integer("Rating"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -582,7 +568,6 @@ test_that("qlm_validate ordinal level computes only appropriate metrics", {
 
 test_that("qlm_validate ordinal correlation measures work correctly", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(rating = ellmer::type_integer("Rating"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -631,7 +616,6 @@ test_that("qlm_validate ordinal correlation measures work correctly", {
 
 test_that("qlm_validate nominal level computes all metrics", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -674,7 +658,6 @@ test_that("qlm_validate nominal level computes all metrics", {
 
 test_that("qlm_validate prints appropriate terminology for ordinal vs nominal", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(rating = ellmer::type_integer("Rating"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
@@ -714,7 +697,6 @@ test_that("qlm_validate prints appropriate terminology for ordinal vs nominal", 
 
 test_that("qlm_validate accepts plain data.frames for both arguments", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   # Create two plain data.frames (simulating human coders)
   coder1 <- data.frame(.id = 1:10, category = rep(c("A", "B"), 5))
@@ -730,7 +712,6 @@ test_that("qlm_validate accepts plain data.frames for both arguments", {
 
 test_that("qlm_validate works with plain data.frames and imperfect agreement", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   # Create two plain data.frames with different values
   coder1 <- data.frame(.id = 1:10, category = c(rep("A", 7), rep("B", 3)))
@@ -750,7 +731,6 @@ test_that("qlm_validate works with plain data.frames and imperfect agreement", {
 
 test_that("qlm_validate supports non-standard evaluation for by argument", {
   skip_if_not_installed("ellmer")
-  skip_if_not_installed("yardstick")
 
   type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)

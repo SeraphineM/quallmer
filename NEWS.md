@@ -1,3 +1,67 @@
+# quallmer 0.4.0.9000 (development version)
+
+## Bug fixes
+
+* `qlm_validate(..., average = "none")` was reporting per-class
+  precision and recall swapped: the helper that derived FP and FN
+  from the confusion matrix had its row and column sums transposed
+  relative to the orientation produced by `yardstick::conf_mat()`.
+  Macro-averaged precision/recall (computed via `yardstick` directly)
+  were correct; only the per-class breakdown was affected.
+
+## New features
+
+* `qlm_compare()` now reports per-category Krippendorff's alpha
+  (`alpha_per_value[k]`) for nominal data, alongside the existing
+  overall alpha. Each category is dichotomised against all others; the
+  marginal count `n` is reported in the `docid` column. Parallels the
+  per-value reporting already provided for unitizing alpha (#112).
+
+* `qlm_compare()` now reports per-category kappa (`kappa_per_value[k]`)
+  for nominal data: Cohen's κ via dichotomise-and-recompute for two
+  raters, Fleiss' formula (1971, Eqs. 20-21) for three or more (#112).
+
+## Internal changes
+
+* All reliability statistics are now native R implementations, derived
+  directly from their source papers; the package no longer depends on
+  `irr`. Each function returns a uniform list shape (`method`, `value`,
+  `ci_lower`/`ci_upper`, `per_value`, `n_observers`, `n_units`,
+  `n_pairable`) plus measure-specific fields (#112):
+  - `reliability_alpha()` — Krippendorff (2019, Ch. 12) for predefined
+    units; nominal/ordinal/interval/ratio metrics; per-category α for
+    nominal data; verified against book worked examples §12.3.1,
+    §12.3.4.1, §12.3.4.4.
+  - `reliability_alpha_u()` — Krippendorff's α for unitizing
+    continua; one call returns all variants (`value` for `_u_α`,
+    `binary` for `|_u_α`, `cu_nominal` for `_cu_α`, plus `per_value`).
+  - `reliability_kappa()` — Cohen (1960) with unweighted, linear, and
+    quadratic weighted variants; analytic SE/CI for unweighted;
+    per-category κ via dichotomisation.
+  - `reliability_kappa_fleiss()` — Fleiss (1971) for many raters with
+    analytic SE and per-category κⱼ.
+  - `reliability_kendall_w()` — Kendall & Smith (1939) with automatic
+    tie correction; verified against Kendall & Gibbons (1990) Ch. 6.
+  - `reliability_icc()` — all six ICC forms (Shrout & Fleiss 1979;
+    McGraw & Wong 1996); verified against Shrout & Fleiss Table 4.
+
+* `qlm_compare()` standardises on `subjects × raters` matrix input
+  internally, removing the transpose step previously needed for
+  `irr::kripp.alpha`.
+
+* `qlm_validate()` no longer relies on `yardstick`. Accuracy, MAE,
+  RMSE, and the confusion matrix are computed inline from base R;
+  multi-class precision, recall, and F-measure are now provided by
+  internal `metric_precision()`, `metric_recall()`, and
+  `metric_f_meas()` supporting all four standard estimators
+  (`binary`, `macro`, `macro_weighted`, `micro`). Confusion matrix,
+  micro and macro precision/recall follow Sokolova & Lapalme (2009),
+  Tables 1-3; macro F-measure is the arithmetic mean of per-class
+  F-scores (Manning, Raghavan & Schütze 2008, ch. 13), matching the
+  yardstick / scikit-learn convention. Output verified identical to
+  `yardstick`'s on both the binary case and a 4-class noisy
+  multi-class example. `yardstick` removed from `Imports`.
+
 # quallmer 0.4.0
 
 ## New features

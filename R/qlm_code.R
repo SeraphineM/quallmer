@@ -59,7 +59,6 @@
 #' coding runs, [qlm_compare()] and [qlm_validate()] for assessing reliability.
 #'
 #' @examples
-#' @examples
 #' # Requires API credentials and internet access; not run in package checks.
 #' \dontrun{
 #' # Basic sentiment analysis

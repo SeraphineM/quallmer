@@ -1,7 +1,3 @@
-# Declare global variables used in yardstick functions to avoid R CMD check NOTEs
-utils::globalVariables(c("truth", "estimate"))
-
-
 #' Extract codebook from a qlm_coded object
 #'
 #' @param obj A qlm_coded object
@@ -32,6 +28,18 @@ get_coded_variables <- function(obj) {
 
 #' Compute bootstrap confidence intervals for validation metrics
 #'
+# Combine two factors (truth and estimate) into a 2-column integer matrix
+# usable by reliability_kappa(). Both columns are refactored on the union
+# of their levels so the integer codes line up category-for-category.
+#' @noRd
+factor_pair_to_matrix <- function(truth, estimate) {
+  all_levels <- union(levels(as.factor(truth)), levels(as.factor(estimate)))
+  cbind(
+    as.integer(factor(truth,    levels = all_levels)),
+    as.integer(factor(estimate, levels = all_levels))
+  )
+}
+
 #' @param merged Data frame with 'estimate' and 'truth' columns
 #' @param var_level Measurement level ("nominal", "ordinal", or "interval")
 #' @param metrics_to_compute Character vector of metric names to compute
@@ -58,32 +66,37 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
     if (var_level == "nominal") {
       # Accuracy
       if ("accuracy" %in% metrics_to_compute) {
-        acc <- yardstick::accuracy(boot_merged, truth = truth, estimate = estimate)
-        bootstrap_results$accuracy <- c(bootstrap_results$accuracy, acc$.estimate)
+        acc <- mean(boot_merged$truth == boot_merged$estimate, na.rm = TRUE)
+        bootstrap_results$accuracy <- c(bootstrap_results$accuracy, acc)
       }
 
       # Precision
       if ("precision" %in% metrics_to_compute) {
-        prec <- yardstick::precision(boot_merged, truth = truth, estimate = estimate, estimator = estimator)
-        bootstrap_results$precision <- c(bootstrap_results$precision, prec$.estimate)
+        prec <- metric_precision(boot_merged$truth, boot_merged$estimate,
+                                  estimator = estimator)
+        bootstrap_results$precision <- c(bootstrap_results$precision, prec)
       }
 
       # Recall
       if ("recall" %in% metrics_to_compute) {
-        rec <- yardstick::recall(boot_merged, truth = truth, estimate = estimate, estimator = estimator)
-        bootstrap_results$recall <- c(bootstrap_results$recall, rec$.estimate)
+        rec <- metric_recall(boot_merged$truth, boot_merged$estimate,
+                              estimator = estimator)
+        bootstrap_results$recall <- c(bootstrap_results$recall, rec)
       }
 
       # F1
       if ("f1" %in% metrics_to_compute) {
-        f1 <- yardstick::f_meas(boot_merged, truth = truth, estimate = estimate, estimator = estimator)
-        bootstrap_results$f1 <- c(bootstrap_results$f1, f1$.estimate)
+        f1 <- metric_f_meas(boot_merged$truth, boot_merged$estimate,
+                             estimator = estimator)
+        bootstrap_results$f1 <- c(bootstrap_results$f1, f1)
       }
 
       # Kappa
       if ("kappa" %in% metrics_to_compute) {
         kap <- tryCatch({
-          yardstick::kap(boot_merged, truth = truth, estimate = estimate, weighting = "none")$.estimate
+          reliability_kappa(factor_pair_to_matrix(boot_merged$truth,
+                                                  boot_merged$estimate),
+                            weight = "unweighted")$value
         }, error = function(e) NA_real_)
         bootstrap_results$kappa <- c(bootstrap_results$kappa, kap)
       }
@@ -120,7 +133,6 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       estimate_num <- as.numeric(as.character(boot_merged$estimate))
       truth_num <- as.numeric(as.character(boot_merged$truth))
 
-      # Create data frame for yardstick
       numeric_data <- data.frame(truth = truth_num, estimate = estimate_num)
 
       # Pearson's r
@@ -134,7 +146,7 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       # MAE
       if ("mae" %in% metrics_to_compute) {
         mae_result <- tryCatch({
-          yardstick::mae(numeric_data, truth = truth, estimate = estimate)$.estimate
+          mean(abs(numeric_data$truth - numeric_data$estimate), na.rm = TRUE)
         }, error = function(e) NA_real_)
         bootstrap_results$mae <- c(bootstrap_results$mae, mae_result)
       }
@@ -142,16 +154,16 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       # RMSE
       if ("rmse" %in% metrics_to_compute) {
         rmse_result <- tryCatch({
-          yardstick::rmse(numeric_data, truth = truth, estimate = estimate)$.estimate
+          sqrt(mean((numeric_data$truth - numeric_data$estimate)^2, na.rm = TRUE))
         }, error = function(e) NA_real_)
         bootstrap_results$rmse <- c(bootstrap_results$rmse, rmse_result)
       }
 
       # ICC
-      if ("icc" %in% metrics_to_compute && requireNamespace("irr", quietly = TRUE)) {
+      if ("icc" %in% metrics_to_compute) {
         icc_result <- tryCatch({
           icc_data <- data.frame(truth = truth_num, estimate = estimate_num)
-          irr::icc(icc_data, model = "twoway", type = "agreement", unit = "single")$value
+          reliability_icc(icc_data, model = "twoway", type = "agreement", unit = "single")$value
         }, error = function(e) NA_real_)
         bootstrap_results$icc <- c(bootstrap_results$icc, icc_result)
       }
@@ -284,11 +296,43 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
 #' Note: The `average` parameter only affects precision, recall, and F1 for
 #' nominal data. For ordinal data, these metrics are not computed.
 #'
+#' @references
+#' Precision, recall, and F-measure (confusion-matrix definitions and
+#' micro / macro averaging):
+#' Sokolova, M., & Lapalme, G. (2009). A systematic analysis of
+#' performance measures for classification tasks. *Information
+#' Processing & Management*, 45(4), 427-437.
+#' \doi{10.1016/j.ipm.2009.03.002}
+#'
+#' Macro F-measure as the arithmetic mean of per-class F-scores
+#' (the convention used here, matching yardstick and scikit-learn):
+#' Manning, C. D., Raghavan, P., & Schutze, H. (2008). *Introduction
+#' to Information Retrieval*, Chapter 13. Cambridge University Press.
+#' Free online: <https://nlp.stanford.edu/IR-book/>
+#'
+#' Cohen's kappa:
+#' Cohen, J. (1960). A coefficient of agreement for nominal scales.
+#' *Educational and Psychological Measurement*, 20(1), 37-46.
+#' \doi{10.1177/001316446002000104}
+#'
+#' Intraclass correlation coefficient:
+#' Shrout, P. E., & Fleiss, J. L. (1979). Intraclass correlations:
+#' Uses in assessing rater reliability. *Psychological Bulletin*,
+#' 86(2), 420-428. \doi{10.1037/0033-2909.86.2.420}
+#'
+#' McGraw, K. O., & Wong, S. P. (1996). Forming inferences about
+#' some intraclass correlation coefficients. *Psychological Methods*,
+#' 1(1), 30-46. \doi{10.1037/1082-989X.1.1.30}
+#'
 #' @seealso
-#' [qlm_compare()] for inter-rater reliability between coded objects,
-#' [qlm_code()] for LLM coding, [as_qlm_coded()] for converting human-coded data,
-#' [yardstick::accuracy()], [yardstick::precision()], [yardstick::recall()],
-#' [yardstick::f_meas()], [yardstick::kap()], [yardstick::conf_mat()]
+#' Related workflow functions: [qlm_compare()] for inter-rater
+#' reliability between coded objects, [qlm_code()] for LLM coding,
+#' [as_qlm_coded()] for converting human-coded data.
+#'
+#' Underlying classification metrics (internal):
+#' [metric_precision()], [metric_recall()], [metric_f_meas()];
+#' Cohen's kappa is computed via [reliability_kappa()] and the ICC
+#' via [reliability_icc()].
 #'
 #' @examples
 #' # Load example coded objects
@@ -713,7 +757,7 @@ qlm_validate <- function(
       merged$truth <- factor(merged$truth, levels = all_levels)
     }
 
-    # Map average to yardstick estimator
+    # Map `average` to the estimator label used by the metric_* functions.
     estimator <- switch(average,
       "macro" = "macro",
       "micro" = "micro",
@@ -739,38 +783,35 @@ qlm_validate <- function(
       cis <- bootstrap_validation_ci(merged, var_level, metrics_to_compute, estimator, bootstrap_n)
     }
 
-    # Compute accuracy (no estimator parameter)
+    # Compute accuracy (proportion of exact matches; NA-safe).
     if ("accuracy" %in% metrics_to_compute) {
-      acc <- yardstick::accuracy(merged, truth = truth, estimate = estimate)
-      results$accuracy <- acc$.estimate
+      results$accuracy <- mean(merged$truth == merged$estimate, na.rm = TRUE)
     }
 
     # Compute precision
     if ("precision" %in% metrics_to_compute) {
-      prec <- yardstick::precision(merged, truth = truth, estimate = estimate,
-                                    estimator = estimator)
-      results$precision <- prec$.estimate
+      results$precision <- metric_precision(merged$truth, merged$estimate,
+                                             estimator = estimator)
     }
 
     # Compute recall
     if ("recall" %in% metrics_to_compute) {
-      rec <- yardstick::recall(merged, truth = truth, estimate = estimate,
-                               estimator = estimator)
-      results$recall <- rec$.estimate
+      results$recall <- metric_recall(merged$truth, merged$estimate,
+                                       estimator = estimator)
     }
 
     # Compute F1
     if ("f1" %in% metrics_to_compute) {
-      f1 <- yardstick::f_meas(merged, truth = truth, estimate = estimate,
-                              estimator = estimator)
-      results$f1 <- f1$.estimate
+      results$f1 <- metric_f_meas(merged$truth, merged$estimate,
+                                   estimator = estimator)
     }
 
     # Compute kappa (only for nominal data)
     if ("kappa" %in% metrics_to_compute) {
-      kap <- yardstick::kap(merged, truth = truth, estimate = estimate,
-                            weighting = "none")
-      results$kappa <- kap$.estimate
+      results$kappa <- reliability_kappa(
+        factor_pair_to_matrix(merged$truth, merged$estimate),
+        weight = "unweighted"
+      )$value
     }
 
     # Ordinal measures (require numeric conversion)
@@ -805,7 +846,6 @@ qlm_validate <- function(
       estimate_num <- as.numeric(as.character(merged$estimate))
       truth_num <- as.numeric(as.character(merged$truth))
 
-      # Create data frame for yardstick functions
       numeric_data <- data.frame(
         truth = truth_num,
         estimate = estimate_num
@@ -827,37 +867,25 @@ qlm_validate <- function(
         }
       }
 
-      # Mean Absolute Error (using yardstick)
+      # Mean Absolute Error
       if ("mae" %in% metrics_to_compute) {
-        mae_result <- yardstick::mae(numeric_data, truth = truth, estimate = estimate)
-        results$mae <- mae_result$.estimate
+        results$mae <- mean(abs(numeric_data$truth - numeric_data$estimate),
+                            na.rm = TRUE)
       }
 
-      # Root Mean Squared Error (using yardstick)
+      # Root Mean Squared Error
       if ("rmse" %in% metrics_to_compute) {
-        rmse_result <- yardstick::rmse(numeric_data, truth = truth, estimate = estimate)
-        results$rmse <- rmse_result$.estimate
+        results$rmse <- sqrt(mean((numeric_data$truth - numeric_data$estimate)^2,
+                                   na.rm = TRUE))
       }
 
-      # Intraclass Correlation Coefficient (using irr package)
+      # Intraclass Correlation Coefficient
       if ("icc" %in% metrics_to_compute) {
-        if (requireNamespace("irr", quietly = TRUE)) {
-          # ICC for two-rater agreement (model = "twoway", type = "agreement")
-          icc_data <- data.frame(truth = truth_num, estimate = estimate_num)
-          icc_result <- irr::icc(icc_data, model = "twoway", type = "agreement", unit = "single")
-          results$icc <- icc_result$value
-          if (ci == "analytic") {
-            cis$icc <- c(lower = icc_result$lbound, upper = icc_result$ubound)
-          }
-        } else {
-          cli::cli_warn(c(
-            "Package {.pkg irr} is required for ICC computation but is not installed.",
-            "i" = "Install it with: {.code install.packages('irr')}"
-          ))
-          results$icc <- NA_real_
-          if (ci == "analytic") {
-            cis$icc <- c(lower = NA_real_, upper = NA_real_)
-          }
+        icc_data <- data.frame(truth = truth_num, estimate = estimate_num)
+        icc_result <- reliability_icc(icc_data, model = "twoway", type = "agreement", unit = "single")
+        results$icc <- icc_result$value
+        if (ci == "analytic") {
+          cis$icc <- c(lower = icc_result$ci_lower, upper = icc_result$ci_upper)
         }
       }
     }
@@ -898,18 +926,18 @@ qlm_validate <- function(
 
     # Compute per-class metrics if average = "none" and nominal data
     if (average == "none" && var_level == "nominal") {
-      # Compute confusion matrix for this variable
-      conf_mat <- yardstick::conf_mat(merged, truth = truth, estimate = estimate)
-
-      # Extract confusion matrix table
-      cm_table <- conf_mat$table
+      # Confusion matrix: rows = truth, cols = estimate (the natural orientation,
+      # so row sums = truth class counts and column sums = predicted class counts).
+      cm_table <- table(truth = merged$truth, estimate = merged$estimate)
       classes <- rownames(cm_table)
 
       # Compute per-class metrics
       for (i in seq_along(classes)) {
         class_label <- classes[i]
 
-        # Extract TP, FP, FN for this class
+        # TP = correctly predicted as this class.
+        # FP = predicted as this class but truth is not (column sum minus TP).
+        # FN = truth is this class but predicted differently (row sum minus TP).
         TP <- cm_table[class_label, class_label]
         FP <- sum(cm_table[, class_label]) - TP
         FN <- sum(cm_table[class_label, ]) - TP

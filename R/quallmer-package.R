@@ -1,6 +1,5 @@
 #' @keywords internal
 #' @import ellmer
-#' @importFrom irr kripp.alpha kappam.fleiss
 #'
 #' @references
 #' Krippendorff, K. (2019). Content Analysis: An Introduction to Its
@@ -11,6 +10,10 @@
 #'
 #' Cohen, J. (1960). A coefficient of agreement for nominal scales. Educational
 #' and Psychological Measurement, 20(1), 37–46. \doi{10.1177/001316446002000104}
+#'
+#' Shrout, P. E., & Fleiss, J. L. (1979). Intraclass correlations: Uses
+#' in assessing rater reliability. *Psychological Bulletin*, 86(2),
+#' 420-428. \doi{10.1037/0033-2909.86.2.420}
 #'
 #' Sokolova, M., & Lapalme, G. (2009). A systematic analysis of performance
 #' measures for classification tasks. Information Processing & Management,
