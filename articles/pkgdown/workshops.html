@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -167,17 +167,83 @@ instats forum.</p>
 </tbody>
 </table>
 <hr>
+</div>
+<div class="section level2">
+<h2 id="workshop-materials">Workshop materials<a class="anchor" aria-label="anchor" href="#workshop-materials"></a>
+</h2>
+<style>
+.workshop-downloads { display: none; }
+.workshop-downloads.visible { display: block; }
+.workshop-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  display: none;
+  margin-top: 0.25rem;
+}
+.workshop-error.visible { display: block; }
+</style>
+<script>
+function checkWorkshopPassword(id, password) {
+  var entered = document.getElementById(id + '-password').value;
+  var downloads = document.getElementById(id + '-downloads');
+  var error = document.getElementById(id + '-error');
+  var form = document.getElementById(id + '-form');
+
+  if (entered === password) {
+    downloads.classList.add('visible');
+    form.style.display = 'none';
+    error.classList.remove('visible');
+  } else {
+    error.classList.add('visible');
+  }
+}
+</script><div class="section level3">
+<h3 id="wzb-berlin-may-2026">WZB Berlin | May 2026<a class="anchor" aria-label="anchor" href="#wzb-berlin-may-2026"></a>
+</h3>
+<p><strong>Access material here</strong> <span class="text-muted small">(for participants only)</span></p>
+<div id="wzb26-form">
+<div class="d-flex gap-2 align-items-center mt-2">
+<p><input type="password" id="wzb26-password" class="form-control form-control-sm" placeholder="Enter password" style="max-width: 200px;" onkeypress="if(event.key==='Enter') checkWorkshopPassword('wzb26', 'quallmer_wzb26')"><button class="btn btn-sm btn-secondary" onclick="checkWorkshopPassword('wzb26', 'quallmer_wzb26')">Unlock</button></p>
+</div>
+<div id="wzb26-error" class="workshop-error">
+Incorrect password
+</div>
+</div>
+<div id="wzb26-downloads" class="workshop-downloads mt-2">
+<p><a href="https://quallmer.github.io/quallmer/workshops/wzb26/Preparations.pdf" class="btn btn-sm btn-outline-primary me-1" download>Preparation
+guide (PDF)</a>
+<a href="https://quallmer.github.io/quallmer/workshops/wzb26/quallmer_slides.html" class="btn btn-sm btn-outline-primary me-1" target="_blank">Slides</a>
+<a href="https://quallmer.github.io/quallmer/workshops/wzb26/quallmer_tutorial.qmd" class="btn btn-sm btn-outline-primary" download>Tutorial
+(QMD)</a></p>
+</div>
 <!--
-## Workshop materials
-
-### 2026
-
-**31 Mar — Seraphine F. Maerz**
-Analysing Qualitative Data with LLMs
-
-[View slides](https://quantilab.github.io/sharezone/quallmer_slides.html) |
-[Tutorial](https://quantilab.github.io/sharezone/quallmer_tutorial.html)
+  To add a workshop, copy the block below and:
+  - Replace WS_ID with a unique identifier (e.g. "belfast26")
+  - Replace PASSWORD with the actual password
+  - Replace the title, date, and location
+  - Add download links inside #WS_ID-downloads
 -->
+<!-- Example block (hidden):
+
+### Workshop name | Location, Month YYYY
+
+**Title** <span class="text-muted small">(for participants only)</span>
+
+<div id="WS_ID-form">
+<div class="d-flex gap-2 align-items-center mt-2">
+<input type="password" id="WS_ID-password" class="form-control form-control-sm" placeholder="Enter password" style="max-width: 200px;" onkeypress="if(event.key==='Enter') checkWorkshopPassword('WS_ID', 'PASSWORD')">
+<button class="btn btn-sm btn-secondary" onclick="checkWorkshopPassword('WS_ID', 'PASSWORD')">Unlock</button>
+</div>
+<div id="WS_ID-error" class="workshop-error">Incorrect password</div>
+</div>
+<div id="WS_ID-downloads" class="workshop-downloads mt-2">
+<a href="URL_TO_PDF" class="btn btn-sm btn-outline-primary me-1" download>Preparation guide (PDF)</a>
+<a href="URL_TO_TUTORIAL" class="btn btn-sm btn-outline-primary me-1" target="_blank">Tutorial</a>
+<a href="URL_TO_SLIDES" class="btn btn-sm btn-outline-primary" target="_blank">Slides</a>
+</div>
+
+-->
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

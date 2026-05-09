@@ -18,7 +18,7 @@ documentation [here](https://ellmer.tidyverse.org/index.html).
 
 The `quallmer` package is developed for using it in R. Please make sure
 you have a recent version of [R and RStudio
-installed](https://posit.co/download/rstudio-desktop/) on your computer.
+installed](https://posit.co/download/rstudio-desktop) on your computer.
 If you are new to R and RStudio, you can find [a great and
 free-of-charge 1.5h introduction to R and RStudio on
 instats](https://instats.org/seminar/introduction-to-r-with-rstudio-free-1-h3).

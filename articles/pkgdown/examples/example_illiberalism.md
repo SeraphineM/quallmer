@@ -62,7 +62,7 @@ from the original study:
 
 ``` r
 codebook_ideology <- qlm_codebook(
-  name = "Liberal-illiberal segments",
+  name = "Liberal-illiberal rhetoric",
   instructions = paste(
     "Analyze the rhetorical style of this political speech.",
     "",
@@ -80,16 +80,14 @@ codebook_ideology <- qlm_codebook(
     "- Democratic values and rule of law",
     "- Open society principles",
     "",
-    "Split into illiberal and liberal segments."
+    "A score of 0 indicates neutral or mixed rhetoric."
   ),
   schema = ellmer::type_object(
-    aspect    = ellmer::type_enum(
-      c("rhetoric_style"),
-      description = "Ideology discussed in this segment"
+    score = ellmer::type_integer(
+      description = "Rhetoric score from -10 (illiberal) to +10 (liberal)"
     ),
-    sentiment = ellmer::type_enum(
-      c("liberal", "illiberal"),
-      description = "Ideology expressed"
+    explanation = ellmer::type_string(
+      description = "Brief explanation of the assigned score"
     )
   ),
   role = "You are an expert political scientist analyzing political rhetoric.",
@@ -97,14 +95,14 @@ codebook_ideology <- qlm_codebook(
 )
 
 codebook_ideology
-#> quallmer codebook: Liberal-illiberal segments 
+#> quallmer codebook: Liberal-illiberal rhetoric 
 #>   Input type:   text
 #>   Role:         You are an expert political scientist analyzing political rh...
 #>   Instructions: Analyze the rhetorical style of this political speech.  ILLI...
 #>   Output schema:ellmer::TypeObject
 #>   Levels:
-#>     aspect: nominal
-#>     sentiment: nominal
+#>     score: ordinal
+#>     explanation: nominal
 ```
 
 ## Running the LLM analysis
@@ -112,8 +110,8 @@ codebook_ideology
 We code all 4,740 speeches using GPT-4o-mini:
 
 ``` r
-coded_speeches <- qlm_segment(
-  data_speeches_ms2020$text[1:20],
+coded_speeches <- qlm_code(
+  data_speeches_ms2020$text,
   codebook = codebook_ideology,
   model = "openai/gpt-4o-mini",
   name = "gpt4o_mini_ideology",

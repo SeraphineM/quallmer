@@ -50,6 +50,13 @@ my_codebook <- qlm_codebook(
 my_codebook
 ```
 
+> **Tip:** Need to split texts into smaller units first? Use
+> [`qlm_segment()`](https://quallmer.github.io/quallmer/reference/qlm_segment.md)
+> to segment texts into thematic or conceptual units (e.g.,
+> quasi-sentences, aspects, or topics) before coding. For an example,
+> see here: [Text
+> segmentation](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_segmentation.html).
+
 ## Step 2: Code your data
 
 Apply the codebook to your texts using an LLM:

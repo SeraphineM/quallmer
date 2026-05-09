@@ -42,3 +42,5 @@ instats forum.
 | AI-Powered Qualitative Analysis in R (Europe) | June 16, 2026 | [Register](https://instats.org/seminar/ai-powered-qualitative-analysis-in-r-eur) |
 
 ------------------------------------------------------------------------
+
+## Workshop materials
