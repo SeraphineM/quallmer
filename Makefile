@@ -13,13 +13,14 @@ articles: readme
 article:
 	Rscript -e "pkgdown::build_article('$(NAME)')"
 
-# Deploy articles to gh-pages without touching other content
+# Deploy articles and workshop materials to gh-pages without touching other content
 deploy-articles: readme
 	git worktree add --detach gh-pages-tmp gh-pages
 	cp -r docs/articles/* gh-pages-tmp/articles/
+	if [ -d docs/workshops ]; then mkdir -p gh-pages-tmp/workshops && cp -r docs/workshops/* gh-pages-tmp/workshops/; fi
 	cd gh-pages-tmp && \
-		git add articles/ && \
-		git commit -m "Update articles" && \
+		git add -A && \
+		git commit -m "Update articles and workshop materials" && \
 		git push origin HEAD:gh-pages
 	git worktree remove gh-pages-tmp
 
