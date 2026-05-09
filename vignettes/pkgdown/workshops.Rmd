@@ -42,14 +42,80 @@ Online workshops via [Instats](https://instats.org/expert/seraphine-maerz-2?view
 
 
 ***
-<!--
+
 ## Workshop materials
 
-### 2026
+<style>
+.workshop-downloads { display: none; }
+.workshop-downloads.visible { display: block; }
+.workshop-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  display: none;
+  margin-top: 0.25rem;
+}
+.workshop-error.visible { display: block; }
+</style>
 
-**31 Mar — Seraphine F. Maerz**
-Analysing Qualitative Data with LLMs
+<script>
+function checkWorkshopPassword(id, password) {
+  var entered = document.getElementById(id + '-password').value;
+  var downloads = document.getElementById(id + '-downloads');
+  var error = document.getElementById(id + '-error');
+  var form = document.getElementById(id + '-form');
 
-[View slides](https://quantilab.github.io/sharezone/quallmer_slides.html) |
-[Tutorial](https://quantilab.github.io/sharezone/quallmer_tutorial.html)
+  if (entered === password) {
+    downloads.classList.add('visible');
+    form.style.display = 'none';
+    error.classList.remove('visible');
+  } else {
+    error.classList.add('visible');
+  }
+}
+</script>
+
+### WZB Berlin | May 2026
+
+**Access material here** <span class="text-muted small">(for participants only)</span>
+
+<div id="wzb26-form">
+<div class="d-flex gap-2 align-items-center mt-2">
+<input type="password" id="wzb26-password" class="form-control form-control-sm" placeholder="Enter password" style="max-width: 200px;" onkeypress="if(event.key==='Enter') checkWorkshopPassword('wzb26', 'quallmer_wzb26')">
+<button class="btn btn-sm btn-secondary" onclick="checkWorkshopPassword('wzb26', 'quallmer_wzb26')">Unlock</button>
+</div>
+<div id="wzb26-error" class="workshop-error">Incorrect password</div>
+</div>
+<div id="wzb26-downloads" class="workshop-downloads mt-2">
+<a href="https://quallmer.github.io/quallmer/workshops/wzb26/Preparations.pdf" class="btn btn-sm btn-outline-primary me-1" download>Preparation guide (PDF)</a>
+<a href="https://quallmer.github.io/quallmer/workshops/wzb26/quallmer_slides.html" class="btn btn-sm btn-outline-primary me-1" target="_blank">Slides</a>
+<a href="https://quallmer.github.io/quallmer/workshops/wzb26/quallmer_tutorial.qmd" class="btn btn-sm btn-outline-primary" download>Tutorial (QMD)</a>
+</div>
+
+<!--
+  To add a workshop, copy the block below and:
+  - Replace WS_ID with a unique identifier (e.g. "belfast26")
+  - Replace PASSWORD with the actual password
+  - Replace the title, date, and location
+  - Add download links inside #WS_ID-downloads
+-->
+
+<!-- Example block (hidden):
+
+### Workshop name | Location, Month YYYY
+
+**Title** <span class="text-muted small">(for participants only)</span>
+
+<div id="WS_ID-form">
+<div class="d-flex gap-2 align-items-center mt-2">
+<input type="password" id="WS_ID-password" class="form-control form-control-sm" placeholder="Enter password" style="max-width: 200px;" onkeypress="if(event.key==='Enter') checkWorkshopPassword('WS_ID', 'PASSWORD')">
+<button class="btn btn-sm btn-secondary" onclick="checkWorkshopPassword('WS_ID', 'PASSWORD')">Unlock</button>
+</div>
+<div id="WS_ID-error" class="workshop-error">Incorrect password</div>
+</div>
+<div id="WS_ID-downloads" class="workshop-downloads mt-2">
+<a href="URL_TO_PDF" class="btn btn-sm btn-outline-primary me-1" download>Preparation guide (PDF)</a>
+<a href="URL_TO_TUTORIAL" class="btn btn-sm btn-outline-primary me-1" target="_blank">Tutorial</a>
+<a href="URL_TO_SLIDES" class="btn btn-sm btn-outline-primary" target="_blank">Slides</a>
+</div>
+
 -->

@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="quallmer_slides_files/libs/clipboard/clipboard.min.js"></script>
+<script src="quallmer_slides_files/libs/quarto-html/tabby.min.js"></script>
+<script src="quallmer_slides_files/libs/quarto-html/popper.min.js"></script>
+<script src="quallmer_slides_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="quallmer_slides_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="quallmer_slides_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="quallmer_slides_files/libs/quarto-html/quarto-syntax-highlighting-0626ff4d7a71b55c8707dcae1d04a9b6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="quallmer_slides_files/libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="quallmer_slides_files/libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="quallmer_slides_files/libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.6.39">
+
+  <meta name="author" content="Seraphine F. Maerz">
+  <meta name="dcterms.date" content="2026-05-09">
+  <title>LLM-assisted text analysis</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="quallmer_slides_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="quallmer_slides_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+      }
+    pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+    div.sourceCode
+      { color: #24292e;  }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #24292e; } /* Normal */
+    code span.al { color: #ff5555; font-weight: bold; } /* Alert */
+    code span.an { color: #6a737d; } /* Annotation */
+    code span.at { color: #d73a49; } /* Attribute */
+    code span.bn { color: #005cc5; } /* BaseN */
+    code span.bu { color: #d73a49; } /* BuiltIn */
+    code span.cf { color: #d73a49; } /* ControlFlow */
+    code span.ch { color: #032f62; } /* Char */
+    code span.cn { color: #005cc5; } /* Constant */
+    code span.co { color: #6a737d; } /* Comment */
+    code span.cv { color: #6a737d; } /* CommentVar */
+    code span.do { color: #6a737d; } /* Documentation */
+    code span.dt { color: #d73a49; } /* DataType */
+    code span.dv { color: #005cc5; } /* DecVal */
+    code span.er { color: #ff5555; text-decoration: underline; } /* Error */
+    code span.ex { color: #d73a49; font-weight: bold; } /* Extension */
+    code span.fl { color: #005cc5; } /* Float */
+    code span.fu { color: #6f42c1; } /* Function */
+    code span.im { color: #032f62; } /* Import */
+    code span.in { color: #6a737d; } /* Information */
+    code span.kw { color: #d73a49; } /* Keyword */
+    code span.op { color: #24292e; } /* Operator */
+    code span.ot { color: #6f42c1; } /* Other */
+    code span.pp { color: #d73a49; } /* Preprocessor */
+    code span.re { color: #6a737d; } /* RegionMarker */
+    code span.sc { color: #005cc5; } /* SpecialChar */
+    code span.ss { color: #032f62; } /* SpecialString */
+    code span.st { color: #032f62; } /* String */
+    code span.va { color: #e36209; } /* Variable */
+    code span.vs { color: #032f62; } /* VerbatimString */
+    code span.wa { color: #ff5555; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="quallmer_slides_files/libs/revealjs/dist/theme/quarto-2152eb5e167d45ad89c39b7ad16f79e5.css">
+  <link href="quallmer_slides_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="quallmer_slides_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="quallmer_slides_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="quallmer_slides_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+  <script src="quallmer_slides_files/libs/quarto-diagram/mermaid.min.js"></script>
+  <script src="quallmer_slides_files/libs/quarto-diagram/mermaid-init.js"></script>
+  <link href="quallmer_slides_files/libs/quarto-diagram/mermaid.css" rel="stylesheet">
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">LLM-assisted text analysis</h1>
+  <p class="subtitle">WZB, May 2026</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Seraphine F. Maerz 
+</div>
+</div>
+</div>
+
+  <p class="date">2026-05-09</p>
+</section>
+<section id="about-me" class="slide level2">
+<h2>About Me</h2>
+<ul>
+<li>Senior Lecturer in Political Science (Research Methods) at University of Melbourne</li>
+<li>Research: Democracy, authoritarianism, language of political leaders</li>
+<li>Co-founder of <a href="https://quantilab.github.io/">QuantLab</a></li>
+<li>Developer of <a href="https://quallmer.github.io/quallmer/index.html">quallmer</a> (with Ken Benoit)</li>
+</ul>
+<p><strong>Motivation:</strong> Fight for democracy, making quantitative methods more accessible</p>
+<p>Website: <a href="https://seraphinem.github.io">seraphinem.github.io</a></p>
+<p>Workshops on instats on <a href="https://instats.org/expert/seraphine-maerz-2?view=Seminars">AI-assisted text analysis and fine-tuning LLMs</a></p>
+</section>
+<section id="about-you" class="slide level2">
+<h2>About you</h2>
+<ul>
+<li>Your name, what is your research topic?</li>
+<li>What is your background? (quantitative, qualitative, mixed methods, other)</li>
+<li>Any R knowledge?</li>
+<li>Have you used LLMs for research before? If so, how?</li>
+<li>What do you hope to learn from this workshop?</li>
+</ul>
+</section>
+<section id="about-this-workshop" class="slide level2">
+<h2>About This Workshop</h2>
+<p><strong>Goals:</strong></p>
+<ul>
+<li>Understand basics of LLM-based text analysis</li>
+<li>Learn the core workflow of the quallmer tool (5 steps)</li>
+<li>Replicate a real research example</li>
+<li>Start using quallmer for your own projects</li>
+<li>Know how to validate and document your analysis</li>
+</ul>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Materials</strong></p>
+</div>
+<div class="callout-content">
+<p>Detailed documentation of the tool: <a href="https://quallmer.github.io/quallmer">quallmer.github.io/quallmer</a></p>
+<p><a href="https://quantilab.github.io/">Slides and tutorial available on QuantLab website: quantilab.github.io</a></p>
+</div>
+</div>
+</div>
+</section>
+<section>
+<section id="introduction" class="title-slide slide level1 center">
+<h1>Introduction</h1>
+
+</section>
+<section id="llms-as-qualitative-analysis-tools-recent-contributions" class="slide level2">
+<h2>LLMs as Qualitative Analysis Tools: Recent Contributions</h2>
+<p><strong>A growing body of research demonstrates LLMs’ potential for qualitative text analysis:</strong></p>
+<ul>
+<li><p><strong>Benoit et al.&nbsp;(2026)</strong>: <a href="https://onlinelibrary.wiley.com/doi/10.1111/ajps.70050">Using LLMs to analyze political texts through natural language understanding</a>. <em>American Journal of Political Science</em>. LLM-generated party position estimates correlate highly with expert ratings – scalable alternative to human coders.</p></li>
+<li><p><strong>Halterman and Keith (2025)</strong>: <a href="https://www.cambridge.org/core/journals/political-analysis/article/codebook-llms-evaluating-llms-as-measurement-tools-for-political-science-concepts/7B323A0E47F782F2698A0AE849EA00DE">Codebook LLMs: Evaluating LLMs as measurement tools for political science concepts</a>. <em>Political Analysis</em>. Systematic evaluation of LLMs for coding political science concepts with codebook guidance.</p></li>
+<li><p><strong>Hayes (2025)</strong>: <a href="https://journals.sagepub.com/doi/full/10.1177/16094069251322346">“Conversing” with qualitative data</a>. <em>International Journal of Qualitative Methods</em>. LLMs enable researchers to explore qualitative data in a conversational way.</p></li>
+</ul>
+<div class="fragment">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Emerging Consensus</strong></p>
+</div>
+<div class="callout-content">
+<p>LLMs can complement (not replace!) traditional methods – but require <strong>validation</strong>, <strong>transparency</strong>, and <strong>methodological rigor</strong>.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="the-quant-qual-dilemma" class="slide level2">
+<h2>The Quant-Qual Dilemma</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Quantitative</strong></p>
+<ul>
+<li>Large N, generalizability</li>
+<li>Replicable &amp; transparent</li>
+<li>Statistical rigor</li>
+</ul>
+<p><em>But:</em> Lacks depth, context, nuance</p>
+</div><div class="column" style="width:50%;">
+<p><strong>Qualitative</strong></p>
+<ul>
+<li>Rich detail &amp; context</li>
+<li>Captures complexity</li>
+<li>Discovers unexpected patterns</li>
+</ul>
+<p><em>But:</em> Small N, labor-intensive, harder to generalize</p>
+</div></div>
+<div class="fragment">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>LLMs as a Bridge?</strong></p>
+</div>
+<div class="callout-content">
+<p>LLMs could combine <strong>scale &amp; replicability</strong> with <strong>contextual understanding</strong> — but only if:</p>
+<ul>
+<li>Results are <strong>validated</strong> against human judgment</li>
+<li>The process is <strong>transparent</strong> and documented</li>
+<li>We maintain <strong>audit trails</strong> for rigor and replicability</li>
+</ul>
+</div>
+</div>
+</div>
+<p><strong>quallmer</strong> was developed with this vision — grounded in established insights from qualitative research methodology.</p>
+</div>
+</section>
+<section id="quality-in-qualitative-research" class="slide level2">
+<h2>Quality in Qualitative Research</h2>
+<div class="columns">
+<div class="column" style="width:40%;">
+<p><a href="pics/naturalistic.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img data-src="pics/naturalistic.jpg" style="width:60.0%"></a></p>
+</div><div class="column" style="width:60%;">
+<p><a href="pics/quality.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img data-src="pics/quality.png" style="width:100.0%"></a></p>
+<p>Lincoln &amp; Guba’s (1985) <strong>trustworthiness criteria</strong> and the importance of <strong>audit trails</strong> for transparency and rigor in qualitative research, Seale, C. (1999). Guiding ideals. In The Quality of Qualitative Research (pp.&nbsp;32-50). SAGE Publications Ltd.</p>
+</div></div>
+
+<aside><div>
+<p>Lincoln, Y. S., &amp; Guba, E. G. (1985). <em>Naturalistic Inquiry</em>. Sage.</p>
+</div></aside></section></section>
+<section>
+<section id="from-bag-of-words-to-llms" class="title-slide slide level1 center">
+<h1>From Bag of Words to LLMs</h1>
+
+</section>
+<section id="pre-llm-text-analysis" class="slide level2">
+<h2>Pre-LLM Text Analysis</h2>
+<div class="center">
+<div class="cell" data-reveal="true" data-fig-width="10" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<pre class="mermaid mermaid-js">flowchart TB
+    A[Corpus of documents] --&gt; B[Document-feature matrix&lt;br&gt;'Bag of Words']
+    B --&gt; C[Supervised&lt;br&gt;known categories]
+    B --&gt; D[Unsupervised&lt;br&gt;unknown categories]
+    C --&gt; E[Dictionary &amp;&lt;br&gt;Sentiment]
+    C --&gt; F[Wordscores &amp;&lt;br&gt;Classifiers]
+    D --&gt; G[Topic Models]
+    D --&gt; H[Wordfish]
+
+    B --&gt; I[Word Embeddings&lt;br&gt;Word2Vec, GloVe]
+    I -.-&gt; J[Transformers&lt;br&gt;Attention mechanism]
+    J -.-&gt; K[Large Language&lt;br&gt;Models]
+
+    style A fill:#b8d4e8,stroke:#333
+    style B fill:#b8d4e8,stroke:#333
+    style C fill:#b8d4e8,stroke:#333
+    style D fill:#b8d4e8,stroke:#333
+    style E fill:#b8d4e8,stroke:#333
+    style F fill:#b8d4e8,stroke:#333
+    style G fill:#b8d4e8,stroke:#333
+    style H fill:#b8d4e8,stroke:#333
+    style I fill:#b8d4e8,stroke:#333
+    style J fill:#f0e68c,stroke:#333
+    style K fill:#f0e68c,stroke:#333
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="pre-llm-vs.-llm-approaches" class="slide level2">
+<h2>Pre-LLM vs.&nbsp;LLM Approaches</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Traditional:</strong></p>
+<ul>
+<li>Dictionary methods</li>
+<li>Topic models</li>
+<li>Supervised learning</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>LLM-based:</strong></p>
+<ul>
+<li>Zero-shot classification</li>
+<li>Context-aware</li>
+<li>Can explain reasoning</li>
+</ul>
+</div></div>
+<p><strong>All (text) models are wrong – but some are useful!</strong></p>
+</section>
+<section id="why-use-llms-for-research" class="slide level2">
+<h2>Why Use LLMs for Research?</h2>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Challenge</th>
+<th>Traditional</th>
+<th>LLM-Based</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Context</td>
+<td>Limited</td>
+<td>Strong</td>
+</tr>
+<tr class="even">
+<td>Training data</td>
+<td>Often needed</td>
+<td>Usually not</td>
+</tr>
+<tr class="odd">
+<td>Cost</td>
+<td>Can be high</td>
+<td>Variable (depends on API)</td>
+</tr>
+<tr class="even">
+<td>Nuance</td>
+<td>Struggles</td>
+<td>Better</td>
+</tr>
+<tr class="odd">
+<td>Reproducibility</td>
+<td>Strong</td>
+<td>Not 100%</td>
+</tr>
+</tbody>
+</table>
+<div class="fragment">
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Important</strong></p>
+</div>
+<div class="callout-content">
+<p>LLMs produce language – not truth! <strong>Validation is essential.</strong></p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="data-security-ethical-considerations" class="slide level2">
+<h2>Data Security &amp; Ethical Considerations</h2>
+<p><strong>Key concerns when using LLMs:</strong></p>
+<ul>
+<li><strong>Privacy</strong> – Sensitive data uploaded to external servers (closed LLMs)</li>
+<li><strong>Reproducibility</strong> – Same prompts can give different responses</li>
+<li><strong>Bias &amp; fairness</strong> – Models may reflect training data biases</li>
+<li><strong>Transparency</strong> – Training data often unknown (closed LLMs)</li>
+<li><strong>Resource consumption</strong> – Environmental impact of large models</li>
+</ul>
+<div class="fragment">
+<p><strong>Reminder:</strong> Use open-source LLMs for sensitive data; provide traceability; always validate!</p>
+</div>
+</section></section>
+<section>
+<section id="current-landscape-of-llm-tools-for-text-analysis" class="title-slide slide level1 center">
+<h1>Current Landscape of LLM Tools for Text Analysis</h1>
+
+</section>
+<section id="existing-tools" class="slide level2">
+<h2>Existing Tools</h2>
+<p><strong>Proprietary QDA software</strong> (NVivo, MAXQDA, QDAMiner) have added AI-assisted coding, but:</p>
+<ul>
+<li><strong>GUI-only</strong> – No code-based workflow, analyses cannot be executed as code</li>
+<li><strong>Not reproducible</strong> – Results cannot be straightforwardly replicated</li>
+<li><strong>No comprehensive audit trails</strong> – Partial documentation at best</li>
+<li><strong>Opaque models</strong> – NVivo/MAXQDA don’t disclose which model powers their AI</li>
+<li><strong>Not open-source</strong></li>
+</ul>
+<div class="fragment">
+<p><strong>Custom LLM code</strong> gives flexibility, but researchers must build infrastructure from scratch:</p>
+<ul>
+<li>Managing codebooks</li>
+<li>Tracking provenance</li>
+<li>Computing reliability metrics</li>
+<li>Documenting workflows</li>
+</ul>
+<p>This can distract from substantive research questions.</p>
+</div>
+</section>
+<section id="working-with-llms-in-r" class="slide level2">
+<h2>Working with LLMs in R</h2>
+<p><strong>General-purpose R packages for LLM access:</strong></p>
+<ul>
+<li><code>ellmer</code> (Wickham et al., 2025)</li>
+<li><code>ollamar</code> (Lin &amp; Safi, 2025)</li>
+<li><code>rollama</code> (Gruber &amp; Weber, 2024)</li>
+</ul>
+<p>Flexible LLM interfaces – but <strong>no qualitative methodology / text analysis support</strong>.</p>
+<div class="fragment">
+<p><strong>Text analysis packages:</strong></p>
+<ul>
+<li><code>quanteda</code> (Benoit et al., 2018) – quantitative text analysis, not AI-assisted qualitative coding</li>
+</ul>
+</div>
+<div class="fragment">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>The Gap</strong></p>
+</div>
+<div class="callout-content">
+<p>No existing tool addresses the specific methodological requirements of <strong>trustworthy qualitative research</strong> with LLMs.</p>
+</div>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="introducing-quallmer" class="title-slide slide level1 center">
+<h1>Introducing quallmer</h1>
+
+</section>
+<section id="what-is-quallmer" class="slide level2">
+<h2>What is quallmer?</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><a href="pics/logo.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img data-src="pics/logo.png" class="quarto-figure quarto-figure-center" style="width:15.0%"></a></p>
+</figure>
+</div>
+<p>An R package that enables researchers to apply <strong>LLM-assisted qualitative coding</strong> while maintaining the rigorous standards of <strong>transparency and traceability</strong> essential to qualitative research.</p>
+<div class="fragment">
+<p><strong>Key features:</strong></p>
+<ul>
+<li>Works with texts, images, PDFs, audio, and tabular data</li>
+<li>Supports open-source and proprietary LLMs (OpenAI, Anthropic, Hugging Face, etc.)</li>
+<li>Built on the <code>ellmer</code> package (Wickham et al., 2025)</li>
+<li>Co-developed by Seraphine Maerz and Kenneth Benoit</li>
+<li>Available on CRAN: <code>install.packages("quallmer")</code></li>
+</ul>
+</div>
+</section>
+<section id="the-quallmer-philosophy" class="slide level2">
+<h2>The quallmer Philosophy</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Simplicity &amp; Accessibility</strong></p>
+<ul>
+<li>Minimal code required</li>
+<li>Clear, intuitive workflow</li>
+<li>Designed for newcomers to R</li>
+<li>Comprehensive tutorials and documentation</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>Rigor &amp; Transparency</strong></p>
+<ul>
+<li>Built-in validation tools</li>
+<li>Automatic audit trails</li>
+<li>Full traceability of decisions</li>
+<li>Reproducible analyses</li>
+</ul>
+</div></div>
+<div class="fragment">
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Getting Started</strong></p>
+</div>
+<div class="callout-content">
+<p>Step-by-step tutorials available at <a href="https://quallmer.github.io/quallmer">quallmer.github.io/quallmer</a></p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="the-5-step-workflow" class="slide level2">
+<h2>The 5-Step Workflow</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 46%">
+<col style="width: 32%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>Function(s)</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1. Define codebook</td>
+<td><code>qlm_codebook()</code></td>
+<td>Create reusable coding schemes with instructions and structured output schema</td>
+</tr>
+<tr class="even">
+<td>2. Code data</td>
+<td><code>qlm_code()</code>, <code>qlm_segment()</code> (optional)</td>
+<td>Apply codebook to texts, images, PDFs, audio, or tabular data using any supported LLM, or - optional - segments texts into thematic or conceptual units using an LLM (or both)</td>
+</tr>
+<tr class="odd">
+<td>3. Replicate</td>
+<td><code>qlm_replicate()</code></td>
+<td>Re-run coding with different models or parameter settings, preserving provenance chains</td>
+</tr>
+<tr class="even">
+<td>4. Compare &amp; validate</td>
+<td><code>qlm_compare()</code>, <code>qlm_validate()</code></td>
+<td>Compute inter-rater reliability metrics; benchmark against human-coded gold standards</td>
+</tr>
+<tr class="odd">
+<td>5. Audit trail</td>
+<td><code>qlm_trail()</code></td>
+<td>Generate complete audit documentation and executable replication report</td>
+</tr>
+</tbody>
+</table>
+</section></section>
+<section>
+<section id="example-coding-political-speeches" class="title-slide slide level1 center">
+<h1>Example: Coding Political Speeches</h1>
+
+</section>
+<section id="the-research-question" class="slide level2">
+<h2>The Research Question</h2>
+<p><strong>Original Study:</strong> Maerz &amp; Schneider (2020), <em>Quality &amp; Quantity</em></p>
+<ul>
+<li>Corpus of 4,740 speeches by 40 heads of government in 27 countries</li>
+<li>Finding: Autocratic leaders use more illiberal language; some democratic leaders too (correlation with backsliding)</li>
+</ul>
+<div class="fragment">
+<p><strong>Goal:</strong> Replicate using LLMs instead of dictionary/topic model approach</p>
+<ul>
+<li>Can LLMs identify liberal-illiberal rhetoric?</li>
+<li>Do they correlate with human/dictionary codings?</li>
+</ul>
+</div>
+</section>
+<section id="step-1-define-the-codebook" class="slide level2">
+<h2>Step 1: Define the Codebook</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(quallmer)</span>
+<span id="cb1-2"><a href="" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="" aria-hidden="true" tabindex="-1"></a>codebook_ideology <span class="ot">&lt;-</span> <span class="fu">qlm_codebook</span>(</span>
+<span id="cb1-4"><a href="" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"Liberal-illiberal rhetoric"</span>,</span>
+<span id="cb1-5"><a href="" aria-hidden="true" tabindex="-1"></a>  <span class="at">instructions =</span> <span class="st">"Analyze the rhetorical style of this political speech.</span></span>
+<span id="cb1-6"><a href="" aria-hidden="true" tabindex="-1"></a><span class="st">    ILLIBERAL rhetoric (negative scores): nationalism, paternalism, traditionalism.</span></span>
+<span id="cb1-7"><a href="" aria-hidden="true" tabindex="-1"></a><span class="st">    LIBERAL rhetoric (positive scores): individual rights, tolerance, civil liberties.</span></span>
+<span id="cb1-8"><a href="" aria-hidden="true" tabindex="-1"></a><span class="st">    Score 0 = neutral/mixed."</span>,</span>
+<span id="cb1-9"><a href="" aria-hidden="true" tabindex="-1"></a>  <span class="at">schema =</span> <span class="fu">type_object</span>(</span>
+<span id="cb1-10"><a href="" aria-hidden="true" tabindex="-1"></a>    <span class="at">score =</span> <span class="fu">type_integer</span>(<span class="st">"Score from -10 (illiberal) to +10 (liberal)"</span>),</span>
+<span id="cb1-11"><a href="" aria-hidden="true" tabindex="-1"></a>    <span class="at">explanation =</span> <span class="fu">type_string</span>(<span class="st">"Brief explanation of the score"</span>)</span>
+<span id="cb1-12"><a href="" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-13"><a href="" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <strong>schema</strong> defines the structured output – here, the LLM returns both a score <em>and</em> an explanation.</p>
+</section>
+<section id="schema-options" class="slide level2">
+<h2>Schema Options</h2>
+<p>The <code>schema</code> defines what the LLM returns:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 37%">
+<col style="width: 37%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Use for</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>type_integer()</code></td>
+<td>Fixed categories</td>
+<td><code>c("pos", "neg", "neutral")</code></td>
+</tr>
+<tr class="even">
+<td><code>type_string()</code></td>
+<td>Text/explanations</td>
+<td><code>"Brief explanation"</code></td>
+</tr>
+<tr class="odd">
+<td><code>type_number()</code></td>
+<td>Number scores</td>
+<td><code>-10 to +10</code></td>
+</tr>
+<tr class="even">
+<td><code>type_boolean()</code></td>
+<td>Yes/no questions</td>
+<td><code>TRUE/FALSE</code></td>
+</tr>
+<tr class="odd">
+<td><code>type_array()</code></td>
+<td>Lists of items</td>
+<td>Persons, relationships, things, etc.</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Tip</strong></p>
+</div>
+<div class="callout-content">
+<p>The schema is flexible – you can ask for multiple fields and also nest objects for more complex outputs – it can be nicely tailored to your research question. Think carefully about what you want to get back from the LLM, the schema will guide the response format and content!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="step-2-code-the-data" class="slide level2">
+<h2>Step 2: Code the Data</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="" aria-hidden="true" tabindex="-1"></a>coded_speeches <span class="ot">&lt;-</span> <span class="fu">qlm_code</span>(</span>
+<span id="cb2-2"><a href="" aria-hidden="true" tabindex="-1"></a>  speech_corpus,                    <span class="co"># character vector or quanteda corpus</span></span>
+<span id="cb2-3"><a href="" aria-hidden="true" tabindex="-1"></a>  <span class="at">codebook =</span> codebook_ideology,     <span class="co"># qlm_codebook object</span></span>
+<span id="cb2-4"><a href="" aria-hidden="true" tabindex="-1"></a>  <span class="at">model =</span> <span class="st">"openai/gpt-4o-mini"</span>,     <span class="co"># provider and model</span></span>
+<span id="cb2-5"><a href="" aria-hidden="true" tabindex="-1"></a>  <span class="at">name =</span> <span class="st">"ideology_coding_run1"</span>     <span class="co"># user-assigned name</span></span>
+<span id="cb2-6"><a href="" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Returns a <code>qlm_coded</code> object with:</p>
+<ul>
+<li>Coding results (score, explanation)</li>
+<li>Full metadata (timestamps, model identifiers, codebook used)</li>
+</ul>
+<p><em>Optionally, you can segment texts into thematic or conceptual units before or during coding using <code>qlm_segment()</code>, which can help capture nuance and variation within longer texts.</em></p>
+</section>
+<section id="step-3-replicate" class="slide level2">
+<h2>Step 3: Replicate</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># Replicate with a different model</span></span>
+<span id="cb3-2"><a href="" aria-hidden="true" tabindex="-1"></a>coded_claude <span class="ot">&lt;-</span> <span class="fu">qlm_replicate</span>(coded_speeches, <span class="at">model =</span> <span class="st">"anthropic/claude-3-5-sonnet"</span>)</span>
+<span id="cb3-3"><a href="" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># Or with different parameter settings</span></span>
+<span id="cb3-5"><a href="" aria-hidden="true" tabindex="-1"></a>coded_temp07 <span class="ot">&lt;-</span> <span class="fu">qlm_replicate</span>(coded_speeches, <span class="at">temperature =</span> <span class="fl">0.7</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Provenance chains</strong> link replicated results to their parent analyses.</p>
+</section>
+<section id="step-4-compare-validate" class="slide level2">
+<h2>Step 4: Compare &amp; Validate</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare multiple LLM runs (inter-rater reliability)</span></span>
+<span id="cb4-2"><a href="" aria-hidden="true" tabindex="-1"></a>comparison <span class="ot">&lt;-</span> <span class="fu">qlm_compare</span>(coded_speeches, coded_claude, <span class="at">by =</span> <span class="st">"score"</span>, <span class="at">level =</span> <span class="st">"interval"</span>)</span>
+<span id="cb4-3"><a href="" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># Validate against human-coded gold standard</span></span>
+<span id="cb4-5"><a href="" aria-hidden="true" tabindex="-1"></a>validation <span class="ot">&lt;-</span> <span class="fu">qlm_validate</span>(coded_speeches, gold_standard, <span class="at">by =</span> <span class="st">"score"</span>, <span class="at">level =</span> <span class="st">"interval"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Metrics available:</strong></p>
+<ul>
+<li>Krippendorff’s alpha, Cohen’s kappa, Fleiss’ kappa</li>
+<li>Accuracy, precision, recall, F1 scores</li>
+</ul>
+<p>For manual review and spot-checking, use the companion <strong>quallmer.app</strong> Shiny application – see <a href="https://quallmer.github.io/quallmer">tutorials</a> for details.</p>
+</section>
+<section id="results-llm-vs.-dictionary-scores" class="slide level2">
+<h2>Results: LLM vs.&nbsp;Dictionary Scores</h2>
+<div class="columns">
+<div class="column" style="width:60%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><a href="pics/scale_plot.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4" title="Click to enlarge"><img data-src="pics/scale_plot.png" style="width:800.0%" alt="Click to enlarge"></a></p>
+<figcaption>Click to enlarge</figcaption>
+</figure>
+</div>
+</div><div class="column" style="width:40%;">
+<p><strong>LLM advantages:</strong></p>
+<ul>
+<li>Replicates dictionary results <strong>fast and cost-effectively</strong></li>
+<li>Provides <strong>explanations for each score</strong></li>
+<li>Enables <strong>cross-model validation</strong></li>
+</ul>
+</div></div>
+</section>
+<section id="step-5-audit-trail" class="slide level2">
+<h2>Step 5: Audit Trail</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="" aria-hidden="true" tabindex="-1"></a><span class="fu">qlm_trail</span>(coded_speeches, <span class="at">path =</span> <span class="st">"replication_materials"</span>)</span>
+<span id="cb5-2"><a href="" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># Creates:</span></span>
+<span id="cb5-4"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># - replication_materials.rds  (R object; complete trail data)</span></span>
+<span id="cb5-5"><a href="" aria-hidden="true" tabindex="-1"></a><span class="co"># - replication_materials.qmd  (executable Quarto replication report)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>Following Lincoln &amp; Guba (1985), the audit trail includes:</strong></p>
+<ul>
+<li>Instrument development (codebook definition)</li>
+<li>Process notes &amp; decisions (model parameters, timestamps)</li>
+<li>Parent-child relationships across analyses</li>
+<li>Complete replication code</li>
+</ul>
+</section></section>
+<section>
+<section id="best-practices" class="title-slide slide level1 center">
+<h1>Best Practices</h1>
+
+</section>
+<section id="validation-is-key" class="slide level2">
+<h2>Validation is Key!</h2>
+<p><strong>Three types:</strong></p>
+<ol type="1">
+<li><strong>Gold standard</strong> – Compare to human codings</li>
+<li><strong>Intercoder reliability</strong> – Compare multiple LLMs</li>
+<li><strong>Manual review</strong> – Spot-check outputs with <a href="https://quallmer.github.io/quallmer/articles/pkgdown/tutorials/validate.html">quallmer.app</a></li>
+</ol>
+<div class="callout callout-tip callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>quallmer.app</strong></p>
+</div>
+<div class="callout-content">
+<p>Interactive Shiny app for annotation &amp; validation.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"quallmer.app"</span>)</span>
+<span id="cb6-2"><a href="" aria-hidden="true" tabindex="-1"></a>quallmer.app<span class="sc">::</span><span class="fu">qlm_app</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="open-vs.-closed-llms" class="slide level2">
+<h2>Open vs.&nbsp;Closed LLMs</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>Closed</strong> (OpenAI, Claude)</p>
+<ul>
+<li>Higher performance</li>
+<li>User-friendly</li>
+<li>Privacy concerns</li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>Open</strong> (Llama, Ollama)</p>
+<ul>
+<li>Full control</li>
+<li>Better for sensitive data</li>
+<li>More reproducible, fine-tuning options</li>
+</ul>
+</div></div>
+<p><strong>quallmer supports both!</strong></p>
+</section>
+<section id="tips-for-good-codebooks" class="slide level2">
+<h2>Tips for Good Codebooks</h2>
+<ol type="1">
+<li><strong>Be specific</strong> – Define categories clearly</li>
+<li><strong>Provide examples</strong> – Show what each category looks like</li>
+<li><strong>Use scales wisely</strong> – Ordinal vs.&nbsp;categorical</li>
+<li><strong>Include explanation</strong> – See the LLM’s reasoning</li>
+<li><strong>Iterate</strong> – Test and refine</li>
+</ol>
+</section>
+<section id="questions-break" class="slide level2">
+<h2>Questions? Break?</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><a href="pics/logo.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img data-src="pics/logo.png" class="quarto-figure quarto-figure-center" style="width:15.0%"></a></p>
+</figure>
+</div>
+<p><strong>Coming up next:</strong></p>
+<ul>
+<li>Hands-on tutorial</li>
+<li>Replicating a real research example</li>
+<li>Starting your own project with quallmer</li>
+</ul>
+<p><strong>Were you able to prepare for the tutorial? (Installing R/RStudio, Ollama, openai API key?)</strong></p>
+<ul>
+<li>Takes 10-15 minutes to set up if you haven’t already – instructions available at QuantLab website: <a href="https://quantilab.github.io/sharezone/">quantilab.github.io</a> / Sharezone</li>
+</ul>
+
+</section></section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<p><img src="pics/logo.png" class="slide-logo"></p>
+<div class="footer footer-default">
+<p>quallmer.github.io/quallmer</p>
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="quallmer_slides_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="quallmer_slides_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="quallmer_slides_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="quallmer_slides_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': true,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'fade',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    
+    <script>
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+      // slide changes (different for each slide format).
+      (function () {
+        // dispatch for htmlwidgets
+        function fireSlideEnter() {
+          const event = window.document.createEvent("Event");
+          event.initEvent("slideenter", true, true);
+          window.document.dispatchEvent(event);
+        }
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+          fireSlideEnter();
+
+          // dispatch for shiny
+          if (window.jQuery) {
+            if (previousSlide) {
+              window.jQuery(previousSlide).trigger("hidden");
+            }
+            if (currentSlide) {
+              window.jQuery(currentSlide).trigger("shown");
+            }
+          }
+        }
+
+        // hookup for slidy
+        if (window.w3c_slidy) {
+          window.w3c_slidy.add_observer(function (slide_num) {
+            // slide_num starts at position 1
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+          });
+        }
+
+      })();
+    </script>
+
+    <script id="quarto-html-after-body" type="application/javascript">
+    window.document.addEventListener("DOMContentLoaded", function (event) {
+      const toggleBodyColorMode = (bsSheetEl) => {
+        const mode = bsSheetEl.getAttribute("data-mode");
+        const bodyEl = window.document.querySelector("body");
+        if (mode === "dark") {
+          bodyEl.classList.add("quarto-dark");
+          bodyEl.classList.remove("quarto-light");
+        } else {
+          bodyEl.classList.add("quarto-light");
+          bodyEl.classList.remove("quarto-dark");
+        }
+      }
+      const toggleBodyColorPrimary = () => {
+        const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+        if (bsSheetEl) {
+          toggleBodyColorMode(bsSheetEl);
+        }
+      }
+      toggleBodyColorPrimary();  
+      const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+      tabsets.forEach(function(tabset) {
+        const tabby = new Tabby('#' + tabset.id);
+      });
+      const isCodeAnnotation = (el) => {
+        for (const clz of el.classList) {
+          if (clz.startsWith('code-annotation-')) {                     
+            return true;
+          }
+        }
+        return false;
+      }
+      const onCopySuccess = function(e) {
+        // button target
+        const button = e.trigger;
+        // don't keep focus
+        button.blur();
+        // flash "checked"
+        button.classList.add('code-copy-button-checked');
+        var currentTitle = button.getAttribute("title");
+        button.setAttribute("title", "Copied!");
+        let tooltip;
+        if (window.bootstrap) {
+          button.setAttribute("data-bs-toggle", "tooltip");
+          button.setAttribute("data-bs-placement", "left");
+          button.setAttribute("data-bs-title", "Copied!");
+          tooltip = new bootstrap.Tooltip(button, 
+            { trigger: "manual", 
+              customClass: "code-copy-button-tooltip",
+              offset: [0, -8]});
+          tooltip.show();    
+        }
+        setTimeout(function() {
+          if (tooltip) {
+            tooltip.hide();
+            button.removeAttribute("data-bs-title");
+            button.removeAttribute("data-bs-toggle");
+            button.removeAttribute("data-bs-placement");
+          }
+          button.setAttribute("title", currentTitle);
+          button.classList.remove('code-copy-button-checked');
+        }, 1000);
+        // clear code selection
+        e.clearSelection();
+      }
+      const getTextToCopy = function(trigger) {
+          const codeEl = trigger.previousElementSibling.cloneNode(true);
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+      }
+      const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+        text: getTextToCopy
+      });
+      clipboard.on('success', onCopySuccess);
+      if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+        const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+          text: getTextToCopy,
+          container: window.document.getElementById('quarto-embedded-source-code-modal')
+        });
+        clipboardModal.on('success', onCopySuccess);
+      }
+        var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+        var mailtoRegex = new RegExp(/^mailto:/);
+          var filterRegex = new RegExp('/' + window.location.host + '/');
+        var isInternal = (href) => {
+            return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+        }
+        // Inspect non-navigation links and adorn them if external
+     	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+        for (var i=0; i<links.length; i++) {
+          const link = links[i];
+          if (!isInternal(link.href)) {
+            // undo the damage that might have been done by quarto-nav.js in the case of
+            // links that we want to consider external
+            if (link.dataset.originalHref !== undefined) {
+              link.href = link.dataset.originalHref;
+            }
+          }
+        }
+      function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+        const config = {
+          allowHTML: true,
+          maxWidth: 500,
+          delay: 100,
+          arrow: false,
+          appendTo: function(el) {
+              return el.closest('section.slide') || el.parentElement;
+          },
+          interactive: true,
+          interactiveBorder: 10,
+          theme: 'light-border',
+          placement: 'bottom-start',
+        };
+        if (contentFn) {
+          config.content = contentFn;
+        }
+        if (onTriggerFn) {
+          config.onTrigger = onTriggerFn;
+        }
+        if (onUntriggerFn) {
+          config.onUntrigger = onUntriggerFn;
+        }
+          config['offset'] = [0,0];
+          config['maxWidth'] = 700;
+        window.tippy(el, config); 
+      }
+      const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+      for (var i=0; i<noterefs.length; i++) {
+        const ref = noterefs[i];
+        tippyHover(ref, function() {
+          // use id or data attribute instead here
+          let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+          try { href = new URL(href).hash; } catch {}
+          const id = href.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note) {
+            return note.innerHTML;
+          } else {
+            return "";
+          }
+        });
+      }
+      const findCites = (el) => {
+        const parentEl = el.parentElement;
+        if (parentEl) {
+          const cites = parentEl.dataset.cites;
+          if (cites) {
+            return {
+              el,
+              cites: cites.split(' ')
+            };
+          } else {
+            return findCites(el.parentElement)
+          }
+        } else {
+          return undefined;
+        }
+      };
+      var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+      for (var i=0; i<bibliorefs.length; i++) {
+        const ref = bibliorefs[i];
+        const citeInfo = findCites(ref);
+        if (citeInfo) {
+          tippyHover(citeInfo.el, function() {
+            var popup = window.document.createElement('div');
+            citeInfo.cites.forEach(function(cite) {
+              var citeDiv = window.document.createElement('div');
+              citeDiv.classList.add('hanging-indent');
+              citeDiv.classList.add('csl-entry');
+              var biblioDiv = window.document.getElementById('ref-' + cite);
+              if (biblioDiv) {
+                citeDiv.innerHTML = biblioDiv.innerHTML;
+              }
+              popup.appendChild(citeDiv);
+            });
+            return popup.innerHTML;
+          });
+        }
+      }
+    });
+    </script>
+    <script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+    (function() {
+      let previousOnload = window.onload;
+      window.onload = () => {
+        if (previousOnload) {
+          previousOnload();
+        }
+        lightboxQuarto.on('slide_before_load', (data) => {
+          const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+          const href = trigger.getAttribute('href');
+          if (href !== null) {
+            const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+            if (imgEl !== null) {
+              const srcAttr = imgEl.getAttribute("src");
+              if (srcAttr && srcAttr.startsWith("data:")) {
+                slideConfig.href = srcAttr;
+              }
+            }
+          } 
+        });
+      
+        lightboxQuarto.on('slide_after_load', (data) => {
+          const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(slideNode);
+          }
+        });
+      
+      };
+      
+    })();
+              </script>
+    
+
+</body></html>
