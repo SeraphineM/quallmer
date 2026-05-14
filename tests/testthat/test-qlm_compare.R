@@ -487,3 +487,67 @@ test_that("qlm_compare supports non-standard evaluation for by argument", {
   expect_equal(attr(comparison_nse, "n"), attr(comparison_quoted, "n"))
   expect_equal(attr(comparison_nse, "raters"), attr(comparison_quoted, "raters"))
 })
+
+
+test_that("qlm_compare suppresses per-category rows by default", {
+  coder1 <- data.frame(.id = 1:10, category = c(rep("A", 6), rep("B", 4)))
+  coder2 <- data.frame(.id = 1:10, category = c(rep("A", 5), rep("B", 5)))
+
+  default_result <- qlm_compare(coder1, coder2, by = category, level = "nominal")
+  expect_false(any(grepl("^alpha_per_value\\[", default_result$measure)))
+  expect_false(any(grepl("^kappa_per_value\\[", default_result$measure)))
+  # Overall measures still present
+  expect_true("alpha_nominal" %in% default_result$measure)
+  expect_true("kappa" %in% default_result$measure)
+})
+
+
+test_that("qlm_compare returns per-category rows when by_category = TRUE", {
+  coder1 <- data.frame(.id = 1:10, category = c(rep("A", 6), rep("B", 4)))
+  coder2 <- data.frame(.id = 1:10, category = c(rep("A", 5), rep("B", 5)))
+
+  result <- qlm_compare(coder1, coder2, by = category, level = "nominal",
+                       by_category = TRUE)
+  expect_true(any(grepl("^alpha_per_value\\[", result$measure)))
+  expect_true(any(grepl("^kappa_per_value\\[", result$measure)))
+  # docid carries marginal n for per-category rows
+  pv_rows <- result[grepl("^alpha_per_value\\[", result$measure), ]
+  expect_true(all(grepl("^\\(n=", pv_rows$docid)))
+})
+
+
+test_that("qlm_compare by_category has no effect on non-nominal levels", {
+  coder1 <- data.frame(.id = 1:10, score = c(1, 2, 3, 4, 5, 1, 2, 3, 4, 5))
+  coder2 <- data.frame(.id = 1:10, score = c(1, 2, 3, 4, 5, 2, 2, 3, 4, 5))
+
+  ordinal_default <- qlm_compare(coder1, coder2, by = score, level = "ordinal")
+  ordinal_by_cat  <- qlm_compare(coder1, coder2, by = score, level = "ordinal",
+                                 by_category = TRUE)
+  expect_identical(ordinal_default$measure, ordinal_by_cat$measure)
+  expect_false(any(grepl("per_value", ordinal_default$measure)))
+  expect_false(any(grepl("per_value", ordinal_by_cat$measure)))
+
+  interval_default <- qlm_compare(coder1, coder2, by = score, level = "interval")
+  interval_by_cat  <- qlm_compare(coder1, coder2, by = score, level = "interval",
+                                  by_category = TRUE)
+  expect_identical(interval_default$measure, interval_by_cat$measure)
+  expect_false(any(grepl("per_value", interval_default$measure)))
+  expect_false(any(grepl("per_value", interval_by_cat$measure)))
+})
+
+
+test_that("qlm_compare validates by_category argument", {
+  coder1 <- data.frame(.id = 1:5, category = c("A", "B", "A", "B", "A"))
+  coder2 <- data.frame(.id = 1:5, category = c("A", "B", "A", "B", "A"))
+
+  expect_error(
+    qlm_compare(coder1, coder2, by = category, level = "nominal",
+                by_category = "yes"),
+    "by_category"
+  )
+  expect_error(
+    qlm_compare(coder1, coder2, by = category, level = "nominal",
+                by_category = NA),
+    "by_category"
+  )
+})
