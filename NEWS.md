@@ -11,15 +11,15 @@
 
 ## New features
 
-* `qlm_compare()` now reports per-category Krippendorff's alpha
-  (`alpha_per_value[k]`) for nominal data, alongside the existing
-  overall alpha. Each category is dichotomised against all others; the
-  marginal count `n` is reported in the `docid` column. Parallels the
-  per-value reporting already provided for unitizing alpha (#112).
-
-* `qlm_compare()` now reports per-category kappa (`kappa_per_value[k]`)
-  for nominal data: Cohen's κ via dichotomise-and-recompute for two
-  raters, Fleiss' formula (1971, Eqs. 20-21) for three or more (#112).
+* `qlm_compare()` gains a `by_category = FALSE` argument that, when
+  set to `TRUE`, reports per-category reliability rows for nominal
+  data: Krippendorff's alpha (`alpha_per_value[k]`, each category
+  dichotomised against all others), kappa (`kappa_per_value[k]`,
+  Cohen's κ via dichotomise-and-recompute for two raters or Fleiss'
+  Eqs. 20-21 for three or more), and `alpha_u_per_value[k]` for
+  unitizing comparisons. The marginal count `n` is reported in the
+  `docid` column. Per-category rows are only produced for
+  nominal-level data (#112).
 
 ## Internal changes
 

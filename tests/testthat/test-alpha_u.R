@@ -261,6 +261,10 @@ test_that("qlm_compare nominal works with differing codes", {
   # Same boundaries but one code differs: alpha < 1.0 but > 0
   expect_true(overall < 1.0)
   expect_true(overall > 0)
-  # Per-value results should also be present
-  expect_true(any(grepl("alpha_u_per_value", result$measure)))
+  # Per-value rows are suppressed by default
+  expect_false(any(grepl("alpha_u_per_value", result$measure)))
+
+  # Opt-in via by_category = TRUE
+  result_cat <- qlm_compare(corp1, corp2, by = "code", by_category = TRUE)
+  expect_true(any(grepl("alpha_u_per_value", result_cat$measure)))
 })

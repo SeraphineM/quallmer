@@ -34,6 +34,11 @@
 #'   }
 #' @param bootstrap_n Number of bootstrap resamples when `ci = "bootstrap"`.
 #'   Default is 1000. Ignored when `ci` is `"none"` or `"analytic"`.
+#' @param by_category Logical. If `TRUE`, include per-category reliability rows
+#'   (`alpha_per_value`, `kappa_per_value`, and `alpha_u_per_value` for unitizing
+#'   comparisons). Per-category rows are only produced for nominal-level data
+#'   (or nominal-coded segments in unitizing comparisons); they are not
+#'   meaningful for ordinal, interval, or ratio levels. Default is `FALSE`.
 #'
 #' @return A `qlm_comparison` object (a tibble/data frame) with the following columns:
 #'   \describe{
@@ -86,6 +91,13 @@
 #' simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 #' computed as the mean of all pairwise correlations between raters.
 #'
+#' **Per-category statistics.** When `by_category = TRUE` and `level = "nominal"`,
+#' the result also includes one row per category for `alpha_per_value` (from
+#' Krippendorff's alpha) and `kappa_per_value` (per-category kappa via
+#' dichotomisation for Cohen's, Fleiss' eq. 20--21 for Fleiss'). The marginal
+#' count `n` for each category is carried in the `docid` column. Per-category
+#' rows are not produced for ordinal, interval, or ratio levels.
+#'
 #' **Unitizing (segmentation) reliability**
 #' `r lifecycle::badge("experimental")`
 #'
@@ -118,8 +130,9 @@
 #'     agree on the codes?" from "do they agree on the boundaries?"
 #'     (section 12.6.5, eqs. 36--37).}
 #'   \item{`alpha_u_per_value[k]` (`_(k)u`alpha\[nominal\])}{Computed
-#'     alongside `alpha_u_nominal` when `by` is specified. Reports the
-#'     reliability of each individual value `k`, showing which codes are
+#'     alongside `alpha_u_nominal` when `by` is specified **and**
+#'     `by_category = TRUE`. Reports the reliability of each individual
+#'     value `k`, showing which codes are
 #'     applied reliably and which are not. Coverage (the percentage of all
 #'     `k`-valued matter found in valued intersections) is reported in the
 #'     `docid` column (section 12.6.6, eq. 38).}
@@ -166,7 +179,12 @@ qlm_compare <- function(...,
                         level = NULL,
                         tolerance = 0,
                         ci = c("none", "analytic", "bootstrap"),
-                        bootstrap_n = 1000) {
+                        bootstrap_n = 1000,
+                        by_category = FALSE) {
+
+  if (!is.logical(by_category) || length(by_category) != 1L || is.na(by_category)) {
+    cli::cli_abort("{.arg by_category} must be a single {.code TRUE} or {.code FALSE}.")
+  }
 
   # Validate ci parameter
   ci <- match.arg(ci)
@@ -209,7 +227,8 @@ qlm_compare <- function(...,
   if (all(is_segment_corpus)) {
     lifecycle::signal_stage("experimental", "qlm_compare(unitizing)")
     return(compare_unitizations(coded_list, by = by, ci = ci,
-                                bootstrap_n = bootstrap_n))
+                                bootstrap_n = bootstrap_n,
+                                by_category = by_category))
   } else if (any(is_segment_corpus)) {
     cli::cli_abort(c(
       "Cannot mix segmented corpora with other object types in {.fn qlm_compare}.",
@@ -462,6 +481,7 @@ qlm_compare <- function(...,
       if (measure_name == "kappa_type") next
 
       if (measure_name %in% names(per_value_specs)) {
+        if (!by_category) next
         spec <- per_value_specs[[measure_name]]
         pv <- var_results[[measure_name]]
         if (is.null(pv) || nrow(pv) == 0L) next
@@ -999,7 +1019,8 @@ format_measure_name <- function(measure) {
 #' @keywords internal
 #' @noRd
 compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
-                                  bootstrap_n = 1000) {
+                                  bootstrap_n = 1000,
+                                  by_category = FALSE) {
   m <- length(corpus_list)
 
   # Validate consistent source documents
@@ -1152,19 +1173,21 @@ compare_unitizations <- function(corpus_list, by = NULL, ci = "none",
         variable_name, measure_name, pick_value(res, is_boundaries), "(overall)"
       )
 
-      # For coded segments, also report cu_nominal and per_value
+      # For coded segments, also report cu_nominal and (optionally) per_value
       if (!is_boundaries) {
         all_results[[length(all_results) + 1L]] <- make_row(
           variable_name, "alpha_cu_nominal", res$cu_nominal, "(overall)"
         )
-        pv <- res$per_value
-        for (row_i in seq_len(nrow(pv))) {
-          all_results[[length(all_results) + 1L]] <- make_row(
-            variable_name,
-            paste0("alpha_u_per_value[", pv$value[row_i], "]"),
-            pv$alpha[row_i],
-            paste0("(overall, coverage=", sprintf("%.0f%%", 100 * pv$coverage[row_i]), ")")
-          )
+        if (by_category) {
+          pv <- res$per_value
+          for (row_i in seq_len(nrow(pv))) {
+            all_results[[length(all_results) + 1L]] <- make_row(
+              variable_name,
+              paste0("alpha_u_per_value[", pv$value[row_i], "]"),
+              pv$alpha[row_i],
+              paste0("(overall, coverage=", sprintf("%.0f%%", 100 * pv$coverage[row_i]), ")")
+            )
+          }
         }
       }
     }

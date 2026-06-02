@@ -10,7 +10,8 @@ qlm_compare(
   level = NULL,
   tolerance = 0,
   ci = c("none", "analytic", "bootstrap"),
-  bootstrap_n = 1000
+  bootstrap_n = 1000,
+  by_category = FALSE
 )
 }
 \arguments{
@@ -48,6 +49,12 @@ Default is 0 (exact agreement required). Used for percent agreement calculation.
 
 \item{bootstrap_n}{Number of bootstrap resamples when \code{ci = "bootstrap"}.
 Default is 1000. Ignored when \code{ci} is \code{"none"} or \code{"analytic"}.}
+
+\item{by_category}{Logical. If \code{TRUE}, include per-category reliability rows
+(\code{alpha_per_value}, \code{kappa_per_value}, and \code{alpha_u_per_value} for unitizing
+comparisons). Per-category rows are only produced for nominal-level data
+(or nominal-coded segments in unitizing comparisons); they are not
+meaningful for ordinal, interval, or ratio levels. Default is \code{FALSE}.}
 }
 \value{
 A \code{qlm_comparison} object (a tibble/data frame) with the following columns:
@@ -111,6 +118,13 @@ Kendall's W, ICC, and percent agreement are computed using all raters
 simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 computed as the mean of all pairwise correlations between raters.
 
+\strong{Per-category statistics.} When \code{by_category = TRUE} and \code{level = "nominal"},
+the result also includes one row per category for \code{alpha_per_value} (from
+Krippendorff's alpha) and \code{kappa_per_value} (per-category kappa via
+dichotomisation for Cohen's, Fleiss' eq. 20--21 for Fleiss'). The marginal
+count \code{n} for each category is carried in the \code{docid} column. Per-category
+rows are not produced for ordinal, interval, or ratio levels.
+
 \strong{Unitizing (segmentation) reliability}
 \ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
 
@@ -143,8 +157,9 @@ intersections of non-gap segments only. This isolates "do the coders
 agree on the codes?" from "do they agree on the boundaries?"
 (section 12.6.5, eqs. 36--37).}
 \item{\code{alpha_u_per_value[k]} (\verb{_(k)u}alpha[nominal])}{Computed
-alongside \code{alpha_u_nominal} when \code{by} is specified. Reports the
-reliability of each individual value \code{k}, showing which codes are
+alongside \code{alpha_u_nominal} when \code{by} is specified \strong{and}
+\code{by_category = TRUE}. Reports the reliability of each individual
+value \code{k}, showing which codes are
 applied reliably and which are not. Coverage (the percentage of all
 \code{k}-valued matter found in valued intersections) is reported in the
 \code{docid} column (section 12.6.6, eq. 38).}
