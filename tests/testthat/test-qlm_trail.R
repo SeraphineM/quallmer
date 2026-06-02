@@ -370,19 +370,22 @@ test_that("qlm_trail() report includes comparison metrics", {
   class(coded2) <- c("qlm_coded", "data.frame")
   attr(coded2, "run") <- list(name = "run2", parent = NULL)
 
-  comparison <- list(
-    level = "nominal",
-    subjects = 3,
-    raters = 2,
-    alpha_nominal = 0.85,
-    kappa = 0.82,
-    kappa_type = "Cohen's",
-    percent_agreement = 0.90
+  # A realistic long-format qlm_comparison tibble (matches qlm_compare() output)
+  comparison <- tibble::tibble(
+    variable = "polarity",
+    level    = "nominal",
+    measure  = c("percent_agreement", "alpha_nominal", "kappa"),
+    value    = c(0.90, 0.85, 0.82),
+    rater1   = "run1",
+    rater2   = "run2"
   )
-  class(comparison) <- "qlm_comparison"
+  class(comparison) <- c("qlm_comparison", class(comparison))
+  attr(comparison, "raters") <- 2L
+  attr(comparison, "n") <- 3L
   attr(comparison, "run") <- list(
     name = "comparison1",
-    parent = c("run1", "run2")
+    parent = c("run1", "run2"),
+    metadata = list(n_raters = 2L, variables = "polarity")
   )
 
   temp_dir <- tempdir()
@@ -400,7 +403,7 @@ test_that("qlm_trail() report includes comparison metrics", {
   expect_true(any(grepl("Data reconstruction", content)))
   expect_true(any(grepl("Comparisons", content)))
   expect_true(any(grepl("Krippendorff", content)))
-  expect_true(any(grepl("0\\.85", content)))
+  expect_true(any(grepl("0\\.8500", content)))
 })
 
 
@@ -409,27 +412,21 @@ test_that("qlm_trail() report includes validation metrics", {
   class(coded) <- c("qlm_coded", "data.frame")
   attr(coded, "run") <- list(name = "run1", parent = NULL)
 
-  validation <- list(
-    level = "nominal",
-    n = 3,
-    classes = c("pos", "neg"),
-    average = "macro",
-    accuracy = 0.90,
-    precision = 0.88,
-    recall = 0.85,
-    f1 = 0.86,
-    kappa = 0.80,
-    rho = NULL,
-    tau = NULL,
-    r = NULL,
-    icc = NULL,
-    mae = NULL,
-    rmse = NULL
+  # A realistic long-format qlm_validation tibble (matches qlm_validate() output)
+  validation <- tibble::tibble(
+    variable = "polarity",
+    level    = "nominal",
+    measure  = c("accuracy", "precision", "recall", "f1", "kappa"),
+    value    = c(0.90, 0.88, 0.85, 0.86, 0.80),
+    class    = NA_character_,
+    rater    = "run1"
   )
-  class(validation) <- "qlm_validation"
+  class(validation) <- c("qlm_validation", class(validation))
+  attr(validation, "n") <- 3L
   attr(validation, "run") <- list(
     name = "validation1",
-    parent = "run1"
+    parent = "run1",
+    metadata = list(variables = "polarity", average = "macro")
   )
 
   temp_dir <- tempdir()
@@ -445,7 +442,61 @@ test_that("qlm_trail() report includes validation metrics", {
 
   expect_true(any(grepl("Data reconstruction", content)))
   expect_true(any(grepl("Validations", content)))
-  expect_true(any(grepl("0\\.90", content)))  # accuracy
+  expect_true(any(grepl("0\\.9000", content)))  # accuracy
+})
+
+
+# Regression test for issue #93: trail must accept real qlm_compare() and
+# qlm_validate() output without warnings or fatal errors.
+test_that("qlm_trail() accepts real qlm_comparison and qlm_validation objects (#93)", {
+  examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+
+  # In-memory trail with real comparison + validation
+  expect_no_warning(
+    expect_no_error(
+      trail <- qlm_trail(
+        examples$example_comparison,
+        examples$example_validation,
+        examples$example_coded_sentiment,
+        examples$example_coded_mini,
+        examples$example_gold_standard
+      )
+    )
+  )
+  expect_s3_class(trail, "qlm_trail")
+
+  # Stored objects must round-trip with classes and metadata intact
+  comp_stored <- trail$runs[[which(vapply(trail$runs,
+                                          function(r) !is.null(r$comparison),
+                                          logical(1)))]]$comparison
+  expect_s3_class(comp_stored, "qlm_comparison")
+  expect_identical(attr(comp_stored, "n"), attr(examples$example_comparison, "n"))
+
+  val_stored <- trail$runs[[which(vapply(trail$runs,
+                                         function(r) !is.null(r$validation),
+                                         logical(1)))]]$validation
+  expect_s3_class(val_stored, "qlm_validation")
+
+  # Saved trail report must render without the "condition has length > 1" crash
+  temp_path <- tempfile("trail_issue93")
+  withr::defer({
+    unlink(paste0(temp_path, ".rds"))
+    unlink(paste0(temp_path, ".qmd"))
+  })
+  expect_no_error(
+    qlm_trail(
+      examples$example_comparison,
+      examples$example_validation,
+      examples$example_coded_sentiment,
+      examples$example_coded_mini,
+      examples$example_gold_standard,
+      path = temp_path
+    )
+  )
+
+  content <- readLines(paste0(temp_path, ".qmd"))
+  expect_true(any(grepl("Krippendorff", content)))
+  expect_true(any(grepl("Cohen's kappa|kappa", content)))
 })
 
 

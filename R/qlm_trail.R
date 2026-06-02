@@ -109,63 +109,25 @@ qlm_trail <- function(..., path = NULL) {
       )
     )
 
-    # Add object-specific metadata
+    # Preserve the full object as-is so downstream consumers can replicate
+    # without any lossy conversion. Type-specific mirrors (codebook, chat_args,
+    # etc.) are kept only as convenience pointers for print/report code.
     if (inherits(obj, "qlm_coded")) {
+      run$coded <- obj
+      run$codebook <- attr(obj, "codebook")
       run$batch <- meta_attr$object$batch
       run$chat_args <- meta_attr$object$chat_args
       run$execution_args <- meta_attr$object$execution_args
-      run$codebook <- attr(obj, "codebook")
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
     } else if (inherits(obj, "qlm_comparison")) {
+      run$comparison <- obj
       run$metadata$n_raters <- meta_attr$object$n_raters
       run$metadata$variables <- meta_attr$object$variables
     } else if (inherits(obj, "qlm_validation")) {
+      run$validation <- obj
       run$metadata$variables <- meta_attr$object$variables
       run$metadata$average <- meta_attr$object$average
-    }
-
-    # Store comparison/validation data if this is a comparison or validation object
-    if (inherits(obj, "qlm_comparison")) {
-      run$comparison_data <- list(
-        level = obj$level,
-        subjects = obj$subjects,
-        raters = obj$raters,
-        alpha_nominal = obj$alpha_nominal,
-        kappa = obj$kappa,
-        kappa_type = obj$kappa_type,
-        alpha_ordinal = obj$alpha_ordinal,
-        kappa_weighted = obj$kappa_weighted,
-        w = obj$w,
-        rho = obj$rho,
-        alpha_interval = obj$alpha_interval,
-        icc = obj$icc,
-        r = obj$r,
-        percent_agreement = obj$percent_agreement
-      )
-    } else if (inherits(obj, "qlm_validation")) {
-      run$validation_data <- list(
-        level = obj$level,
-        n = obj$n,
-        classes = obj$classes,
-        average = obj$average,
-        accuracy = obj$accuracy,
-        precision = obj$precision,
-        recall = obj$recall,
-        f1 = obj$f1,
-        kappa = obj$kappa,
-        rho = obj$rho,
-        tau = obj$tau,
-        r = obj$r,
-        icc = obj$icc,
-        mae = obj$mae,
-        rmse = obj$rmse
-      )
-    }
-
-    # Always store coded data for complete audit trail
-    if (inherits(obj, "qlm_coded")) {
-      run$data <- as.data.frame(obj)
     }
 
     # Generate fallback name if missing
@@ -286,20 +248,24 @@ print.qlm_trail <- function(x, ...) {
     }
 
     # Show comparison info if available
-    if (!is.null(run$comparison_data)) {
-      comp <- run$comparison_data
-      cat("\nComparison (", comp$level %||% "unknown", " level):\n", sep = "")
-      cat("  Subjects: ", comp$subjects %||% "?", "\n", sep = "")
-      cat("  Raters:   ", comp$raters %||% "?", "\n", sep = "")
+    if (!is.null(run$comparison)) {
+      comp <- run$comparison
+      levels <- unique(comp$level)
+      level_str <- if (length(levels)) paste(levels, collapse = "/") else "unknown"
+      cat("\nComparison (", level_str, " level):\n", sep = "")
+      cat("  Subjects: ", attr(comp, "n") %||% "?", "\n", sep = "")
+      cat("  Raters:   ", attr(comp, "raters") %||% "?", "\n", sep = "")
     }
 
     # Show validation info if available
-    if (!is.null(run$validation_data)) {
-      val <- run$validation_data
-      cat("\nValidation (", val$level %||% "unknown", " level):\n", sep = "")
-      cat("  N:        ", val$n %||% "?", "\n", sep = "")
-      if (!is.null(val$average)) {
-        cat("  Average:  ", val$average, "\n", sep = "")
+    if (!is.null(run$validation)) {
+      val <- run$validation
+      levels <- unique(val$level)
+      level_str <- if (length(levels)) paste(levels, collapse = "/") else "unknown"
+      cat("\nValidation (", level_str, " level):\n", sep = "")
+      cat("  N:        ", attr(val, "n") %||% "?", "\n", sep = "")
+      if (!is.null(run$metadata$average)) {
+        cat("  Average:  ", run$metadata$average, "\n", sep = "")
       }
     }
 
@@ -347,19 +313,23 @@ print.qlm_trail <- function(x, ...) {
         cat("   Notes: ", run$metadata$notes, "\n", sep = "")
       }
 
-      if (!is.null(run$comparison_data)) {
-        comp <- run$comparison_data
-        cat("   Comparison: ", comp$level %||% "unknown", " level | ",
-            comp$subjects %||% "?", " subjects | ",
-            comp$raters %||% "?", " raters\n", sep = "")
+      if (!is.null(run$comparison)) {
+        comp <- run$comparison
+        levels <- unique(comp$level)
+        level_str <- if (length(levels)) paste(levels, collapse = "/") else "unknown"
+        cat("   Comparison: ", level_str, " level | ",
+            attr(comp, "n") %||% "?", " subjects | ",
+            attr(comp, "raters") %||% "?", " raters\n", sep = "")
       }
 
-      if (!is.null(run$validation_data)) {
-        val <- run$validation_data
-        cat("   Validation: ", val$level %||% "unknown", " level | ",
-            "n=", val$n %||% "?", sep = "")
-        if (!is.null(val$average)) {
-          cat(" | ", val$average, " avg", sep = "")
+      if (!is.null(run$validation)) {
+        val <- run$validation
+        levels <- unique(val$level)
+        level_str <- if (length(levels)) paste(levels, collapse = "/") else "unknown"
+        cat("   Validation: ", level_str, " level | ",
+            "n=", attr(val, "n") %||% "?", sep = "")
+        if (!is.null(run$metadata$average)) {
+          cat(" | ", run$metadata$average, " avg", sep = "")
         }
         cat("\n")
       }
@@ -535,11 +505,15 @@ generate_trail_report <- function(trail, file) {
   validations <- list()
 
   for (run in trail$runs) {
-    if (!is.null(run$comparison_data)) {
-      comparisons[[length(comparisons) + 1]] <- list(name = run$name, data = run$comparison_data, parent = run$parent)
+    if (!is.null(run$comparison)) {
+      comparisons[[length(comparisons) + 1]] <- list(
+        name = run$name, comparison = run$comparison, parent = run$parent
+      )
     }
-    if (!is.null(run$validation_data)) {
-      validations[[length(validations) + 1]] <- list(name = run$name, data = run$validation_data, parent = run$parent)
+    if (!is.null(run$validation)) {
+      validations[[length(validations) + 1]] <- list(
+        name = run$name, validation = run$validation, parent = run$parent
+      )
     }
   }
 
@@ -554,39 +528,25 @@ generate_trail_report <- function(trail, file) {
     lines <- c(lines, "### Comparisons")
     lines <- c(lines, "")
 
-    for (comp in comparisons) {
-      lines <- c(lines, paste0("#### ", comp$name))
+    for (entry in comparisons) {
+      lines <- c(lines, paste0("#### ", entry$name))
       lines <- c(lines, "")
 
-      if (!is.null(comp$parent)) {
-        lines <- c(lines, paste("**Compared runs:**", paste(comp$parent, collapse = ", ")))
+      if (!is.null(entry$parent)) {
+        lines <- c(lines, paste("**Compared runs:**", paste(entry$parent, collapse = ", ")))
       }
 
-      cd <- comp$data
-      lines <- c(lines, paste("**Level:**", cd$level %||% "unknown"))
-      lines <- c(lines, paste("**Subjects:**", cd$subjects %||% "?"))
-      lines <- c(lines, paste("**Raters:**", cd$raters %||% "?"))
+      comp <- entry$comparison
+      levels <- unique(comp$level)
+      level_str <- if (length(levels)) paste(levels, collapse = ", ") else "unknown"
+      lines <- c(lines, paste("**Level:**", level_str))
+      lines <- c(lines, paste("**Subjects:**", attr(comp, "n") %||% "?"))
+      lines <- c(lines, paste("**Raters:**", attr(comp, "raters") %||% "?"))
       lines <- c(lines, "")
 
-      # Display relevant measures
       lines <- c(lines, "**Measures:**")
       lines <- c(lines, "")
-
-      if (!is.null(cd$level)) {
-        if (cd$level == "nominal") {
-          if (!is.null(cd$alpha_nominal)) lines <- c(lines, sprintf("- Krippendorff's alpha: %.4f", cd$alpha_nominal))
-          if (!is.null(cd$kappa)) lines <- c(lines, sprintf("- %s kappa: %.4f", cd$kappa_type %||% "Cohen's", cd$kappa))
-        } else if (cd$level == "ordinal") {
-          if (!is.null(cd$alpha_ordinal)) lines <- c(lines, sprintf("- Krippendorff's alpha (ordinal): %.4f", cd$alpha_ordinal))
-          if (!is.null(cd$kappa_weighted)) lines <- c(lines, sprintf("- Weighted kappa: %.4f", cd$kappa_weighted))
-          if (!is.null(cd$rho)) lines <- c(lines, sprintf("- Spearman's rho: %.4f", cd$rho))
-        } else if (cd$level %in% c("interval", "ratio")) {
-          if (!is.null(cd$alpha_interval)) lines <- c(lines, sprintf("- Krippendorff's alpha (interval): %.4f", cd$alpha_interval))
-          if (!is.null(cd$icc)) lines <- c(lines, sprintf("- ICC: %.4f", cd$icc))
-          if (!is.null(cd$r)) lines <- c(lines, sprintf("- Pearson's r: %.4f", cd$r))
-        }
-        if (!is.null(cd$percent_agreement)) lines <- c(lines, sprintf("- Percent agreement: %.2f%%", cd$percent_agreement * 100))
-      }
+      lines <- c(lines, format_metric_rows(comp, format_measure_name))
       lines <- c(lines, "")
     }
   }
@@ -595,43 +555,29 @@ generate_trail_report <- function(trail, file) {
     lines <- c(lines, "### Validations")
     lines <- c(lines, "")
 
-    for (val in validations) {
-      lines <- c(lines, paste0("#### ", val$name))
+    for (entry in validations) {
+      lines <- c(lines, paste0("#### ", entry$name))
       lines <- c(lines, "")
 
-      if (!is.null(val$parent)) {
-        lines <- c(lines, paste("**Validated run:**", paste(val$parent, collapse = ", ")))
+      if (!is.null(entry$parent)) {
+        lines <- c(lines, paste("**Validated run:**", paste(entry$parent, collapse = ", ")))
       }
 
-      vd <- val$data
-      lines <- c(lines, paste("**Level:**", vd$level %||% "unknown"))
-      lines <- c(lines, paste("**N:**", vd$n %||% "?"))
-      if (!is.null(vd$average)) {
-        lines <- c(lines, paste("**Averaging:**", vd$average))
+      val <- entry$validation
+      levels <- unique(val$level)
+      level_str <- if (length(levels)) paste(levels, collapse = ", ") else "unknown"
+      lines <- c(lines, paste("**Level:**", level_str))
+      lines <- c(lines, paste("**N:**", attr(val, "n") %||% "?"))
+      meta_v <- attr(val, "meta")
+      if (!is.null(meta_v$object$average)) {
+        lines <- c(lines, paste("**Averaging:**", meta_v$object$average))
       }
       lines <- c(lines, "")
 
       lines <- c(lines, "**Metrics:**")
       lines <- c(lines, "")
-
-      if (!is.null(vd$level)) {
-        if (vd$level == "nominal") {
-          if (!is.null(vd$accuracy)) lines <- c(lines, sprintf("- Accuracy: %.4f", vd$accuracy))
-          if (!is.null(vd$precision)) lines <- c(lines, sprintf("- Precision: %.4f", vd$precision))
-          if (!is.null(vd$recall)) lines <- c(lines, sprintf("- Recall: %.4f", vd$recall))
-          if (!is.null(vd$f1)) lines <- c(lines, sprintf("- F1-score: %.4f", vd$f1))
-          if (!is.null(vd$kappa)) lines <- c(lines, sprintf("- Cohen's kappa: %.4f", vd$kappa))
-        } else if (vd$level == "ordinal") {
-          if (!is.null(vd$rho)) lines <- c(lines, sprintf("- Spearman's rho: %.4f", vd$rho))
-          if (!is.null(vd$tau)) lines <- c(lines, sprintf("- Kendall's tau: %.4f", vd$tau))
-          if (!is.null(vd$mae)) lines <- c(lines, sprintf("- MAE: %.4f", vd$mae))
-        } else if (vd$level == "interval") {
-          if (!is.null(vd$r)) lines <- c(lines, sprintf("- Pearson's r: %.4f", vd$r))
-          if (!is.null(vd$icc)) lines <- c(lines, sprintf("- ICC: %.4f", vd$icc))
-          if (!is.null(vd$mae)) lines <- c(lines, sprintf("- MAE: %.4f", vd$mae))
-          if (!is.null(vd$rmse)) lines <- c(lines, sprintf("- RMSE: %.4f", vd$rmse))
-        }
-      }
+      lines <- c(lines, format_metric_rows(val, format_validation_measure_name,
+                                            extra_label_col = "class"))
       lines <- c(lines, "")
     }
   }
@@ -651,9 +597,9 @@ generate_trail_report <- function(trail, file) {
 
   # Summary of data in each run
   for (run in trail$runs) {
-    if (!is.null(run$data)) {
-      lines <- c(lines, paste0("**", run$name, ":** ", nrow(run$data), " units, ",
-                               ncol(run$data) - 1, " variables"))
+    if (!is.null(run$coded)) {
+      lines <- c(lines, paste0("**", run$name, ":** ", nrow(run$coded), " units, ",
+                               ncol(run$coded) - 1, " variables"))
     }
   }
   lines <- c(lines, "")
@@ -732,7 +678,7 @@ generate_trail_report <- function(trail, file) {
 
   # Find coding runs (those with codebooks, excluding comparisons/validations)
   coding_runs <- trail$runs[sapply(trail$runs, function(r) {
-    !is.null(r$codebook) && is.null(r$comparison_data) && is.null(r$validation_data)
+    !is.null(r$coded)
   })]
 
   if (length(coding_runs) > 0) {
@@ -787,13 +733,21 @@ generate_trail_report <- function(trail, file) {
     lines <- c(lines, "")
     lines <- c(lines, "```r")
 
-    for (comp in comparisons) {
-      cd <- comp$data
-      if (!is.null(comp$parent) && length(comp$parent) >= 2) {
-        parent_vars <- paste0("coded_", comp$parent, collapse = ", ")
+    for (entry in comparisons) {
+      comp <- entry$comparison
+      if (!is.null(entry$parent) && length(entry$parent) >= 2) {
+        parent_vars <- paste0("coded_", entry$parent, collapse = ", ")
+        meta_c <- attr(comp, "meta")
+        vars <- meta_c$object$variables %||% unique(comp$variable)
+        by_arg <- if (length(vars) == 1L) vars else paste0("c(", paste(shQuote(vars), collapse = ", "), ")")
+        levels <- unique(comp$level)
         lines <- c(lines, paste0("comparison <- qlm_compare(", parent_vars, ","))
-        lines <- c(lines, paste0("  by = variable_name,  # Replace with actual variable"))
-        lines <- c(lines, paste0("  level = \"", cd$level %||% "nominal", "\""))
+        lines <- c(lines, paste0("  by = \"", by_arg, "\","))
+        if (length(levels) == 1L) {
+          lines <- c(lines, paste0("  level = \"", levels, "\""))
+        } else {
+          lines <- c(lines, "  level = NULL  # auto-detect from codebook")
+        }
         lines <- c(lines, ")")
       }
     }
@@ -810,13 +764,21 @@ generate_trail_report <- function(trail, file) {
     lines <- c(lines, "")
     lines <- c(lines, "```r")
 
-    for (val in validations) {
-      vd <- val$data
-      if (!is.null(val$parent) && length(val$parent) >= 1) {
-        lines <- c(lines, paste0("validation <- qlm_validate(coded_", val$parent[1], ","))
+    for (entry in validations) {
+      val <- entry$validation
+      if (!is.null(entry$parent) && length(entry$parent) >= 1) {
+        meta_v <- attr(val, "meta")
+        vars <- meta_v$object$variables %||% unique(val$variable)
+        by_arg <- if (length(vars) == 1L) vars else paste0("c(", paste(shQuote(vars), collapse = ", "), ")")
+        levels <- unique(val$level)
+        lines <- c(lines, paste0("validation <- qlm_validate(coded_", entry$parent[1], ","))
         lines <- c(lines, "  gold = gold_standard,  # Your gold standard data")
-        lines <- c(lines, "  by = variable_name,    # Replace with actual variable")
-        lines <- c(lines, paste0("  level = \"", vd$level %||% "nominal", "\""))
+        lines <- c(lines, paste0("  by = \"", by_arg, "\","))
+        if (length(levels) == 1L) {
+          lines <- c(lines, paste0("  level = \"", levels, "\""))
+        } else {
+          lines <- c(lines, "  level = NULL  # auto-detect from codebook")
+        }
         lines <- c(lines, ")")
       }
     }
@@ -846,4 +808,59 @@ generate_trail_report <- function(trail, file) {
   writeLines(lines, file)
 
   invisible(file)
+}
+
+
+#' Format the rows of a comparison/validation tibble as markdown bullets
+#'
+#' Iterates the long-format `qlm_comparison` / `qlm_validation` tibble and
+#' produces one bullet per row, grouped by `variable`. Honours optional
+#' `docid`/`class` qualifiers and `ci_lower`/`ci_upper` columns when present.
+#'
+#' @param df A `qlm_comparison` or `qlm_validation` tibble.
+#' @param label_fn Function mapping a measure name to its display label
+#'   (`format_measure_name` or `format_validation_measure_name`).
+#' @param extra_label_col Optional name of an extra column whose value is
+#'   appended to the measure label in parentheses (e.g., `"class"` for
+#'   validation per-class breakdowns).
+#'
+#' @return A character vector of markdown lines.
+#' @keywords internal
+#' @noRd
+format_metric_rows <- function(df, label_fn, extra_label_col = NULL) {
+  out <- character()
+  if (is.null(df) || nrow(df) == 0L || !"variable" %in% names(df)) {
+    return(out)
+  }
+
+  has_ci    <- all(c("ci_lower", "ci_upper") %in% names(df))
+  has_docid <- "docid" %in% names(df) && !all(is.na(df$docid))
+  has_extra <- !is.null(extra_label_col) &&
+               extra_label_col %in% names(df) &&
+               !all(is.na(df[[extra_label_col]]))
+
+  variables <- unique(df$variable)
+  for (i in seq_along(variables)) {
+    var <- variables[i]
+    rows <- df[df$variable == var, , drop = FALSE]
+    if (length(variables) > 1L) {
+      out <- c(out, paste0("*", var, ":*"))
+    }
+    for (j in seq_len(nrow(rows))) {
+      label <- label_fn(rows$measure[j])
+      if (has_extra && !is.na(rows[[extra_label_col]][j])) {
+        label <- paste0(label, " (", rows[[extra_label_col]][j], ")")
+      }
+      if (has_docid && !is.na(rows$docid[j])) {
+        label <- paste0(label, " [", rows$docid[j], "]")
+      }
+      line <- sprintf("- %s: %.4f", label, rows$value[j])
+      if (has_ci && !is.na(rows$ci_lower[j])) {
+        line <- sprintf("%s [%.4f, %.4f]", line, rows$ci_lower[j], rows$ci_upper[j])
+      }
+      out <- c(out, line)
+    }
+    if (i < length(variables)) out <- c(out, "")
+  }
+  out
 }
