@@ -2,6 +2,14 @@
 
 ## Bug fixes
 
+* `qlm_trail()` no longer emits "unknown column" warnings or crashes with
+  `the condition has length > 1` when passed a `qlm_comparison` or
+  `qlm_validation` object. The trail now stores these (and `qlm_coded`)
+  objects as-is rather than copying selected fields into a parallel
+  structure, so they round-trip with their class and metadata intact and
+  can be extracted from the trail for replication without modification
+  (#93).
+
 * `qlm_validate(..., average = "none")` was reporting per-class
   precision and recall swapped: the helper that derived FP and FN
   from the confusion matrix had its row and column sums transposed
