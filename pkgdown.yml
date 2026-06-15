@@ -16,7 +16,7 @@ articles:
   pkgdown/tutorials/validate: pkgdown/tutorials/validate.html
   pkgdown/getting-started/workflow: pkgdown/getting-started/workflow.html
   pkgdown/workshops: pkgdown/workshops.html
-last_built: 2026-06-10T00:54Z
+last_built: 2026-06-15T12:47Z
 urls:
   reference: https://quallmer.github.io/quallmer/reference
   article: https://quallmer.github.io/quallmer/articles
