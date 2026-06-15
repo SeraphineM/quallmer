@@ -90,7 +90,8 @@ function checkWorkshopPassword(id, password) {
 <div id="epss26-error" class="workshop-error">Incorrect password</div>
 </div>
 <div id="epss26-downloads" class="workshop-downloads mt-2">
-<a href="https://quallmer.github.io/quallmer/workshops/epss26/quallmer_slides.qmd" class="btn btn-sm btn-outline-primary" download>Slides (QMD)</a>
+<a href="https://quallmer.github.io/quallmer/workshops/epss26/quallmer_slides.qmd" class="btn btn-sm btn-outline-primary me-1" download>Slides (QMD)</a>
+<a href="https://quallmer.github.io/quallmer/workshops/epss26/quallmer_tutorial.qmd" class="btn btn-sm btn-outline-primary" download>Tutorial (QMD)</a>
 </div>
 
 ***
