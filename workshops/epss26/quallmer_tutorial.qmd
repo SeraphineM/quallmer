@@ -1,7 +1,7 @@
 ---
 title: "Hands-on Tutorial"
-subtitle: "Qualitative analysis with LLMs: The quallmer toolbox"
-author: "Seraphine F. Maerz and Kenneth Benoit"
+subtitle: "LLM-assisted text analysis at WZB, May 2026"
+author: "Seraphine F. Maerz"
 date: today
 format:
   html:
@@ -17,8 +17,6 @@ format:
 
 # Welcome!
 
-## Tutorial Part I: The 5-Step Workflow
-
 This tutorial walks you through the **complete quallmer workflow in 5 steps**, using ideology detection in political speeches as our running example.
 
 ::: callout-tip
@@ -27,7 +25,7 @@ This tutorial walks you through the **complete quallmer workflow in 5 steps**, u
 | Step | Function | Purpose |
 |------------------|----------------------------|--------------------------|
 | **1** | `qlm_codebook()` | Define your coding scheme |
-| **2** | `qlm_code()` | Apply LLM coding to texts (optional: `qlm_segment`)|
+| **2** | `qlm_code()` | Apply LLM coding to texts (optionally: `qlm_segment()`) |
 | **3** | `qlm_replicate()` | Test robustness across models/settings |
 | **4** | `qlm_compare()` / `qlm_validate()` | Assess reliability and validity |
 | **5** | `qlm_trail()` | Create audit documentation |
@@ -220,6 +218,9 @@ coded_run1$explanation
 2.  Look at the scores -- do they match your intuition?
 3.  Read the explanations -- are they reasonable?
 :::
+
+
+For an example of how to use `qlm_segment()`, see the [quallmer documentation on text segmentation](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_segmentation.html).
 
 ------------------------------------------------------------------------
 
@@ -477,236 +478,11 @@ Run the complete 5-step workflow on your own texts:
 
 ------------------------------------------------------------------------
 
-# Tutorial Part II: Scraping and Analysing Campaign Posters
-
-So far we have coded **text**. `qlm_code()` works just as cleanly on **images** — you pass image URLs (or local file paths) to a vision-capable model and get back the same kind of structured output. This tutorial walks through a full pipeline in two parts:
-
-1.  **Scrape** image URLs of historical campaign posters from Wikimedia Commons
-2.  **Analyse** those posters with `qlm_code()` using a codebook designed for visual content
-
-
-## Load packages
-
-`qlm_code()` does the heavy lifting for *both* the scrape and the analysis — so the only package you need is `quallmer`.
-
-```{r}
-#| eval: false
-#| message: false
-
-library(quallmer)
-```
-
-------------------------------------------------------------------------
-
-## Part A: Scrape the poster URLs **with `qlm_code()`**
-
-The trick: a model with web access can take a page URL as input, fetch it, and return structured output — including a *list of image URLs* it finds on the page. We define a codebook that asks for exactly that.
-
-### Step A1 — Point at the source page
-
-We host a tiny **example-data folder** alongside the workshop materials with three pre-1929 public-domain US presidential campaign posters. The page is a small HTML listing for educational purposes — the model will fetch it and extract the image URLs.
-
-```{r}
-#| eval: false
-
-index_url <- "https://quallmer.github.io/quallmer/workshops/epss26/Example_data/"
-names(index_url) <- "epss26_posters"
-```
-
-
-### Step A2 — Codebook: "go to this URL and list the posters"
-
-The schema asks for a single field — an **array of direct image URLs**. The page is small and clean, so the instructions can be brief: just return every `.jpg` link. This can become much more complex if the page is larger or messier but the principle is the same: **the codebook defines what you want the model to extract**.
-
-```{r}
-#| eval: false
-
-cb_scrape <- qlm_codebook(
-  name = "Scrape poster image URLs",
-  role = "You are a careful web research assistant.",
-  instructions = "The user supplies a URL to a small HTML page that lists historical
-    US presidential campaign posters. Retrieve the page and return every direct
-    image URL it links to.
-
-    Rules:
-    - Return only direct image links (ending in .jpg, .jpeg, or .png).
-    - Resolve relative paths against the page URL into absolute URLs.
-    - Do not fabricate URLs. If the page cannot be retrieved, return an empty list
-      and explain in `notes`.",
-  schema = type_object(
-    poster_urls = type_array(
-      type_string(),
-      description = "Absolute, direct image URLs for the campaign posters listed on the page"
-    ),
-    retrieval_ok = type_boolean("TRUE if the page was successfully retrieved"),
-    notes = type_string("Caveats or reason for empty results", required = FALSE)
-  )
-)
-```
-
-### Step A3 — Run the scrape
-
-Pick a model with web access. Claude Sonnet and Gemini Flash both work; pick whichever you have access to.
-
-```{r}
-#| eval: false
-
-scraped <- qlm_code(
-  index_url,
-  codebook = cb_scrape,
-  model    = "openai/gpt-4o",
-  name     = "epss26_poster_scrape"
-)
-
-scraped
-```
-
-### Step A4 — Pull the URLs out into a vector
-
-`qlm_code()` returns a structured object; the `poster_urls` field is a list-column we can unnest.
-
-```{r}
-#| eval: false
-
-poster_urls <- unlist(scraped$poster_urls)
-names(poster_urls) <- basename(poster_urls)
-poster_urls
-```
-
-::: callout-important
-## A word on what "scraping" means with `qlm_code()`
-
-For URL inputs, `qlm_code()` works in **two distinct ways** depending on what the URL points to:
-
--   **URL → text page (HTML/JSON):** the model fetches the page *as text*, parses it, and returns structured fields — including lists of image URLs it finds inside. That is the call you just made in Steps A1–A3.
--   **URL → image file (.jpg/.png):** the model fetches the file *as an image* and "sees" it with a vision encoder. That is what Part B will do.
-
-A model **does not automatically analyse images embedded in an HTML page** — it only sees the HTML. So the two-step pattern (scrape URLs → analyse images) is not just stylistic; it reflects how vision-capable models actually consume content.
-:::
-
-------------------------------------------------------------------------
-
-## Part B: Analyse the posters with `qlm_code()`
-
-We now hand the URL vector to `qlm_code()`. The codebook is the same idea as for text — only the **schema** changes, because we are extracting visual and rhetorical features instead of textual scores.
-
-### Step B1 — Define the codebook
-
-```{r}
-#| eval: false
-
-poster_codebook <- qlm_codebook(
-  name = "Campaign poster analysis",
-
-  role = "You are a political communication scholar specialising in
-          historical campaign visuals.",
-
-  instructions = "You will be shown an image of a US presidential campaign poster.
-    Identify the candidate (if visible), the main message, the dominant emotional
-    appeal, and the central visual motifs. If the candidate is not clearly named
-    or shown, return 'unknown'. Do not guess wildly — explain your reasoning briefly.",
-
-  schema = type_object(
-    candidate = type_string(
-      "Name of the candidate shown or named on the poster ('unknown' if unclear)"
-    ),
-    approx_year = type_integer(
-      "Approximate election year, if inferable from the poster",
-      required = FALSE
-    ),
-    main_message = type_string(
-      "One-sentence summary of the poster's central message"
-    ),
-    appeal = type_enum(
-      c("hope", "pride", "fear", "anger", "unity", "prosperity", "duty", "other"),
-      description = "Dominant emotional appeal"
-    ),
-    visual_motifs = type_array(
-      type_string(),
-      description = "Main visual elements (e.g. flag, eagle, portrait, slogan)"
-    ),
-    explanation = type_string(
-      "Brief justification, referring to specific elements in the image"
-    )
-  )
-)
-```
-
-::: callout-tip
-## What changed compared to a text codebook?
-
-Nothing structural — same `qlm_codebook()`, same schema types. The only difference is that the **input** to `qlm_code()` will be image URLs, and we will pick a **vision-capable** model.
-:::
-
-### Step B2 — Code the posters
-
-Image inputs require a model that can actually *see*. GPT-4o and Claude Sonnet are both vision-capable.
-
-```{r}
-#| eval: false
-
-poster_results <- qlm_code(
-  poster_urls,
-  codebook = poster_codebook,
-  model    = "openai/gpt-4o",
-  name     = "campaign_posters_run1"
-)
-
-poster_results
-```
-
-::: callout-note
-## Cost note
-
-Vision calls cost more per request than text calls. Start with a handful of images (we sampled 6 above) before scaling up. You can always re-run on the full set once the codebook is dialled in.
-:::
-
-### Step B3 — Inspect the results
-
-The output mirrors a text coding result. We pull out the key fields, flatten `visual_motifs` (a list-column) into a comma-separated string, and present everything as an interactive table.
-
-```{r}
-#| echo: false
-#| eval: !expr file.exists("example_data/poster_results.rds")
-
-poster_results <- readRDS("example_data/poster_results.rds")
-
-poster_results |>
-  as.data.frame() |>
-  dplyr::select(candidate, approx_year, appeal, main_message, explanation) |>
-  knitr::kable(
-    col.names = c("Candidate", "Year", "Appeal", "Main message", "Explanation"),
-    caption   = "Campaign poster analysis (GPT-4o)"
-  )
-```
-
-::: callout-tip
-## Where to spot hallucinations
-
-The `Explanation` column is your audit channel — it should refer to elements you actually see in the poster. If the model writes "the central eagle motif" but the poster shows no eagle, the row is suspect.
-:::
-
-### Step B4 — Plug back into the 5-step workflow
-
-Everything you learned in Steps 1–5 above applies unchanged:
-
--   **`qlm_compare()`** — quantify how often repeat runs pick the same `appeal` or `candidate`
--   **`qlm_validate()`** — compare against your own human-coded labels for a subset
--   **`qlm_trail()`** — produce an audit trail that includes the scraped URLs, the codebook, and every response
-
-::: callout-tip
-## Take-home
-
-A different *input modality* (images instead of text) requires **only two changes**: image URLs as input, and a vision-capable model. Codebooks, comparison, validation, and audit trails all carry over.
-:::
-
-------------------------------------------------------------------------
-
 # Resources
 
 -   **Package website:** [quallmer.github.io/quallmer](https://quallmer.github.io/quallmer)
--   **Our Instats workshops (including fine-tuning LLMs):** [Instats Seminars](https://instats.org/expert/seraphine-maerz-2?view=Seminars)
--   **Contact:** [kenbenoit.net](https://kenbenoit.net/) and [seraphinem.github.io](https://seraphinem.github.io)
+-   **My Instats workshops (including fine-tuning LLMs):** [Instats Seminars](https://instats.org/expert/seraphine-maerz-2?view=Seminars)
+-   **Contact:** [seraphinem.github.io](https://seraphinem.github.io)
 
 ------------------------------------------------------------------------
 
