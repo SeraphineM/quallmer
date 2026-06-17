@@ -76,10 +76,6 @@ function checkWorkshopPassword(id, password) {
 
 ### EPSS 2026 Belfast | June 2026
 
-**Example data** <span class="text-muted small">(open access)</span>
-
-<a href="https://quallmer.github.io/quallmer/workshops/epss26/Example_data/" class="btn btn-sm btn-outline-primary mt-2" target="_blank">Example_data folder</a>
-
 **Access material here** <span class="text-muted small">(for participants only)</span>
 
 <div id="epss26-form">
