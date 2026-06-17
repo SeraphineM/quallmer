@@ -1,7 +1,7 @@
 ---
 title: "Hands-on Tutorial"
-subtitle: "LLM-assisted text analysis at WZB, May 2026"
-author: "Seraphine F. Maerz"
+subtitle: "Qualitative analysis with LLMs: The quallmer toolbox"
+author: "Seraphine F. Maerz and Kenneth Benoit"
 date: today
 format:
   html:
@@ -17,6 +17,8 @@ format:
 
 # Welcome!
 
+## The 5-Step Workflow
+
 This tutorial walks you through the **complete quallmer workflow in 5 steps**, using ideology detection in political speeches as our running example.
 
 ::: callout-tip
@@ -25,7 +27,7 @@ This tutorial walks you through the **complete quallmer workflow in 5 steps**, u
 | Step | Function | Purpose |
 |------------------|----------------------------|--------------------------|
 | **1** | `qlm_codebook()` | Define your coding scheme |
-| **2** | `qlm_code()` | Apply LLM coding to texts (optionally: `qlm_segment()`) |
+| **2** | `qlm_code()` | Apply LLM coding to texts (optional: `qlm_segment`)|
 | **3** | `qlm_replicate()` | Test robustness across models/settings |
 | **4** | `qlm_compare()` / `qlm_validate()` | Assess reliability and validity |
 | **5** | `qlm_trail()` | Create audit documentation |
@@ -218,9 +220,6 @@ coded_run1$explanation
 2.  Look at the scores -- do they match your intuition?
 3.  Read the explanations -- are they reasonable?
 :::
-
-
-For an example of how to use `qlm_segment()`, see the [quallmer documentation on text segmentation](https://quallmer.github.io/quallmer/articles/pkgdown/examples/example_segmentation.html).
 
 ------------------------------------------------------------------------
 
@@ -481,8 +480,8 @@ Run the complete 5-step workflow on your own texts:
 # Resources
 
 -   **Package website:** [quallmer.github.io/quallmer](https://quallmer.github.io/quallmer)
--   **My Instats workshops (including fine-tuning LLMs):** [Instats Seminars](https://instats.org/expert/seraphine-maerz-2?view=Seminars)
--   **Contact:** [seraphinem.github.io](https://seraphinem.github.io)
+-   **Our Instats workshops (including fine-tuning LLMs):** [Instats Seminars](https://instats.org/expert/seraphine-maerz-2?view=Seminars)
+-   **Contact:** [kenbenoit.net](https://kenbenoit.net/) and [seraphinem.github.io](https://seraphinem.github.io)
 
 ------------------------------------------------------------------------
 
