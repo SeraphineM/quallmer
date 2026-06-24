@@ -109,6 +109,23 @@ function checkWorkshopPassword(id, password) {
 <a href="https://quallmer.github.io/quallmer/workshops/wzb26/quallmer_tutorial.qmd" class="btn btn-sm btn-outline-primary" download>Tutorial (QMD)</a>
 </div>
 
+***
+
+### SICSS Melbourne | 2026
+
+**Access material here** <span class="text-muted small">(for participants only)</span>
+
+<div id="sicss26-form">
+<div class="d-flex gap-2 align-items-center mt-2">
+<input type="password" id="sicss26-password" class="form-control form-control-sm" placeholder="Enter password" style="max-width: 200px;" onkeypress="if(event.key==='Enter') checkWorkshopPassword('sicss26', 'SICSS26')">
+<button class="btn btn-sm btn-secondary" onclick="checkWorkshopPassword('sicss26', 'SICSS26')">Unlock</button>
+</div>
+<div id="sicss26-error" class="workshop-error">Incorrect password</div>
+</div>
+<div id="sicss26-downloads" class="workshop-downloads mt-2">
+<a href="https://quallmer.github.io/quallmer/workshops/sicss26/quallmer_tutorial.qmd" class="btn btn-sm btn-outline-primary" download>Tutorial (QMD)</a>
+</div>
+
 <!--
   To add a workshop, copy the block below and:
   - Replace WS_ID with a unique identifier (e.g. "belfast26")
