@@ -1,0 +1,256 @@
+---
+title: "quallmer audit trail"
+date: "2026-06-17"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+---
+
+This audit trail documents the complete workflow following Lincoln and Guba's (1985)
+framework for establishing trustworthiness in qualitative research.
+
+## Trail summary
+
+- **Number of runs:** 4
+- **Complete:** Yes
+
+### System information
+
+- **quallmer version:** 0.4.0
+- **ellmer version:** 0.4.0
+- **R version:** 4.5.3
+
+## Instrument development
+
+Codebooks used in this analysis:
+
+### Ideological Scaling
+
+**Instructions:**
+
+> Read each text carefully. Place the text on a -5 to +5 scale
+    for the inclusive-exclusive ideological dimension.
+
+    INCLUSIVE language (-5): Emphasizes equal rights, diversity, pluralism,
+    and protection of minorities.
+
+    EXCLUSIVE language (+5): Emphasizes exclusion of groups, national homogeneity,
+    and restricting rights.
+
+    Score 0 = neutral or mixed rhetoric.
+
+**Schema:**
+
+```
+<ellmer::TypeObject>
+ @ description          : NULL
+ @ required             : logi TRUE
+ @ properties           :List of 2
+ .. $ score      : <ellmer::TypeBasic>
+ ..  ..@ description: chr "Ideological position (-5 = inclusive, +5 = exclusive)"
+ ..  ..@ required   : logi TRUE
+ ..  ..@ type       : chr "integer"
+ .. $ explanation: <ellmer::TypeBasic>
+ ..  ..@ description: chr "Brief justification for the assigned score, referring to specific text elements"
+ ..  ..@ required   : logi TRUE
+ ..  ..@ type       : chr "string"
+ @ additional_properties: logi FALSE
+```
+
+## Process notes
+
+Chronological record of all coding runs:
+
+### 1. run1_ideology
+
+**Parent:** None (original run)
+**Timestamp:** 2026-06-17 20:12:33
+**Model:** openai/gpt-4o-mini
+**Codebook:** Ideological Scaling
+**Units coded:** 5
+
+**Call:**
+
+```{r eval=FALSE}
+qlm_code(x = inaugural_texts, codebook = ideology_codebook, model = "openai/gpt-4o-mini", 
+    name = "run1_ideology")
+```
+
+### 2. run2_same_settings
+
+**Parent:** run1_ideology
+**Timestamp:** 2026-06-17 20:29:50
+**Model:** openai/gpt-4o-mini
+**Codebook:** Ideological Scaling
+**Units coded:** 5
+
+**Call:**
+
+```{r eval=FALSE}
+qlm_replicate(x = coded_run1, name = "run2_same_settings")
+```
+
+### 3. run3_high_temp
+
+**Parent:** run1_ideology
+**Timestamp:** 2026-06-17 20:30:26
+**Model:** openai/gpt-4o-mini
+**Codebook:** Ideological Scaling
+**Units coded:** 5
+
+**Call:**
+
+```{r eval=FALSE}
+qlm_replicate(x = coded_run1, params = params(temperature = 0.9), 
+    name = "run3_high_temp")
+```
+
+### 4. run4_llama
+
+**Parent:** run1_ideology
+**Timestamp:** 2026-06-17 20:31:52
+**Model:** ollama/llama3.2:1b
+**Codebook:** Ideological Scaling
+**Units coded:** 5
+
+**Call:**
+
+```{r eval=FALSE}
+qlm_replicate(x = coded_run1, model = "ollama/llama3.2:1b", name = "run4_llama")
+```
+
+## Raw data and coded results
+
+The complete coded data for each run is stored in the RDS file.
+Load with `readRDS()` to access:
+
+```r
+trail <- readRDS("path/to/trail.rds")
+trail$runs$run_name$data
+# Coded results for a specific run
+```
+
+**run1_ideology:** 5 units, 2 variables
+**run2_same_settings:** 5 units, 2 variables
+**run3_high_temp:** 5 units, 2 variables
+**run4_llama:** 5 units, 2 variables
+
+## Replication
+
+This section provides instructions and code to replicate the analysis.
+
+### Environment setup
+
+Install required packages:
+
+```r
+# Install quallmer (if not already installed)
+# install.packages("pak")
+# pak::pak("quallmer/quallmer")
+
+library(quallmer)
+```
+
+Configure API credentials for the models used:
+
+```r
+# OpenAI: Set OPENAI_API_KEY environment variable
+# Sys.setenv(OPENAI_API_KEY = "your-api-key")
+# Ollama: Ensure Ollama is running locally
+# See: https://ollama.ai/
+```
+
+### Loading the trail
+
+Load the saved trail to access codebooks, data, and metadata:
+
+```r
+trail <- readRDS("ideology_analysis.rds")
+```
+
+### Replication code
+
+The following code replicates each coding run using the stored parameters.
+
+#### Replicate: run1_ideology
+
+```r
+# Get codebook from trail
+codebook_run1_ideology <- trail$runs$run1_ideology$codebook
+
+# Load your input data (same structure as original)
+# texts <- your_data$text_column
+
+coded_run1_ideology <- qlm_code(
+  texts,
+  codebook_run1_ideology,
+  model = "openai/gpt-4o-mini",
+  name = "run1_ideology"
+)
+```
+
+#### Replicate: run2_same_settings
+
+```r
+# Get codebook from trail
+codebook_run2_same_settings <- trail$runs$run2_same_settings$codebook
+
+# Load your input data (same structure as original)
+# texts <- your_data$text_column
+
+coded_run2_same_settings <- qlm_code(
+  texts,
+  codebook_run2_same_settings,
+  model = "openai/gpt-4o-mini",
+  name = "run2_same_settings"
+)
+```
+
+#### Replicate: run3_high_temp
+
+```r
+# Get codebook from trail
+codebook_run3_high_temp <- trail$runs$run3_high_temp$codebook
+
+# Load your input data (same structure as original)
+# texts <- your_data$text_column
+
+coded_run3_high_temp <- qlm_code(
+  texts,
+  codebook_run3_high_temp,
+  model = "openai/gpt-4o-mini",
+  name = "run3_high_temp"
+)
+```
+
+#### Replicate: run4_llama
+
+```r
+# Get codebook from trail
+codebook_run4_llama <- trail$runs$run4_llama$codebook
+
+# Load your input data (same structure as original)
+# texts <- your_data$text_column
+
+coded_run4_llama <- qlm_code(
+  texts,
+  codebook_run4_llama,
+  model = "ollama/llama3.2:1b",
+  name = "run4_llama"
+)
+```
+
+### Note on reproducibility
+
+LLM outputs are inherently stochastic. To improve reproducibility:
+
+- Use `temperature = 0` for more deterministic outputs
+- Set a random seed where supported by the provider
+- Document the exact model version (models are updated over time)
+- Compare results across multiple runs using `qlm_replicate()`
+
+## Reference
+
+Lincoln, Y. S., & Guba, E. G. (1985). *Naturalistic Inquiry*. Sage.
+

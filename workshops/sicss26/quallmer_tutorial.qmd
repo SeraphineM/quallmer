@@ -1,7 +1,7 @@
 ---
-title: "Hands-on Tutorial"
-subtitle: "Qualitative analysis with LLMs: The quallmer toolbox"
-author: "Seraphine F. Maerz and Kenneth Benoit"
+title: "Hands-on Tutorial, SICSS @Melbourne 2026"
+subtitle: "Using LLMs to Create Data Analysis Pipelines for Text-as-Data Research"
+author: "Seraphine F. Maerz"
 date: today
 format:
   html:
@@ -311,7 +311,7 @@ comparison <- qlm_compare(
   coded_run1,
   coded_run2,
   coded_run3,
-  #coded_run4,
+  coded_run4,
   by = "score",
   level = "ordinal"
 )
