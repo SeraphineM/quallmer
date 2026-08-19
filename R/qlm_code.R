@@ -20,6 +20,15 @@
 #'   that provider). Passed to the `name` argument of [ellmer::chat()].
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
+#' @param tools Optional list of `ellmer` tool objects to register on the chat
+#'   before coding, e.g. a provider's hosted web-search tool
+#'   ([ellmer::openai_tool_web_search()], [ellmer::claude_tool_web_search()],
+#'   [ellmer::google_tool_web_search()]) or a custom tool from [ellmer::tool()].
+#'   A single tool may be passed directly (it is wrapped in a list). Tools
+#'   cannot be passed through `...` because `ellmer`'s `chat_*()` constructors
+#'   have no `tools` argument -- they must be registered on the chat object
+#'   after it is constructed, via `chat$register_tool()`, which is what this
+#'   argument does on your behalf. Default is `NULL` (no tools registered).
 #' @param structured character; how the output schema is obtained. `"structured"` uses
 #'   [ellmer::parallel_chat_structured()] and trusts the provider to enforce
 #'   the schema. `"json"` asks for JSON, puts the schema in the system prompt,
@@ -55,6 +64,15 @@
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
 #'   Default is `FALSE`. See [ellmer::batch_chat_structured()] for details.
+#' @param tools Optional list of `ellmer` tool objects to register on the chat
+#'   before coding, e.g. a provider's hosted web-search tool
+#'   ([ellmer::openai_tool_web_search()], [ellmer::claude_tool_web_search()],
+#'   [ellmer::google_tool_web_search()]) or a custom tool from [ellmer::tool()].
+#'   A single tool may be passed directly (it is wrapped in a list). Tools
+#'   cannot be passed through `...` because `ellmer`'s `chat_*()` constructors
+#'   have no `tools` argument -- they must be registered on the chat object
+#'   after it is constructed, via `chat$register_tool()`, which is what this
+#'   argument does on your behalf. Default is `NULL` (no tools registered).
 #' @param ... Additional arguments passed to [ellmer::chat()],
 #'   [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()].
 #'   Arguments recognized by [ellmer::parallel_chat_structured()] or
@@ -279,7 +297,7 @@
 #'
 #' @export
 qlm_code <- function(x, codebook, model, ...,
-                     batch = FALSE,
+                     batch = FALSE, tools = NULL,
                      structured = c("auto", "structured", "json"),
                      json_retries = 2L, backfill = FALSE, prices = NULL,
                      name = NULL, notes = NULL) {
@@ -292,6 +310,24 @@ qlm_code <- function(x, codebook, model, ...,
   # reached only after the structured attempt has been paid for.
   if (!is_count(json_retries)) {
     cli::cli_abort("{.arg json_retries} must be a single non-negative integer.")
+  }
+
+  # A single tool may be passed directly rather than wrapped in a list; ellmer
+  # tool objects are S7 objects, so is.list() reliably distinguishes the two.
+  if (!is.null(tools) && !is.list(tools)) {
+    tools <- list(tools)
+  }
+  # ellmer has no single shared parent class for tools: custom tools from
+  # ellmer::tool() are "ellmer::ToolDef", provider built-ins (e.g.
+  # ellmer::openai_tool_web_search()) are "ellmer::ToolBuiltIn" -- both must
+  # be checked explicitly.
+  is_ellmer_tool <- function(t) inherits(t, "ellmer::ToolDef") || inherits(t, "ellmer::ToolBuiltIn")
+  if (!is.null(tools) && !all(vapply(tools, is_ellmer_tool, logical(1)))) {
+    cli::cli_abort(c(
+      "{.arg tools} must be a list of {.pkg ellmer} tool objects, or a single one.",
+      "i" = "Create tools with {.fn ellmer::tool} or a provider's built-in tool
+             function, e.g. {.fn ellmer::openai_tool_web_search}."
+    ))
   }
 
   # Accept both qlm_codebook and task objects, converting if needed
@@ -321,6 +357,24 @@ qlm_code <- function(x, codebook, model, ...,
   # before any request is spent, rather than in the constructor afterwards.
   if (!is.null(names(x))) {
     check_ids(names(x), what = "{.code names(x)}")
+  }
+
+  # A single tool may be passed directly rather than wrapped in a list; ellmer
+  # tool objects are S7 objects, so is.list() reliably distinguishes the two.
+  if (!is.null(tools) && !is.list(tools)) {
+    tools <- list(tools)
+  }
+  # ellmer has no single shared parent class for tools: custom tools from
+  # ellmer::tool() are "ellmer::ToolDef", provider built-ins (e.g.
+  # ellmer::openai_tool_web_search()) are "ellmer::ToolBuiltIn" -- both must
+  # be checked explicitly.
+  is_ellmer_tool <- function(t) inherits(t, "ellmer::ToolDef") || inherits(t, "ellmer::ToolBuiltIn")
+  if (!is.null(tools) && !all(vapply(tools, is_ellmer_tool, logical(1)))) {
+    cli::cli_abort(c(
+      "{.arg tools} must be a list of {.pkg ellmer} tool objects, or a single one.",
+      "i" = "Create tools with {.fn ellmer::tool} or a provider's built-in tool
+             function, e.g. {.fn ellmer::openai_tool_web_search}."
+    ))
   }
 
   # Get valid argument names from ellmer functions
@@ -414,6 +468,7 @@ qlm_code <- function(x, codebook, model, ...,
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
+      tools = tools,
       allow_skip = identical(structured, "auto") && !batch,
       cost_message = is.null(prices)
     )
@@ -539,6 +594,14 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Add model to chat_args for easy access
   chat_args$name <- model
+  # Record registered tools for reproducibility (e.g. inspecting via qlm_trail()).
+  if (!is.null(tools)) {
+    chat_args$tools <- tools
+  }
+  # Record registered tools for reproducibility (e.g. inspecting via qlm_trail()).
+  if (!is.null(tools)) {
+    chat_args$tools <- tools
+  }
 
   coded <- new_qlm_coded(
     results = results,
@@ -600,7 +663,7 @@ default_structured_mode <- function(model) {
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
-                                allow_skip = FALSE, cost_message = TRUE) {
+                                tools = NULL, allow_skip = FALSE, cost_message = TRUE) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -614,7 +677,16 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   build_chat <- function(prompt) {
-    do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
+    chat <- do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
+    # Register tools (e.g. a hosted web-search tool) on the chat object. This
+    # can't be routed through chat_args/`...` like other ellmer::chat() args,
+    # because ellmer's chat_*() constructors have no `tools` parameter -- tools
+    # are only registered via chat$register_tool(), which requires the chat
+    # object to already exist.
+    for (tool in tools) {
+      chat$register_tool(tool)
+    }
+    chat
   }
   chat <- build_chat(system_prompt)
 

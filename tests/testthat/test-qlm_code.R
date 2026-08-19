@@ -301,6 +301,100 @@ test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
 })
 
 
+# The chat is built inside try_structured_call(), so tools are observed there:
+# a stub with a chat that records what is registered on it.
+tools_stub <- function(registered, results = data.frame(id = 1:2, score = c(0.5, 0.8))) {
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) {
+    structure(
+      list(register_tool = function(tool) {
+        registered$tools <- c(registered$tools, list(tool))
+        invisible(NULL)
+      }),
+      class = "Chat"
+    )
+  })
+  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  f
+}
+
+test_that("qlm_code registers a single tool passed via `tools`", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  registered <- new.env()
+  f <- tools_stub(registered)
+  web_search <- ellmer::openai_tool_web_search()
+
+  # Passed bare, not wrapped in list() -- should be auto-wrapped.
+  f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini", tools = web_search)
+
+  expect_length(registered$tools, 1)
+  expect_identical(registered$tools[[1]], web_search)
+})
+
+test_that("qlm_code registers multiple tools, in order", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  registered <- new.env()
+  f <- tools_stub(registered)
+  web_search <- ellmer::openai_tool_web_search()
+  custom_tool <- ellmer::tool(function() "ok", name = "fake_tool", description = "A test tool.")
+
+  f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini",
+    tools = list(web_search, custom_tool))
+
+  expect_length(registered$tools, 2)
+  expect_identical(registered$tools[[1]], web_search)
+  expect_identical(registered$tools[[2]], custom_tool)
+})
+
+test_that("qlm_code does not register any tools when tools is NULL (default)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  registered <- new.env()
+  f <- tools_stub(registered)
+
+  f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini")
+
+  expect_null(registered$tools)
+})
+
+test_that("qlm_code rejects non-tool objects passed as `tools`", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+
+  expect_error(
+    qlm_code(c("text1"), codebook, model = "openai/gpt-4o-mini", tools = "not a tool"),
+    "must be a list of.*tool objects"
+  )
+  expect_error(
+    qlm_code(c("text1"), codebook, model = "openai/gpt-4o-mini",
+             tools = list(ellmer::openai_tool_web_search(), "not a tool")),
+    "must be a list of.*tool objects"
+  )
+})
+
+test_that("qlm_code records tools in chat_args metadata for reproducibility", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  web_search <- ellmer::openai_tool_web_search()
+
+  result <- f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini", tools = web_search)
+
+  meta_attr <- attr(result, "meta")
+  expect_length(meta_attr$object$chat_args$tools, 1)
+  expect_identical(meta_attr$object$chat_args$tools[[1]], web_search)
+})
+
+
 test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
   skip_if_not_installed("ellmer")
 

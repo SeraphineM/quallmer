@@ -10,6 +10,7 @@ qlm_code(
   model,
   ...,
   batch = FALSE,
+  tools = NULL,
   structured = c("auto", "structured", "json"),
   json_retries = 2L,
   backfill = FALSE,
@@ -45,6 +46,16 @@ Arguments recognized by \code{\link[ellmer:parallel_chat_structured]{ellmer::par
 instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}. Batch processing is more
 cost-effective for large jobs but may have longer turnaround times.
 Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
+
+\item{tools}{Optional list of \code{ellmer} tool objects to register on the chat
+before coding, e.g. a provider's hosted web-search tool
+(\code{\link[ellmer:openai_tool_web_search]{ellmer::openai_tool_web_search()}}, \code{\link[ellmer:claude_tool_web_search]{ellmer::claude_tool_web_search()}},
+\code{\link[ellmer:google_tool_web_search]{ellmer::google_tool_web_search()}}) or a custom tool from \code{\link[ellmer:tool]{ellmer::tool()}}.
+A single tool may be passed directly (it is wrapped in a list). Tools
+cannot be passed through \code{...} because \code{ellmer}'s \verb{chat_*()} constructors
+have no \code{tools} argument -- they must be registered on the chat object
+after it is constructed, via \code{chat$register_tool()}, which is what this
+argument does on your behalf. Default is \code{NULL} (no tools registered).}
 
 \item{structured}{character; how the output schema is obtained. \code{"structured"} uses
 \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} and trusts the provider to enforce

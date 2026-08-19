@@ -29,6 +29,17 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
+* `qlm_code()` gains a `tools` argument for registering `ellmer` tools (e.g.
+  a provider's hosted web-search tool, such as
+  `ellmer::openai_tool_web_search()`) on the chat before coding. Previously
+  there was no way to do this: `ellmer`'s `chat_*()` constructors have no
+  `tools` parameter, so tools must be registered via `chat$register_tool()`
+  on the chat object `qlm_code()` builds internally, which its public API
+  didn't expose. A single tool may be passed directly, or several as a list;
+  registered tools are recorded in the run's `chat_args` metadata for
+  reproducibility.
+
+
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
   results into the original object, instead of re-running the whole corpus
   to recover a handful of transient failures. Which units to retry is
