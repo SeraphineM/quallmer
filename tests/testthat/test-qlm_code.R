@@ -423,3 +423,128 @@ test_that("qlm_code stores notes in metadata", {
   output <- capture.output(print(result))
   expect_true(any(grepl("Notes:.*Test run with temperature 0.5", output)))
 })
+
+
+test_that("code_handler_for routes only providers that need JSON-mode coding", {
+  expect_null(code_handler_for("openai/gpt-4o-mini"))
+  expect_null(code_handler_for("anthropic/claude-sonnet-4-5"))
+  expect_null(code_handler_for("openai"))
+
+  expect_identical(code_handler_for("deepseek/deepseek-chat"), code_handler_json)
+  expect_identical(code_handler_for("deepseek"), code_handler_json)
+})
+
+
+test_that("qlm_code delegates to the handler and records the backend", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  handler_args <- NULL
+  fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
+                           max_retries = 2L) {
+    handler_args <<- list(model = model, batch = batch, max_retries = max_retries,
+                          chat_args = chat_args, execution_args = execution_args)
+    results <- tibble::tibble(score = c(0.5, 0.8))
+    attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
+    results
+  }
+
+  f <- qlm_code
+  mockery::stub(f, "code_handler_for", function(...) fake_handler)
+
+  result <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+              max_retries = 5, max_active = 3)
+
+  expect_s3_class(result, "qlm_coded")
+  expect_equal(result$.id, 1:2)
+  expect_equal(result$score, c(0.5, 0.8))
+  expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
+  expect_equal(qlm_meta(result, type = "user")$n_invalid, 0)
+
+  # max_retries reaches the handler as a formal; max_active still routes to execution
+  expect_equal(handler_args$max_retries, 5)
+  expect_equal(handler_args$execution_args, list(max_active = 3))
+  expect_length(handler_args$chat_args, 0)
+})
+
+
+test_that("qlm_code still uses parallel_chat_structured for other providers", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  mock_chat <- structure(list(), class = "Chat")
+  mock_pcs <- mockery::mock(data.frame(score = c(0.5, 0.8)), cycle = TRUE)
+
+  f <- qlm_code
+  mockery::stub(f, "ellmer::chat", mock_chat)
+  mockery::stub(f, "ellmer::parallel_chat_structured", mock_pcs)
+
+  result <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini")
+
+  mockery::expect_called(mock_pcs, 1)
+  expect_null(qlm_meta(result, type = "object")$backend)
+})
+
+
+test_that("qlm_code errors on max_retries only when it is set explicitly", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  # Explicitly set for a provider that cannot honour it
+  expect_error(
+    qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini", max_retries = 2),
+    "not supported for model"
+  )
+  # Even when the value happens to equal the default
+  expect_error(
+    qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini", max_retries = 2L),
+    "not supported for model"
+  )
+
+  # Left at the default, the same call proceeds
+  mock_chat <- structure(list(), class = "Chat")
+  f <- qlm_code
+  mockery::stub(f, "ellmer::chat", mock_chat)
+  mockery::stub(f, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  expect_s3_class(
+    f(c("a"), codebook, model = "openai/gpt-4o-mini"),
+    "qlm_coded"
+  )
+})
+
+
+test_that("qlm_code passes its max_retries default to the handler", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  seen <- NULL
+  fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
+                           max_retries) {
+    seen <<- max_retries
+    tibble::tibble(score = 0.5)
+  }
+  f <- qlm_code
+  mockery::stub(f, "code_handler_for", function(...) fake_handler)
+
+  f("a", codebook, model = "deepseek/deepseek-chat")
+  expect_equal(seen, 2L)
+})
+
+
+test_that("qlm_code requires a single model string", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  expect_error(
+    qlm_code(c("a"), codebook, model = c("openai", "anthropic")),
+    "must be a single string"
+  )
+})

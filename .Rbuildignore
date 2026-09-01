@@ -28,3 +28,4 @@
 ^\.positai$
 ^quallmer-context\.xml$
 ^sources$
+^dev$

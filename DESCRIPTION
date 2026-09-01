@@ -38,6 +38,7 @@ Depends:
 Imports:
     cli,
     digest,
+    jsonlite,
     lifecycle,
     rlang,
     stats,
@@ -46,7 +47,6 @@ Imports:
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Suggests:
     ggplot2,
     janitor,
@@ -61,3 +61,4 @@ Suggests:
     yardstick
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.0

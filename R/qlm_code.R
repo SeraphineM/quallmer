@@ -18,6 +18,13 @@
 #'   that provider). Passed to the `name` argument of [ellmer::chat()].
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
+#' @param max_retries Number of additional attempts made for a response that
+#'   arrives intact but does not conform to the codebook schema. Applies only to
+#'   providers coded in JSON mode (see Details); setting it for any other
+#'   provider is an error. Default is 2, giving at most three attempts per unit.
+#'   This is separate from ellmer's transport-level retries for rate limits and
+#'   server errors, which apply to every provider and are set with
+#'   `options(ellmer_max_tries = )`.
 #' @param batch Logical. If `TRUE`, uses [ellmer::batch_chat_structured()]
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
@@ -38,6 +45,17 @@
 #' [ellmer::parallel_chat_structured()] or [ellmer::batch_chat_structured()]
 #' function. Set `verbose = TRUE` to see progress messages during coding.
 #' Retry logic for API failures should be configured through ellmer's options.
+#'
+#' Some providers accept a JSON Schema but do not enforce it, so a response can
+#' come back parseable but non-conforming, and the non-conformance then arrives
+#' silently as `NA`. For those providers `qlm_code()` routes to a JSON-mode
+#' handler that puts the schema in the system prompt, validates every response
+#' against the codebook schema locally, and re-prompts the model with the
+#' specific validation error when a response does not conform. This currently
+#' applies to `"deepseek"`. Units that never validate have `NA` coded values and
+#' a `.error` list-column recording the reason. `max_retries` controls how many
+#' repair attempts each unit gets. Batch processing and image codebooks are not
+#' supported on this path.
 #'
 #' When `batch = TRUE`, the function uses [ellmer::batch_chat_structured()]
 #' which submits jobs to the provider's batch API. This is typically more
@@ -73,7 +91,12 @@
 #' }
 #'
 #' @export
-qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes = NULL) {
+qlm_code <- function(x, codebook, model, ..., batch = FALSE, max_retries = 2L,
+                     name = NULL, notes = NULL) {
+  # Distinguishes a value the user chose from the default, so that the default
+  # never errors but an explicit setting is never silently ignored.
+  explicit_retries <- !missing(max_retries)
+
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
     codebook <- as_qlm_codebook(codebook)
@@ -110,6 +133,28 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes 
   dots <- list(...)
   dot_names <- names(dots)
 
+  if (!is.character(model) || length(model) != 1L || is.na(model)) {
+    cli::cli_abort(c(
+      "{.arg model} must be a single string.",
+      "i" = "Use the form {.val provider/model} or {.val provider}, for example {.val openai/gpt-4o-mini}."
+    ))
+  }
+
+  # Providers that do not enforce the output schema are coded by a dedicated
+  # handler instead of ellmer::parallel_chat_structured(); see code_handler_for().
+  handler <- code_handler_for(model)
+
+  # Repairing a response requires validating it, which only the JSON-mode
+  # handler does. Setting it for any other provider would have no effect, so
+  # say so rather than accepting a value that will not be applied.
+  if (explicit_retries && is.null(handler)) {
+    cli::cli_abort(c(
+      "{.arg max_retries} is not supported for model {.val {model}}.",
+      "i" = "It applies only to providers coded in JSON mode, such as {.val deepseek}.",
+      "i" = "For transport-level retries on any provider, set {.code options(ellmer_max_tries = )}."
+    ))
+  }
+
   # execution_args contains arguments for parallel_chat_structured or batch_chat_structured
   execution_arg_names <- unique(c(pcs_arg_names, batch_arg_names))
   execution_args <- dots[dot_names %in% execution_arg_names]
@@ -120,48 +165,65 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes 
   # to pass through to ellmer::chat() which forwards them to the provider
   chat_args <- dots[!dot_names %in% execution_arg_names]
 
-  # Build system prompt from role and instructions
-  system_prompt <- if (!is.null(codebook$role)) {
-    paste(codebook$role, codebook$instructions, sep = "\n\n")
+  # Metadata contributed by a provider-specific handler (empty for the default path)
+  backend_meta <- list()
+
+  if (!is.null(handler)) {
+    results <- handler(
+      x = x,
+      codebook = codebook,
+      model = model,
+      chat_args = chat_args,
+      execution_args = execution_args,
+      batch = batch,
+      max_retries = max_retries
+    )
+    backend_meta <- attr(results, "qlm_backend_meta") %||% list()
+    attr(results, "qlm_backend_meta") <- NULL
   } else {
-    codebook$instructions
-  }
+    # Build system prompt from role and instructions
+    system_prompt <- if (!is.null(codebook$role)) {
+      paste(codebook$role, codebook$instructions, sep = "\n\n")
+    } else {
+      codebook$instructions
+    }
 
-  # Build chat object using ellmer::chat()
-  chat <- do.call(ellmer::chat, c(
-    list(
-      name = model,
-      system_prompt = system_prompt
-    ),
-    chat_args
-  ))
-
-  # Prepare prompts based on input type
-  if (codebook$input_type == "image") {
-    prompts <- lapply(x, ellmer::content_image_file)
-  } else {
-    prompts <- as.list(x)
-  }
-
-  # Execute with appropriate function based on batch parameter
-  if (batch) {
-    results <- do.call(ellmer::batch_chat_structured, c(
+    # Build chat object using ellmer::chat()
+    chat <- do.call(ellmer::chat, c(
       list(
-        chat = chat,
-        prompts = prompts,
-        type = codebook$schema
+        name = model,
+        system_prompt = system_prompt
       ),
-      execution_args
+      chat_args
     ))
-  } else {
-    results <- do.call(ellmer::parallel_chat_structured, c(
-      list(
-        chat = chat,
-        prompts = prompts,
-        type = codebook$schema
-      ),
-      execution_args
-    ))
+
+    # Prepare prompts based on input type
+    if (codebook$input_type == "image") {
+      prompts <- lapply(x, ellmer::content_image_file)
+    } else {
+      prompts <- as.list(x)
+    }
+
+    # Execute with appropriate function based on batch parameter
+    if (batch) {
+      results <- do.call(ellmer::batch_chat_structured, c(
+        list(
+          chat = chat,
+          prompts = prompts,
+          type = codebook$schema
+        ),
+        execution_args
+      ))
+    } else {
+      results <- do.call(ellmer::parallel_chat_structured, c(
+        list(
+          chat = chat,
+          prompts = prompts,
+          type = codebook$schema
+        ),
+        execution_args
+      ))
+    }
   }
 
   # Add ID column from input names or sequence
@@ -183,6 +245,9 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes 
     R_version = paste(R.version$major, R.version$minor, sep = ".")
   )
 
+  # Fields contributed by a provider-specific handler (backend, max_retries, ...)
+  metadata <- c(metadata, backend_meta)
+
   # Add model to chat_args for easy access
   chat_args$name <- model
 
@@ -201,6 +266,30 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, name = NULL, notes 
     parent = NULL
   )
 }
+
+#' Resolve the coding handler for a model
+#'
+#' Providers that accept a JSON Schema but do not enforce it are coded by a
+#' dedicated handler rather than by [ellmer::parallel_chat_structured()]. This
+#' is the registry mapping a provider to its handler; adding a provider means
+#' adding an entry here and a handler function, not another branch in
+#' [qlm_code()].
+#'
+#' @param model Provider (and optionally model) name, as passed to [qlm_code()].
+#'
+#' @return The handler function, or `NULL` when the default
+#'   [ellmer::parallel_chat_structured()] path should be used.
+#' @keywords internal
+#' @noRd
+code_handler_for <- function(model) {
+  provider <- sub("/.*$", "", model)
+
+  switch(provider,
+    deepseek = code_handler_json,
+    NULL
+  )
+}
+
 
 #' Create a qlm_coded object (internal)
 #'
@@ -263,6 +352,9 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   if (!is.null(metadata$is_gold)) {
     object_meta$is_gold <- metadata$is_gold
   }
+  if (!is.null(metadata$backend)) {
+    object_meta$backend <- metadata$backend
+  }
 
   # Build user metadata: start with name and notes, then add custom metadata
   user_meta <- list(
@@ -272,7 +364,7 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
 
   # Add any custom metadata fields (exclude system, object, and user-handled fields)
   system_fields <- c("timestamp", "ellmer_version", "quallmer_version", "R_version")
-  object_fields <- c("n_units", "source", "is_gold")
+  object_fields <- c("n_units", "source", "is_gold", "backend")
   user_handled <- c("name", "notes")
   exclude_fields <- c(system_fields, object_fields, user_handled)
 
