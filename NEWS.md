@@ -2,6 +2,29 @@
 
 ## Bug fixes
 
+* `qlm_trail()` reports which endpoint each run actually used, and points at
+  the right ellmer help page for setting it up. The report derived a provider
+  by splitting the model string and mapped it through a four-name `if/else`
+  chain, which had gone stale three ways. The `google` branch could never fire,
+  because ellmer's providers are `google_gemini` and `google_vertex` and a
+  `google/` prefix does not resolve at all. Every OpenAI-compatible endpoint --
+  Qwen through Alibaba, Kimi through Moonshot, a vLLM box, a laptop -- reported
+  the same provider and the same instruction to configure credentials for
+  "openai_compatible", which for an audit trail whose purpose is telling runs
+  apart was the worst of the three. And roughly twenty providers ellmer ships
+  fell through to "configure credentials as needed". Runs are now identified by
+  provider *and* `base_url`, the rule `qlm_replicate()` already applies, so
+  endpoints differing only by port, path or scheme stay distinct. Credentials
+  embedded in a URL, as userinfo or as a query parameter, are stripped from the
+  endpoint labels this section prints; note that the Call section still shows
+  the call as written and the `.rds` still preserves `chat_args` whole. Ollama
+  is told it needs no key only where a loopback endpoint was recorded, since
+  ellmer reads `OLLAMA_API_KEY` for one served behind a proxy and resolves an
+  unset `base_url` through `OLLAMA_BASE_URL`, which may be remote.
+  The section is now "Provider and endpoint setup" rather than "Configure API
+  credentials", because several providers use IAM, OAuth or platform
+  credentials rather than a key (#130).
+
 * `qlm_compare(level = "interval", tolerance = )` counted a pair differing by
   exactly `tolerance` as disagreement or agreement depending on how the
   subtraction happened to round in binary. `1.1 - 1.0` is
