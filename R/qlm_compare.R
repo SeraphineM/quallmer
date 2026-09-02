@@ -24,8 +24,14 @@
 #'     \item Named list: Specify level for each variable
 #'   }
 #'   Valid levels are `"nominal"`, `"ordinal"`, `"interval"`, or `"ratio"`.
-#' @param tolerance Numeric. Tolerance for agreement with numeric data.
-#'   Default is 0 (exact agreement required). Used for percent agreement calculation.
+#' @param tolerance Numeric. Ratings agree when they differ by no more than
+#'   `tolerance`. Default is 0, meaning numerical equality. The comparison
+#'   allows a few units of floating-point rounding error scaled to the values
+#'   being compared, so a difference of exactly `tolerance` counts as agreement
+#'   and `0.1 + 0.2` equals `0.3`; it is numerical equality rather than bit
+#'   identity. The allowance is far smaller than any meaningful rating
+#'   difference, so a genuinely different pair is never counted as agreeing.
+#'   Used for percent agreement calculation.
 #' @param ci Confidence interval method:
 #'   \describe{
 #'     \item{`"none"`}{No confidence intervals (default)}
@@ -667,6 +673,42 @@ bootstrap_reliability_ci <- function(ratings, n_raters, level, tolerance, bootst
 #' @param tolerance Tolerance for agreement
 #' @param use_ci CI method: FALSE, "analytic", or "bootstrap"
 #'
+#' Do a unit's ratings agree, within tolerance?
+#'
+#' A raw `max(row) - min(row) <= tolerance` decides an exactly-at-tolerance
+#' pair on how the subtraction happens to round in binary. `1.1 - 1.0` is
+#' `0.10000000000000009` and fails at `tolerance = 0.1`, while `1.2 - 1.1` is
+#' `0.09999999999999987` and passes -- the same nominal difference, opposite
+#' answers. On decimal-increment scales that is common rather than exotic, and
+#' the reported agreement was understated as a result (#121).
+#'
+#' The allowance is a few units in the last place, scaled to the magnitudes
+#' involved, so it tracks the representational error actually available at that
+#' scale. Deliberately not `sqrt(.Machine$double.eps)`, which at ordinary
+#' magnitudes is around `1.5e-8` and would count a real `1e-9` difference as
+#' exact agreement at `tolerance = 0` -- over-reporting agreement, the more
+#' damaging direction for a reliability statistic. Deliberately not
+#' [all.equal()] either, whose approximate-equality semantics are far broader
+#' than rounding error.
+#'
+#' @param row Numeric ratings for one unit, one per rater.
+#' @param tolerance Numeric scalar. Largest difference still counted as
+#'   agreement.
+#'
+#' @return `TRUE` if the ratings agree within `tolerance`.
+#' @keywords internal
+#' @noRd
+agrees_within_tolerance <- function(row, tolerance) {
+  lower <- min(row)
+  upper <- max(row)
+
+  scale <- max(1, abs(lower), abs(upper), abs(tolerance))
+  epsilon <- 4 * .Machine$double.eps * scale
+
+  upper - lower <= tolerance + epsilon
+}
+
+
 #' @return List with all computed measures (and optionally CIs)
 #' @keywords internal
 #' @noRd
@@ -680,7 +722,7 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
   # For ordinal/interval/ratio: agreement within tolerance
   agrees <- apply(ratings, 1, function(row) {
     if (is.numeric(row)) {
-      max(row) - min(row) <= tolerance
+      agrees_within_tolerance(row, tolerance)
     } else {
       length(unique(as.character(row))) == 1
     }

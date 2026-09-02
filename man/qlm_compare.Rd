@@ -37,8 +37,14 @@ compared. Can be a single variable (\code{by = sentiment}), a character vector
 }
 Valid levels are \code{"nominal"}, \code{"ordinal"}, \code{"interval"}, or \code{"ratio"}.}
 
-\item{tolerance}{Numeric. Tolerance for agreement with numeric data.
-Default is 0 (exact agreement required). Used for percent agreement calculation.}
+\item{tolerance}{Numeric. Ratings agree when they differ by no more than
+\code{tolerance}. Default is 0, meaning numerical equality. The comparison
+allows a few units of floating-point rounding error scaled to the values
+being compared, so a difference of exactly \code{tolerance} counts as agreement
+and \code{0.1 + 0.2} equals \code{0.3}; it is numerical equality rather than bit
+identity. The allowance is far smaller than any meaningful rating
+difference, so a genuinely different pair is never counted as agreeing.
+Used for percent agreement calculation.}
 
 \item{ci}{Confidence interval method:
 \describe{

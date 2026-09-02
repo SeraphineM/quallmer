@@ -551,3 +551,93 @@ test_that("qlm_compare validates by_category argument", {
     "by_category"
   )
 })
+
+
+# ---- agreement at exactly the tolerance boundary (#121) ---------------------
+
+# Cases about the predicate itself are tested directly: routing them through
+# qlm_compare() would need >= 2 units purely to keep ICC quiet, which would
+# obscure what each case is actually pinning.
+
+compare_pair <- function(a, b, tolerance, level = "interval") {
+  x <- as_qlm_coded(data.frame(.id = seq_along(a), g = a), id = .id, name = "A")
+  y <- as_qlm_coded(data.frame(.id = seq_along(b), g = b), id = .id, name = "B")
+  res <- as.data.frame(
+    qlm_compare(x, y, by = "g", level = level, tolerance = tolerance)
+  )
+  res$value[res$measure == "percent_agreement"]
+}
+
+
+test_that("a difference of exactly the tolerance counts as agreement (#121)", {
+  # The reported case, end to end. Correct agreement is 4/4; a raw `<=` on the
+  # subtraction gave 0.5.
+  a <- c(1.1, 1.2, 1.3, 0.9)
+  b <- c(1.0, 1.1, 1.2, 0.9)
+
+  expect_equal(compare_pair(a, b, tolerance = 0.1), 1)
+})
+
+
+test_that("each at-tolerance pair agrees individually (#121)", {
+  # Pairwise, because only two of the three failed: a test built solely on
+  # 1.2/1.1 would have passed against the broken comparison.
+  expect_true(agrees_within_tolerance(c(1.1, 1.0), 0.1))
+  expect_true(agrees_within_tolerance(c(1.2, 1.1), 0.1))
+  expect_true(agrees_within_tolerance(c(1.3, 1.2), 0.1))
+})
+
+
+test_that("a difference beyond the tolerance still disagrees (#121)", {
+  # The guard that the comparison was corrected rather than loosened.
+  expect_false(agrees_within_tolerance(c(1.0 + 0.1 + 1e-6, 1.0), 0.1))
+  expect_false(agrees_within_tolerance(c(1.2, 1.0), 0.1))
+  expect_equal(compare_pair(c(1.2, 1.1), c(1.0, 1.2), tolerance = 0.1), 0.5)
+})
+
+
+test_that("other decimal grids work at their own increment (#121)", {
+  expect_equal(compare_pair(c(0.25, 0.75), c(0.5, 1.0), tolerance = 0.25), 1)
+  expect_equal(compare_pair(c(1.5, 2.5), c(1.0, 2.0), tolerance = 0.5), 1)
+  expect_equal(compare_pair(c(0.3, 0.6), c(0.2, 0.5), tolerance = 0.1), 1)
+})
+
+
+test_that("tolerance = 0 means numerical equality, not bit identity (#121)", {
+  # 0.1 + 0.2 is 0.30000000000000004, the same number for any measurement
+  # purpose.
+  expect_true(agrees_within_tolerance(c(0.1 + 0.2, 0.3), 0))
+  expect_equal(compare_pair(c(0.1 + 0.2, 1), c(0.3, 1), tolerance = 0), 1)
+
+  # A real difference is still a difference. This is what rules out
+  # sqrt(.Machine$double.eps): at about 1.5e-8 it would call this agreement,
+  # over-reporting, which is the more damaging direction for a reliability
+  # statistic.
+  expect_false(agrees_within_tolerance(c(0, 1e-9), 0))
+  expect_equal(compare_pair(c(1, 2), c(1, 3), tolerance = 0), 0.5)
+})
+
+
+test_that("the boundary holds at large magnitudes too (#121)", {
+  # The epsilon scales with the values, so it tracks the precision actually
+  # available there rather than assuming ratings are of order 1.
+  expect_true(agrees_within_tolerance(c(1e6 + 0.1, 1e6), 0.1))
+  expect_false(agrees_within_tolerance(c(1e6 + 0.2, 1e6), 0.1))
+  expect_true(agrees_within_tolerance(c(1e8 + 0.1, 1e8), 0.1))
+  expect_false(agrees_within_tolerance(c(1e8 + 0.2, 1e8), 0.1))
+})
+
+
+test_that("agrees_within_tolerance() handles more than two raters (#121)", {
+  # The comparison is on max - min, so a third rater inside the band must not
+  # change the verdict.
+  expect_true(agrees_within_tolerance(c(1.0, 1.05, 1.1), 0.1))
+  expect_false(agrees_within_tolerance(c(1.0, 1.05, 1.2), 0.1))
+  expect_true(agrees_within_tolerance(1.0, 0))
+})
+
+
+test_that("nominal comparison is unaffected by the tolerance change (#121)", {
+  expect_equal(compare_pair(c("a", "b"), c("a", "b"), tolerance = 0, level = "nominal"), 1)
+  expect_equal(compare_pair(c("a", "b"), c("a", "c"), tolerance = 0, level = "nominal"), 0.5)
+})
