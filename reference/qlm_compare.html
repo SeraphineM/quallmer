@@ -109,8 +109,14 @@ compared. Can be a single variable (<code>by = sentiment</code>), a character ve
 
 
 <dt id="arg-tolerance">tolerance<a class="anchor" aria-label="anchor" href="#arg-tolerance"></a></dt>
-<dd><p>Numeric. Tolerance for agreement with numeric data.
-Default is 0 (exact agreement required). Used for percent agreement calculation.</p></dd>
+<dd><p>Numeric. Ratings agree when they differ by no more than
+<code>tolerance</code>. Default is 0, meaning numerical equality. The comparison
+allows a few units of floating-point rounding error scaled to the values
+being compared, so a difference of exactly <code>tolerance</code> counts as agreement
+and <code>0.1 + 0.2</code> equals <code>0.3</code>; it is numerical equality rather than bit
+identity. The allowance is far smaller than any meaningful rating
+difference, so a genuinely different pair is never counted as agreeing.
+Used for percent agreement calculation.</p></dd>
 
 
 <dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
