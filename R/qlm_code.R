@@ -224,6 +224,11 @@ qlm_code <- function(x, codebook, model, ...,
     ))
   }
 
+  # A prefix ellmer cannot dispatch on is knowable without asking the provider
+  # anything, so say so here rather than letting ellmer::chat() abort with
+  # "Can't find provider ellmer::chat_qwen()".
+  check_model_provider(model)
+
   # Providers whose API rejects the schema-constrained request skip straight to
   # JSON mode rather than spending a wasted round trip; see
   # default_structured_mode().
@@ -398,7 +403,7 @@ qlm_code <- function(x, codebook, model, ...,
 #' @keywords internal
 #' @noRd
 default_structured_mode <- function(model) {
-  provider <- sub("/.*$", "", model)
+  provider <- model_provider(model)
 
   switch(provider,
     deepseek = "json",

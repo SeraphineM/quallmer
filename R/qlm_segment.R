@@ -138,6 +138,11 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
     ))
   }
 
+  # Dispatches by name through ellmer::chat() just as qlm_code() does, so an
+  # unreachable prefix gets the same explanation here. Checked after the input
+  # and codebook, which are the more fundamental problems when both are wrong.
+  check_model_provider(model)
+
   # Build internal schema: text field prepended to user-defined fields
   user_props <- codebook$schema@properties
   items_schema <- do.call(

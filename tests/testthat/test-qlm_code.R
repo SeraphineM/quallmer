@@ -292,7 +292,7 @@ test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
   mockery::stub(f, "try_structured_call", tsc)
 
   # Call with a provider-specific argument (like base_url for openai_compatible)
-  f(c("text1", "text2"), codebook, model = "test/model",
+  f(c("text1", "text2"), codebook, model = "openai_compatible/test-model",
            base_url = "https://my-api.com/v1")
 
   # Verify the provider-specific argument was passed through to ellmer::chat
@@ -319,7 +319,7 @@ test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
   mockery::stub(f, "try_structured_call", tsc)
 
   result <- f(c("text1", "text2"), codebook,
-                     model = "test/model", batch = FALSE)
+                     model = "openai_compatible/test-model", batch = FALSE)
 
   # Verify parallel_chat_structured was called
   mockery::expect_called(mock_pcs, 1)
@@ -350,7 +350,7 @@ test_that("qlm_code uses batch_chat_structured when batch=TRUE", {
   # Use an execution arg that's valid (convert is in both parallel and batch)
   result <- suppressWarnings(
     f(c("text1", "text2"), codebook,
-      model = "test/model", batch = TRUE,
+      model = "openai_compatible/test-model", batch = TRUE,
       convert = TRUE)
   )
 
@@ -381,7 +381,7 @@ test_that("qlm_code builds metadata correctly", {
   mockery::stub(f, "try_structured_call", tsc)
 
   result <- f(c("text1", "text2", "text3"), codebook,
-              model = "test/model")
+              model = "openai_compatible/test-model")
 
   meta_attr <- attr(result, "meta")
 
