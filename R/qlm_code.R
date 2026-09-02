@@ -208,14 +208,8 @@ qlm_code <- function(x, codebook, model, ...,
   }
 
   # Get valid argument names from ellmer functions
-  chat_arg_names <- names(formals(ellmer::chat))
   pcs_arg_names <- names(formals(ellmer::parallel_chat_structured))
   batch_arg_names <- names(formals(ellmer::batch_chat_structured))
-
-  # Common model parameters that should go in params
-  model_param_names <- c("temperature", "max_tokens", "top_p", "top_k",
-                         "frequency_penalty", "presence_penalty", "stop",
-                         "seed", "response_format")
 
   # Route ... arguments
   # execution_args go to parallel_chat_structured or batch_chat_structured
