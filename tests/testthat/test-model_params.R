@@ -186,3 +186,52 @@ test_that("a malformed model is still reported before a stray parameter (#139)",
     "Can't reach provider"
   )
 })
+
+
+test_that("check_model_params() leaves a malformed model to the caller (#139)", {
+  # Same contract as check_model_provider(). Without it, a length > 1 model
+  # reached get0() and died with "first argument has length > 1", and an NA
+  # model resolved to no provider and reported the parameter instead.
+  expect_silent(check_model_params("max_tokens", c("openai", "anthropic")))
+  expect_silent(check_model_params("max_tokens", NA_character_))
+  expect_silent(check_model_params("max_tokens", 42))
+  expect_silent(check_model_params("max_tokens", NULL))
+  expect_silent(check_model_params("max_tokens", character(0)))
+})
+
+
+test_that("qlm_segment() reports a malformed model before a stray parameter (#139)", {
+  skip_if_not_installed("quanteda")
+  cb <- test_codebook()
+
+  # qlm_segment() has no model validation of its own and defers to ellmer's
+  # check_string(), so the message here is ellmer's rather than qlm_code()'s.
+  expect_error(
+    qlm_segment("A sentence.", cb, model = c("openai", "anthropic"), max_tokens = 1),
+    "must be a single string"
+  )
+  expect_error(
+    qlm_segment("A sentence.", cb, model = "quallmer_unknown_provider_7f3c/m", max_tokens = 1),
+    "Can't reach provider"
+  )
+})
+
+
+test_that("a malformed model reports the same way whether or not ... is passed (#139)", {
+  skip_if_not_installed("quanteda")
+  cb <- test_codebook()
+
+  # The actual defect: the reported error depended on whether `...` happened to
+  # be empty, so the crash only appeared for callers who passed something.
+  bare <- tryCatch(
+    qlm_segment("A sentence.", cb, model = c("openai", "anthropic")),
+    error = conditionMessage
+  )
+  with_dots <- tryCatch(
+    qlm_segment("A sentence.", cb, model = c("openai", "anthropic"), max_tokens = 1),
+    error = conditionMessage
+  )
+
+  expect_equal(with_dots, bare)
+  expect_false(grepl("length > 1", with_dots, fixed = TRUE))
+})

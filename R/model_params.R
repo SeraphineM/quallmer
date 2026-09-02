@@ -86,6 +86,16 @@ check_model_params <- function(dot_names, model, call = rlang::caller_env()) {
     return(invisible(dot_names))
   }
 
+  # Same contract as check_model_provider(): a malformed `model` is the
+  # caller's to report, or ellmer's. Without this, `qlm_segment()` -- which has
+  # no model validation of its own -- reached get0() with a length-2 prefix and
+  # died with "first argument has length > 1", and an `NA` model resolved to no
+  # provider and reported the parameter instead of the model. Either way the
+  # error depended on whether `...` happened to be empty.
+  if (!is.character(model) || length(model) != 1L || is.na(model)) {
+    return(invisible(dot_names))
+  }
+
   candidates <- setdiff(
     c(model_param_names(), model_param_aliases),
     top_level_arg_names(model)
