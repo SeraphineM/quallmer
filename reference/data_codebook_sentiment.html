@@ -111,16 +111,23 @@ polarity scale that includes a "mixed" category.</p>
 <span class="r-in"><span>                  <span class="va">data_codebook_sentiment</span>,</span></span>
 <span class="r-in"><span>                  model <span class="op">=</span> <span class="st">"openai"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-5.4"</span>.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Structured output failed; falling back to JSON mode with local validation.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">✖</span> Can't find env var `OPENAI_API_KEY`.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-5.4"</span>.</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in openai_key():</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create multiple coded versions for comparison</span></span></span>
 <span class="r-in"><span><span class="va">coded1</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>                   <span class="va">data_codebook_sentiment</span>,</span></span>
 <span class="r-in"><span>                   model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Structured output failed; falling back to JSON mode with local validation.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">✖</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in openai_key():</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-in"><span><span class="va">coded2</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">data_corpus_LMRDsample</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>                   <span class="va">data_codebook_sentiment</span>,</span></span>
 <span class="r-in"><span>                   model <span class="op">=</span> <span class="st">"openai/gpt-4o"</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Structured output failed; falling back to JSON mode with local validation.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">✖</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in openai_key():</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Compare inter-rater reliability</span></span></span>
