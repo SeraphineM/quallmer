@@ -16,7 +16,9 @@
   percent agreement computed on a non-integer scale should recompute it.
   `tolerance = 0` now means numerical equality rather than bit identity, so
   `0.1 + 0.2` counts as equal to `0.3`, while a genuine difference of `1e-9` is
-  still a difference (#121).
+  still a difference. A non-finite rating takes the plain comparison, since an
+  infinite magnitude would otherwise scale the allowance to infinity and report
+  a finite rating as agreeing with an infinite one (#121).
 
 * `qlm_code()` and `qlm_segment()` now reject a model parameter passed at the
   top level. `max_tokens = 100` used to fall through to `chat_args` and reach

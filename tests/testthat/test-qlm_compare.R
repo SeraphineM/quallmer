@@ -619,12 +619,37 @@ test_that("tolerance = 0 means numerical equality, not bit identity (#121)", {
 
 
 test_that("the boundary holds at large magnitudes too (#121)", {
-  # The epsilon scales with the values, so it tracks the precision actually
-  # available there rather than assuming ratings are of order 1.
+  # 2^28 is where this actually bites: (2^28 + 0.1) - 2^28 is
+  # 0.10000002384185791, so a raw comparison and a fixed small epsilon both
+  # reject it, and only an epsilon scaled to the magnitude accepts it. The 1e6
+  # and 1e8 cases below round the other way and pass even the broken
+  # comparison, so they are sanity checks rather than discriminating ones.
+  expect_true(agrees_within_tolerance(c(2^28 + 0.1, 2^28), 0.1))
+  expect_false(agrees_within_tolerance(c(2^28 + 0.3, 2^28), 0.1))
+
   expect_true(agrees_within_tolerance(c(1e6 + 0.1, 1e6), 0.1))
   expect_false(agrees_within_tolerance(c(1e6 + 0.2, 1e6), 0.1))
   expect_true(agrees_within_tolerance(c(1e8 + 0.1, 1e8), 0.1))
-  expect_false(agrees_within_tolerance(c(1e8 + 0.2, 1e8), 0.1))
+})
+
+
+test_that("a non-finite rating is not counted as agreement (#121)", {
+  # Scaling to the magnitudes involved is meaningless once one is infinite: the
+  # scale becomes Inf, so does the epsilon, and `Inf <= Inf` reported a finite
+  # rating as agreeing with an infinite one. Non-finite rows take the plain
+  # comparison, which is what they did before the tolerance fix.
+  expect_false(agrees_within_tolerance(c(1, Inf), 0))
+  expect_false(agrees_within_tolerance(c(1, -Inf), 0))
+  expect_false(agrees_within_tolerance(c(-Inf, Inf), 0))
+  expect_false(agrees_within_tolerance(c(1, Inf), 1e6))
+
+  # Inf - Inf and anything with NaN are NA, unchanged from before.
+  expect_true(is.na(agrees_within_tolerance(c(Inf, Inf), 0)))
+  expect_true(is.na(agrees_within_tolerance(c(1, NaN), 0)))
+
+  # Finite comparisons are untouched by the guard.
+  expect_true(agrees_within_tolerance(c(1.1, 1.0), 0.1))
+  expect_false(agrees_within_tolerance(c(0, 1e-9), 0))
 })
 
 

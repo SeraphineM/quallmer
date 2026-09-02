@@ -665,14 +665,6 @@ bootstrap_reliability_ci <- function(ratings, n_raters, level, tolerance, bootst
 }
 
 
-#' Compute all reliability statistics for a given level
-#'
-#' @param ratings Matrix where rows are subjects and columns are raters
-#' @param n_raters Number of raters
-#' @param level Measurement level
-#' @param tolerance Tolerance for agreement
-#' @param use_ci CI method: FALSE, "analytic", or "bootstrap"
-#'
 #' Do a unit's ratings agree, within tolerance?
 #'
 #' A raw `max(row) - min(row) <= tolerance` decides an exactly-at-tolerance
@@ -691,6 +683,11 @@ bootstrap_reliability_ci <- function(ratings, n_raters, level, tolerance, bootst
 #' [all.equal()] either, whose approximate-equality semantics are far broader
 #' than rounding error.
 #'
+#' A non-finite rating gets the plain comparison. Scaling to the magnitudes
+#' involved is meaningless once one of them is infinite, and an infinite scale
+#' makes an infinite epsilon, under which `Inf <= Inf` reports agreement
+#' between a finite rating and an infinite one.
+#'
 #' @param row Numeric ratings for one unit, one per rater.
 #' @param tolerance Numeric scalar. Largest difference still counted as
 #'   agreement.
@@ -702,6 +699,10 @@ agrees_within_tolerance <- function(row, tolerance) {
   lower <- min(row)
   upper <- max(row)
 
+  if (!is.finite(lower) || !is.finite(upper)) {
+    return(upper - lower <= tolerance)
+  }
+
   scale <- max(1, abs(lower), abs(upper), abs(tolerance))
   epsilon <- 4 * .Machine$double.eps * scale
 
@@ -709,6 +710,14 @@ agrees_within_tolerance <- function(row, tolerance) {
 }
 
 
+#' Compute all reliability statistics for a given level
+#'
+#' @param ratings Matrix where rows are subjects and columns are raters
+#' @param n_raters Number of raters
+#' @param level Measurement level
+#' @param tolerance Tolerance for agreement
+#' @param use_ci CI method: FALSE, "analytic", or "bootstrap"
+#'
 #' @return List with all computed measures (and optionally CIs)
 #' @keywords internal
 #' @noRd
