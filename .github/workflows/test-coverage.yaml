@@ -12,11 +12,13 @@ permissions: read-all
 jobs:
   test-coverage:
     runs-on: ubuntu-latest
+    # Healthy runs take ~2m10s. See #126.
+    timeout-minutes: 20
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: r-lib/actions/setup-r@v2
         with:

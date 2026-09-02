@@ -13,10 +13,12 @@ permissions:
 jobs:
   render-readme:
     runs-on: ubuntu-latest
+    # Same setup-r apt exposure as the others. See #126.
+    timeout-minutes: 20
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
