@@ -109,6 +109,13 @@ Arguments recognized by <code><a href="https://ellmer.tidyverse.org/reference/pa
 <code>api_args</code> for OpenAI-compatible endpoints) are passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.</p></dd>
 
 
+<dt id="arg-batch">batch<a class="anchor" aria-label="anchor" href="#arg-batch"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, uses <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
+instead of <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code>. Batch processing is more
+cost-effective for large jobs but may have longer turnaround times.
+Default is <code>FALSE</code>. See <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code> for details.</p></dd>
+
+
 <dt id="arg-max-retries">max_retries<a class="anchor" aria-label="anchor" href="#arg-max-retries"></a></dt>
 <dd><p>Number of additional attempts made for a response that
 arrives intact but does not conform to the codebook schema. Applies only to
@@ -117,13 +124,6 @@ provider is an error. Default is 2, giving at most three attempts per unit.
 This is separate from ellmer's transport-level retries for rate limits and
 server errors, which apply to every provider and are set with
 <code>options(ellmer_max_tries = )</code>.</p></dd>
-
-
-<dt id="arg-batch">batch<a class="anchor" aria-label="anchor" href="#arg-batch"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, uses <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
-instead of <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code>. Batch processing is more
-cost-effective for large jobs but may have longer turnaround times.
-Default is <code>FALSE</code>. See <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code> for details.</p></dd>
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
