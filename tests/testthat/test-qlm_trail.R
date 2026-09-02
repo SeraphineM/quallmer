@@ -695,3 +695,151 @@ test_that("qlm_trail() reproducibility advice uses the form that works (#127)", 
     content, fixed = TRUE
   )))
 })
+
+
+# ---- provider and endpoint setup section (#130) -----------------------------
+
+endpoint_fixture <- function(name, base_url = NULL, run = "run1") {
+  coded <- data.frame(.id = 1:2, polarity = c("pos", "neg"))
+  class(coded) <- c("qlm_coded", "data.frame")
+  chat_args <- list(name = name)
+  if (!is.null(base_url)) chat_args$base_url <- base_url
+  attr(coded, "run") <- list(
+    name = run, parent = NULL, call = quote(qlm_code(x, cb)),
+    metadata = list(timestamp = as.POSIXct("2024-01-01 12:00:00"), n_units = 2),
+    chat_args = chat_args,
+    codebook = list(name = "sentiment", instructions = "Code sentiment")
+  )
+  coded
+}
+
+setup_section <- function(...) {
+  path <- file.path(tempdir(), "test_trail_endpoints")
+  withr::defer_parent(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(..., path = path)
+  content <- readLines(paste0(path, ".qmd"))
+  start <- grep("^### Provider and endpoint setup$", content)
+  if (length(start) == 0) return(character(0))
+  rest <- content[start:length(content)]
+  rest[seq_len(grep("^### ", rest)[2] - 1L)]
+}
+
+
+test_that("endpoints on the same host but different ports stay distinct (#130)", {
+  section <- setup_section(
+    endpoint_fixture("vllm/a", "http://localhost:8000/v1", "one"),
+    endpoint_fixture("vllm/b", "http://localhost:1234/v1", "two")
+  )
+
+  expect_true(any(grepl("localhost:8000/v1", section, fixed = TRUE)))
+  expect_true(any(grepl("localhost:1234/v1", section, fixed = TRUE)))
+  expect_equal(sum(grepl("^# vllm at", section)), 2)
+})
+
+
+test_that("endpoints on the same host but different paths stay distinct (#130)", {
+  section <- setup_section(
+    endpoint_fixture("openai_compatible/a", "https://gw.example.com/team-a/v1", "one"),
+    endpoint_fixture("openai_compatible/b", "https://gw.example.com/team-b/v1", "two")
+  )
+
+  expect_true(any(grepl("gw.example.com/team-a/v1", section, fixed = TRUE)))
+  expect_true(any(grepl("gw.example.com/team-b/v1", section, fixed = TRUE)))
+  expect_equal(sum(grepl("^# openai_compatible at", section)), 2)
+})
+
+
+test_that("OpenAI-compatible endpoints are no longer collapsed into one (#130)", {
+  # The worst of the three symptoms: Qwen and Kimi both arrive as
+  # `openai_compatible`, and the report used to name only that prefix.
+  section <- setup_section(
+    endpoint_fixture("openai_compatible/qwen3-max",
+                     "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "one"),
+    endpoint_fixture("openai_compatible/kimi-k3", "https://api.moonshot.ai/v1", "two")
+  )
+
+  expect_true(any(grepl("dashscope-intl.aliyuncs.com", section, fixed = TRUE)))
+  expect_true(any(grepl("api.moonshot.ai", section, fixed = TRUE)))
+})
+
+
+test_that("a credential in the URL never reaches the report (#130)", {
+  # A trail is written to be handed to someone else. Credentials arrive both as
+  # userinfo and as a query parameter.
+  section <- setup_section(endpoint_fixture(
+    "openai_compatible/m", "https://user:tok3n@api.example.com/v1?api_key=abc#frag"
+  ))
+
+  expect_false(any(grepl("tok3n", section, fixed = TRUE)))
+  expect_false(any(grepl("api_key=abc", section, fixed = TRUE)))
+  expect_false(any(grepl("user:", section, fixed = TRUE)))
+  expect_false(any(grepl("#frag", section, fixed = TRUE)))
+  expect_true(any(grepl("api.example.com/v1", section, fixed = TRUE)))
+})
+
+
+test_that("Ollama is only told it needs no key when the endpoint is local (#130)", {
+  # ellmer reads OLLAMA_API_KEY through ollama_credentials() and takes
+  # OLLAMA_BASE_URL, so a blanket "running locally" is wrong behind a proxy.
+  local_section <- setup_section(endpoint_fixture("ollama/llama3.2"))
+  expect_true(any(grepl("no API key for a local endpoint", local_section, fixed = TRUE)))
+  expect_true(any(grepl("?ellmer::chat_ollama", local_section, fixed = TRUE)))
+
+  remote_section <- setup_section(
+    endpoint_fixture("ollama/llama3.2", "https://ollama.corp.example.com")
+  )
+  expect_false(any(grepl("no API key", remote_section, fixed = TRUE)))
+  expect_true(any(grepl("?ellmer::chat_ollama", remote_section, fixed = TRUE)))
+})
+
+
+test_that("every ellmer provider gets a real pointer, not a generic non-answer (#130)", {
+  section <- setup_section(
+    endpoint_fixture("google_gemini/gemini-2.5-flash", run = "one"),
+    endpoint_fixture("deepseek/deepseek-chat", run = "two"),
+    endpoint_fixture("aws_bedrock/claude", run = "three")
+  )
+
+  expect_true(any(grepl("?ellmer::chat_google_gemini", section, fixed = TRUE)))
+  expect_true(any(grepl("?ellmer::chat_deepseek", section, fixed = TRUE)))
+  expect_true(any(grepl("?ellmer::chat_aws_bedrock", section, fixed = TRUE)))
+  expect_false(any(grepl("Configure API credentials as needed", section, fixed = TRUE)))
+})
+
+
+test_that("a provider the installed ellmer lacks gets no broken help link (#130)", {
+  # `google` is the shape of a trail recorded before qlm_code() began
+  # rejecting prefixes ellmer cannot dispatch on. `?ellmer::chat_google` does
+  # not exist, so it must not be offered.
+  section <- setup_section(endpoint_fixture("google/gemini-2.5-flash"))
+
+  expect_false(any(grepl("?ellmer::chat_google", section, fixed = TRUE)))
+  expect_true(any(grepl("not one the installed ellmer offers", section, fixed = TRUE)))
+  expect_true(any(grepl("ellmer.tidyverse.org/reference/index.html", section, fixed = TRUE)))
+})
+
+
+test_that("a missing or unusable base_url degrades to the provider alone (#130)", {
+  for (value in list(NULL, NA_character_, "", 42, c("a", "b"))) {
+    section <- setup_section(endpoint_fixture("openai/gpt-4o-mini", base_url = value))
+    expect_true(any(grepl("^# openai$", section)), info = paste(class(value), length(value)))
+    expect_false(any(grepl(" at NA", section, fixed = TRUE)))
+    expect_true(any(grepl("?ellmer::chat_openai", section, fixed = TRUE)))
+  }
+})
+
+
+test_that("a run with no recorded model name does not break the section (#130)", {
+  coded <- data.frame(.id = 1:2, polarity = c("pos", "neg"))
+  class(coded) <- c("qlm_coded", "data.frame")
+  attr(coded, "run") <- list(
+    name = "nameless", parent = NULL, call = quote(qlm_code(x, cb)),
+    metadata = list(timestamp = as.POSIXct("2024-01-01 12:00:00"), n_units = 2),
+    chat_args = list(),
+    codebook = list(name = "sentiment", instructions = "Code sentiment")
+  )
+
+  # qlm_trail() reports where it saved, so silence is not the assertion here.
+  expect_no_error(section <- setup_section(coded))
+  expect_length(section, 0)
+})

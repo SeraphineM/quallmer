@@ -631,35 +631,64 @@ generate_trail_report <- function(trail, file) {
   lines <- c(lines, "```")
   lines <- c(lines, "")
 
-  # Collect unique providers from runs
-  providers <- unique(unlist(lapply(trail$runs, function(r) {
-    if (!is.null(r$chat_args$name)) {
-      strsplit(r$chat_args$name, "/")[[1]][1]
+  # One entry per distinct endpoint actually used. Identity is the provider
+  # prefix *and* the base_url, matching qlm_replicate(): everything ellmer has
+  # no chat_*() for arrives as `openai_compatible`, so the prefix alone would
+  # collapse unrelated services into one line.
+  endpoints <- lapply(trail$runs, function(r) {
+    if (is.null(r$chat_args$name)) {
+      return(NULL)
     }
-  })))
-  providers <- providers[!is.na(providers)]
+    identity <- endpoint_identity(r$chat_args$base_url)
+    list(
+      provider = model_provider(r$chat_args$name),
+      identity = identity,
+      key = paste0(model_provider(r$chat_args$name), "\r", identity)
+    )
+  })
+  endpoints <- endpoints[!vapply(endpoints, is.null, logical(1))]
+  endpoints <- endpoints[!duplicated(vapply(endpoints, function(e) e$key, character(1)))]
 
-  if (length(providers) > 0) {
-    lines <- c(lines, "Configure API credentials for the models used:")
+  if (length(endpoints) > 0) {
+    known <- ellmer_providers()
+
+    lines <- c(lines, "### Provider and endpoint setup")
+    lines <- c(lines, "")
+    lines <- c(lines, paste(
+      "Credentials are not recorded in the trail. Set up each provider below as",
+      "its ellmer help page describes -- the requirements differ, from an API key",
+      "to platform IAM to none at all."
+    ))
     lines <- c(lines, "")
     lines <- c(lines, "```r")
-    for (provider in providers) {
-      if (provider == "openai") {
-        lines <- c(lines, "# OpenAI: Set OPENAI_API_KEY environment variable")
-        lines <- c(lines, "# Sys.setenv(OPENAI_API_KEY = \"your-api-key\")")
-      } else if (provider == "anthropic") {
-        lines <- c(lines, "# Anthropic: Set ANTHROPIC_API_KEY environment variable")
-        lines <- c(lines, "# Sys.setenv(ANTHROPIC_API_KEY = \"your-api-key\")")
-      } else if (provider == "google") {
-        lines <- c(lines, "# Google: Set GOOGLE_API_KEY environment variable")
-        lines <- c(lines, "# Sys.setenv(GOOGLE_API_KEY = \"your-api-key\")")
-      } else if (provider == "ollama") {
-        lines <- c(lines, "# Ollama: Ensure Ollama is running locally")
-        lines <- c(lines, "# See: https://ollama.ai/")
+
+    for (endpoint in endpoints) {
+      label <- endpoint_label(endpoint$identity)
+      heading <- if (is.na(label)) {
+        paste0("# ", endpoint$provider)
       } else {
-        lines <- c(lines, paste0("# ", provider, ": Configure API credentials as needed"))
+        paste0("# ", endpoint$provider, " at ", label)
+      }
+      lines <- c(lines, heading)
+
+      if (endpoint$provider %in% known) {
+        lines <- c(lines, paste0("#   see ?ellmer::chat_", endpoint$provider))
+      } else {
+        # Recorded before qlm_code() began rejecting prefixes ellmer cannot
+        # dispatch on, so there is no help topic to send the reader to.
+        lines <- c(lines, "#   this provider is not one the installed ellmer offers")
+        lines <- c(lines, "#   see https://ellmer.tidyverse.org/reference/index.html")
+      }
+
+      # Ollama needs no key on a local endpoint, but ellmer reads
+      # OLLAMA_API_KEY when one is served behind a proxy, so this is said only
+      # where it is true.
+      if (identical(endpoint$provider, "ollama") && is_local_endpoint(endpoint$identity)) {
+        lines <- c(lines, "#   no API key for a local endpoint; ensure Ollama is running")
+        lines <- c(lines, "#   https://ollama.com")
       }
     }
+
     lines <- c(lines, "```")
     lines <- c(lines, "")
   }
@@ -934,4 +963,84 @@ deparse_value <- function(value) {
 #' @noRd
 format_param <- function(name, value) {
   paste0(name, " = ", deparse_value(value))
+}
+
+
+#' Normalised endpoint identity for a run
+#'
+#' Two runs are against the same endpoint when the provider prefix *and* the
+#' `base_url` match, which is the rule [qlm_replicate()] already applies: every
+#' provider ellmer has no `chat_*()` for is reached as
+#' `openai_compatible/<model>`, so the prefix alone cannot tell Qwen through
+#' Alibaba from Kimi through Moonshot, nor one local server from another.
+#'
+#' The host alone is not enough either. `localhost:8000` and `localhost:1234`
+#' are different servers, `/team-a/v1` and `/team-b/v1` on one gateway are
+#' different deployments, and `http` and `https` are different endpoints. So
+#' the whole URL is kept, minus any userinfo -- a credential embedded as
+#' `https://user:token@host` is not part of the endpoint's identity and must
+#' never be recorded as though it were.
+#'
+#' @param base_url A recorded `chat_args$base_url`, possibly `NULL` or `NA`.
+#'
+#' @return A single string, or `NA_character_` when no usable URL was recorded.
+#' @keywords internal
+#' @noRd
+endpoint_identity <- function(base_url) {
+  if (length(base_url) != 1L || !is.character(base_url) || is.na(base_url) ||
+      !nzchar(base_url)) {
+    return(NA_character_)
+  }
+
+  url <- sub("^(\\w+://)[^/@]*@", "\\1", base_url)  # drop userinfo
+  sub("/+$", "", url)
+}
+
+
+#' Endpoint label safe to print in a shared report
+#'
+#' The identity minus query and fragment. A credential is as likely to arrive
+#' as `?api_key=` as in userinfo, and an audit trail is written to be handed to
+#' someone else.
+#'
+#' Known limitation: an endpoint distinguished only by a query parameter --
+#' Azure's `api-version=`, say -- prints the same label as its sibling, though
+#' the two remain distinct identities and so appear as separate entries.
+#'
+#' @param identity A value from `endpoint_identity()`.
+#'
+#' @return A single string, or `NA_character_`.
+#' @keywords internal
+#' @noRd
+endpoint_label <- function(identity) {
+  if (is.na(identity)) {
+    return(NA_character_)
+  }
+
+  sub("[?#].*$", "", identity)
+}
+
+
+#' Is this endpoint on the machine running the report?
+#'
+#' Used only to decide whether "no API key needed" is safe to say. An absent
+#' `base_url` means the provider's own default, which for Ollama is
+#' `http://localhost:11434`.
+#'
+#' @param identity A value from `endpoint_identity()`.
+#'
+#' @return `TRUE` when the endpoint is local or defaulted.
+#' @keywords internal
+#' @noRd
+is_local_endpoint <- function(identity) {
+  if (is.na(identity)) {
+    return(TRUE)
+  }
+
+  host <- sub("^\\w+://", "", identity)
+  host <- sub("[/?#].*$", "", host)
+  host <- sub("^\\[(.*)\\]$", "\\1", host)  # bracketed IPv6
+  host <- sub(":\\d+$", "", host)
+
+  host %in% c("localhost", "127.0.0.1", "::1", "0.0.0.0")
 }
