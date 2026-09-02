@@ -562,3 +562,136 @@ test_that("qlm_trail() report includes codebook information", {
   expect_true(any(grepl("Sentiment Codebook", content)))
   expect_true(any(grepl("positive or negative", content)))
 })
+
+
+# ---- sampling parameters in the trail (#127) --------------------------------
+
+# Minimum coded object for which generate_trail_report() emits both a metadata
+# block and a replication block for one run.
+trail_params_fixture <- function(chat_args, name = "run1") {
+  coded <- data.frame(.id = 1:3, polarity = c("pos", "neg", "pos"))
+  class(coded) <- c("qlm_coded", "data.frame")
+  attr(coded, "run") <- list(
+    name = name,
+    parent = NULL,
+    call = quote(qlm_code(data, codebook)),
+    metadata = list(
+      timestamp = as.POSIXct("2024-01-01 12:00:00"),
+      n_units = 3
+    ),
+    chat_args = chat_args,
+    codebook = list(name = "sentiment", instructions = "Code sentiment")
+  )
+  coded
+}
+
+trail_params_report <- function(chat_args, name = "run1") {
+  path <- file.path(tempdir(), "test_trail_params")
+  withr::defer_parent(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(trail_params_fixture(chat_args, name), path = path)
+  readLines(paste0(path, ".qmd"))
+}
+
+# The generated block is only useful if the sampling settings land where
+# qlm_code() actually reads them, so assert on the parsed call rather than on
+# the text: correct output contains "temperature =" too, nested inside
+# ellmer::params().
+qlm_code_call <- function(content, run_name = "run1") {
+  start <- grep(paste0("^#### Replicate: ", run_name, "$"), content)[1]
+  fences <- grep("^```", content[start:length(content)]) + start - 1L
+  block <- content[(fences[1] + 1L):(fences[2] - 1L)]
+  exprs <- as.list(parse(text = paste(block, collapse = "\n")))
+  hits <- Filter(function(e) {
+    is.call(e) && identical(e[[1]], as.name("<-")) &&
+      is.call(e[[3]]) && identical(e[[3]][[1]], as.name("qlm_code"))
+  }, exprs)
+  as.list(hits[[1]][[3]])[-1]
+}
+
+
+test_that("qlm_trail() report reads sampling settings from chat_args$params (#127)", {
+  content <- trail_params_report(list(
+    name = "openai/gpt-4o-mini",
+    params = list(temperature = 0, top_p = 0.95)
+  ))
+
+  expect_true(any(grepl(
+    "**Parameters:** temperature = 0, top_p = 0.95",
+    content, fixed = TRUE
+  )))
+
+  args <- qlm_code_call(content)
+  expect_false("temperature" %in% names(args))
+  expect_true("params" %in% names(args))
+  expect_equal(deparse(args$params[[1]]), "ellmer::params")
+
+  pargs <- as.list(args$params)[-1]
+  expect_equal(pargs$temperature, 0)
+  expect_equal(pargs$top_p, 0.95)
+})
+
+
+test_that("qlm_trail() normalises a legacy chat_args$temperature into params (#127)", {
+  content <- trail_params_report(list(
+    name = "openai/gpt-4o-mini",
+    temperature = 0.3
+  ))
+
+  # The obsolete form is read but never shown or emitted.
+  expect_false(any(grepl("**Temperature:**", content, fixed = TRUE)))
+  expect_true(any(grepl("**Parameters:** temperature = 0.3", content, fixed = TRUE)))
+
+  args <- qlm_code_call(content)
+  expect_false("temperature" %in% names(args))
+  pargs <- as.list(args$params)[-1]
+  expect_equal(pargs$temperature, 0.3)
+})
+
+
+test_that("qlm_trail() prefers params over a legacy temperature (#127)", {
+  content <- trail_params_report(list(
+    name = "openai/gpt-4o-mini",
+    params = list(temperature = 0),
+    temperature = 0.9
+  ))
+
+  pargs <- as.list(qlm_code_call(content)$params)[-1]
+  expect_equal(pargs$temperature, 0)
+})
+
+
+test_that("qlm_trail() serialises parameter values one at a time (#127)", {
+  content <- trail_params_report(list(
+    name = "openai/gpt-4o-mini",
+    params = list(
+      temperature = 0,
+      label = 'a "quoted" phrase',
+      stop = c("END", "STOP")
+    )
+  ))
+
+  # unlist() would flatten the vector into separate entries here.
+  expect_true(any(grepl('stop = c("END", "STOP")', content, fixed = TRUE)))
+
+  pargs <- as.list(qlm_code_call(content)$params)[-1]
+  expect_equal(eval(pargs$label), 'a "quoted" phrase')
+  expect_equal(eval(pargs$stop), c("END", "STOP"))
+})
+
+
+test_that("qlm_trail() omits parameters entirely when a run recorded none (#127)", {
+  content <- trail_params_report(list(name = "openai/gpt-4o-mini"))
+
+  expect_false(any(grepl("**Parameters:**", content, fixed = TRUE)))
+  expect_false("params" %in% names(qlm_code_call(content)))
+})
+
+
+test_that("qlm_trail() reproducibility advice uses the form that works (#127)", {
+  content <- trail_params_report(list(name = "openai/gpt-4o-mini"))
+
+  expect_true(any(grepl(
+    "Use `params = ellmer::params(temperature = 0)` for more deterministic",
+    content, fixed = TRUE
+  )))
+})
