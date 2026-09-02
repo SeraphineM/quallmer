@@ -2,6 +2,22 @@
 
 ## Bug fixes
 
+* `qlm_compare(level = "interval", tolerance = )` counted a pair differing by
+  exactly `tolerance` as disagreement or agreement depending on how the
+  subtraction happened to round in binary. `1.1 - 1.0` is
+  `0.10000000000000009` and failed at `tolerance = 0.1`, while `1.2 - 1.1` is
+  `0.09999999999999987` and passed -- the same nominal difference, opposite
+  answers. On decimal-increment scales this is common rather than exotic; one
+  reported analysis understated agreement by 23 percentage points, and the
+  result stayed plausible enough that nothing looked wrong. The comparison now
+  allows a few units in the last place, scaled to the magnitudes being
+  compared. Percent agreement can therefore only stay the same or rise: no pair
+  that previously agreed becomes a disagreement. Anyone who has reported a
+  percent agreement computed on a non-integer scale should recompute it.
+  `tolerance = 0` now means numerical equality rather than bit identity, so
+  `0.1 + 0.2` counts as equal to `0.3`, while a genuine difference of `1e-9` is
+  still a difference (#121).
+
 * `qlm_code()` and `qlm_segment()` now reject a model parameter passed at the
   top level. `max_tokens = 100` used to fall through to `chat_args` and reach
   `ellmer::chat()`, failing with `unused argument (max_tokens = 100)` raised
