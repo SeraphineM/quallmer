@@ -2,6 +2,19 @@
 
 ## Bug fixes
 
+* `qlm_trail()` no longer advertises or generates a top-level `temperature`
+  argument. That form does not work -- it reaches `ellmer::chat()`, which has no
+  such argument -- so the replication script the audit trail generated could not
+  run, in the one document meant to show that a run can be reproduced. The
+  report now reads the sampling settings a run actually recorded, in
+  `chat_args$params`, and emits them as `params = ellmer::params()`. A legacy
+  `chat_args$temperature`, which older objects carry from the routing that was
+  never implemented, is folded into `params` on read, so an old trail file still
+  describes and reproduces itself in the form that works; `params$temperature`
+  is canonical and wins when both are present. Values are serialised one at a
+  time rather than through `unlist()`, so a vector-valued parameter such as
+  `stop = c("END", "STOP")` survives into the generated call (#127).
+
 * `qlm_code()` gains a `structured` argument controlling how the output schema
   is obtained, generalising the local-validation path added in #128 beyond
   DeepSeek. `"structured"` trusts the provider; `"json"` puts the schema in the
