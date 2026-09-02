@@ -19,7 +19,7 @@ qlm_codebook(
 \item{instructions}{Instructions to guide the model in performing the coding task.}
 
 \item{schema}{Structured output definition, e.g., created by
-\code{\link[ellmer:type_boolean]{ellmer::type_object()}}, \code{\link[ellmer:type_boolean]{ellmer::type_array()}}, or \code{\link[ellmer:type_boolean]{ellmer::type_enum()}}.}
+\code{\link[ellmer:type_object]{type_object()}}, \code{\link[ellmer:type_array]{type_array()}}, or \code{\link[ellmer:type_enum]{type_enum()}}.}
 
 \item{role}{Optional role description for the model (e.g., "You are an expert
 annotator"). If provided, this will be prepended to the instructions when

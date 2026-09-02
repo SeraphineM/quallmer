@@ -36,6 +36,11 @@ Arguments recognized by \code{\link[ellmer:parallel_chat_structured]{ellmer::par
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
 \code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 
+\item{batch}{Logical. If \code{TRUE}, uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
+instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}. Batch processing is more
+cost-effective for large jobs but may have longer turnaround times.
+Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
+
 \item{max_retries}{Number of additional attempts made for a response that
 arrives intact but does not conform to the codebook schema. Applies only to
 providers coded in JSON mode (see Details); setting it for any other
@@ -43,11 +48,6 @@ provider is an error. Default is 2, giving at most three attempts per unit.
 This is separate from ellmer's transport-level retries for rate limits and
 server errors, which apply to every provider and are set with
 \code{options(ellmer_max_tries = )}.}
-
-\item{batch}{Logical. If \code{TRUE}, uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
-instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}. Batch processing is more
-cost-effective for large jobs but may have longer turnaround times.
-Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
 
 \item{name}{Character string identifying this coding run. Default is \code{NULL}.}
 

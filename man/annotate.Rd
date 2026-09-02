@@ -9,12 +9,12 @@ annotate(.data, task, model_name, ...)
 \arguments{
 \item{task}{A task object created with \code{\link[=task]{task()}} or \code{\link[=qlm_codebook]{qlm_codebook()}}.}
 
-\item{...}{Additional arguments passed to \code{\link[ellmer:chat-any]{ellmer::chat()}},
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}.
-Arguments recognized by \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} or
-\code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}} are routed there; all other arguments
+\item{...}{Additional arguments passed to \code{\link[ellmer:chat]{ellmer::chat()}},
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}.
+Arguments recognized by \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or
+\code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} are routed there; all other arguments
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
-\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.}
+\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 }
 \value{
 A data frame with one row per input element, containing:

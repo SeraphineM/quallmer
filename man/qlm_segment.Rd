@@ -12,21 +12,21 @@ Named character vectors use names as document identifiers; unnamed vectors
 use sequential labels (\code{text1}, \code{text2}, ...).}
 
 \item{codebook}{A codebook object created with \code{\link[=qlm_codebook]{qlm_codebook()}}. The schema
-should be a \code{\link[ellmer:type_boolean]{ellmer::type_object()}} whose fields become docvars in the output
+should be a \code{\link[ellmer:type_object]{type_object()}} whose fields become docvars in the output
 corpus. Do not include a field named \code{text}; it is reserved for the
 verbatim segment text and is added automatically.}
 
 \item{model}{Provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
-that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat-any]{ellmer::chat()}}.
+that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
-\item{...}{Additional arguments passed to \code{\link[ellmer:chat-any]{ellmer::chat()}} or
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}. Arguments recognized by
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} are routed there; all other arguments
+\item{...}{Additional arguments passed to \code{\link[ellmer:chat]{ellmer::chat()}} or
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}. Arguments recognized by
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} are routed there; all other arguments
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
-\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.}
+\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 
 \item{name}{Character string identifying this coding run. Default is \code{NULL}.}
 

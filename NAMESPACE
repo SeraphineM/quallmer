@@ -51,8 +51,12 @@ export(trail_record)
 export(trail_settings)
 export(validate)
 import(ellmer)
-importFrom(stats,aggregate)
-importFrom(stats,ave)
-importFrom(stats,na.omit)
-importFrom(utils,head)
-importFrom(utils,modifyList)
+importFrom(stats,
+  aggregate,
+  ave,
+  na.omit
+)
+importFrom(utils,
+  head,
+  modifyList
+)

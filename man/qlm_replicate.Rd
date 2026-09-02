@@ -19,7 +19,7 @@ qlm_replicate(
 
 \item{...}{Optional overrides passed to \code{\link[=qlm_code]{qlm_code()}}, such as \code{params},
 \code{api_args}, or \code{max_active}. Any setting not overridden is restored from
-the original run, including the arguments it passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.
+the original run, including the arguments it passed to \code{\link[ellmer:chat]{ellmer::chat()}}.
 Registered \code{tools} are the one exception: they are provider-specific and
 are not carried over.}
 
@@ -48,7 +48,7 @@ A \code{qlm_coded} object with \code{run$parent} set to the parent's run name.
 Re-executes a coding task from a \code{qlm_coded} object, optionally with
 modified settings. If no overrides are provided, uses identical settings
 to the original coding: both the execution arguments and the arguments the
-original run passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}, such as \code{params} and \code{api_args}.
+original run passed to \code{\link[ellmer:chat]{ellmer::chat()}}, such as \code{params} and \code{api_args}.
 }
 \examples{
 \donttest{

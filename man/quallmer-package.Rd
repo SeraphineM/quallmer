@@ -43,6 +43,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Seraphine F. Maerz \email{seraphine.maerz@unimelb.edu.au} (\href{https://orcid.org/0000-0002-7173-9617}{ORCID})
   \item Kenneth Benoit \email{kbenoit@smu.edu.sg} (\href{https://orcid.org/0000-0002-0797-564X}{ORCID})
 }
 
