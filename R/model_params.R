@@ -13,7 +13,7 @@ model_param_names <- function() {
 
 #' Names that are not `params()` fields but get typed as though they were
 #'
-#' Kept separate from [model_param_names()] so that nothing here implies
+#' Kept separate from `model_param_names()` so that nothing here implies
 #' [ellmer::params()] accepts them:
 #'
 #' * `stop` is OpenAI's body field; ellmer spells the standardised form
