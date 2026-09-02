@@ -63,8 +63,16 @@
   and the resulting `qlm_compare()` would read as a model-stability measurement
   when it was partly a settings-difference measurement. Chat arguments are now
   restored alongside execution arguments, with overrides in `...` taking
-  precedence. Two exceptions: the model is still passed as `model`, and
-  registered `tools` are not carried over, being provider-specific (#125).
+  precedence. Provider-specific arguments such as credentials and endpoint
+  settings are restored only when the provider is unchanged; when changing
+  endpoint, an informational message names any inherited arguments that were
+  omitted and not explicitly replaced. An endpoint is identified by both the
+  provider prefix and `base_url`, because every provider ellmer has no
+  `chat_*()` for is reached as `openai_compatible/<model>` -- so Qwen through
+  Alibaba Model Studio and Kimi through Moonshot share a prefix while being
+  different services with different credentials, and a prefix-only check would
+  send one vendor's credential to the other. The model is still passed as
+  `model`, and registered `tools` are never carried over (#125).
 
 * `qlm_replicate()` also carries `max_retries` over from the original run, when
   the model being replicated onto can still honour it (#128).
@@ -308,4 +316,3 @@ The new API uses the `qlm_` prefix to avoid namespace conflicts (e.g., with `ggp
 - Improved error messages in `qlm_compare()` and `qlm_validate()` now show which objects are missing the requested variable and list available alternatives.
 - Adopt tidyverse-style error messaging via `cli::cli_abort()` and `cli::cli_warn()` throughout the package, replacing all `stop()`, `stopifnot()`, and `warning()` calls with structured, informative error messages.
 - Documentation and CI notes refreshed.
-

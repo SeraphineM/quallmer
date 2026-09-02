@@ -19,9 +19,17 @@ qlm_replicate(
 
 \item{...}{Optional overrides passed to \code{\link[=qlm_code]{qlm_code()}}, such as \code{params},
 \code{api_args}, or \code{max_active}. Any setting not overridden is restored from
-the original run, including the arguments it passed to \code{\link[ellmer:chat]{ellmer::chat()}}.
-Registered \code{tools} are the one exception: they are provider-specific and
-are not carried over.}
+the original run when the endpoint is unchanged, including the arguments
+it passed to \code{\link[ellmer:chat]{ellmer::chat()}}. An endpoint is identified by both the
+provider prefix and \code{base_url}, since every provider ellmer has no
+\verb{chat_*()} for is reached as \verb{openai_compatible/<model>} — so Qwen through
+Alibaba Model Studio and Kimi through Moonshot share a prefix while being
+different services with different credentials. When either changes, only
+portable chat settings (\code{params} and \code{echo}) are carried over; supply
+credentials, endpoint settings and other endpoint-specific arguments
+explicitly. An informational message names inherited arguments that were
+omitted and not explicitly replaced. Registered \code{tools} are never carried
+over.}
 
 \item{codebook}{Optional replacement codebook. If \code{NULL} (default), uses
 the codebook from \code{x}.}
@@ -49,6 +57,8 @@ Re-executes a coding task from a \code{qlm_coded} object, optionally with
 modified settings. If no overrides are provided, uses identical settings
 to the original coding: both the execution arguments and the arguments the
 original run passed to \code{\link[ellmer:chat]{ellmer::chat()}}, such as \code{params} and \code{api_args}.
+Credentials and endpoint settings are an exception, and are carried over
+only while the endpoint itself is unchanged.
 }
 \examples{
 \donttest{

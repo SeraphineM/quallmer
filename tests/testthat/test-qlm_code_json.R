@@ -240,6 +240,10 @@ test_that("is_length_rejection recognises over-long input only", {
   expect_true(is_length_rejection("Range of input length should be [1, 129024]"))
   expect_true(is_length_rejection("the prompt is too long"))
 
+  # Generic latency language is transient, not evidence of a context overflow.
+  expect_false(is_length_rejection("upstream server took too long to respond"))
+  expect_false(is_length_rejection("request waited too long in queue"))
+
   # Content refusals must NOT be treated as unrecoverable: they are
   # non-deterministic, and the same document is coded on a later attempt.
   expect_false(is_length_rejection(
@@ -565,6 +569,21 @@ test_that("api_error_detail copes with bodies it cannot use", {
   expect_true(is.na(api_error_detail(make_cnd(raw(0)))))
   expect_true(is.na(api_error_detail(make_cnd(charToRaw("<html>nope</html>")))))
   expect_true(is.na(api_error_detail(make_cnd(charToRaw('{"ok":true}')))))
+  expect_equal(
+    api_error_detail(make_cnd(charToRaw('{"error":"bad request"}'))),
+    "bad request"
+  )
+  expect_equal(
+    api_error_detail(make_cnd(charToRaw('{"message":"top-level failure"}'))),
+    "top-level failure"
+  )
+  expect_equal(
+    api_error_detail(make_cnd(charToRaw(
+      '{"error":{"type":"invalid_request"},"message":"fallback failure"}'
+    ))),
+    "fallback failure"
+  )
+  expect_true(is.na(api_error_detail(make_cnd(charToRaw('"not an object"')))))
   expect_true(is.na(api_error_detail(simpleError("boom"))))
   expect_equal(api_error_message(simpleError("boom")), "boom")
   expect_equal(api_error_message(NULL), "the request failed")
@@ -616,6 +635,32 @@ test_that("code_handler_json aborts when the provider rejects every request", {
 
   # No point re-sending a request the provider rejected outright
   expect_equal(calls$n, 1)
+})
+
+test_that("code_handler_json does not retry a fatal failure in a mixed batch", {
+  calls <- new.env()
+  h <- json_test_handler(
+    list(list(
+      text = c(NA_character_, "{\"score\":1,\"lab\":\"pos\"}"),
+      error = c("HTTP 400 Bad Request. Invalid request body.", NA_character_),
+      status = c(400L, NA_integer_)
+    )),
+    calls = calls
+  )
+
+  expect_warning(
+    result <- h(
+      x = c("a", "b"), codebook = json_test_codebook(),
+      model = "deepseek/deepseek-v4-pro", chat_args = list(),
+      execution_args = list()
+    ),
+    "1 response could not be coded, out of 2"
+  )
+
+  expect_equal(calls$n, 1)
+  expect_true(is.na(result$score[[1]]))
+  expect_equal(result$score[[2]], 1)
+  expect_match(json_test_messages(result)[[1]], "Invalid request body")
 })
 
 test_that("code_handler_json retries transient failures but not fatal ones", {

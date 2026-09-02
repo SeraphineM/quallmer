@@ -4,13 +4,23 @@
 #' modified settings. If no overrides are provided, uses identical settings
 #' to the original coding: both the execution arguments and the arguments the
 #' original run passed to [ellmer::chat()], such as `params` and `api_args`.
+#' Credentials and endpoint settings are an exception, and are carried over
+#' only while the endpoint itself is unchanged.
 #'
 #' @param x A `qlm_coded` object.
 #' @param ... Optional overrides passed to [qlm_code()], such as `params`,
 #'   `api_args`, or `max_active`. Any setting not overridden is restored from
-#'   the original run, including the arguments it passed to [ellmer::chat()].
-#'   Registered `tools` are the one exception: they are provider-specific and
-#'   are not carried over.
+#'   the original run when the endpoint is unchanged, including the arguments
+#'   it passed to [ellmer::chat()]. An endpoint is identified by both the
+#'   provider prefix and `base_url`, since every provider ellmer has no
+#'   `chat_*()` for is reached as `openai_compatible/<model>` — so Qwen through
+#'   Alibaba Model Studio and Kimi through Moonshot share a prefix while being
+#'   different services with different credentials. When either changes, only
+#'   portable chat settings (`params` and `echo`) are carried over; supply
+#'   credentials, endpoint settings and other endpoint-specific arguments
+#'   explicitly. An informational message names inherited arguments that were
+#'   omitted and not explicitly replaced. Registered `tools` are never carried
+#'   over.
 #' @param codebook Optional replacement codebook. If `NULL` (default), uses
 #'   the codebook from `x`.
 #' @param model Optional replacement model (e.g., `"openai/gpt-4o"`). If `NULL`
@@ -62,10 +72,10 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   # Ensure it's always a list (empty if NULL)
   original_execution_args <- meta_attr$object$execution_args %||% list()
   # Everything the original passed to ellmer::chat() -- params, api_args,
-  # base_url, credentials -- must be restored too, or a replication runs with
-  # different model settings than the run it claims to replicate. Two
-  # exclusions: `name` is the model and is passed separately, and `tools` are
-  # provider-specific objects that would error against a different provider.
+  # base_url, credentials -- must be restored for the same provider, or a
+  # replication runs with different model settings than the run it claims to
+  # replicate. Two exclusions: `name` is the model and is passed separately,
+  # and registered `tools` are not safe to recreate automatically.
   original_chat_args <- meta_attr$object$chat_args %||% list()
   original_chat_args[c("name", "tools")] <- NULL
   # Extract batch flag (default to FALSE for backward compatibility)
@@ -81,6 +91,57 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   # Apply overrides (NULL means use original)
   use_codebook <- codebook %||% original_codebook
   use_model <- model %||% original_model
+  overrides <- list(...)
+
+  # Credentials and endpoint settings belong to an endpoint, not to a model in
+  # the abstract. Carrying them across endpoints can send a credential to the
+  # wrong service, or point the replacement model at the original host.
+  #
+  # The prefix alone is not enough to identify an endpoint. Providers ellmer
+  # has no `chat_*()` for are all reached as `openai_compatible/<model>`, so
+  # Qwen through Alibaba Model Studio and Kimi through Moonshot share a prefix
+  # while being entirely different services with different credentials. What
+  # distinguishes them is `base_url`, so that is part of the identity too.
+  #
+  # A `base_url` supplied in `...` counts as a change: the caller is pointing
+  # this run at a different host, so the credential inherited for the old one
+  # must not travel with it.
+  original_endpoint <- list(
+    provider = sub("/.*$", "", original_model),
+    base_url = original_chat_args$base_url %||% NA_character_
+  )
+  use_endpoint <- list(
+    provider = sub("/.*$", "", use_model),
+    base_url = overrides$base_url %||% original_chat_args$base_url %||% NA_character_
+  )
+
+  if (!identical(original_endpoint, use_endpoint)) {
+    portable_chat_args <- c("params", "echo")
+    endpoint_bound_args <- setdiff(names(original_chat_args), portable_chat_args)
+    omitted_args <- setdiff(endpoint_bound_args, names(overrides))
+    omitted_args <- unique(omitted_args[nzchar(omitted_args)])
+    if (length(omitted_args)) {
+      changed <- if (!identical(original_endpoint$provider, use_endpoint$provider)) {
+        paste0("provider from \"", original_endpoint$provider, "\" to \"",
+               use_endpoint$provider, "\"")
+      } else {
+        paste0("endpoint from \"", original_endpoint$base_url, "\" to \"",
+               use_endpoint$base_url, "\"")
+      }
+      omitted_text <- paste0("`", omitted_args, "`", collapse = ", ")
+      cli::cli_inform(c(
+        "i" = paste0(
+          "Changing ", changed, "; not carrying over endpoint-specific argument",
+          if (length(omitted_args) == 1L) "" else "s", ": ", omitted_text,
+          ". Supply ", if (length(omitted_args) == 1L) "it" else "them",
+          " explicitly in `...` if needed."
+        )
+      ))
+    }
+    original_chat_args <- original_chat_args[
+      names(original_chat_args) %in% portable_chat_args
+    ]
+  }
 
   # Determine run name
   if (is.null(name)) {
@@ -98,7 +159,6 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   # execution_args are disjoint by construction -- qlm_code() splits `...`
   # between them by name -- so they can be merged here and re-split there,
   # keeping one source of truth for the routing rules.
-  overrides <- list(...)
   original_args <- c(original_chat_args, original_execution_args)
   call_args <- modifyList(original_args, overrides)
 

@@ -143,16 +143,17 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
         # unauthorised. A refusal or an over-long document also arrives as a
         # fatal status, but says nothing about the run as a whole, so neither
         # counts towards the all-failed abort below.
+        refusal <- is_content_refusal(checked$error)
+        length_rejection <- is_length_rejection(checked$error)
         fatal[[i]] <- is_fatal_status(turns$status[[j]]) &&
-          !is_content_refusal(checked$error) &&
-          !is_length_rejection(checked$error)
+          !refusal && !length_rejection
         # Content refusals are deliberately retried. They look deterministic
         # and are not: the same document is refused on one pass and coded on
         # the next, at more than one provider. Refusals are rejected before
         # generation and billed at zero tokens, so a wasted attempt is free,
         # whereas dropping the unit discards a coding a retry would have got.
         # Only a context-length rejection is provably unrecoverable.
-        if (!is_length_rejection(checked$error)) {
+        if (!length_rejection && !fatal[[i]]) {
           next_pending <- c(next_pending, i)
         }
       }
@@ -160,9 +161,9 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 
     # A run that fails in its entirety on the first attempt is misconfigured --
     # a wrong model name, a bad credential -- so stop before spending retries
-    # on it. Checked here rather than by dropping individual units, so that a
-    # single unit failing with the same status (an over-long document, a
-    # refusal) is still retried.
+    # on it. Checked at run level so a content refusal does not masquerade as
+    # bad configuration; refusals remain retryable, while over-long documents
+    # and other terminal per-unit failures have already left the retry queue.
     if (attempt == 0L && all(vapply(parsed, is.null, logical(1))) && all(fatal)) {
       break
     }
@@ -611,9 +612,21 @@ api_error_detail <- function(cnd) {
     jsonlite::fromJSON(text, simplifyVector = FALSE),
     error = function(e) NULL
   )
-  # OpenAI-compatible errors nest the message under `error`; some providers
-  # put it at the top level.
-  detail <- parsed$error$message %||% parsed$message %||% parsed$error
+  if (!is.list(parsed)) {
+    return(NA_character_)
+  }
+  # OpenAI-compatible errors usually nest the message under `error`, but some
+  # providers return a scalar `error` string or put `message` at the top level.
+  nested_error <- parsed$error
+  nested_detail <- if (is.list(nested_error)) {
+    nested_error$message
+  } else if (is.character(nested_error) && length(nested_error) == 1L &&
+             nzchar(nested_error)) {
+    nested_error
+  } else {
+    NULL
+  }
+  detail <- nested_detail %||% parsed$message
   if (!is.character(detail) || length(detail) != 1L || !nzchar(detail)) {
     return(NA_character_)
   }
@@ -722,9 +735,14 @@ is_length_rejection <- function(msg) {
     return(FALSE)
   }
   grepl(
-    "maximum context length|context length|range of input length|too long|exceeds .*token",
+    paste0(
+      "maximum context length|context[ -]?length|context window|",
+      "range of input length|(?:input|prompt|document)(?: is|'s)? too long|",
+      "exceeds?.{0,40}(?:token|context)|too many (?:input )?tokens"
+    ),
     msg,
-    ignore.case = TRUE
+    ignore.case = TRUE,
+    perl = TRUE
   )
 }
 

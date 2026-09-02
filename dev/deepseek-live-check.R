@@ -38,8 +38,9 @@ texts <- c(
 # Confirms routing and the guard rails without spending anything.
 
 stopifnot(
-  identical(quallmer:::code_handler_for(MODEL)$fn, quallmer:::code_handler_json),
-  is.null(quallmer:::code_handler_for("openai/gpt-4o-mini"))
+  # DeepSeek rejects the schema-constrained request, so it starts in JSON mode
+  identical(quallmer:::default_structured_mode(MODEL), "json"),
+  identical(quallmer:::default_structured_mode("openai/gpt-4o-mini"), "auto")
 )
 
 # The exact system prompt DeepSeek will receive. Worth reading once: if the
