@@ -15,9 +15,12 @@
   fell through to "configure credentials as needed". Runs are now identified by
   provider *and* `base_url`, the rule `qlm_replicate()` already applies, so
   endpoints differing only by port, path or scheme stay distinct. Credentials
-  embedded in a URL, as userinfo or as a query parameter, are stripped before
-  anything is printed. Ollama is told it needs no key only where the endpoint
-  is local, since ellmer reads `OLLAMA_API_KEY` for one served behind a proxy.
+  embedded in a URL, as userinfo or as a query parameter, are stripped from the
+  endpoint labels this section prints; note that the Call section still shows
+  the call as written and the `.rds` still preserves `chat_args` whole. Ollama
+  is told it needs no key only where a loopback endpoint was recorded, since
+  ellmer reads `OLLAMA_API_KEY` for one served behind a proxy and resolves an
+  unset `base_url` through `OLLAMA_BASE_URL`, which may be remote.
   The section is now "Provider and endpoint setup" rather than "Configure API
   credentials", because several providers use IAM, OAuth or platform
   credentials rather than a key (#130).

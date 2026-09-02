@@ -655,9 +655,9 @@ generate_trail_report <- function(trail, file) {
     lines <- c(lines, "### Provider and endpoint setup")
     lines <- c(lines, "")
     lines <- c(lines, paste(
-      "Credentials are not recorded in the trail. Set up each provider below as",
-      "its ellmer help page describes -- the requirements differ, from an API key",
-      "to platform IAM to none at all."
+      "Credential requirements differ by provider, from an API key to platform",
+      "IAM to none at all. Follow the corresponding ellmer help page to",
+      "configure access."
     ))
     lines <- c(lines, "")
     lines <- c(lines, "```r")
@@ -997,11 +997,16 @@ endpoint_identity <- function(base_url) {
 }
 
 
-#' Endpoint label safe to print in a shared report
+#' Endpoint label for the setup section
 #'
 #' The identity minus query and fragment. A credential is as likely to arrive
-#' as `?api_key=` as in userinfo, and an audit trail is written to be handed to
-#' someone else.
+#' as `?api_key=` as in userinfo, and a trail is written to be handed to
+#' someone else, so neither is printed here.
+#'
+#' This narrows one exposure; it does not make the report credential-free. The
+#' Call section prints `deparse(run$call)`, so a `base_url` written as a
+#' literal at the call site still appears there, and the `.rds` preserves
+#' `chat_args` whole by design. Redacting those is a separate problem.
 #'
 #' Known limitation: an endpoint distinguished only by a query parameter --
 #' Azure's `api-version=`, say -- prints the same label as its sibling, though
@@ -1023,24 +1028,34 @@ endpoint_label <- function(identity) {
 
 #' Is this endpoint on the machine running the report?
 #'
-#' Used only to decide whether "no API key needed" is safe to say. An absent
-#' `base_url` means the provider's own default, which for Ollama is
-#' `http://localhost:11434`.
+#' Used only to decide whether "no API key needed" is safe to say, so an
+#' unknown endpoint must not count as local. An absent `base_url` is unknown
+#' rather than default: ellmer resolves Ollama's to
+#' `Sys.getenv("OLLAMA_BASE_URL", "http://localhost:11434")`, so a run made
+#' against a remote `OLLAMA_BASE_URL` records no URL, and calling that local
+#' would reproduce the stale guidance this replaced.
 #'
 #' @param identity A value from `endpoint_identity()`.
 #'
-#' @return `TRUE` when the endpoint is local or defaulted.
+#' @return `TRUE` only when the endpoint is recorded and loopback.
 #' @keywords internal
 #' @noRd
 is_local_endpoint <- function(identity) {
   if (is.na(identity)) {
-    return(TRUE)
+    return(FALSE)
   }
 
   host <- sub("^\\w+://", "", identity)
   host <- sub("[/?#].*$", "", host)
-  host <- sub("^\\[(.*)\\]$", "\\1", host)  # bracketed IPv6
-  host <- sub(":\\d+$", "", host)
+
+  # Brackets and port together: `[::1]` and `[::1]:11434` both have to reduce
+  # to `::1`. Unbracketing first and stripping the port after would take the
+  # trailing `:1` off `::1` and leave a bare colon.
+  host <- if (grepl("^\\[", host)) {
+    sub("^\\[([^]]*)\\].*$", "\\1", host)
+  } else {
+    sub(":\\d+$", "", host)
+  }
 
   host %in% c("localhost", "127.0.0.1", "::1", "0.0.0.0")
 }
