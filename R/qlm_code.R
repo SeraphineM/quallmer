@@ -52,6 +52,53 @@
 #' function. Set `verbose = TRUE` to see progress messages during coding.
 #' Retry logic for API failures should be configured through ellmer's options.
 #'
+#' @section Provider-specific parameters:
+#'
+#' `params` and `api_args` are forwarded to [ellmer::chat()] unchanged.
+#' quallmer does not inspect or rewrite either, so which of the two a setting
+#' belongs in is determined by ellmer and the provider, not here.
+#'
+#' The distinction matters. [ellmer::params()] carries provider-agnostic
+#' settings that ellmer translates per provider; `api_args` goes into the raw
+#' request body untouched. A setting placed in the wrong one is not
+#' necessarily rejected. For OpenAI-compatible providers ellmer maps `top_k`
+#' onto the OpenAI field `top_logprobs`, which asks for log-probabilities per
+#' token and has nothing to do with top-k sampling — so
+#' `params(top_k = 20)` is rejected by Alibaba Model Studio
+#' (`Range of top_logprobs should be [0, 5]`), while `params(top_k = 3)` is
+#' accepted and silently applies no sampling setting at all. Non-OpenAI
+#' sampling controls therefore belong in `api_args`:
+#'
+#' ```r
+#' # Qwen through Alibaba Model Studio
+#' qlm_code(
+#'   x, codebook,
+#'   model = "openai_compatible/qwen3-max",
+#'   base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+#'   credentials = function() {
+#'     list(Authorization = paste("Bearer", Sys.getenv("DASHSCOPE_API_KEY")))
+#'   },
+#'   params = ellmer::params(temperature = 0.6, top_p = 0.95),
+#'   api_args = list(top_k = 20, min_p = 0, enable_thinking = TRUE)
+#' )
+#'
+#' # Kimi K3 through Moonshot, whose temperature and top_p are fixed by the
+#' # provider and documented as needing to be omitted rather than set
+#' qlm_code(
+#'   x, codebook,
+#'   model = "openai_compatible/kimi-k3",
+#'   base_url = "https://api.moonshot.ai/v1",
+#'   credentials = function() {
+#'     list(Authorization = paste("Bearer", Sys.getenv("MOONSHOT_API_KEY")))
+#'   },
+#'   api_args = list(reasoning_effort = "max")
+#' )
+#' ```
+#'
+#' Passing a model parameter such as `temperature` or `max_tokens` at the top
+#' level does not work: those reach [ellmer::chat()], which has no such
+#' argument. Use `params`.
+#'
 #' @section Schema enforcement:
 #'
 #' Some providers accept a JSON Schema without enforcing it, so a response can
@@ -79,6 +126,15 @@
 #' `"auto"` catches wholesale non-enforcement, not the intermittent kind: a
 #' single non-conforming row among many leaves that check silent. Only
 #' `"json"` catches that, at the cost of putting the schema in the prompt.
+#'
+#' That check also needs something to look at. It reads required scalar
+#' properties, because those become ordinary columns; required arrays and
+#' nested objects become list-columns in which a missing value and a
+#' schema-valid empty one are the same zero-length cell, and cannot be told
+#' apart. So for a codebook whose required properties are all arrays or nested
+#' objects, `"auto"` on an unverified endpoint validates locally from the
+#' start rather than making a call it could not check, and says so. Use
+#' `"structured"` to rely on the provider regardless.
 #'
 #' On the JSON path, units that never validate have `NA` coded values and a
 #' `.error` list-column recording the reason, and `max_retries` controls how
@@ -202,6 +258,18 @@ qlm_code <- function(x, codebook, model, ...,
   # to pass through to ellmer::chat() which forwards them to the provider
   chat_args <- dots[!dot_names %in% execution_arg_names]
 
+  # ellmer returns a bare list under convert = FALSE, which has no rows to
+  # merge an .id into and no columns for new_qlm_coded() to reorder. It has
+  # never worked here; say so rather than failing later with "incorrect number
+  # of dimensions".
+  if (identical(execution_args$convert, FALSE)) {
+    cli::cli_abort(c(
+      "{.code convert = FALSE} is not supported by {.fn qlm_code}.",
+      "i" = "A {.cls qlm_coded} object is built from the converted table, one row per unit.",
+      "i" = "For the unconverted list, call {.fn ellmer::parallel_chat_structured} directly."
+    ))
+  }
+
   # Metadata contributed by the coding path
   backend_meta <- list()
   results <- NULL
@@ -211,7 +279,8 @@ qlm_code <- function(x, codebook, model, ...,
   if (structured %in% c("auto", "structured")) {
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
-      chat_args = chat_args, execution_args = execution_args, batch = batch
+      chat_args = chat_args, execution_args = execution_args, batch = batch,
+      allow_skip = identical(structured, "auto") && !batch
     )
 
     if (isTRUE(attempt$ok)) {
@@ -223,6 +292,16 @@ qlm_code <- function(x, codebook, model, ...,
           "{incomplete} row{?s} from the structured call {?is/are} missing at least one required field."
         )
       }
+    } else if (isTRUE(attempt$undetectable)) {
+      # Not a failure: no request was made. Informational, because the choice
+      # is a consequence of the codebook and the endpoint, not of anything
+      # going wrong.
+      fallback_reason <- attempt$error
+      cli::cli_inform(c(
+        "i" = "Coding {.val {model}} in JSON mode with local validation.",
+        "i" = attempt$error,
+        "i" = "Use {.code structured = \"structured\"} to rely on the provider instead."
+      ))
     } else if (identical(structured, "structured")) {
       cli::cli_abort(c(
         "Structured output failed for model {.val {model}}.",
@@ -347,7 +426,8 @@ default_structured_mode <- function(model) {
 #' @return A list with `ok`, and either `value` (the results) or `error`.
 #' @keywords internal
 #' @noRd
-try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch) {
+try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
+                                allow_skip = FALSE) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -360,13 +440,42 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     prompts <- as.list(x)
   }
 
-  run <- function(prompt) {
-    chat <- do.call(ellmer::chat, c(
-      list(name = model, system_prompt = prompt),
-      chat_args
-    ))
-    warn_unenforced_schema(chat, model)
+  build_chat <- function(prompt) {
+    do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
+  }
+  chat <- build_chat(system_prompt)
 
+  # Whether a failed structured call would even be visible depends on the
+  # codebook. Failure is detected from required scalar fields coming back all
+  # NA; a codebook whose required properties are all arrays or nested objects
+  # offers no such signal, because ellmer renders those as list-columns where a
+  # missing value and a schema-valid empty one are the same zero-length cell.
+  #
+  # So on an endpoint whose enforcement cannot be verified, a structured call
+  # over such a codebook would be trusted with no way to check it. Validate
+  # locally instead, and say why. `structured = "structured"` remains the way
+  # to ask for provider enforcement regardless.
+  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+  undetectable <- allow_skip &&
+    !is.null(provider) &&
+    !provider_enforces_schema(provider) &&
+    !length(required_scalar_fields(codebook$schema))
+
+  if (undetectable) {
+    return(list(
+      ok = FALSE,
+      undetectable = TRUE,
+      error = paste0(
+        "this endpoint's schema enforcement cannot be verified, and the ",
+        "codebook has no required scalar field whose absence would reveal a ",
+        "failed structured call"
+      )
+    ))
+  }
+
+  warn_unenforced_schema(chat, model)
+
+  run <- function(chat) {
     if (batch) {
       do.call(ellmer::batch_chat_structured, c(
         list(chat = chat, prompts = prompts, type = codebook$schema),
@@ -381,7 +490,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   attempt <- tryCatch(
-    list(ok = TRUE, value = run(system_prompt)),
+    list(ok = TRUE, value = run(chat)),
     error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
   )
 
@@ -401,7 +510,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
       sep = "\n\n"
     )
     attempt <- tryCatch(
-      list(ok = TRUE, value = run(retry_prompt)),
+      list(ok = TRUE, value = run(build_chat(retry_prompt))),
       error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
     )
   }
@@ -411,7 +520,9 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
       ok = FALSE,
       error = paste0(
         "the structured call returned no usable values (every required field ",
-        "was NA in all ", nrow(attempt$value), " row{s}); the endpoint appears ",
+        "was NA in all ", nrow(attempt$value),
+        if (nrow(attempt$value) == 1L) " row" else " rows",
+        "); the endpoint appears ",
         "not to honour the JSON schema"
       )
     )

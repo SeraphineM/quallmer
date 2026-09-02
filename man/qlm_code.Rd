@@ -88,6 +88,54 @@ Progress indicators and error handling are provided by the underlying
 function. Set \code{verbose = TRUE} to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options.
 }
+\section{Provider-specific parameters}{
+
+
+\code{params} and \code{api_args} are forwarded to \code{\link[ellmer:chat]{ellmer::chat()}} unchanged.
+quallmer does not inspect or rewrite either, so which of the two a setting
+belongs in is determined by ellmer and the provider, not here.
+
+The distinction matters. \code{\link[ellmer:params]{ellmer::params()}} carries provider-agnostic
+settings that ellmer translates per provider; \code{api_args} goes into the raw
+request body untouched. A setting placed in the wrong one is not
+necessarily rejected. For OpenAI-compatible providers ellmer maps \code{top_k}
+onto the OpenAI field \code{top_logprobs}, which asks for log-probabilities per
+token and has nothing to do with top-k sampling — so
+\code{params(top_k = 20)} is rejected by Alibaba Model Studio
+(\verb{Range of top_logprobs should be [0, 5]}), while \code{params(top_k = 3)} is
+accepted and silently applies no sampling setting at all. Non-OpenAI
+sampling controls therefore belong in \code{api_args}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{# Qwen through Alibaba Model Studio
+qlm_code(
+  x, codebook,
+  model = "openai_compatible/qwen3-max",
+  base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+  credentials = function() \{
+    list(Authorization = paste("Bearer", Sys.getenv("DASHSCOPE_API_KEY")))
+  \},
+  params = ellmer::params(temperature = 0.6, top_p = 0.95),
+  api_args = list(top_k = 20, min_p = 0, enable_thinking = TRUE)
+)
+
+# Kimi K3 through Moonshot, whose temperature and top_p are fixed by the
+# provider and documented as needing to be omitted rather than set
+qlm_code(
+  x, codebook,
+  model = "openai_compatible/kimi-k3",
+  base_url = "https://api.moonshot.ai/v1",
+  credentials = function() \{
+    list(Authorization = paste("Bearer", Sys.getenv("MOONSHOT_API_KEY")))
+  \},
+  api_args = list(reasoning_effort = "max")
+)
+}\if{html}{\out{</div>}}
+
+Passing a model parameter such as \code{temperature} or \code{max_tokens} at the top
+level does not work: those reach \code{\link[ellmer:chat]{ellmer::chat()}}, which has no such
+argument. Use \code{params}.
+}
+
 \section{Schema enforcement}{
 
 
@@ -116,6 +164,15 @@ produces.}
 \code{"auto"} catches wholesale non-enforcement, not the intermittent kind: a
 single non-conforming row among many leaves that check silent. Only
 \code{"json"} catches that, at the cost of putting the schema in the prompt.
+
+That check also needs something to look at. It reads required scalar
+properties, because those become ordinary columns; required arrays and
+nested objects become list-columns in which a missing value and a
+schema-valid empty one are the same zero-length cell, and cannot be told
+apart. So for a codebook whose required properties are all arrays or nested
+objects, \code{"auto"} on an unverified endpoint validates locally from the
+start rather than making a call it could not check, and says so. Use
+\code{"structured"} to rely on the provider regardless.
 
 On the JSON path, units that never validate have \code{NA} coded values and a
 \code{.error} list-column recording the reason, and \code{max_retries} controls how

@@ -19,7 +19,18 @@
   a list of vendors, so a provider added to ellmer later defaults to
   unverified. Failure is detected both from an error and from a result in which
   every required field is `NA` in every row, which is what an endpoint that
-  accepted the schema and ignored it produces (#134).
+  accepted the schema and ignored it produces. That check reads required
+  scalar properties, since required arrays and nested objects become
+  list-columns in which a missing value and a schema-valid empty one are
+  indistinguishable -- so for a codebook whose required properties are all
+  arrays or nested objects, `"auto"` on an unverified endpoint validates
+  locally from the start rather than making a call it could not check, and
+  reports why (#134).
+
+* `qlm_code()` now rejects `convert = FALSE` with an explanation. It has never
+  worked: `ellmer` returns a bare list, which has no rows to carry an `.id` and
+  no columns to reorder, and the call failed later with `incorrect number of
+  dimensions` (#134).
 
 * `qlm_code()` can now code with DeepSeek, and no longer trusts providers that
   accept a JSON Schema without enforcing it. The DeepSeek API rejects the

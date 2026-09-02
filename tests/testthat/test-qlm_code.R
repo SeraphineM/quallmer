@@ -829,3 +829,212 @@ test_that("the enforcement note survives a provider it cannot inspect", {
 
   expect_silent(warn_unenforced_schema(broken, "some/model"))
 })
+
+
+test_that("auto validates locally when a failed structured call would be invisible", {
+  skip_if_not_installed("mockery")
+
+  # Required properties are all arrays, so there is no scalar field whose
+  # absence would reveal a failed structured call
+  array_codebook <- qlm_codebook(
+    "Test", "Prompt",
+    ellmer::type_object(
+      claims = ellmer::type_array(ellmer::type_string("A claim"))
+    )
+  )
+  expect_length(required_scalar_fields(array_codebook$schema), 0)
+
+  calls <- new.env()
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) {
+    list(get_provider = function() {
+      structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
+    })
+  })
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(...) {
+    calls$structured <- TRUE
+    tibble::tibble(claims = list("x"))
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_message(
+    result <- f("a", array_codebook, model = "openai_compatible/kimi-k3",
+                base_url = "https://example.com/v1"),
+    "no required scalar field whose absence would reveal"
+  )
+
+  # No request was spent on a call that could not be checked
+  expect_null(calls$structured)
+  expect_true(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
+  # ... and the reason is recorded, not just printed
+  expect_match(qlm_meta(result, type = "user")$fallback_reason, "cannot be verified")
+})
+
+
+test_that("the undetectable skip applies only where it is warranted", {
+  skip_if_not_installed("mockery")
+
+  array_codebook <- qlm_codebook(
+    "Test", "Prompt",
+    ellmer::type_object(claims = ellmer::type_array(ellmer::type_string("A claim")))
+  )
+  results <- tibble::tibble(claims = list("x"))
+
+  make_tsc <- function(provider_class) {
+    tsc <- try_structured_call
+    mockery::stub(tsc, "ellmer::chat", function(...) {
+      list(get_provider = function() structure(list(), class = c(provider_class, "S7_object")))
+    })
+    mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
+    tsc
+  }
+
+  # An endpoint that enforces by construction needs no local validation
+  calls <- new.env()
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", make_tsc("ellmer::ProviderOpenAI"))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+  expect_silent(f("a", array_codebook, model = "openai/gpt-4o-mini"))
+  expect_null(calls$json)
+
+  # And an explicit `structured` is never overridden. The enforcement note may
+  # still fire here -- trusting an unverified endpoint is exactly when it
+  # should -- so assert on the skip reason rather than on silence.
+  calls <- new.env()
+  f2 <- qlm_code
+  mockery::stub(f2, "try_structured_call", make_tsc("ellmer::ProviderOpenAICompatible"))
+  mockery::stub(f2, "code_handler_json", json_stub(calls))
+  emitted <- testthat::capture_messages(
+    f2("a", array_codebook, model = "openai_compatible/x",
+       base_url = "https://example.com/v1", structured = "structured")
+  )
+  expect_false(any(grepl("no required scalar field", emitted)))
+  expect_null(calls$json)
+})
+
+
+test_that("a schema-valid empty array is not mistaken for a failure", {
+  skip_if_not_installed("mockery")
+
+  # An empty array is valid JSON Schema output for a required array, and after
+  # conversion is indistinguishable from a missing one -- so detection must not
+  # guess, and a codebook with a checkable scalar alongside must not fall back
+  codebook <- qlm_codebook(
+    "Test", "Prompt",
+    ellmer::type_object(
+      score  = ellmer::type_number("Score"),
+      claims = ellmer::type_array(ellmer::type_string("A claim"))
+    )
+  )
+  results <- tibble::tibble(score = c(1, 2), claims = list(character(0), character(0)))
+
+  expect_false(all_required_missing(results, codebook$schema))
+  expect_equal(n_incomplete(results, codebook$schema), 0)
+
+  calls <- new.env()
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) {
+    list(get_provider = function() {
+      structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
+    })
+  })
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  suppressMessages(result <- f(c("a", "b"), codebook, model = "openai_compatible/x",
+                               base_url = "https://example.com/v1"))
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+})
+
+
+test_that("qlm_code rejects convert = FALSE rather than failing downstream", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  expect_error(
+    qlm_code("a", codebook, model = "openai/gpt-4o-mini", convert = FALSE),
+    "is not supported"
+  )
+  # TRUE is the default and must still be accepted
+  skip_if_not_installed("mockery")
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  expect_s3_class(
+    f("a", codebook, model = "openai/gpt-4o-mini", convert = TRUE),
+    "qlm_coded"
+  )
+})
+
+
+test_that("qlm_code forwards params and api_args to ellmer unchanged", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  # Which of the two a setting belongs in is ellmer's and the provider's
+  # business. quallmer must not inspect or rewrite either object -- notably it
+  # must not "helpfully" move top_k out of params, even though ellmer maps that
+  # onto the unrelated OpenAI field top_logprobs for OpenAI-compatible
+  # providers.
+  user_params <- ellmer::params(temperature = 0.6, top_p = 0.95, top_k = 20)
+  user_api_args <- list(top_k = 20, min_p = 0, enable_thinking = TRUE)
+
+  seen <- NULL
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) {
+    seen <<- list(...)
+    structure(list(), class = "Chat")
+  })
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+
+  f("a", codebook, model = "openai_compatible/qwen3-max",
+    base_url = "https://example.com/v1",
+    params = user_params, api_args = user_api_args)
+
+  expect_identical(seen$params, user_params)
+  expect_identical(seen$api_args, user_api_args)
+  expect_equal(seen$base_url, "https://example.com/v1")
+})
+
+
+test_that("the JSON path forwards api_args too, adding only the response format", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  user_params <- ellmer::params(temperature = 0.6)
+
+  seen <- NULL
+  h <- code_handler_json
+  mockery::stub(h, "ellmer::chat", function(...) {
+    seen <<- list(...)
+    structure(list(), class = "Chat")
+  })
+  mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
+    list(text = "{\"score\":1}", error = NA_character_, status = NA_integer_,
+         usage = matrix(0, 1, 4, dimnames = list(
+           NULL, c("input_tokens", "output_tokens", "cached_input_tokens", "cost"))))
+  })
+
+  h(x = "a", codebook = codebook, model = "openai_compatible/kimi-k3",
+    chat_args = list(params = user_params,
+                     api_args = list(reasoning_effort = "max")),
+    execution_args = list())
+
+  expect_identical(seen$params, user_params)
+  expect_equal(seen$api_args$reasoning_effort, "max")
+  # JSON mode is the one thing this path must set
+  expect_equal(seen$api_args$response_format, list(type = "json_object"))
+})
