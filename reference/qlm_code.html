@@ -65,7 +65,16 @@ metadata for reproducibility.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">qlm_code</span><span class="op">(</span><span class="va">x</span>, <span class="va">codebook</span>, <span class="va">model</span>, <span class="va">...</span>, batch <span class="op">=</span> <span class="cn">FALSE</span>, name <span class="op">=</span> <span class="cn">NULL</span>, notes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">qlm_code</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">codebook</span>,</span>
+<span>  <span class="va">model</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  batch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  max_retries <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  notes <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -98,6 +107,16 @@ Arguments recognized by <code><a href="https://ellmer.tidyverse.org/reference/pa
 <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code> are routed there; all other arguments
 (including provider-specific arguments like <code>base_url</code>, <code>credentials</code>, or
 <code>api_args</code> for OpenAI-compatible endpoints) are passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.</p></dd>
+
+
+<dt id="arg-max-retries">max_retries<a class="anchor" aria-label="anchor" href="#arg-max-retries"></a></dt>
+<dd><p>Number of additional attempts made for a response that
+arrives intact but does not conform to the codebook schema. Applies only to
+providers coded in JSON mode (see Details); setting it for any other
+provider is an error. Default is 2, giving at most three attempts per unit.
+This is separate from ellmer's transport-level retries for rate limits and
+server errors, which apply to every provider and are set with
+<code>options(ellmer_max_tries = )</code>.</p></dd>
 
 
 <dt id="arg-batch">batch<a class="anchor" aria-label="anchor" href="#arg-batch"></a></dt>
@@ -139,6 +158,16 @@ based on their names.</p>
 <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code> or <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
 function. Set <code>verbose = TRUE</code> to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options.</p>
+<p>Some providers accept a JSON Schema but do not enforce it, so a response can
+come back parseable but non-conforming, and the non-conformance then arrives
+silently as <code>NA</code>. For those providers <code>qlm_code()</code> routes to a JSON-mode
+handler that puts the schema in the system prompt, validates every response
+against the codebook schema locally, and re-prompts the model with the
+specific validation error when a response does not conform. This currently
+applies to <code>"deepseek"</code>. Units that never validate have <code>NA</code> coded values and
+a <code>.error</code> list-column recording the reason. <code>max_retries</code> controls how many
+repair attempts each unit gets. Batch processing and image codebooks are not
+supported on this path.</p>
 <p>When <code>batch = TRUE</code>, the function uses <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
 which submits jobs to the provider's batch API. This is typically more
 cost-effective but has longer turnaround times. The <code>path</code> argument specifies
@@ -177,7 +206,7 @@ coding runs, <code><a href="qlm_compare.html">qlm_compare()</a></code> and <code
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

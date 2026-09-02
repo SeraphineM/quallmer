@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   pkgdown/examples/example_audio: pkgdown/examples/example_audio.html
@@ -16,7 +16,7 @@ articles:
   pkgdown/tutorials/validate: pkgdown/tutorials/validate.html
   pkgdown/getting-started/workflow: pkgdown/getting-started/workflow.html
   pkgdown/workshops: pkgdown/workshops.html
-last_built: 2026-06-24T03:39Z
+last_built: 2026-09-02T00:35Z
 urls:
   reference: https://quallmer.github.io/quallmer/reference
   article: https://quallmer.github.io/quallmer/articles
