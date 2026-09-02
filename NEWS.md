@@ -2,6 +2,36 @@
 
 ## Bug fixes
 
+* `qlm_code()` gains a `structured` argument controlling how the output schema
+  is obtained, generalising the local-validation path added in #128 beyond
+  DeepSeek. `"structured"` trusts the provider; `"json"` puts the schema in the
+  system prompt and validates every response against `codebook$schema` locally;
+  `"auto"` (the default) attempts the structured call and falls back to
+  `"json"` when it fails. This matters because ellmer sends
+  `response_format = {type: "json_schema", strict: true}` to every
+  OpenAI-compatible provider and takes the result on trust, and measurement
+  shows several do not honour it — Kimi violated a schema it was given on 2 of
+  3 identical requests through one gateway. Non-conformance arrives as `NA`,
+  indistinguishable from missing data, so `qlm_code()` now also emits a
+  one-time note when coding against an endpoint whose enforcement it cannot
+  verify, silenced with `options(quallmer.quiet_schema_note = TRUE)`. Whether
+  an endpoint is trusted is derived from ellmer's own request path rather than
+  a list of vendors, so a provider added to ellmer later defaults to
+  unverified. Failure is detected both from an error and from a result in which
+  every required field is `NA` in every row, which is what an endpoint that
+  accepted the schema and ignored it produces. That check reads required
+  scalar properties, since required arrays and nested objects become
+  list-columns in which a missing value and a schema-valid empty one are
+  indistinguishable -- so for a codebook whose required properties are all
+  arrays or nested objects, `"auto"` on an unverified endpoint validates
+  locally from the start rather than making a call it could not check, and
+  reports why (#134).
+
+* `qlm_code()` now rejects `convert = FALSE` with an explanation. It has never
+  worked: `ellmer` returns a bare list, which has no rows to carry an `.id` and
+  no columns to reorder, and the call failed later with `incorrect number of
+  dimensions` (#134).
+
 * `qlm_code()` can now code with DeepSeek, and no longer trusts providers that
   accept a JSON Schema without enforcing it. The DeepSeek API rejects the
   `response_format` that `ellmer::parallel_chat_structured()` sends
@@ -44,11 +74,24 @@
   and the resulting `qlm_compare()` would read as a model-stability measurement
   when it was partly a settings-difference measurement. Chat arguments are now
   restored alongside execution arguments, with overrides in `...` taking
-  precedence. Two exceptions: the model is still passed as `model`, and
-  registered `tools` are not carried over, being provider-specific (#125).
+  precedence. Provider-specific arguments such as credentials and endpoint
+  settings are restored only when the provider is unchanged; when changing
+  endpoint, an informational message names any inherited arguments that were
+  omitted and not explicitly replaced. An endpoint is identified by both the
+  provider prefix and `base_url`, because every provider ellmer has no
+  `chat_*()` for is reached as `openai_compatible/<model>` -- so Qwen through
+  Alibaba Model Studio and Kimi through Moonshot share a prefix while being
+  different services with different credentials, and a prefix-only check would
+  send one vendor's credential to the other. The model is still passed as
+  `model`, and registered `tools` are never carried over (#125).
 
-* `qlm_replicate()` also carries `max_retries` over from the original run, when
-  the model being replicated onto can still honour it (#128).
+* `qlm_replicate()` also reproduces the coding path and `max_retries` of the
+  original run. The path is derived from the backend the run actually used
+  rather than the mode it requested, so a run that asked for
+  `structured = "auto"` and fell back to JSON mode replicates as `"json"`:
+  requesting `"auto"` again would let an intermittently conforming endpoint
+  take the structured path instead, silently skipping the local validation the
+  original relied on and leaving the two runs incomparable (#128, #134).
 
 * `qlm_trail()` no longer emits "unknown column" warnings or crashes with
   `the condition has length > 1` when passed a `qlm_comparison` or
@@ -289,4 +332,3 @@ The new API uses the `qlm_` prefix to avoid namespace conflicts (e.g., with `ggp
 - Improved error messages in `qlm_compare()` and `qlm_validate()` now show which objects are missing the requested variable and list available alternatives.
 - Adopt tidyverse-style error messaging via `cli::cli_abort()` and `cli::cli_warn()` throughout the package, replacing all `stop()`, `stopifnot()`, and `warning()` calls with structured, informative error messages.
 - Documentation and CI notes refreshed.
-

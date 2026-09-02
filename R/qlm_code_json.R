@@ -143,16 +143,17 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
         # unauthorised. A refusal or an over-long document also arrives as a
         # fatal status, but says nothing about the run as a whole, so neither
         # counts towards the all-failed abort below.
+        refusal <- is_content_refusal(checked$error)
+        length_rejection <- is_length_rejection(checked$error)
         fatal[[i]] <- is_fatal_status(turns$status[[j]]) &&
-          !is_content_refusal(checked$error) &&
-          !is_length_rejection(checked$error)
+          !refusal && !length_rejection
         # Content refusals are deliberately retried. They look deterministic
         # and are not: the same document is refused on one pass and coded on
         # the next, at more than one provider. Refusals are rejected before
         # generation and billed at zero tokens, so a wasted attempt is free,
         # whereas dropping the unit discards a coding a retry would have got.
         # Only a context-length rejection is provably unrecoverable.
-        if (!is_length_rejection(checked$error)) {
+        if (!length_rejection && !fatal[[i]]) {
           next_pending <- c(next_pending, i)
         }
       }
@@ -160,9 +161,9 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 
     # A run that fails in its entirety on the first attempt is misconfigured --
     # a wrong model name, a bad credential -- so stop before spending retries
-    # on it. Checked here rather than by dropping individual units, so that a
-    # single unit failing with the same status (an over-long document, a
-    # refusal) is still retried.
+    # on it. Checked at run level so a content refusal does not masquerade as
+    # bad configuration; refusals remain retryable, while over-long documents
+    # and other terminal per-unit failures have already left the retry queue.
     if (attempt == 0L && all(vapply(parsed, is.null, logical(1))) && all(fatal)) {
       break
     }
@@ -611,9 +612,21 @@ api_error_detail <- function(cnd) {
     jsonlite::fromJSON(text, simplifyVector = FALSE),
     error = function(e) NULL
   )
-  # OpenAI-compatible errors nest the message under `error`; some providers
-  # put it at the top level.
-  detail <- parsed$error$message %||% parsed$message %||% parsed$error
+  if (!is.list(parsed)) {
+    return(NA_character_)
+  }
+  # OpenAI-compatible errors usually nest the message under `error`, but some
+  # providers return a scalar `error` string or put `message` at the top level.
+  nested_error <- parsed$error
+  nested_detail <- if (is.list(nested_error)) {
+    nested_error$message
+  } else if (is.character(nested_error) && length(nested_error) == 1L &&
+             nzchar(nested_error)) {
+    nested_error
+  } else {
+    NULL
+  }
+  detail <- nested_detail %||% parsed$message
   if (!is.character(detail) || length(detail) != 1L || !nzchar(detail)) {
     return(NA_character_)
   }
@@ -722,9 +735,14 @@ is_length_rejection <- function(msg) {
     return(FALSE)
   }
   grepl(
-    "maximum context length|context length|range of input length|too long|exceeds .*token",
+    paste0(
+      "maximum context length|context[ -]?length|context window|",
+      "range of input length|(?:input|prompt|document)(?: is|'s)? too long|",
+      "exceeds?.{0,40}(?:token|context)|too many (?:input )?tokens"
+    ),
     msg,
-    ignore.case = TRUE
+    ignore.case = TRUE,
+    perl = TRUE
   )
 }
 
@@ -784,4 +802,144 @@ ellmer_convert_from_type <- function(x, type) {
     ))
   }
   converter(x, type)
+}
+
+
+#' Required properties whose absence is detectable in the result table
+#'
+#' Restricted to required scalar properties, because those are the ones
+#' [ellmer::parallel_chat_structured()] renders as a single column that can be
+#' checked for `NA`. Arrays and nested objects become list-columns, where "the
+#' model returned nothing useful" has no simple representation.
+#'
+#' @param schema An [ellmer::type_object()].
+#'
+#' @return A character vector of property names.
+#' @keywords internal
+#' @noRd
+required_scalar_fields <- function(schema) {
+  if (!inherits(schema, "ellmer::TypeObject")) {
+    return(character())
+  }
+  properties <- schema@properties
+  keep <- vapply(properties, function(p) {
+    isTRUE(p@required) && inherits(p, c("ellmer::TypeBasic", "ellmer::TypeEnum"))
+  }, logical(1))
+  names(properties)[keep]
+}
+
+
+#' Did the structured call return nothing usable at all?
+#'
+#' A structured call can succeed at the HTTP level and still return a table in
+#' which every required field is `NA` in every row: the endpoint accepted the
+#' JSON schema and ignored it, so ellmer had nothing to map onto the type and
+#' emitted `NA` rather than an error. Observed with `qwen3.5-397b-a17b` through
+#' Alibaba Model Studio. Erroring is therefore not a sufficient test of whether
+#' the structured path worked.
+#'
+#' @param results The result of [ellmer::parallel_chat_structured()].
+#' @param schema An [ellmer::type_object()].
+#'
+#' @return `TRUE` when the call produced no usable values.
+#' @keywords internal
+#' @noRd
+all_required_missing <- function(results, schema) {
+  # A user may have passed convert = FALSE, in which case there is no table to
+  # inspect and no basis for calling the attempt a failure.
+  if (!is.data.frame(results) || !nrow(results)) {
+    return(FALSE)
+  }
+  fields <- intersect(required_scalar_fields(schema), names(results))
+  if (!length(fields)) {
+    return(FALSE)
+  }
+  all(vapply(fields, function(f) all(is.na(results[[f]])), logical(1)))
+}
+
+
+#' How many rows are missing at least one required field?
+#'
+#' Partial failure, which is worth reporting but is not grounds for discarding
+#' the whole attempt and re-coding in JSON mode.
+#'
+#' @param results The result of [ellmer::parallel_chat_structured()].
+#' @param schema An [ellmer::type_object()].
+#'
+#' @return An integer count.
+#' @keywords internal
+#' @noRd
+n_incomplete <- function(results, schema) {
+  if (!is.data.frame(results) || !nrow(results)) {
+    return(0L)
+  }
+  fields <- intersect(required_scalar_fields(schema), names(results))
+  if (!length(fields)) {
+    return(0L)
+  }
+  sum(Reduce(`|`, lapply(fields, function(f) is.na(results[[f]]))))
+}
+
+
+#' Does this provider enforce the output schema by construction?
+#'
+#' Derived from ellmer's own dispatch rather than from a list of vendors.
+#' These provider classes define their own `chat_body()` method using a
+#' mechanism the provider is documented to enforce: OpenAI's `/responses`
+#' format with `strict = TRUE`, Anthropic's native structured output or a
+#' forced tool call, Gemini's `response_schema`, Bedrock's forced tool call,
+#' Snowflake's typed `response_format`.
+#'
+#' Everything else falls through to `ProviderOpenAICompatible`'s method, which
+#' sends `response_format = {type: "json_schema", strict: true}` and takes the
+#' answer on trust. Whether that is honoured is up to the endpoint, and
+#' measurement shows it often is not.
+#'
+#' Deriving this rather than tabulating it means a provider ellmer adds later
+#' defaults to "cannot vouch for this", which is the safe direction.
+#'
+#' @param provider A provider object from `chat$get_provider()`.
+#'
+#' @return `TRUE` when the schema is enforced by the provider's mechanism.
+#' @keywords internal
+#' @noRd
+provider_enforces_schema <- function(provider) {
+  enforcing <- c(
+    "ellmer::ProviderOpenAI",
+    "ellmer::ProviderAnthropic",
+    "ellmer::ProviderGoogleGemini",
+    "ellmer::ProviderAWSBedrock",
+    "ellmer::ProviderSnowflakeCortex"
+  )
+  any(class(provider) %in% enforcing)
+}
+
+
+#' Is this the DashScope "messages must contain the word json" rejection?
+#'
+#' Alibaba Model Studio rejects any request that sets `response_format` unless
+#' the word "json" appears somewhere in the messages, and
+#' [ellmer::parallel_chat_structured()] sets `response_format` from the schema.
+#' The structured call would therefore fail for a reason that has nothing to do
+#' with the codebook, on an endpoint that does enforce the schema once the
+#' request is accepted. Recognising it lets us satisfy the requirement and keep
+#' the enforcement, rather than falling back and losing it.
+#'
+#' NOT OBSERVED against ellmer's current request shape. The rejection was seen
+#' on 2026-08-12 with `response_format` of type `json_object`; ellmer sends type
+#' `json_schema`, which Model Studio accepted without complaint when this was
+#' checked live on 2026-09-02. This is therefore defensive: if the requirement
+#' does apply, one retry preserves enforcement; if it never fires, nothing
+#' happens. Do not read its presence as evidence that the quirk is live.
+#'
+#' @param msg An error message.
+#'
+#' @return `TRUE` when the request needs the word "json" in its prompt.
+#' @keywords internal
+#' @noRd
+is_json_word_error <- function(msg) {
+  if (!length(msg) || is.na(msg)) {
+    return(FALSE)
+  }
+  grepl("must contain the word ['\"]?json", msg, ignore.case = TRUE)
 }

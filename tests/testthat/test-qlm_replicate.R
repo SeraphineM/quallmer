@@ -515,6 +515,62 @@ test_that("qlm_replicate lets overrides win over restored chat_args", {
 })
 
 
+test_that("qlm_replicate drops provider-bound arguments when provider changes", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  old_credentials <- function() "old-provider-key"
+
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "deepseek/deepseek-v4-flash",
+      params = list(temperature = 0),
+      echo = "none",
+      credentials = old_credentials,
+      base_url = "https://api.deepseek.example",
+      api_args = list(seed = 42),
+      api_headers = c(`X-Provider` = "deepseek")
+    ),
+    execution_args = list(max_active = 3),
+    batch = FALSE, metadata = list(n_units = 1), name = "run1",
+    call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+  expect_message(
+    f(coded, model = "openai/gpt-4o-mini", name = "run2"),
+    paste0(
+      "not carrying over endpoint-specific arguments: `credentials`, ",
+      "`base_url`, `api_args`, `api_headers`"
+    )
+  )
+
+  expect_equal(seen$params, list(temperature = 0))
+  expect_equal(seen$echo, "none")
+  expect_equal(seen$max_active, 3)
+  expect_false(any(c("credentials", "base_url", "api_args", "api_headers") %in% names(seen)))
+
+  # Explicit settings for the replacement provider still pass through.
+  replacement_credentials <- function() "replacement-key"
+  expect_message(
+    f(coded, model = "openai/gpt-4o-mini", name = "run3",
+      credentials = replacement_credentials,
+      base_url = "https://api.openai.example"),
+    "not carrying over endpoint-specific arguments: `api_args`, `api_headers`"
+  )
+  expect_identical(seen$credentials, replacement_credentials)
+  expect_equal(seen$base_url, "https://api.openai.example")
+})
+
+
 test_that("qlm_replicate does not carry tools across a replication", {
   skip_if_not_installed("mockery")
 
@@ -575,9 +631,207 @@ test_that("qlm_replicate carries max_retries only where it applies", {
   f(make("deepseek/deepseek-chat"), name = "run2")
   expect_equal(seen$max_retries, 5L)
 
-  # Replicating onto a provider that cannot honour it drops it rather than
-  # aborting: changing the model is a legitimate thing to do.
+  # JSON mode is now reachable for any provider, so the setting still applies
+  # after a model change
   seen <- NULL
   f(make("deepseek/deepseek-chat"), model = "openai/gpt-4o-mini", name = "run3")
+  expect_equal(seen$max_retries, 5L)
+})
+
+
+test_that("qlm_replicate reproduces the path taken, not the mode requested", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  make <- function(..., model = "openai_compatible/kimi-k3") {
+    new_qlm_coded(
+      results = data.frame(id = 1L, score = 0.5),
+      codebook = codebook, data = "a", input_type = "text",
+      chat_args = list(name = model),
+      execution_args = list(), batch = FALSE,
+      metadata = c(list(n_units = 1), list(...)),
+      name = "run1", call = quote(qlm_code())
+    )
+  }
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    make(structured = "json", backend = "json_mode")
+  })
+
+  # The case that matters: the run asked for "auto" and the endpoint failed, so
+  # it validated locally. Replicating with "auto" would let an intermittently
+  # conforming endpoint take the structured path instead and skip that
+  # validation, making the two runs incomparable.
+  f(make(structured = "auto", backend = "json_mode", max_retries = 4L), name = "run2")
+  expect_equal(seen$structured, "json")
+  expect_equal(seen$max_retries, 4L)
+
+  # Likewise the other way: a run that did take the structured path replicates
+  # as "structured", so a failure surfaces rather than being papered over by a
+  # fallback the original never used
+  seen <- NULL
+  f(make(structured = "auto", backend = "structured"), name = "run3")
+  expect_equal(seen$structured, "structured")
+  # max_retries has no meaning there, and supplying it is an error
   expect_false("max_retries" %in% names(seen))
+
+  # An explicit override still wins
+  seen <- NULL
+  f(make(structured = "auto", backend = "json_mode"), structured = "auto", name = "run4")
+  expect_equal(seen$structured, "auto")
+})
+
+
+test_that("qlm_replicate leaves the mode alone for objects with no recorded backend", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  # Coded before `backend` was recorded at all
+  legacy <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    legacy
+  })
+
+  f(legacy, name = "run2")
+  expect_false("structured" %in% names(seen))
+})
+
+
+test_that("qlm_replicate drops credentials when the endpoint changes but the prefix does not", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  # Kimi through Moonshot. Qwen through Alibaba Model Studio has the same
+  # prefix, so only base_url distinguishes the two services.
+  moonshot <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai_compatible/kimi-k3",
+      base_url = "https://api.moonshot.ai/v1",
+      credentials = function() list(Authorization = "Bearer moonshot-key"),
+      api_headers = c(`X-Trace` = "1"),
+      api_args = list(reasoning_effort = "max"),
+      params = list(temperature = 0)
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    moonshot
+  })
+
+  # Repointing at DashScope keeps the prefix identical, so a prefix-only check
+  # would send Moonshot's credential to Alibaba
+  expect_message(
+    f(moonshot, base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      name = "run2"),
+    "not carrying over endpoint-specific arguments"
+  )
+
+  expect_false("credentials" %in% names(seen))
+  expect_false("api_headers" %in% names(seen))
+  expect_false("api_args" %in% names(seen))
+  # The new endpoint is used, and portable settings still travel
+  expect_equal(seen$base_url, "https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
+  expect_equal(seen$params, list(temperature = 0))
+})
+
+
+test_that("qlm_replicate keeps credentials when the endpoint is unchanged", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai_compatible/kimi-k3",
+      base_url = "https://api.moonshot.ai/v1",
+      credentials = function() list(Authorization = "Bearer moonshot-key")
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+
+  # A different model on the same host is the same endpoint: nothing to drop
+  expect_silent(f(coded, model = "openai_compatible/kimi-k2.6", name = "run2"))
+  expect_true("credentials" %in% names(seen))
+  expect_equal(seen$base_url, "https://api.moonshot.ai/v1")
+
+  # And a plain replication of the same run keeps everything
+  seen <- NULL
+  expect_silent(f(coded, name = "run3"))
+  expect_true("credentials" %in% names(seen))
+})
+
+
+test_that("qlm_replicate keeps an explicitly supplied credential across an endpoint change", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai_compatible/kimi-k3",
+      base_url = "https://api.moonshot.ai/v1",
+      credentials = function() list(Authorization = "Bearer moonshot-key")
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+
+  # Replacing the credential alongside the endpoint is the supported route,
+  # and is not reported as omitted
+  expect_silent(
+    f(coded,
+      base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+      credentials = function() list(Authorization = "Bearer dashscope-key"),
+      name = "run2")
+  )
+  expect_equal(
+    seen$credentials()$Authorization, "Bearer dashscope-key"
+  )
 })

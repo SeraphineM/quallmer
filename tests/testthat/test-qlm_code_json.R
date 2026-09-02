@@ -240,6 +240,10 @@ test_that("is_length_rejection recognises over-long input only", {
   expect_true(is_length_rejection("Range of input length should be [1, 129024]"))
   expect_true(is_length_rejection("the prompt is too long"))
 
+  # Generic latency language is transient, not evidence of a context overflow.
+  expect_false(is_length_rejection("upstream server took too long to respond"))
+  expect_false(is_length_rejection("request waited too long in queue"))
+
   # Content refusals must NOT be treated as unrecoverable: they are
   # non-deterministic, and the same document is coded on a later attempt.
   expect_false(is_length_rejection(
@@ -565,6 +569,21 @@ test_that("api_error_detail copes with bodies it cannot use", {
   expect_true(is.na(api_error_detail(make_cnd(raw(0)))))
   expect_true(is.na(api_error_detail(make_cnd(charToRaw("<html>nope</html>")))))
   expect_true(is.na(api_error_detail(make_cnd(charToRaw('{"ok":true}')))))
+  expect_equal(
+    api_error_detail(make_cnd(charToRaw('{"error":"bad request"}'))),
+    "bad request"
+  )
+  expect_equal(
+    api_error_detail(make_cnd(charToRaw('{"message":"top-level failure"}'))),
+    "top-level failure"
+  )
+  expect_equal(
+    api_error_detail(make_cnd(charToRaw(
+      '{"error":{"type":"invalid_request"},"message":"fallback failure"}'
+    ))),
+    "fallback failure"
+  )
+  expect_true(is.na(api_error_detail(make_cnd(charToRaw('"not an object"')))))
   expect_true(is.na(api_error_detail(simpleError("boom"))))
   expect_equal(api_error_message(simpleError("boom")), "boom")
   expect_equal(api_error_message(NULL), "the request failed")
@@ -618,6 +637,32 @@ test_that("code_handler_json aborts when the provider rejects every request", {
   expect_equal(calls$n, 1)
 })
 
+test_that("code_handler_json does not retry a fatal failure in a mixed batch", {
+  calls <- new.env()
+  h <- json_test_handler(
+    list(list(
+      text = c(NA_character_, "{\"score\":1,\"lab\":\"pos\"}"),
+      error = c("HTTP 400 Bad Request. Invalid request body.", NA_character_),
+      status = c(400L, NA_integer_)
+    )),
+    calls = calls
+  )
+
+  expect_warning(
+    result <- h(
+      x = c("a", "b"), codebook = json_test_codebook(),
+      model = "deepseek/deepseek-v4-pro", chat_args = list(),
+      execution_args = list()
+    ),
+    "1 response could not be coded, out of 2"
+  )
+
+  expect_equal(calls$n, 1)
+  expect_true(is.na(result$score[[1]]))
+  expect_equal(result$score[[2]], 1)
+  expect_match(json_test_messages(result)[[1]], "Invalid request body")
+})
+
 test_that("code_handler_json retries transient failures but not fatal ones", {
   calls <- new.env()
   h <- json_test_handler(
@@ -666,4 +711,92 @@ test_that("code_handler_json names the reasons in its warning", {
     ),
     "Context length exceeded"
   )
+})
+
+
+# Structured-failure detection ------------------------------------------------
+
+test_that("required_scalar_fields covers only checkable properties", {
+  schema <- ellmer::type_object(
+    code     = ellmer::type_enum("A code", values = c("a", "b")),
+    n        = ellmer::type_integer("N"),
+    optional = ellmer::type_string("Optional", required = FALSE),
+    claims   = ellmer::type_array(ellmer::type_string("A claim"))
+  )
+  # Arrays become list-columns, where "nothing useful came back" has no simple
+  # NA representation, so they are not checkable this way
+  expect_setequal(required_scalar_fields(schema), c("code", "n"))
+  expect_equal(required_scalar_fields("not a schema"), character())
+})
+
+test_that("all_required_missing detects a call that returned nothing usable", {
+  schema <- json_test_codebook()$schema
+
+  expect_true(all_required_missing(
+    data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_)),
+    schema
+  ))
+  # One good row is enough to say the endpoint did something
+  expect_false(all_required_missing(
+    data.frame(score = c(1, NA_real_), lab = c("pos", NA_character_)),
+    schema
+  ))
+  expect_false(all_required_missing(
+    data.frame(score = c(1, 2), lab = c("pos", "neg")),
+    schema
+  ))
+})
+
+test_that("all_required_missing does not misread a non-table result", {
+  schema <- json_test_codebook()$schema
+  # convert = FALSE returns a list; there is no table to inspect and so no
+  # basis for calling the attempt a failure
+  expect_false(all_required_missing(list(list(score = 1, lab = "pos")), schema))
+  expect_false(all_required_missing(data.frame(), schema))
+  expect_false(all_required_missing(NULL, schema))
+})
+
+test_that("n_incomplete counts partially failed rows", {
+  schema <- json_test_codebook()$schema
+  results <- data.frame(score = c(1, NA_real_, 3), lab = c("pos", "neg", NA_character_))
+
+  expect_equal(n_incomplete(results, schema), 2)
+  expect_equal(n_incomplete(data.frame(score = 1, lab = "pos"), schema), 0)
+  expect_equal(n_incomplete(list(), schema), 0L)
+})
+
+
+# Provider capability ---------------------------------------------------------
+
+test_that("provider_enforces_schema follows ellmer's mechanism, not a vendor list", {
+  withr::local_envvar(OPENAI_API_KEY = "x", ANTHROPIC_API_KEY = "x",
+                      GROQ_API_KEY = "x", MISTRAL_API_KEY = "x")
+  # ellmer::chat() derives the model from the name string, so it must not also
+  # be passed through `...`
+  provider_of <- function(name, ...) {
+    suppressWarnings(ellmer::chat(name, echo = "none", ...)$get_provider())
+  }
+
+  # Own chat_body() using a mechanism the provider enforces
+  expect_true(provider_enforces_schema(provider_of("openai/gpt-4o-mini")))
+  expect_true(provider_enforces_schema(provider_of("anthropic/claude-sonnet-4-5")))
+
+  # Falls through to ProviderOpenAICompatible, which sends strict = TRUE and
+  # takes the answer on trust
+  expect_false(provider_enforces_schema(provider_of("groq/llama-3.1-8b-instant")))
+  expect_false(provider_enforces_schema(provider_of("mistral/mistral-large-latest")))
+  expect_false(provider_enforces_schema(
+    provider_of("openai_compatible/some-model", base_url = "https://example.com/v1",
+                credentials = function() "k")
+  ))
+})
+
+test_that("is_json_word_error recognises the DashScope rejection", {
+  expect_true(is_json_word_error(paste(
+    "<400> InternalError.Algo.InvalidParameter: 'messages' must contain the word",
+    "'json' in some form, to use 'response_format' of type 'json_object'"
+  )))
+  expect_false(is_json_word_error("HTTP 429 Too Many Requests."))
+  expect_false(is_json_word_error(NA_character_))
+  expect_false(is_json_word_error(character(0)))
 })

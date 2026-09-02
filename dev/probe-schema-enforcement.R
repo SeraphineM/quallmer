@@ -146,6 +146,38 @@ if (interactive()) {
   ), right = FALSE, row.names = FALSE)
 }
 
+# Natural-rate probe: the same question without the adversarial instruction.
+# The adversarial probe answers "does this endpoint enforce"; this one answers
+# "how often does it actually matter", which is a different and lower number.
+# convert = FALSE again, or convert_from_type() hides the evidence.
+probe_natural <- function(label, base_url, key, model, codebook, texts) {
+  ch <- ellmer::chat_openai_compatible(
+    base_url = base_url, credentials = function() key, model = model,
+    echo = "none",
+    system_prompt = if (is.null(codebook$role)) codebook$instructions
+                    else paste(codebook$role, codebook$instructions, sep = "\n\n"))
+  out <- tryCatch(
+    ellmer::parallel_chat_structured(ch, as.list(texts), type = codebook$schema,
+                                     convert = FALSE),
+    error = function(e) e)
+  if (inherits(out, "error")) {
+    return(data.frame(model = label, verdict = "error",
+                      detail = substr(conditionMessage(out), 1, 60)))
+  }
+  bad <- character()
+  for (v in out) {
+    if (is.null(v)) next
+    chk <- tryCatch(quallmer:::validate_against_type(v, codebook$schema, "$"),
+                    error = function(e) e)
+    if (inherits(chk, "error")) bad <- c(bad, conditionMessage(chk))
+  }
+  data.frame(model = label,
+             verdict = if (length(bad)) "NOT ENFORCED" else "no violation seen",
+             detail = sprintf("%d/%d non-conforming%s", length(bad), length(texts),
+                              if (length(bad)) paste0(": ", bad[[1]]) else ""))
+}
+
+
 # Observed 2026-09-01, ellmer 0.4.2, 3 trials each:
 #
 #   openai/gpt-4o-mini               no violation seen   0/3
@@ -162,3 +194,19 @@ if (interactive()) {
 #
 # Note kimi-k3 differs by route, and both failures were intermittent. The probe
 # can prove non-enforcement; it cannot prove enforcement.
+#
+# Natural rate, 2026-09-02, probe_natural():
+#
+#   data_codebook_sentiment (1 enum, 1 integer), 25 texts
+#     kimi-k3 [dashscope]  0/25        kimi-k3 [moonshot]  0/25
+#
+#   complex codebook (nested array, 4 enums, bounded numbers), 15 passages
+#     kimi-k3 [dashscope]  1/15  -> $ has unexpected properties: in_group, out_group
+#     kimi-k3 [moonshot]   0/15        qwen-flash [dashscope]  0/15
+#
+# So: low on a simple schema, non-zero on a complex one. That single violation
+# is instructive -- the instructions asked for an in-group and out-group, the
+# schema had no slot for either, and the model invented two properties.
+# additionalProperties: false makes that impossible on an enforcing endpoint,
+# and under the default convert = TRUE the extra keys are silently dropped and
+# the row looks perfect.
