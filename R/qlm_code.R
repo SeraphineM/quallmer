@@ -18,12 +18,18 @@
 #'   that provider). Passed to the `name` argument of [ellmer::chat()].
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
+#' @param structured How the output schema is obtained. `"structured"` uses
+#'   [ellmer::parallel_chat_structured()] and trusts the provider to enforce
+#'   the schema. `"json"` asks for JSON, puts the schema in the system prompt,
+#'   and validates every response against the codebook locally. `"auto"` (the
+#'   default) attempts the structured call and falls back to `"json"` if it
+#'   fails. See Details for which to use.
 #' @param max_retries Number of additional attempts made for a response that
-#'   arrives intact but does not conform to the codebook schema. Applies only to
-#'   providers coded in JSON mode (see Details); setting it for any other
-#'   provider is an error. Default is 2, giving at most three attempts per unit.
-#'   This is separate from ellmer's transport-level retries for rate limits and
-#'   server errors, which apply to every provider and are set with
+#'   arrives intact but does not conform to the codebook schema. Applies on the
+#'   JSON path only, so setting it alongside `structured = "structured"` is an
+#'   error. Default is 2, giving at most three attempts per unit. This is
+#'   separate from ellmer's transport-level retries for rate limits and server
+#'   errors, which apply to every provider and are set with
 #'   `options(ellmer_max_tries = )`.
 #' @param batch Logical. If `TRUE`, uses [ellmer::batch_chat_structured()]
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
@@ -46,16 +52,40 @@
 #' function. Set `verbose = TRUE` to see progress messages during coding.
 #' Retry logic for API failures should be configured through ellmer's options.
 #'
-#' Some providers accept a JSON Schema but do not enforce it, so a response can
-#' come back parseable but non-conforming, and the non-conformance then arrives
-#' silently as `NA`. For those providers `qlm_code()` routes to a JSON-mode
-#' handler that puts the schema in the system prompt, validates every response
-#' against the codebook schema locally, and re-prompts the model with the
-#' specific validation error when a response does not conform. This currently
-#' applies to `"deepseek"`. Units that never validate have `NA` coded values and
-#' a `.error` list-column recording the reason. `max_retries` controls how many
-#' repair attempts each unit gets. Batch processing and image codebooks are not
-#' supported on this path.
+#' @section Schema enforcement:
+#'
+#' Some providers accept a JSON Schema without enforcing it, so a response can
+#' come back parseable but non-conforming — and the non-conformance then arrives
+#' silently as `NA`, indistinguishable from missing data. Providers reached
+#' through ellmer's generic OpenAI-compatible request path are all in this
+#' position: `strict = TRUE` is sent and may simply be ignored. `qlm_code()`
+#' emits a one-time note when it detects one, which
+#' `options(quallmer.quiet_schema_note = TRUE)` silences.
+#'
+#' `structured` chooses what to do about it:
+#'
+#' \describe{
+#'   \item{`"structured"`}{Trust the provider. Fails loudly if the call fails.}
+#'   \item{`"json"`}{Never trust it: ask for JSON, put the schema in the system
+#'     prompt, and validate each response against `codebook$schema` locally,
+#'     re-prompting with the specific validation error when one does not
+#'     conform. The reliable choice for an endpoint known not to enforce.}
+#'   \item{`"auto"`}{Attempt the structured call; fall back to `"json"` if it
+#'     errors, or if it returns a result in which every required field is `NA`
+#'     in every row, which is what an endpoint that ignored the schema
+#'     produces.}
+#' }
+#'
+#' `"auto"` catches wholesale non-enforcement, not the intermittent kind: a
+#' single non-conforming row among many leaves that check silent. Only
+#' `"json"` catches that, at the cost of putting the schema in the prompt.
+#'
+#' On the JSON path, units that never validate have `NA` coded values and a
+#' `.error` list-column recording the reason, and `max_retries` controls how
+#' many repair attempts each unit gets. Batch processing and image codebooks
+#' are not supported there, so `"auto"` will not fall back under
+#' `batch = TRUE`. The path actually taken is recorded in the run metadata as
+#' `backend`.
 #'
 #' When `batch = TRUE`, the function uses [ellmer::batch_chat_structured()]
 #' which submits jobs to the provider's batch API. This is typically more
@@ -91,11 +121,15 @@
 #' }
 #'
 #' @export
-qlm_code <- function(x, codebook, model, ..., batch = FALSE, max_retries = 2L,
-                     name = NULL, notes = NULL) {
+qlm_code <- function(x, codebook, model, ...,
+                     batch = FALSE,
+                     structured = c("auto", "structured", "json"),
+                     max_retries = 2L, name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
   explicit_retries <- !missing(max_retries)
+  explicit_structured <- !missing(structured)
+  structured <- match.arg(structured)
 
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
@@ -140,17 +174,20 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, max_retries = 2L,
     ))
   }
 
-  # Providers that do not enforce the output schema are coded by a dedicated
-  # handler instead of ellmer::parallel_chat_structured(); see code_handler_for().
-  handler <- code_handler_for(model)
+  # Providers whose API rejects the schema-constrained request skip straight to
+  # JSON mode rather than spending a wasted round trip; see
+  # default_structured_mode().
+  if (!explicit_structured) {
+    structured <- default_structured_mode(model)
+  }
 
-  # Repairing a response requires validating it, which only the JSON-mode
-  # handler does. Setting it for any other provider would have no effect, so
-  # say so rather than accepting a value that will not be applied.
-  if (explicit_retries && is.null(handler)) {
+  # Repairing a response requires validating it, which only the JSON-mode path
+  # does. Under `structured = "structured"` that path is never reached, so say
+  # so rather than accepting a value that will not be applied.
+  if (explicit_retries && identical(structured, "structured")) {
     cli::cli_abort(c(
-      "{.arg max_retries} is not supported for model {.val {model}}.",
-      "i" = "It applies only to providers coded in JSON mode, such as {.val deepseek}.",
+      "{.arg max_retries} is not supported with {.code structured = \"structured\"}.",
+      "i" = "It applies to the JSON-mode path; use {.code structured = \"auto\"} or {.code \"json\"}.",
       "i" = "For transport-level retries on any provider, set {.code options(ellmer_max_tries = )}."
     ))
   }
@@ -165,11 +202,55 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, max_retries = 2L,
   # to pass through to ellmer::chat() which forwards them to the provider
   chat_args <- dots[!dot_names %in% execution_arg_names]
 
-  # Metadata contributed by a provider-specific handler (empty for the default path)
+  # Metadata contributed by the coding path
   backend_meta <- list()
+  results <- NULL
+  fallback_reason <- NULL
 
-  if (!is.null(handler)) {
-    results <- handler(
+  # ---- schema-constrained structured output -------------------------------
+  if (structured %in% c("auto", "structured")) {
+    attempt <- try_structured_call(
+      x = x, codebook = codebook, model = model,
+      chat_args = chat_args, execution_args = execution_args, batch = batch
+    )
+
+    if (isTRUE(attempt$ok)) {
+      results <- attempt$value
+      backend_meta <- list(backend = "structured")
+      incomplete <- n_incomplete(results, codebook$schema)
+      if (incomplete) {
+        cli::cli_warn(
+          "{incomplete} row{?s} from the structured call {?is/are} missing at least one required field."
+        )
+      }
+    } else if (identical(structured, "structured")) {
+      cli::cli_abort(c(
+        "Structured output failed for model {.val {model}}.",
+        set_bullets(attempt$error),
+        "i" = "Use {.code structured = \"auto\"} to fall back to JSON mode with local validation."
+      ))
+    } else if (batch) {
+      # JSON mode drives its own parallel requests and has no batch API path,
+      # so under batch there is nothing to fall back to. Say that, rather than
+      # letting the handler abort later with a message about `batch`.
+      cli::cli_abort(c(
+        "Structured output failed for model {.val {model}}.",
+        set_bullets(attempt$error),
+        "i" = "JSON-mode coding has no batch path, so {.code structured = \"auto\"} cannot fall back here.",
+        "i" = "Re-run with {.code batch = FALSE} to use local validation instead."
+      ))
+    } else {
+      fallback_reason <- attempt$error
+      cli::cli_warn(c(
+        "Structured output failed; falling back to JSON mode with local validation.",
+        set_bullets(attempt$error)
+      ))
+    }
+  }
+
+  # ---- JSON mode with local validation ------------------------------------
+  if (is.null(results)) {
+    results <- code_handler_json(
       x = x,
       codebook = codebook,
       model = model,
@@ -180,50 +261,11 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, max_retries = 2L,
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL
-  } else {
-    # Build system prompt from role and instructions
-    system_prompt <- if (!is.null(codebook$role)) {
-      paste(codebook$role, codebook$instructions, sep = "\n\n")
-    } else {
-      codebook$instructions
-    }
+  }
 
-    # Build chat object using ellmer::chat()
-    chat <- do.call(ellmer::chat, c(
-      list(
-        name = model,
-        system_prompt = system_prompt
-      ),
-      chat_args
-    ))
-
-    # Prepare prompts based on input type
-    if (codebook$input_type == "image") {
-      prompts <- lapply(x, ellmer::content_image_file)
-    } else {
-      prompts <- as.list(x)
-    }
-
-    # Execute with appropriate function based on batch parameter
-    if (batch) {
-      results <- do.call(ellmer::batch_chat_structured, c(
-        list(
-          chat = chat,
-          prompts = prompts,
-          type = codebook$schema
-        ),
-        execution_args
-      ))
-    } else {
-      results <- do.call(ellmer::parallel_chat_structured, c(
-        list(
-          chat = chat,
-          prompts = prompts,
-          type = codebook$schema
-        ),
-        execution_args
-      ))
-    }
+  backend_meta$structured <- structured
+  if (!is.null(fallback_reason)) {
+    backend_meta$fallback_reason <- fallback_reason
   }
 
   # Add ID column from input names or sequence
@@ -267,27 +309,152 @@ qlm_code <- function(x, codebook, model, ..., batch = FALSE, max_retries = 2L,
   )
 }
 
-#' Resolve the coding handler for a model
+#' Default structured-output mode for a model
 #'
-#' Providers that accept a JSON Schema but do not enforce it are coded by a
-#' dedicated handler rather than by [ellmer::parallel_chat_structured()]. This
-#' is the registry mapping a provider to its handler; adding a provider means
-#' adding an entry here and a handler function, not another branch in
-#' [qlm_code()].
+#' Providers whose API rejects the schema-constrained request outright should
+#' not spend a guaranteed-wasted round trip discovering that. DeepSeek is the
+#' known case: its endpoint answers `response_format` of type `json_schema`
+#' with HTTP 400, "This response_format type is unavailable now". Everything
+#' else defaults to attempting the structured call.
+#'
+#' Only a *default*: an explicit `structured =` always wins.
 #'
 #' @param model Provider (and optionally model) name, as passed to [qlm_code()].
 #'
-#' @return The handler function, or `NULL` when the default
-#'   [ellmer::parallel_chat_structured()] path should be used.
+#' @return One of `"auto"`, `"structured"` or `"json"`.
 #' @keywords internal
 #' @noRd
-code_handler_for <- function(model) {
+default_structured_mode <- function(model) {
   provider <- sub("/.*$", "", model)
 
   switch(provider,
-    deepseek = code_handler_json,
-    NULL
+    deepseek = "json",
+    "auto"
   )
+}
+
+
+#' Attempt schema-constrained structured output
+#'
+#' Wraps the [ellmer::parallel_chat_structured()] path so that [qlm_code()] can
+#' decide what to do when it does not work. Two things count as failure: the
+#' call throwing, and the call returning a table in which every required field
+#' is `NA` in every row, which is what an endpoint that accepted the schema and
+#' ignored it produces.
+#'
+#' @param x,codebook,model,chat_args,execution_args,batch As in [qlm_code()].
+#'
+#' @return A list with `ok`, and either `value` (the results) or `error`.
+#' @keywords internal
+#' @noRd
+try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch) {
+  system_prompt <- if (!is.null(codebook$role)) {
+    paste(codebook$role, codebook$instructions, sep = "\n\n")
+  } else {
+    codebook$instructions
+  }
+
+  if (codebook$input_type == "image") {
+    prompts <- lapply(x, ellmer::content_image_file)
+  } else {
+    prompts <- as.list(x)
+  }
+
+  run <- function(prompt) {
+    chat <- do.call(ellmer::chat, c(
+      list(name = model, system_prompt = prompt),
+      chat_args
+    ))
+    warn_unenforced_schema(chat, model)
+
+    if (batch) {
+      do.call(ellmer::batch_chat_structured, c(
+        list(chat = chat, prompts = prompts, type = codebook$schema),
+        execution_args
+      ))
+    } else {
+      do.call(ellmer::parallel_chat_structured, c(
+        list(chat = chat, prompts = prompts, type = codebook$schema),
+        execution_args
+      ))
+    }
+  }
+
+  attempt <- tryCatch(
+    list(ok = TRUE, value = run(system_prompt)),
+    error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+  )
+
+  # Alibaba Model Studio refuses `response_format` unless the word "json"
+  # appears in the messages. That is a request-shape requirement, not a coding
+  # one, and the endpoint does enforce the schema once the request is accepted
+  # -- so satisfy it and retry rather than falling back and losing enforcement.
+  # The added sentence concerns output format only and names no coding
+  # criterion, so the substantive instrument is unchanged.
+  #
+  # Defensive: not reachable against ellmer's current request shape, which
+  # sends json_schema rather than json_object. See is_json_word_error().
+  if (!isTRUE(attempt$ok) && is_json_word_error(attempt$error)) {
+    retry_prompt <- paste(
+      system_prompt,
+      "Return your answer as a single JSON object.",
+      sep = "\n\n"
+    )
+    attempt <- tryCatch(
+      list(ok = TRUE, value = run(retry_prompt)),
+      error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+    )
+  }
+
+  if (isTRUE(attempt$ok) && all_required_missing(attempt$value, codebook$schema)) {
+    attempt <- list(
+      ok = FALSE,
+      error = paste0(
+        "the structured call returned no usable values (every required field ",
+        "was NA in all ", nrow(attempt$value), " row{s}); the endpoint appears ",
+        "not to honour the JSON schema"
+      )
+    )
+  }
+
+  attempt
+}
+
+
+#' Note when the provider does not guarantee schema enforcement
+#'
+#' Emitted once per session. The structured path is being trusted to return
+#' conforming output, and for anything on ellmer's generic OpenAI-compatible
+#' request path that trust is unverified: `strict = TRUE` is sent and may
+#' simply be ignored. Informational rather than a warning, because it describes
+#' a property of the endpoint, not a problem with this run.
+#'
+#' @param chat An [ellmer::Chat] object.
+#' @param model The model string, for the message.
+#'
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+warn_unenforced_schema <- function(chat, model) {
+  if (isTRUE(getOption("quallmer.quiet_schema_note", FALSE))) {
+    return(invisible(NULL))
+  }
+  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+  if (is.null(provider) || provider_enforces_schema(provider)) {
+    return(invisible(NULL))
+  }
+
+  cli::cli_inform(
+    c(
+      "!" = "{.val {model}} is reached through an OpenAI-compatible endpoint, which may accept the output schema without enforcing it.",
+      "i" = "Non-conforming values arrive as {.val NA}, indistinguishable from missing data.",
+      "i" = "Use {.code structured = \"json\"} to validate each response against the codebook locally.",
+      "i" = "Silence this with {.code options(quallmer.quiet_schema_note = TRUE)}."
+    ),
+    .frequency = "once",
+    .frequency_id = "quallmer_schema_enforcement"
+  )
+  invisible(NULL)
 }
 
 
@@ -355,6 +522,9 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   if (!is.null(metadata$backend)) {
     object_meta$backend <- metadata$backend
   }
+  if (!is.null(metadata$structured)) {
+    object_meta$structured <- metadata$structured
+  }
 
   # Build user metadata: start with name and notes, then add custom metadata
   user_meta <- list(
@@ -364,7 +534,7 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
 
   # Add any custom metadata fields (exclude system, object, and user-handled fields)
   system_fields <- c("timestamp", "ellmer_version", "quallmer_version", "R_version")
-  object_fields <- c("n_units", "source", "is_gold", "backend")
+  object_fields <- c("n_units", "source", "is_gold", "backend", "structured")
   user_handled <- c("name", "notes")
   exclude_fields <- c(system_fields, object_fields, user_handled)
 

@@ -285,11 +285,14 @@ test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
   }
   mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
 
-  mockery::stub(qlm_code, "ellmer::chat", mock_chat)
-  mockery::stub(qlm_code, "ellmer::parallel_chat_structured", mock_results)
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", mock_chat)
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
 
   # Call with a provider-specific argument (like base_url for openai_compatible)
-  qlm_code(c("text1", "text2"), codebook, model = "test/model",
+  f(c("text1", "text2"), codebook, model = "test/model",
            base_url = "https://my-api.com/v1")
 
   # Verify the provider-specific argument was passed through to ellmer::chat
@@ -308,13 +311,14 @@ test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
   mock_chat <- structure(list(), class = "ellmer_chat")
   mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
 
-  mockery::stub(qlm_code, "ellmer::chat", mock_chat)
-
-  # Mock parallel_chat_structured and verify it's called
   mock_pcs <- mockery::mock(mock_results, cycle = TRUE)
-  mockery::stub(qlm_code, "ellmer::parallel_chat_structured", mock_pcs)
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", mock_chat)
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_pcs)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
 
-  result <- qlm_code(c("text1", "text2"), codebook,
+  result <- f(c("text1", "text2"), codebook,
                      model = "test/model", batch = FALSE)
 
   # Verify parallel_chat_structured was called
@@ -336,17 +340,18 @@ test_that("qlm_code uses batch_chat_structured when batch=TRUE", {
   mock_chat <- structure(list(), class = "ellmer_chat")
   mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
 
-  mockery::stub(qlm_code, "ellmer::chat", mock_chat)
-
-  # Mock batch_chat_structured and verify it's called
   mock_bcs <- mockery::mock(mock_results, cycle = TRUE)
-  mockery::stub(qlm_code, "ellmer::batch_chat_structured", mock_bcs)
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", mock_chat)
+  mockery::stub(tsc, "ellmer::batch_chat_structured", mock_bcs)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
 
   # Use an execution arg that's valid (convert is in both parallel and batch)
   result <- suppressWarnings(
-    qlm_code(c("text1", "text2"), codebook,
-             model = "test/model", batch = TRUE,
-             convert = TRUE)
+    f(c("text1", "text2"), codebook,
+      model = "test/model", batch = TRUE,
+      convert = TRUE)
   )
 
   # Verify batch_chat_structured was called
@@ -369,11 +374,14 @@ test_that("qlm_code builds metadata correctly", {
   mock_chat <- structure(list(), class = "ellmer_chat")
   mock_results <- data.frame(id = 1:3, score = c(0.5, 0.8, 0.2))
 
-  mockery::stub(qlm_code, "ellmer::chat", mock_chat)
-  mockery::stub(qlm_code, "ellmer::parallel_chat_structured", mock_results)
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", mock_chat)
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
 
-  result <- qlm_code(c("text1", "text2", "text3"), codebook,
-                     model = "test/model")
+  result <- f(c("text1", "text2", "text3"), codebook,
+              model = "test/model")
 
   meta_attr <- attr(result, "meta")
 
@@ -425,13 +433,15 @@ test_that("qlm_code stores notes in metadata", {
 })
 
 
-test_that("code_handler_for routes only providers that need JSON-mode coding", {
-  expect_null(code_handler_for("openai/gpt-4o-mini"))
-  expect_null(code_handler_for("anthropic/claude-sonnet-4-5"))
-  expect_null(code_handler_for("openai"))
+test_that("default_structured_mode skips the structured call only where it cannot work", {
+  # DeepSeek's API answers `response_format` with HTTP 400, so attempting it is
+  # a guaranteed-wasted round trip
+  expect_equal(default_structured_mode("deepseek/deepseek-v4-pro"), "json")
+  expect_equal(default_structured_mode("deepseek"), "json")
 
-  expect_identical(code_handler_for("deepseek/deepseek-chat"), code_handler_json)
-  expect_identical(code_handler_for("deepseek"), code_handler_json)
+  expect_equal(default_structured_mode("openai/gpt-4o-mini"), "auto")
+  expect_equal(default_structured_mode("anthropic/claude-sonnet-4-5"), "auto")
+  expect_equal(default_structured_mode("openai_compatible/kimi-k3"), "auto")
 })
 
 
@@ -452,7 +462,7 @@ test_that("qlm_code delegates to the handler and records the backend", {
   }
 
   f <- qlm_code
-  mockery::stub(f, "code_handler_for", function(...) fake_handler)
+  mockery::stub(f, "code_handler_json", fake_handler)
 
   result <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
               max_retries = 5, max_active = 3)
@@ -476,44 +486,49 @@ test_that("qlm_code still uses parallel_chat_structured for other providers", {
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Prompt", type_obj)
 
-  mock_chat <- structure(list(), class = "Chat")
   mock_pcs <- mockery::mock(data.frame(score = c(0.5, 0.8)), cycle = TRUE)
-
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_pcs)
   f <- qlm_code
-  mockery::stub(f, "ellmer::chat", mock_chat)
-  mockery::stub(f, "ellmer::parallel_chat_structured", mock_pcs)
+  mockery::stub(f, "try_structured_call", tsc)
 
   result <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini")
 
   mockery::expect_called(mock_pcs, 1)
-  expect_null(qlm_meta(result, type = "object")$backend)
+  # Every run now says which path produced it
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  expect_equal(qlm_meta(result, type = "object")$structured, "auto")
 })
 
 
-test_that("qlm_code errors on max_retries only when it is set explicitly", {
+test_that("qlm_code errors on max_retries only where JSON mode cannot be reached", {
   skip_if_not_installed("mockery")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Prompt", type_obj)
 
-  # Explicitly set for a provider that cannot honour it
+  # `structured` forbids the JSON path, so repair attempts can never happen
   expect_error(
-    qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini", max_retries = 2),
-    "not supported for model"
+    qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini",
+             structured = "structured", max_retries = 2),
+    "not supported with"
   )
   # Even when the value happens to equal the default
   expect_error(
-    qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini", max_retries = 2L),
-    "not supported for model"
+    qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini",
+             structured = "structured", max_retries = 2L),
+    "not supported with"
   )
 
-  # Left at the default, the same call proceeds
-  mock_chat <- structure(list(), class = "Chat")
+  # Under "auto" the JSON path is reachable, so the argument applies
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
   f <- qlm_code
-  mockery::stub(f, "ellmer::chat", mock_chat)
-  mockery::stub(f, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  mockery::stub(f, "try_structured_call", tsc)
   expect_s3_class(
-    f(c("a"), codebook, model = "openai/gpt-4o-mini"),
+    f(c("a"), codebook, model = "openai/gpt-4o-mini", max_retries = 4),
     "qlm_coded"
   )
 })
@@ -532,7 +547,7 @@ test_that("qlm_code passes its max_retries default to the handler", {
     tibble::tibble(score = 0.5)
   }
   f <- qlm_code
-  mockery::stub(f, "code_handler_for", function(...) fake_handler)
+  mockery::stub(f, "code_handler_json", fake_handler)
 
   f("a", codebook, model = "deepseek/deepseek-chat")
   expect_equal(seen, 2L)
@@ -547,4 +562,270 @@ test_that("qlm_code requires a single model string", {
     qlm_code(c("a"), codebook, model = c("openai", "anthropic")),
     "must be a single string"
   )
+})
+
+
+# structured = c("auto", "structured", "json") --------------------------------
+
+# A try_structured_call() with the ellmer calls stubbed out. `results` is
+# returned by the structured call; `errors` is a character vector of messages
+# to throw, one per attempt, NA meaning "succeed".
+structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
+                            calls = NULL) {
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
+  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
+  i <- 0L
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
+    i <<- i + 1L
+    if (!is.null(calls)) {
+      calls$n <- i
+    }
+    err <- if (!is.null(errors) && i <= length(errors)) errors[[i]] else NA_character_
+    if (!is.na(err)) stop(err, call. = FALSE)
+    results
+  })
+  tsc
+}
+
+json_stub <- function(calls = NULL) {
+  function(x, codebook, model, chat_args, execution_args, batch, max_retries) {
+    if (!is.null(calls)) {
+      calls$json <- TRUE
+      calls$max_retries <- max_retries
+    }
+    results <- tibble::tibble(score = rep(0.99, length(x)))
+    attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
+    results
+  }
+}
+
+structured_test_codebook <- function() {
+  qlm_codebook("Test", "Prompt", ellmer::type_object(score = ellmer::type_number("Score")))
+}
+
+
+test_that("structured = 'structured' never reaches the JSON path", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub())
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+              structured = "structured")
+
+  expect_null(calls$json)
+  expect_equal(result$score, 0.5)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+})
+
+
+test_that("structured = 'json' never attempts the structured call", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(calls = calls))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+              structured = "json")
+
+  expect_null(calls$n)
+  expect_true(calls$json)
+  expect_equal(result$score, 0.99)
+  expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
+  expect_equal(qlm_meta(result, type = "object")$structured, "json")
+})
+
+
+test_that("structured = 'auto' falls back to JSON mode when the call errors", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call",
+                structured_stub(errors = "HTTP 400 Bad Request.", calls = calls))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    result <- f("a", structured_test_codebook(), model = "openai_compatible/kimi-k3",
+                base_url = "https://example.com/v1"),
+    "falling back to JSON mode"
+  )
+
+  expect_true(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
+  # The reason is kept, so a run that switched path can say why
+  expect_match(qlm_meta(result, type = "user")$fallback_reason, "400")
+})
+
+
+test_that("structured = 'auto' falls back when every required field is NA", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # HTTP 200, but the endpoint accepted the schema and ignored it
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call",
+                structured_stub(results = data.frame(score = c(NA_real_, NA_real_))))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(), model = "openai_compatible/x",
+                base_url = "https://example.com/v1"),
+    "no usable values"
+  )
+  expect_true(calls$json)
+})
+
+
+test_that("a partly incomplete structured result warns without falling back", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call",
+                structured_stub(results = data.frame(score = c(1, NA_real_, 3))))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    result <- f(c("a", "b", "c"), structured_test_codebook(), model = "openai/gpt-4o-mini"),
+    "1 row from the structured call is missing"
+  )
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+})
+
+
+test_that("structured = 'structured' aborts rather than falling back", {
+  skip_if_not_installed("mockery")
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(errors = "the endpoint said no"))
+
+  expect_error(
+    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+      structured = "structured"),
+    "the endpoint said no"
+  )
+})
+
+
+test_that("auto cannot fall back under batch, and says so", {
+  skip_if_not_installed("mockery")
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(errors = "batch call failed"))
+
+  expect_error(
+    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", batch = TRUE),
+    "has no batch path"
+  )
+})
+
+
+test_that("the DashScope json-word rejection retries structured before falling back", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  json_word <- paste(
+    "<400> InternalError.Algo.InvalidParameter: 'messages' must contain the word",
+    "'json' in some form, to use 'response_format' of type 'json_object'"
+  )
+  # Fails once with the json-word error, succeeds on the retry
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call",
+                structured_stub(errors = json_word, calls = calls))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  result <- f("a", structured_test_codebook(), model = "openai_compatible/qwen-flash",
+              base_url = "https://example.com/v1")
+
+  # Two structured attempts, and enforcement is kept rather than abandoned
+  expect_equal(calls$n, 2)
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+})
+
+
+test_that("an unrelated error falls back without a second structured attempt", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call",
+                structured_stub(errors = "HTTP 500 Internal Server Error.", calls = calls))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  suppressWarnings(
+    f("a", structured_test_codebook(), model = "openai_compatible/x",
+      base_url = "https://example.com/v1")
+  )
+
+  expect_equal(calls$n, 1)
+  expect_true(calls$json)
+})
+
+
+test_that("max_retries reaches the JSON path under auto", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(errors = "nope"))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  suppressWarnings(
+    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", max_retries = 7)
+  )
+  expect_equal(calls$max_retries, 7)
+})
+
+
+test_that("the enforcement note fires for unverifiable endpoints only", {
+  skip_if_not_installed("mockery")
+  # The note is once-per-session; disable that so the test does not depend on
+  # whether something earlier in the suite already consumed it
+  withr::local_options(quallmer.quiet_schema_note = FALSE,
+                       rlib_message_verbosity = "verbose")
+
+  fake_chat <- function(provider_class) {
+    list(get_provider = function() structure(list(), class = c(provider_class, "S7_object")))
+  }
+
+  # A provider whose own chat_body() uses an enforced mechanism: nothing to say
+  expect_silent(
+    warn_unenforced_schema(fake_chat("ellmer::ProviderOpenAI"), "openai/gpt-4o-mini")
+  )
+  expect_silent(
+    warn_unenforced_schema(fake_chat("ellmer::ProviderAnthropic"), "anthropic/claude")
+  )
+
+  # Anything on the generic OpenAI-compatible path is unverified
+  expect_message(
+    warn_unenforced_schema(fake_chat("ellmer::ProviderOpenAICompatible"),
+                           "openai_compatible/kimi-k3"),
+    "may accept the output schema without enforcing it"
+  )
+})
+
+
+test_that("the enforcement note can be silenced", {
+  withr::local_options(quallmer.quiet_schema_note = TRUE)
+  fake <- list(get_provider = function() {
+    structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
+  })
+
+  expect_silent(warn_unenforced_schema(fake, "openai_compatible/kimi-k3"))
+})
+
+
+test_that("the enforcement note survives a provider it cannot inspect", {
+  withr::local_options(quallmer.quiet_schema_note = FALSE)
+  broken <- list(get_provider = function() stop("no provider"))
+
+  expect_silent(warn_unenforced_schema(broken, "some/model"))
 })

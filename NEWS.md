@@ -2,6 +2,25 @@
 
 ## Bug fixes
 
+* `qlm_code()` gains a `structured` argument controlling how the output schema
+  is obtained, generalising the local-validation path added in #128 beyond
+  DeepSeek. `"structured"` trusts the provider; `"json"` puts the schema in the
+  system prompt and validates every response against `codebook$schema` locally;
+  `"auto"` (the default) attempts the structured call and falls back to
+  `"json"` when it fails. This matters because ellmer sends
+  `response_format = {type: "json_schema", strict: true}` to every
+  OpenAI-compatible provider and takes the result on trust, and measurement
+  shows several do not honour it — Kimi violated a schema it was given on 2 of
+  3 identical requests through one gateway. Non-conformance arrives as `NA`,
+  indistinguishable from missing data, so `qlm_code()` now also emits a
+  one-time note when coding against an endpoint whose enforcement it cannot
+  verify, silenced with `options(quallmer.quiet_schema_note = TRUE)`. Whether
+  an endpoint is trusted is derived from ellmer's own request path rather than
+  a list of vendors, so a provider added to ellmer later defaults to
+  unverified. Failure is detected both from an error and from a result in which
+  every required field is `NA` in every row, which is what an endpoint that
+  accepted the schema and ignored it produces (#134).
+
 * `qlm_code()` can now code with DeepSeek, and no longer trusts providers that
   accept a JSON Schema without enforcing it. The DeepSeek API rejects the
   `response_format` that `ellmer::parallel_chat_structured()` sends

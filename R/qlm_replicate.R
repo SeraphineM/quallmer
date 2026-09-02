@@ -102,14 +102,18 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   original_args <- c(original_chat_args, original_execution_args)
   call_args <- modifyList(original_args, overrides)
 
-  # max_retries is a formal of qlm_code(), so it is recorded in the run
-  # metadata rather than in chat_args. Carry it only when the target model can
-  # still honour it: replicating with a different provider is legitimate, and
-  # passing it to one without a JSON-mode handler would abort. An explicit
-  # override in `...` is left alone, so that case errors as it should.
+  # `structured` and `max_retries` are formals of qlm_code(), so they are
+  # recorded in the run metadata rather than in chat_args. Reproducing the
+  # original run means reproducing the coding path it took, not just its chat
+  # settings. An explicit override in `...` is left alone.
+  original_structured <- meta_attr$object$structured
+  if (!"structured" %in% names(call_args) && !is.null(original_structured)) {
+    call_args$structured <- original_structured
+  }
+  # max_retries has no effect on the purely structured path, where supplying it
+  # is an error, so carry it only where it can apply.
   if (!"max_retries" %in% names(call_args) &&
-      is.character(use_model) && length(use_model) == 1L &&
-      !is.null(code_handler_for(use_model))) {
+      !identical(call_args$structured, "structured")) {
     original_retries <- meta_attr$user$max_retries
     if (!is.null(original_retries)) {
       call_args$max_retries <- original_retries

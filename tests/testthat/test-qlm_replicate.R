@@ -575,9 +575,53 @@ test_that("qlm_replicate carries max_retries only where it applies", {
   f(make("deepseek/deepseek-chat"), name = "run2")
   expect_equal(seen$max_retries, 5L)
 
-  # Replicating onto a provider that cannot honour it drops it rather than
-  # aborting: changing the model is a legitimate thing to do.
+  # JSON mode is now reachable for any provider, so the setting still applies
+  # after a model change
   seen <- NULL
   f(make("deepseek/deepseek-chat"), model = "openai/gpt-4o-mini", name = "run3")
+  expect_equal(seen$max_retries, 5L)
+})
+
+
+test_that("qlm_replicate reproduces the coding path, not just the chat settings", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  make <- function(structured, ...) {
+    new_qlm_coded(
+      results = data.frame(id = 1L, score = 0.5),
+      codebook = codebook, data = "a", input_type = "text",
+      chat_args = list(name = "openai_compatible/kimi-k3"),
+      execution_args = list(), batch = FALSE,
+      metadata = c(list(n_units = 1, structured = structured), list(...)),
+      name = "run1", call = quote(qlm_code())
+    )
+  }
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    make("json")
+  })
+
+  # A run that validated locally must replicate the same way, or the
+  # replication is not comparable to the run it claims to reproduce
+  f(make("json", backend = "json_mode", max_retries = 4L), name = "run2")
+  expect_equal(seen$structured, "json")
+  expect_equal(seen$max_retries, 4L)
+
+  # max_retries has no meaning on the purely structured path, and supplying it
+  # there is an error, so it is not carried
+  seen <- NULL
+  f(make("structured", backend = "structured", max_retries = 4L), name = "run3")
+  expect_equal(seen$structured, "structured")
   expect_false("max_retries" %in% names(seen))
+
+  # An explicit override still wins
+  seen <- NULL
+  f(make("json", backend = "json_mode"), structured = "structured", name = "run4")
+  expect_equal(seen$structured, "structured")
 })

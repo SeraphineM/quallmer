@@ -10,6 +10,7 @@ qlm_code(
   model,
   ...,
   batch = FALSE,
+  structured = c("auto", "structured", "json"),
   max_retries = 2L,
   name = NULL,
   notes = NULL
@@ -41,12 +42,19 @@ instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_st
 cost-effective for large jobs but may have longer turnaround times.
 Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
 
+\item{structured}{How the output schema is obtained. \code{"structured"} uses
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} and trusts the provider to enforce
+the schema. \code{"json"} asks for JSON, puts the schema in the system prompt,
+and validates every response against the codebook locally. \code{"auto"} (the
+default) attempts the structured call and falls back to \code{"json"} if it
+fails. See Details for which to use.}
+
 \item{max_retries}{Number of additional attempts made for a response that
-arrives intact but does not conform to the codebook schema. Applies only to
-providers coded in JSON mode (see Details); setting it for any other
-provider is an error. Default is 2, giving at most three attempts per unit.
-This is separate from ellmer's transport-level retries for rate limits and
-server errors, which apply to every provider and are set with
+arrives intact but does not conform to the codebook schema. Applies on the
+JSON path only, so setting it alongside \code{structured = "structured"} is an
+error. Default is 2, giving at most three attempts per unit. This is
+separate from ellmer's transport-level retries for rate limits and server
+errors, which apply to every provider and are set with
 \code{options(ellmer_max_tries = )}.}
 
 \item{name}{Character string identifying this coding run. Default is \code{NULL}.}
@@ -79,17 +87,42 @@ Progress indicators and error handling are provided by the underlying
 \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 function. Set \code{verbose = TRUE} to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options.
+}
+\section{Schema enforcement}{
 
-Some providers accept a JSON Schema but do not enforce it, so a response can
-come back parseable but non-conforming, and the non-conformance then arrives
-silently as \code{NA}. For those providers \code{qlm_code()} routes to a JSON-mode
-handler that puts the schema in the system prompt, validates every response
-against the codebook schema locally, and re-prompts the model with the
-specific validation error when a response does not conform. This currently
-applies to \code{"deepseek"}. Units that never validate have \code{NA} coded values and
-a \code{.error} list-column recording the reason. \code{max_retries} controls how many
-repair attempts each unit gets. Batch processing and image codebooks are not
-supported on this path.
+
+Some providers accept a JSON Schema without enforcing it, so a response can
+come back parseable but non-conforming — and the non-conformance then arrives
+silently as \code{NA}, indistinguishable from missing data. Providers reached
+through ellmer's generic OpenAI-compatible request path are all in this
+position: \code{strict = TRUE} is sent and may simply be ignored. \code{qlm_code()}
+emits a one-time note when it detects one, which
+\code{options(quallmer.quiet_schema_note = TRUE)} silences.
+
+\code{structured} chooses what to do about it:
+
+\describe{
+\item{\code{"structured"}}{Trust the provider. Fails loudly if the call fails.}
+\item{\code{"json"}}{Never trust it: ask for JSON, put the schema in the system
+prompt, and validate each response against \code{codebook$schema} locally,
+re-prompting with the specific validation error when one does not
+conform. The reliable choice for an endpoint known not to enforce.}
+\item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} if it
+errors, or if it returns a result in which every required field is \code{NA}
+in every row, which is what an endpoint that ignored the schema
+produces.}
+}
+
+\code{"auto"} catches wholesale non-enforcement, not the intermittent kind: a
+single non-conforming row among many leaves that check silent. Only
+\code{"json"} catches that, at the cost of putting the schema in the prompt.
+
+On the JSON path, units that never validate have \code{NA} coded values and a
+\code{.error} list-column recording the reason, and \code{max_retries} controls how
+many repair attempts each unit gets. Batch processing and image codebooks
+are not supported there, so \code{"auto"} will not fall back under
+\code{batch = TRUE}. The path actually taken is recorded in the run metadata as
+\code{backend}.
 
 When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 which submits jobs to the provider's batch API. This is typically more
@@ -97,6 +130,7 @@ cost-effective but has longer turnaround times. The \code{path} argument specifi
 where batch results are cached, \code{wait} controls whether to wait for completion,
 and \code{ignore_hash} can force reprocessing of cached results.
 }
+
 \examples{
 # Requires API credentials and internet access; not run in package checks.
 \dontrun{
