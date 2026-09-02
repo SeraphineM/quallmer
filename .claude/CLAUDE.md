@@ -153,17 +153,16 @@ quallmer builds on the ellmer framework. Key points:
 - Use imperative mood: "Add feature" not "Added feature"
 - Keep subject line concise (50 chars or less)
 - Reference issues when applicable: "Fixes #21", "Closes #45"
-- Include Claude Code attribution when appropriate:
-  ```
-  Add trail comparison summary
-
-  Generated with Claude Code
-
-  Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-  ```
+- Do not add a `Co-Authored-By: Claude ...` trailer or a "Generated with Claude
+  Code" line. No commit in this repository carries one and they are not wanted
+  here; end the message at the issue reference.
+- Explain *why* in the body, not just what changed. See the commits on #138 and
+  #142 for the house style.
 
 ### Pull Requests
-Use `.github/pull_request_template.md` to structure PRs. Include:
+`.github/pull_request_template.md` is a starting point, not a requirement --
+prefer a more direct structure when the change calls for one. Either way,
+cover:
 - **Clear summary**: What does this PR do?
 - **Motivation**: Why is this change needed?
 - **Scope**: What files/functions are affected?
