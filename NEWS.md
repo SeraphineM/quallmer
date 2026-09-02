@@ -2,6 +2,21 @@
 
 ## Bug fixes
 
+* `qlm_code()` and `qlm_segment()` now reject a model parameter passed at the
+  top level. `max_tokens = 100` used to fall through to `chat_args` and reach
+  `ellmer::chat()`, failing with `unused argument (max_tokens = 100)` raised
+  from inside ellmer -- naming the argument but neither of the two places it
+  could have gone. The error now names both: `params` for the settings ellmer
+  standardises, `api_args` for a provider's raw request fields. It deliberately
+  does not prescribe one, because the choice is not a property of the name:
+  `top_k` is a real `ellmer::params()` field, but ellmer maps it onto
+  `top_logprobs` for OpenAI-compatible providers, so a caller wanting a
+  provider's raw `top_k` needs `api_args`. `stop` and `response_format` are
+  unambiguous and do get a specific destination. The rejected set is read from
+  `ellmer::params()` at run time, minus whatever the request path currently
+  accepts, so a name a later ellmer gives a real meaning stops being rejected
+  without an update here (#139).
+
 * `qlm_code()` and `qlm_segment()` now say what to do when a model's provider
   prefix is not one ellmer can dispatch on. `model = "qwen/qwen3-max"` reached
   `ellmer::chat()` and failed with `Can't find provider ellmer::chat_qwen()`,

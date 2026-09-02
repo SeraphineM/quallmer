@@ -143,6 +143,12 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
   # and codebook, which are the more fundamental problems when both are wrong.
   check_model_provider(model)
 
+  # Same routing contract as qlm_code(), so the same rejection. Captured once
+  # here and reused by the routing below, rather than forcing `...` twice.
+  dots      <- list(...)
+  dot_names <- names(dots)
+  check_model_params(dot_names, model)
+
   # Build internal schema: text field prepended to user-defined fields
   user_props <- codebook$schema@properties
   items_schema <- do.call(
@@ -167,8 +173,6 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
   # execution_args go to parallel_chat_structured
   # Everything else (including provider-specific args like base_url) goes to chat()
   pcs_arg_names  <- names(formals(ellmer::parallel_chat_structured))
-  dots       <- list(...)
-  dot_names  <- names(dots)
   execution_args <- dots[dot_names %in% pcs_arg_names]
   # chat_args gets everything NOT destined for execution functions
   # This allows provider-specific args (base_url, credentials, api_args, etc.)

@@ -229,6 +229,10 @@ qlm_code <- function(x, codebook, model, ...,
   # "Can't find provider ellmer::chat_qwen()".
   check_model_provider(model)
 
+  # Checked after the model itself, so a bad model and a stray parameter report
+  # the model first. `dot_names` is already in hand from the capture above.
+  check_model_params(dot_names, model)
+
   # Providers whose API rejects the schema-constrained request skip straight to
   # JSON mode rather than spending a wasted round trip; see
   # default_structured_mode().
