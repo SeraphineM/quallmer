@@ -2,6 +2,18 @@
 
 ## Bug fixes
 
+* `qlm_code()` and `qlm_segment()` now say what to do when a model's provider
+  prefix is not one ellmer can dispatch on. `model = "qwen/qwen3-max"` reached
+  `ellmer::chat()` and failed with `Can't find provider ellmer::chat_qwen()`,
+  which names an ellmer internal and offers no way forward. The error now names
+  every prefix that does work and points at `openai_compatible/<model>` with
+  `base_url` and `credentials`, which is how any other OpenAI-compatible
+  endpoint is reached. The list of working prefixes is derived from the
+  installed ellmer at run time, mirroring both gates `ellmer::chat()` applies,
+  so a provider ellmer adds or drops later needs no change here. Checked before
+  any request is made, since the answer does not depend on asking the provider
+  anything (#129).
+
 * `qlm_trail()` no longer advertises or generates a top-level `temperature`
   argument. That form does not work -- it reaches `ellmer::chat()`, which has no
   such argument -- so the replication script the audit trail generated could not

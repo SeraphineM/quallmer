@@ -88,7 +88,7 @@ test_that("qlm_segment returns a quanteda corpus from character input", {
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
   input  <- c(review1 = "Clean room. Basic furnishings.", review2 = "Great location.")
-  result <- qlm_segment(input, cb, model = "test/model")
+  result <- qlm_segment(input, cb, model = "openai_compatible/test-model")
 
   expect_true(quanteda::is.corpus(result))
   expect_equal(quanteda::ndoc(result), 3L)
@@ -119,7 +119,7 @@ test_that("qlm_segment sets docvars correctly from character input", {
 
   result <- qlm_segment(
     c(review1 = "Clean room. Basic furnishings.", review2 = "Great location."),
-    cb, model = "test/model"
+    cb, model = "openai_compatible/test-model"
   )
 
   dv <- quanteda::docvars(result)
@@ -147,7 +147,7 @@ test_that("qlm_segment uses sequential text labels for unnamed character input",
   mockery::stub(qlm_segment, "ellmer::chat", mock_chat)
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
-  result <- qlm_segment(c("Text one.", "Text two."), cb, model = "test/model")
+  result <- qlm_segment(c("Text one.", "Text two."), cb, model = "openai_compatible/test-model")
 
   expect_equal(quanteda::docnames(result), c("text1.1", "text2.1"))
   expect_equal(quanteda::docvars(result)$docid, c("text1", "text2"))
@@ -179,7 +179,7 @@ test_that("qlm_segment returns a corpus from corpus input", {
   mockery::stub(qlm_segment, "ellmer::chat", mock_chat)
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
-  result <- qlm_segment(corp, cb, model = "test/model")
+  result <- qlm_segment(corp, cb, model = "openai_compatible/test-model")
 
   expect_true(quanteda::is.corpus(result))
   expect_equal(quanteda::ndoc(result), 3L)
@@ -210,7 +210,7 @@ test_that("qlm_segment corpus output inherits parent docvars", {
   mockery::stub(qlm_segment, "ellmer::chat", mock_chat)
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
-  result <- qlm_segment(corp, cb, model = "test/model")
+  result <- qlm_segment(corp, cb, model = "openai_compatible/test-model")
   dv     <- quanteda::docvars(result)
 
   expect_equal(quanteda::ndoc(result), 2L)
@@ -239,7 +239,7 @@ test_that("qlm_segment warns for documents producing no segments", {
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
   expect_warning(
-    qlm_segment(c(doc1 = "Text one.", doc2 = "Text two."), cb, model = "test/model"),
+    qlm_segment(c(doc1 = "Text one.", doc2 = "Text two."), cb, model = "openai_compatible/test-model"),
     "produced no segments"
   )
 })
@@ -266,7 +266,7 @@ test_that("qlm_segment passes provider-specific arguments to ellmer::chat", {
   mockery::stub(qlm_segment, "ellmer::parallel_chat_structured", mock_results)
 
   # Call with a provider-specific argument (like base_url for openai_compatible)
-  qlm_segment("Text.", cb, model = "test/model", base_url = "https://my-api.com/v1")
+  qlm_segment("Text.", cb, model = "openai_compatible/test-model", base_url = "https://my-api.com/v1")
 
   # Verify the provider-specific argument was passed through to ellmer::chat
   expect_true("base_url" %in% names(chat_args_received))
