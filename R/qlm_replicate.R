@@ -7,6 +7,12 @@
 #' Credentials and endpoint settings are an exception, and are carried over
 #' only while the endpoint itself is unchanged.
 #'
+#' The coding path is reproduced from the path the original run actually took,
+#' not the `structured` mode it requested: a run that asked for `"auto"` and
+#' fell back to JSON mode replicates as `"json"`, so that an intermittently
+#' conforming endpoint cannot quietly skip the local validation the original
+#' relied on. Pass `structured` explicitly to override.
+#'
 #' @param x A `qlm_coded` object.
 #' @param ... Optional overrides passed to [qlm_code()], such as `params`,
 #'   `api_args`, or `max_active`. Any setting not overridden is restored from
@@ -163,12 +169,28 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   call_args <- modifyList(original_args, overrides)
 
   # `structured` and `max_retries` are formals of qlm_code(), so they are
-  # recorded in the run metadata rather than in chat_args. Reproducing the
-  # original run means reproducing the coding path it took, not just its chat
-  # settings. An explicit override in `...` is left alone.
-  original_structured <- meta_attr$object$structured
-  if (!"structured" %in% names(call_args) && !is.null(original_structured)) {
-    call_args$structured <- original_structured
+  # recorded in the run metadata rather than in chat_args. An explicit override
+  # in `...` is left alone.
+  #
+  # Derived from `backend`, the path the run actually took, NOT from
+  # `structured`, the mode it asked for. A run that requested "auto" and fell
+  # back to JSON mode must replicate in JSON mode: requesting "auto" again
+  # would let an intermittently-conforming endpoint take the structured path
+  # this time, skipping the local validation the original relied on, so the two
+  # runs would not be comparable -- which is the whole point of replicating.
+  #
+  # Deriving from `backend` also covers objects coded before `structured`
+  # existed, which record a backend but no mode.
+  original_backend <- meta_attr$object$backend
+  original_mode <- if (identical(original_backend, "json_mode")) {
+    "json"
+  } else if (identical(original_backend, "structured")) {
+    "structured"
+  } else {
+    NULL
+  }
+  if (!"structured" %in% names(call_args) && !is.null(original_mode)) {
+    call_args$structured <- original_mode
   }
   # max_retries has no effect on the purely structured path, where supplying it
   # is an error, so carry it only where it can apply.

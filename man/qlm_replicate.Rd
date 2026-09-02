@@ -60,6 +60,13 @@ original run passed to \code{\link[ellmer:chat]{ellmer::chat()}}, such as \code{
 Credentials and endpoint settings are an exception, and are carried over
 only while the endpoint itself is unchanged.
 }
+\details{
+The coding path is reproduced from the path the original run actually took,
+not the \code{structured} mode it requested: a run that asked for \code{"auto"} and
+fell back to JSON mode replicates as \code{"json"}, so that an intermittently
+conforming endpoint cannot quietly skip the local validation the original
+relied on. Pass \code{structured} explicitly to override.
+}
 \examples{
 \donttest{
 # First create a coded object

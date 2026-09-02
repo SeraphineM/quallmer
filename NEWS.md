@@ -74,8 +74,13 @@
   send one vendor's credential to the other. The model is still passed as
   `model`, and registered `tools` are never carried over (#125).
 
-* `qlm_replicate()` also carries `max_retries` over from the original run, when
-  the model being replicated onto can still honour it (#128).
+* `qlm_replicate()` also reproduces the coding path and `max_retries` of the
+  original run. The path is derived from the backend the run actually used
+  rather than the mode it requested, so a run that asked for
+  `structured = "auto"` and fell back to JSON mode replicates as `"json"`:
+  requesting `"auto"` again would let an intermittently conforming endpoint
+  take the structured path instead, silently skipping the local validation the
+  original relied on and leaving the two runs incomparable (#128, #134).
 
 * `qlm_trail()` no longer emits "unknown column" warnings or crashes with
   `the condition has length > 1` when passed a `qlm_comparison` or
