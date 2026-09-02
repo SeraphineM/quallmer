@@ -97,9 +97,12 @@ Valid range depends on provider: OpenAI (0-2), Anthropic (0-1), etc.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><code>trail_settings()</code> is deprecated. Use <code><a href="qlm_code.html">qlm_code()</a></code> with the <code>model</code> and
-<code>temperature</code> parameters directly instead. For systematic comparisons across
-different models or settings, see <code><a href="qlm_replicate.html">qlm_replicate()</a></code>.</p>
+    <p><code>trail_settings()</code> is deprecated. Use <code><a href="qlm_code.html">qlm_code()</a></code> instead, passing the
+model as <code>model</code> and sampling settings as
+<code>params = ellmer::params(temperature = )</code>. A top-level <code>temperature</code>
+argument does not work: it reaches <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>, which has no such
+argument. For systematic comparisons across different models or settings,
+see <code><a href="qlm_replicate.html">qlm_replicate()</a></code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
