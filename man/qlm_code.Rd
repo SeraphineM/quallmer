@@ -4,7 +4,16 @@
 \alias{qlm_code}
 \title{Code qualitative data with an LLM}
 \usage{
-qlm_code(x, codebook, model, ..., batch = FALSE, name = NULL, notes = NULL)
+qlm_code(
+  x,
+  codebook,
+  model,
+  ...,
+  batch = FALSE,
+  max_retries = 2L,
+  name = NULL,
+  notes = NULL
+)
 }
 \arguments{
 \item{x}{Input data: a character vector of texts (for text codebooks) or
@@ -16,21 +25,29 @@ deprecated \code{\link[=task]{task()}} objects for backward compatibility.}
 
 \item{model}{Provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
-that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat-any]{ellmer::chat()}}.
+that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
-\item{...}{Additional arguments passed to \code{\link[ellmer:chat-any]{ellmer::chat()}},
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}.
-Arguments recognized by \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} or
-\code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}} are routed there; all other arguments
+\item{...}{Additional arguments passed to \code{\link[ellmer:chat]{ellmer::chat()}},
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}.
+Arguments recognized by \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or
+\code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} are routed there; all other arguments
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
-\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat-any]{ellmer::chat()}}.}
+\code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 
-\item{batch}{Logical. If \code{TRUE}, uses \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}
-instead of \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}. Batch processing is more
+\item{max_retries}{Number of additional attempts made for a response that
+arrives intact but does not conform to the codebook schema. Applies only to
+providers coded in JSON mode (see Details); setting it for any other
+provider is an error. Default is 2, giving at most three attempts per unit.
+This is separate from ellmer's transport-level retries for rate limits and
+server errors, which apply to every provider and are set with
+\code{options(ellmer_max_tries = )}.}
+
+\item{batch}{Logical. If \code{TRUE}, uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
+instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}. Batch processing is more
 cost-effective for large jobs but may have longer turnaround times.
-Default is \code{FALSE}. See \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}} for details.}
+Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
 
 \item{name}{Character string identifying this coding run. Default is \code{NULL}.}
 
@@ -54,16 +71,27 @@ a rich object that includes the codebook, execution settings, results, and
 metadata for reproducibility.
 }
 \details{
-Arguments in \code{...} are dynamically routed to either \code{\link[ellmer:chat-any]{ellmer::chat()}},
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}
+Arguments in \code{...} are dynamically routed to either \code{\link[ellmer:chat]{ellmer::chat()}},
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}, or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 based on their names.
 
 Progress indicators and error handling are provided by the underlying
-\code{\link[ellmer:parallel_chat]{ellmer::parallel_chat_structured()}} or \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}
+\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 function. Set \code{verbose = TRUE} to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options.
 
-When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat]{ellmer::batch_chat_structured()}}
+Some providers accept a JSON Schema but do not enforce it, so a response can
+come back parseable but non-conforming, and the non-conformance then arrives
+silently as \code{NA}. For those providers \code{qlm_code()} routes to a JSON-mode
+handler that puts the schema in the system prompt, validates every response
+against the codebook schema locally, and re-prompts the model with the
+specific validation error when a response does not conform. This currently
+applies to \code{"deepseek"}. Units that never validate have \code{NA} coded values and
+a \code{.error} list-column recording the reason. \code{max_retries} controls how many
+repair attempts each unit gets. Batch processing and image codebooks are not
+supported on this path.
+
+When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 which submits jobs to the provider's batch API. This is typically more
 cost-effective but has longer turnaround times. The \code{path} argument specifies
 where batch results are cached, \code{wait} controls whether to wait for completion,

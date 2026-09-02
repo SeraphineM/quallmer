@@ -440,3 +440,144 @@ test_that("qlm_replicate allows batch override to FALSE", {
   # Verify batch flag was overridden
   expect_false(attr(result, "meta")$object$batch)
 })
+
+
+test_that("qlm_replicate restores chat_args, not just execution_args", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(
+      name = "openai/gpt-4o-mini",
+      params = list(temperature = 0),
+      api_args = list(seed = 42),
+      base_url = "https://example.com/v1"
+    ),
+    execution_args = list(max_active = 3),
+    batch = FALSE,
+    metadata = list(n_units = 2),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+  f(coded, name = "run2")
+
+  # Everything the original passed to ellmer::chat() comes back
+  expect_equal(seen$params, list(temperature = 0))
+  expect_equal(seen$api_args, list(seed = 42))
+  expect_equal(seen$base_url, "https://example.com/v1")
+  # ... alongside the execution arguments, which already worked
+  expect_equal(seen$max_active, 3)
+  # `name` in chat_args is the model; it reaches qlm_code() as `model`, and
+  # `name` itself stays the run name rather than being restored over it
+  expect_equal(seen$model, "openai/gpt-4o-mini")
+  expect_equal(seen$name, "run2")
+})
+
+
+test_that("qlm_replicate lets overrides win over restored chat_args", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini", params = list(temperature = 0)),
+    execution_args = list(max_active = 3),
+    batch = FALSE, metadata = list(n_units = 1), name = "run1",
+    call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+  f(coded, params = list(temperature = 1), max_active = 8, name = "run2")
+
+  expect_equal(seen$params, list(temperature = 1))
+  expect_equal(seen$max_active, 8)
+})
+
+
+test_that("qlm_replicate does not carry tools across a replication", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini", tools = list("a tool"),
+                     params = list(temperature = 0)),
+    execution_args = list(),
+    batch = FALSE, metadata = list(n_units = 1), name = "run1",
+    call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+  f(coded, name = "run2")
+
+  # Provider-specific, so deliberately not round-tripped
+  expect_false("tools" %in% names(seen))
+  expect_equal(seen$params, list(temperature = 0))
+})
+
+
+test_that("qlm_replicate carries max_retries only where it applies", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  make <- function(model) {
+    new_qlm_coded(
+      results = data.frame(id = 1L, score = 0.5),
+      codebook = codebook, data = "a", input_type = "text",
+      chat_args = list(name = model),
+      execution_args = list(),
+      batch = FALSE,
+      metadata = list(n_units = 1, backend = "json_mode", max_retries = 5L),
+      name = "run1", call = quote(qlm_code())
+    )
+  }
+
+  seen <- NULL
+  capture <- function(...) {
+    seen <<- list(...)
+    make("deepseek/deepseek-chat")
+  }
+
+  # Same provider: the original setting is reproduced
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", capture)
+  f(make("deepseek/deepseek-chat"), name = "run2")
+  expect_equal(seen$max_retries, 5L)
+
+  # Replicating onto a provider that cannot honour it drops it rather than
+  # aborting: changing the model is a legitimate thing to do.
+  seen <- NULL
+  f(make("deepseek/deepseek-chat"), model = "openai/gpt-4o-mini", name = "run3")
+  expect_false("max_retries" %in% names(seen))
+})

@@ -2,6 +2,54 @@
 
 ## Bug fixes
 
+* `qlm_code()` can now code with DeepSeek, and no longer trusts providers that
+  accept a JSON Schema without enforcing it. The DeepSeek API rejects the
+  `response_format` that `ellmer::parallel_chat_structured()` sends
+  ("This response_format type is unavailable now"), so every request failed;
+  and its JSON mode guarantees JSON syntax, not schema conformance, so simply
+  switching to JSON mode would trade a loud failure for a silent one. ellmer
+  converts every non-conformance -- wrong field type, missing required field,
+  out-of-range enum value -- to `NA` without warning, so a run could come back
+  looking plausible but wrong. `qlm_code()` now routes `model = "deepseek/..."`
+  to a handler that requests JSON mode, puts the codebook schema in the system
+  prompt, validates each response locally against `codebook$schema`, and
+  re-prompts the model with the specific validation error
+  (`$.claims[2].salience must be a number`) when a response does not conform.
+  Repair attempts default to 2 and are configurable with `max_retries`. Units
+  that never validate have `NA` coded values and a `.error` list-column
+  recording why, and token and cost accounting sums across repair attempts. A
+  document the provider rejects as too long is not re-sent, but a content
+  refusal is: refusals are not deterministic -- the same document is refused on
+  one pass and coded on the next, at more than one provider -- and are rejected
+  before generation, so a further attempt is free. No other provider's
+  behaviour changes (#128).
+
+* `qlm_code()` no longer retries a request the provider has rejected outright,
+  and reports why it was rejected. A wrong model name previously produced three
+  rounds of retries and four warnings, none of which mentioned the model; it
+  now aborts once, quoting the provider's own message (which for DeepSeek lists
+  the valid model names). Failures with a fatal HTTP status (400, 401, 403,
+  404, 422) are not retried, unlike rate limits and server errors, and the
+  provider's error body is read directly off the response, since httr2 will
+  only parse a body served as JSON and several providers do not label theirs
+  correctly. A run in which every request is rejected as malformed or
+  unauthorised stops after the first pass rather than retrying; a refusal or an
+  over-long document does not count towards that, so a single failing unit is
+  still retried (#128).
+
+* `qlm_replicate()` now reproduces the settings it claims to. It restored only
+  the execution arguments, silently dropping everything the original run passed
+  to `ellmer::chat()` -- `params`, `api_args`, `base_url`, `credentials` -- so a
+  replication could run at a different temperature than the run it replicated,
+  and the resulting `qlm_compare()` would read as a model-stability measurement
+  when it was partly a settings-difference measurement. Chat arguments are now
+  restored alongside execution arguments, with overrides in `...` taking
+  precedence. Two exceptions: the model is still passed as `model`, and
+  registered `tools` are not carried over, being provider-specific (#125).
+
+* `qlm_replicate()` also carries `max_retries` over from the original run, when
+  the model being replicated onto can still honour it (#128).
+
 * `qlm_trail()` no longer emits "unknown column" warnings or crashes with
   `the condition has length > 1` when passed a `qlm_comparison` or
   `qlm_validation` object. The trail now stores these (and `qlm_coded`)

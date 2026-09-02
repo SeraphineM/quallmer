@@ -2,11 +2,15 @@
 #'
 #' Re-executes a coding task from a `qlm_coded` object, optionally with
 #' modified settings. If no overrides are provided, uses identical settings
-#' to the original coding.
+#' to the original coding: both the execution arguments and the arguments the
+#' original run passed to [ellmer::chat()], such as `params` and `api_args`.
 #'
 #' @param x A `qlm_coded` object.
-#' @param ... Optional overrides passed to [qlm_code()], such as `temperature`
-#'   or `max_tokens`.
+#' @param ... Optional overrides passed to [qlm_code()], such as `params`,
+#'   `api_args`, or `max_active`. Any setting not overridden is restored from
+#'   the original run, including the arguments it passed to [ellmer::chat()].
+#'   Registered `tools` are the one exception: they are provider-specific and
+#'   are not carried over.
 #' @param codebook Optional replacement codebook. If `NULL` (default), uses
 #'   the codebook from `x`.
 #' @param model Optional replacement model (e.g., `"openai/gpt-4o"`). If `NULL`
@@ -57,6 +61,13 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   original_model <- meta_attr$object$chat_args$name
   # Ensure it's always a list (empty if NULL)
   original_execution_args <- meta_attr$object$execution_args %||% list()
+  # Everything the original passed to ellmer::chat() -- params, api_args,
+  # base_url, credentials -- must be restored too, or a replication runs with
+  # different model settings than the run it claims to replicate. Two
+  # exclusions: `name` is the model and is passed separately, and `tools` are
+  # provider-specific objects that would error against a different provider.
+  original_chat_args <- meta_attr$object$chat_args %||% list()
+  original_chat_args[c("name", "tools")] <- NULL
   # Extract batch flag (default to FALSE for backward compatibility)
   original_batch <- meta_attr$object$batch %||% FALSE
   parent_name <- meta_attr$user$name
@@ -83,9 +94,27 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     }
   }
 
-  # Merge additional overrides with original execution_args
+  # Merge overrides over everything the original run used. chat_args and
+  # execution_args are disjoint by construction -- qlm_code() splits `...`
+  # between them by name -- so they can be merged here and re-split there,
+  # keeping one source of truth for the routing rules.
   overrides <- list(...)
-  execution_args <- modifyList(original_execution_args, overrides)
+  original_args <- c(original_chat_args, original_execution_args)
+  call_args <- modifyList(original_args, overrides)
+
+  # max_retries is a formal of qlm_code(), so it is recorded in the run
+  # metadata rather than in chat_args. Carry it only when the target model can
+  # still honour it: replicating with a different provider is legitimate, and
+  # passing it to one without a JSON-mode handler would abort. An explicit
+  # override in `...` is left alone, so that case errors as it should.
+  if (!"max_retries" %in% names(call_args) &&
+      is.character(use_model) && length(use_model) == 1L &&
+      !is.null(code_handler_for(use_model))) {
+    original_retries <- meta_attr$user$max_retries
+    if (!is.null(original_retries)) {
+      call_args$max_retries <- original_retries
+    }
+  }
 
   # Call qlm_code with merged arguments, including batch flag
   result <- do.call(qlm_code, c(
@@ -97,7 +126,7 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
       name = name,
       notes = notes
     ),
-    execution_args
+    call_args
   ))
 
   # Override the metadata to reflect this is a replication
