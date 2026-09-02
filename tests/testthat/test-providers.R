@@ -1,3 +1,12 @@
+# A prefix ellmer will never export a `chat_*()` for.
+#
+# Naming a real provider here -- "qwen", "kimi" -- would assert that it stays
+# unsupported, so these tests would start failing the day ellmer adds it. That
+# is the opposite of the property this file exists to check: that the supported
+# set is derived from the installed ellmer and needs no change here. See #129.
+unknown_provider <- "quallmer_unknown_provider_7f3c"
+
+
 test_that("model_provider() takes the prefix, or the whole string", {
   expect_equal(model_provider("openai/gpt-4o-mini"), "openai")
   expect_equal(model_provider("openai"), "openai")
@@ -17,7 +26,7 @@ test_that("ellmer_providers() reports the prefixes ellmer::chat() can dispatch o
   # Named rather than counted: a count would break every time ellmer adds a
   # provider, which is the churn deriving the list at run time avoids.
   expect_true(all(c("openai", "anthropic", "openai_compatible") %in% providers))
-  expect_false("qwen" %in% providers)
+  expect_false(unknown_provider %in% providers)
 
   # Every name reported must round-trip to a function ellmer exports.
   expect_true(all(paste0("chat_", providers) %in% getNamespaceExports("ellmer")))
@@ -38,22 +47,22 @@ test_that("ellmer_providers() excludes anything ellmer::chat() would refuse", {
 
 test_that("check_model_provider() explains an unreachable provider (#129)", {
   expect_error(
-    check_model_provider("qwen/qwen3-max"),
+    check_model_provider(paste0(unknown_provider, "/some-model")),
     "Can't reach provider"
   )
 
-  err <- tryCatch(check_model_provider("qwen/qwen3-max"), error = function(e) e)
+  err <- tryCatch(check_model_provider(paste0(unknown_provider, "/some-model")), error = function(e) e)
   msg <- cli::ansi_strip(paste(conditionMessage(err), collapse = "\n"))
 
   # The three things the bare ellmer error left the user without.
-  expect_match(msg, "qwen", fixed = TRUE)
+  expect_match(msg, unknown_provider, fixed = TRUE)
   expect_match(msg, "openai_compatible/<model>", fixed = TRUE)
   expect_match(msg, "base_url", fixed = TRUE)
 })
 
 
 test_that("check_model_provider() names every provider, without cli truncation (#129)", {
-  err <- tryCatch(check_model_provider("qwen/qwen3-max"), error = function(e) e)
+  err <- tryCatch(check_model_provider(paste0(unknown_provider, "/some-model")), error = function(e) e)
   msg <- cli::ansi_strip(paste(conditionMessage(err), collapse = "\n"))
 
   # cli abbreviates a vector this long by default, which would silently drop
@@ -62,6 +71,17 @@ test_that("check_model_provider() names every provider, without cli truncation (
     expect_match(msg, provider, fixed = TRUE)
   }
   expect_false(grepl("\u2026", msg))
+})
+
+
+test_that("check_model_provider() accepts every provider ellmer reports", {
+  # The forward-compatible half of the same property: if ellmer gains
+  # chat_qwen(), it appears in ellmer_providers() and is accepted here with no
+  # change to this file.
+  for (provider in ellmer_providers()) {
+    expect_silent(check_model_provider(provider))
+    expect_silent(check_model_provider(paste0(provider, "/some-model")))
+  }
 })
 
 
@@ -94,17 +114,17 @@ test_that("qlm_code() and qlm_segment() reject an unreachable provider before re
 
   # No request is made, so these need no credentials and no network.
   expect_error(
-    qlm_code(c("great", "awful"), cb, model = "qwen/qwen3-max"),
+    qlm_code(c("great", "awful"), cb, model = paste0(unknown_provider, "/some-model")),
     "Can't reach provider"
   )
   expect_error(
-    qlm_code(c("great", "awful"), cb, model = "kimi"),
+    qlm_code(c("great", "awful"), cb, model = unknown_provider),
     "Can't reach provider"
   )
 
   skip_if_not_installed("quanteda")
   expect_error(
-    qlm_segment("A sentence. Another one.", cb, model = "qwen/qwen3-max"),
+    qlm_segment("A sentence. Another one.", cb, model = paste0(unknown_provider, "/some-model")),
     "Can't reach provider"
   )
 })
