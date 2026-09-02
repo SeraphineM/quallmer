@@ -9,6 +9,9 @@ permissions: read-all
 jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
+    # Without this a hung step inherits GitHub's 6h default; healthy runs
+    # take ~4m20s. See #126.
+    timeout-minutes: 30
     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
     strategy:
       fail-fast: false

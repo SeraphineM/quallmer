@@ -12,6 +12,8 @@ permissions: read-all
 jobs:
   test-coverage:
     runs-on: ubuntu-latest
+    # Healthy runs take ~2m10s. See #126.
+    timeout-minutes: 20
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
