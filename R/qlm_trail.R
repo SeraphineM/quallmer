@@ -468,8 +468,12 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, paste("**Model:**", run$chat_args$name))
     }
 
-    if (!is.null(run$chat_args$temperature)) {
-      lines <- c(lines, paste("**Temperature:**", run$chat_args$temperature))
+    params <- run_params(run)
+    if (length(params) > 0) {
+      lines <- c(lines, paste(
+        "**Parameters:**",
+        paste(Map(format_param, names(params), params), collapse = ", ")
+      ))
     }
 
     # Codebook reference
@@ -701,15 +705,21 @@ generate_trail_report <- function(trail, file) {
 
       # Build qlm_code call
       model <- run$chat_args$name %||% "openai/gpt-4o"
-      temp <- run$chat_args$temperature
+      params <- run_params(run)
 
       code_call <- paste0("coded_", run$name, " <- qlm_code(")
       code_call <- paste0(code_call, "\n  texts,")
       code_call <- paste0(code_call, "\n  codebook_", run$name, ",")
       code_call <- paste0(code_call, "\n  model = \"", model, "\"")
 
-      if (!is.null(temp)) {
-        code_call <- paste0(code_call, ",\n  temperature = ", temp)
+      # Sampling settings belong in `params`, not at the top level, where they
+      # would reach ellmer::chat() and error. A generated script that cannot
+      # run is worse than one that omits the settings.
+      if (length(params) > 0) {
+        code_call <- paste0(
+          code_call, ",\n  params = ellmer::params(",
+          paste(Map(format_param, names(params), params), collapse = ", "), ")"
+        )
       }
 
       if (!is.null(run$batch) && run$batch) {
@@ -792,7 +802,7 @@ generate_trail_report <- function(trail, file) {
   lines <- c(lines, "")
   lines <- c(lines, "LLM outputs are inherently stochastic. To improve reproducibility:")
   lines <- c(lines, "")
-  lines <- c(lines, "- Use `temperature = 0` for more deterministic outputs")
+  lines <- c(lines, "- Use `params = ellmer::params(temperature = 0)` for more deterministic outputs")
   lines <- c(lines, "- Set a random seed where supported by the provider")
   lines <- c(lines, "- Document the exact model version (models are updated over time)")
   lines <- c(lines, "- Compare results across multiple runs using `qlm_replicate()`")
@@ -863,4 +873,65 @@ format_metric_rows <- function(df, label_fn, extra_label_col = NULL) {
     if (i < length(variables)) out <- c(out, "")
   }
   out
+}
+
+
+#' Sampling parameters recorded for a run
+#'
+#' `qlm_code()` takes sampling settings as `params = ellmer::params(...)` and
+#' stores them in `chat_args$params`. Older runs recorded a bare
+#' `chat_args$temperature` instead, from a routing that was never implemented:
+#' a top-level `temperature` reaches [ellmer::chat()], which has no such
+#' argument, so the call errored. That shape is read here and folded into
+#' `params` so an old trail still describes and reproduces itself in the form
+#' that works, but it is never displayed or emitted. `params$temperature` is
+#' canonical and wins when both are present.
+#'
+#' @param run One element of `trail$runs`.
+#'
+#' @return A named list of sampling parameters, possibly empty.
+#' @keywords internal
+#' @noRd
+run_params <- function(run) {
+  params <- run$chat_args$params %||% list()
+
+  if (is.null(params$temperature) && !is.null(run$chat_args$temperature)) {
+    params$temperature <- run$chat_args$temperature
+  }
+
+  params
+}
+
+
+#' Deparse one value onto a single line
+#'
+#' Values are serialised one at a time rather than through `unlist()`, which
+#' would flatten a vector-valued parameter such as `stop = c("END", "STOP")`
+#' into separate entries and lose the distinction between `0` and `"0"`. This
+#' is `deparse1()`, which cannot be used directly because the package supports
+#' R (>= 3.5.0) and `deparse1()` arrived in R 4.0.0.
+#'
+#' @param value Any value short enough to belong in a parameter list.
+#'
+#' @return A character scalar.
+#' @keywords internal
+#' @noRd
+deparse_value <- function(value) {
+  paste(deparse(value, width.cutoff = 500L), collapse = " ")
+}
+
+
+#' Format one named parameter as `name = value`
+#'
+#' Serves both the metadata readout and the generated replication call, so the
+#' report describes exactly what the script will run.
+#'
+#' @param name Parameter name.
+#' @param value Parameter value.
+#'
+#' @return A character scalar.
+#' @keywords internal
+#' @noRd
+format_param <- function(name, value) {
+  paste0(name, " = ", deparse_value(value))
 }

@@ -2,9 +2,12 @@
 #'
 #' `r lifecycle::badge("deprecated")`
 #'
-#' `trail_settings()` is deprecated. Use [qlm_code()] with the `model` and
-#' `temperature` parameters directly instead. For systematic comparisons across
-#' different models or settings, see [qlm_replicate()].
+#' `trail_settings()` is deprecated. Use [qlm_code()] instead, passing the
+#' model as `model` and sampling settings as
+#' `params = ellmer::params(temperature = )`. A top-level `temperature`
+#' argument does not work: it reaches [ellmer::chat()], which has no such
+#' argument. For systematic comparisons across different models or settings,
+#' see [qlm_replicate()].
 #'
 #' @param provider Character. Backend provider identifier supported by ellmer,
 #'   e.g. "openai", "ollama", "anthropic". See
