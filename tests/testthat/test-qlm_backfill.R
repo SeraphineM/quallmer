@@ -896,10 +896,42 @@ test_that("backfill_cost_notes names only the passes costed differently from the
   expect_length(backfill_cost_notes(list(list(cost_note = "x")), "x"), 0)
   expect_length(backfill_cost_notes(list(list(), list(attempted = "a")), NULL), 0)
   expect_equal(
-    backfill_cost_notes(list(list(cost_note = "x"), list(), list(cost_note = "y")), "x"),
+    backfill_cost_notes(list(list(cost_note = "x"), list(cost_note = "x"), list(cost_note = "y")), "x"),
     c(`backfill pass 3` = "y")
   )
   # A run priced by ellmer has no note; a pass that was not is disclosed
   expect_equal(backfill_cost_notes(list(list(cost_note = "NA (unpriced)")), NULL),
                c(`backfill pass 1` = "NA (unpriced)"))
+  # The reverse: a run on supplied rates, and a pass ellmer priced itself,
+  # which records no note. Silence would read as the run's rates
+  expect_equal(backfill_cost_notes(list(list(cost_note = "x"), list()), "x"),
+               c(`backfill pass 2` = "from ellmer's price table"))
+  # A pass that failed outright merged nothing and is not a source of cost
+  expect_length(backfill_cost_notes(list(list(error = "HTTP 503")), "x"), 0)
+})
+
+test_that("an ellmer-priced pass on a run costed from supplied rates is disclosed", {
+  skip_if_not_installed("mockery")
+  run_rates <- c(input = 1, output = 2, cached_input = 1)
+  run <- make_run(usage_rows(c("a", "b"), c(1L, NA), c(0.1, NA)))
+  meta_attr <- attr(run, "meta")
+  meta_attr$user$prices <- run_rates
+  meta_attr$user$cost_note <- prices_note(run_rates)
+  attr(run, "meta") <- meta_attr
+
+  # The pass came back priced by ellmer: cost filled, no note recorded
+  f <- backfill_with(list(usage_rows("b", 2L, 0.04)))
+  filled <- suppressMessages(f(run))
+  pass <- qlm_meta(filled, "backfill", type = "object")[[1]]
+  expect_null(pass$cost_note)
+  expect_null(pass$prices)
+
+  out <- capture.output(print(filled))
+  expect_true(any(grepl("^# Cost:     from supplied rates: \\$1 input", out)))
+  expect_true(any(grepl("^# Cost \\(backfill pass 1\\): from ellmer's price table$", out)))
+
+  stem <- tempfile()
+  qlm_trail(filled, path = stem)
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("^\\*\\*Cost \\(backfill pass 1\\):\\*\\* from ellmer's price table$", report)))
 })

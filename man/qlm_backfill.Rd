@@ -96,10 +96,11 @@ object metadata as \code{backfill}, one entry per pass with its timestamp, the
 model if it differed from the run's, the overrides, the \code{.id}s attempted
 and recovered, where its cost came from when that was not where the run's
 did, and for a pass that failed outright its error, so the result can say
-which of its rows came from which pass and which model. A pass costed on
-other rates than the run, or left \code{NA} where the run was priced, is
-disclosed by \code{print()} and \code{\link[=qlm_trail]{qlm_trail()}} beside the run's own cost note,
-since part of the cost column then rests on it.
+which of its rows came from which pass and which model. A pass whose cost
+came from somewhere else than the run's, other supplied rates, ellmer's
+own table where the run rested on supplied rates, or nowhere where the
+run was priced, is disclosed by \code{print()} and \code{\link[=qlm_trail]{qlm_trail()}} beside the
+run's own cost note, since part of the cost column then rests on it.
 \code{\link[=qlm_trail]{qlm_trail()}} redacts any credential among a pass's overrides as it does
 the run's own, and a pass replayed from a trail does not send a redacted
 value. \code{\link[=qlm_replicate]{qlm_replicate()}} replays these passes on a replication, so that a

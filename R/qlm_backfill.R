@@ -79,10 +79,11 @@
 #' model if it differed from the run's, the overrides, the `.id`s attempted
 #' and recovered, where its cost came from when that was not where the run's
 #' did, and for a pass that failed outright its error, so the result can say
-#' which of its rows came from which pass and which model. A pass costed on
-#' other rates than the run, or left `NA` where the run was priced, is
-#' disclosed by `print()` and [qlm_trail()] beside the run's own cost note,
-#' since part of the cost column then rests on it.
+#' which of its rows came from which pass and which model. A pass whose cost
+#' came from somewhere else than the run's, other supplied rates, ellmer's
+#' own table where the run rested on supplied rates, or nowhere where the
+#' run was priced, is disclosed by `print()` and [qlm_trail()] beside the
+#' run's own cost note, since part of the cost column then rests on it.
 #' [qlm_trail()] redacts any credential among a pass's overrides as it does
 #' the run's own, and a pass replayed from a trail does not send a redacted
 #' value. [qlm_replicate()] replays these passes on a replication, so that a
@@ -646,10 +647,13 @@ backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
 
 #' Cost notes of the passes costed differently from the run
 #'
-#' Each pass records where its cost came from, as the run does. A pass costed
-#' as the run was has nothing to add. One costed on other rates, or left
-#' `NA` where the run was priced, has to be disclosed wherever the run's own
-#' note is, since part of the cost column then rests on it (#135).
+#' Each pass records where its cost came from, as the run does, and in both
+#' the absence of a note means ellmer priced it from its own table. A pass
+#' costed as the run was has nothing to add. One costed on other rates, left
+#' `NA` where the run was priced, or priced by ellmer where the run rested on
+#' supplied rates, has to be disclosed wherever the run's own note is, since
+#' part of the cost column then rests on something else (#135). A pass that
+#' failed outright merged no figures and has no provenance to give.
 #'
 #' @param passes The `backfill` entry of the object metadata.
 #' @param run_note The run's own `cost_note`, possibly `NULL`.
@@ -658,10 +662,16 @@ backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
 #' @keywords internal
 #' @noRd
 backfill_cost_notes <- function(passes, run_note = NULL) {
+  ellmer_note <- "from ellmer's price table"
+  run_note <- run_note %||% ellmer_note
   notes <- character()
   for (i in seq_along(passes)) {
-    note <- passes[[i]]$cost_note
-    if (!is.null(note) && !identical(note, run_note)) {
+    pass <- passes[[i]]
+    if (!is.null(pass$error)) {
+      next
+    }
+    note <- pass$cost_note %||% ellmer_note
+    if (!identical(note, run_note)) {
       notes[paste0("backfill pass ", i)] <- note
     }
   }
