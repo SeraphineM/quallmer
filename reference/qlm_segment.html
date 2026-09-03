@@ -65,7 +65,7 @@ This is the LLM-powered analogue of <code><a href="https://quanteda.io/reference
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">qlm_segment</span><span class="op">(</span><span class="va">x</span>, <span class="va">codebook</span>, <span class="va">model</span>, <span class="va">...</span>, name <span class="op">=</span> <span class="cn">NULL</span>, notes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">qlm_segment</span><span class="op">(</span><span class="va">x</span>, <span class="va">codebook</span>, <span class="va">model</span>, <span class="va">...</span>, prices <span class="op">=</span> <span class="cn">NULL</span>, name <span class="op">=</span> <span class="cn">NULL</span>, notes <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -101,6 +101,13 @@ Examples: <code>"openai/gpt-4o-mini"</code>, <code>"anthropic/claude-3-5-sonnet-
 <code>api_args</code> for OpenAI-compatible endpoints) are passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.</p></dd>
 
 
+<dt id="arg-prices">prices<a class="anchor" aria-label="anchor" href="#arg-prices"></a></dt>
+<dd><p>Optional. Rates for costing the run when ellmer cannot: a
+named numeric vector or list with <code>input</code> and <code>output</code>, and optionally
+<code>cached_input</code>, in US dollars per million tokens. As for <code><a href="qlm_code.html">qlm_code()</a></code>;
+see the section on cost there. Supplying them implies <code>include_tokens = TRUE</code> and <code>include_cost = TRUE</code>. Default is <code>NULL</code>.</p></dd>
+
+
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
 <dd><p>Character string identifying this coding run. Default is <code>NULL</code>.</p></dd>
 
@@ -123,18 +130,47 @@ Docvars include:</p><dl><dt><code>docid</code></dt>
 <dt>...</dt>
 <dd><p>Any fields defined in the codebook schema.</p></dd>
 
+<dt><code>input_tokens</code>, <code>output_tokens</code>, <code>cached_input_tokens</code>,
+<code>cost</code></dt>
+<dd><p>With <code>include_tokens = TRUE</code> or <code>include_cost = TRUE</code>: the
+usage of the call made for the source document, repeated on each of
+its segments. See the section on cost.</p></dd>
+
 <dt>...</dt>
 <dd><p>Original docvars inherited from the input (if <code>x</code> is a
 corpus).</p></dd>
 
 
-</dl></div>
+</dl><p>The corpus metadata (see <code><a href="https://quanteda.io/reference/meta.html" class="external-link">quanteda::meta()</a></code>) carries <code>name</code>,
+<code>continuum_lengths</code>, and, when usage was requested, <code>usage</code>, a data frame
+with one row per source document, plus <code>cost_note</code> and <code>prices</code> where
+they apply.</p>
+    </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The codebook schema defines additional document-level variables (docvars)
 for each segment. A <code>text</code> field (the verbatim segment text) is always added
 automatically and must not appear in the schema. Measurement <code>levels</code> defined
 in the codebook are not applicable to segmentation and are silently ignored.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="cost">Cost<a class="anchor" aria-label="anchor" href="#cost"></a></h2>
+
+
+
+<p>Each source document is one request, so token counts and cost belong to
+the document, not to a segment. With <code>include_tokens = TRUE</code> or
+<code>include_cost = TRUE</code> they are recorded twice: in the corpus metadata as
+<code>usage</code>, one row per input document including documents that yielded no
+segments, and on each segment as docvars for convenience. Sum the metadata
+table for the run's total; summing the docvars counts a document once per
+segment, and a document that produced no segments has no docvars at all.</p>
+<p>ellmer prices from a table fixed at its release and returns <code>NA</code> for a
+model it does not list; <code>qlm_segment()</code> says so once before the run, as
+<code><a href="qlm_code.html">qlm_code()</a></code> does, and <code>prices</code> costs the run from the token counts at
+rates you supply. The four usage names are reserved when usage is
+requested: a codebook field or an inherited docvar of the same name is an
+error rather than silently overwritten.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
