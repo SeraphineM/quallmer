@@ -31,9 +31,9 @@
   rows ellmer leaves `NA` are filled, by the sum ellmer applies to its own
   table; where ellmer prices the model its figure stands. The rates are kept
   in the run's metadata, shown by `print()` and the trail report, and reused
-  by `qlm_replicate()` when the model, endpoint and batch setting are
-  unchanged, so a cost resting on entered figures is always labelled as
-  such. quallmer bundles no prices of its own
+  by `qlm_replicate()` when the model, endpoint, batch setting and service
+  tier are unchanged, so a cost resting on entered figures is always
+  labelled as such. quallmer bundles no prices of its own
   (#135).
 
 * `qlm_compare()` now honours `tolerance`, and computes its numeric

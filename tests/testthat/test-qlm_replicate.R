@@ -892,6 +892,25 @@ test_that("qlm_replicate carries supplied prices to the same model, not to anoth
   expect_message(f(coded, model = "deepseek/deepseek-reasoner", batch = TRUE, name = "both"),
                  "the model, batch setting differ")
 
+  # A service tier is priced on its own: from unset (ellmer's "auto") to an
+  # explicit tier, dropped; the same tier again, carried
+  expect_message(f(coded, service_tier = "priority", name = "fast"),
+                 "the service tier differs")
+  expect_null(seen$prices)
+  expect_message(f(coded, service_tier = "default", name = "std"),
+                 "the service tier differs")
+  expect_null(seen$prices)
+  f(coded, service_tier = "auto", name = "same")
+  expect_equal(seen$prices, c(input = 1, output = 10, cached_input = 0.1))
+
+  # An original run on an explicit tier carries to the same tier only
+  tiered <- priced_coded()
+  attr(tiered, "meta")$object$chat_args$service_tier <- "priority"
+  f(tiered, name = "again")
+  expect_equal(seen$prices, c(input = 1, output = 10, cached_input = 0.1))
+  expect_message(f(tiered, service_tier = "flex", name = "cheap"), "the service tier differs")
+  expect_null(seen$prices)
+
   # An explicit override is left alone
   f(coded, model = "deepseek/deepseek-reasoner", prices = c(input = 2, output = 20))
   expect_equal(seen$prices, c(input = 2, output = 20))

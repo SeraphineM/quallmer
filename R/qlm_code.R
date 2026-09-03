@@ -130,9 +130,9 @@
 #' each per million. Where ellmer priced every row itself the rates are not
 #' used, and you are told so. The rates are kept in the run's metadata, shown
 #' by `print()` and in the trail report, and reused by [qlm_replicate()] when
-#' the model, the endpoint and the batch setting are unchanged, so a cost that
-#' rests on entered figures is always labelled as such. quallmer bundles no
-#' prices of its own.
+#' the model, the endpoint, the batch setting and the service tier are
+#' unchanged, so a cost that rests on entered figures is always labelled as
+#' such. quallmer bundles no prices of its own.
 #'
 #' @section Schema enforcement:
 #'
