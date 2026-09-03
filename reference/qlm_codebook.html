@@ -108,7 +108,17 @@ variable in the schema. Names should match schema property names. Values
 should be one of <code>"nominal"</code>, <code>"ordinal"</code>, <code>"interval"</code>, or <code>"ratio"</code>.
 If <code>NULL</code> (default), levels are auto-detected from schema types using the
 following mapping: <code>type_boolean</code> and <code>type_enum</code> = nominal, <code>type_string</code>
-= nominal, <code>type_integer</code> = ordinal, <code>type_number</code> = interval.</p></dd>
+= nominal, <code>type_integer</code> = ordinal, <code>type_number</code> = interval.</p>
+<p>Names may refer to properties at any depth of the schema, including those
+inside a nested <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code> or the items of a <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code>. A level
+declared for a nested variable describes that variable in a table
+unnested to one row per item. <code><a href="qlm_compare.html">qlm_compare()</a></code> and <code><a href="qlm_validate.html">qlm_validate()</a></code> merge
+on <code>.id</code>, so such a table needs an identifier that is unique per item
+(a document-item key, not the document's <code>.id</code> alone) and must be
+re-wrapped with <code><a href="as_qlm_coded.html">as_qlm_coded()</a></code>, passing this codebook as <code>codebook</code>,
+for the declared levels to be found. Because <code>levels</code> is a flat list, a
+name that occurs at more than one place in the schema cannot be declared
+and is an error; rename the properties to make them distinct.</p></dd>
 
 </dl></div>
     <div class="section level2">
