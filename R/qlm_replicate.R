@@ -64,7 +64,7 @@
 #'   failed on.
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # First create a coded object
 #' texts <- c("I love this!", "Terrible.", "It's okay.")
 #' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", name = "run1")
@@ -113,7 +113,8 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
 
   # Everything the original run passed to ellmer, merged with the overrides,
   # on the path the original run took. Shared with qlm_backfill().
-  restored <- restore_run_args(x, overrides = list(...), model = model)
+  restored <- restore_run_args(x, overrides = list(...), model = model,
+                               batch = use_batch)
   use_model <- restored$model
   call_args <- restored$call_args
 
@@ -161,16 +162,22 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
 #' [qlm_backfill()], so that both re-run a coding with the settings it was
 #' made with.
 #'
+#' Rates supplied to cost the original run (`prices`) travel only within
+#' their pricing context, which is why the batch setting the caller will use
+#' is an argument here: a backfill always runs as a parallel call, so a
+#' batch-coded run's rates do not apply to it.
+#'
 #' @param x A `qlm_coded` object, already upgraded.
 #' @param overrides Named list of overrides, as from `...`.
 #' @param model Replacement model, or `NULL` to keep the original.
+#' @param batch The batch setting the caller will run with.
 #'
 #' @return A list with `model` (the model to use) and `call_args` (arguments
 #'   for [qlm_code()] beyond `x`, `codebook`, `model`, `batch`, `name` and
 #'   `notes`).
 #' @keywords internal
 #' @noRd
-restore_run_args <- function(x, overrides = list(), model = NULL) {
+restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE) {
   meta_attr <- attr(x, "meta")
   original_model <- meta_attr$object$chat_args$name
   # Ensure it's always a list (empty if NULL)
@@ -290,6 +297,39 @@ restore_run_args <- function(x, overrides = list(), model = NULL) {
     original_retries <- meta_attr$user$max_retries
     if (!is.null(original_retries)) {
       call_args$max_retries <- original_retries
+    }
+  }
+
+  # Rates supplied to cost the original run belong to a pricing context:
+  # the model, the endpoint it was reached through (provider and base_url,
+  # the identity used above), whether it ran as a batch, and the service
+  # tier, each of which providers price differently. A run that keeps all
+  # four is costed the same way again; one that changes any of them is not
+  # costed on the old rates, and says so. A tier left unset is ellmer's
+  # default, "auto", and a change to any explicit tier counts. An explicit
+  # `prices` in `...` is left alone (#135).
+  original_prices <- meta_attr$user$prices
+  if (!"prices" %in% names(call_args) && !is.null(original_prices)) {
+    original_batch <- meta_attr$object$batch %||% FALSE
+    original_tier <- meta_attr$object$chat_args$service_tier %||% "auto"
+    use_tier <- call_args$service_tier %||% "auto"
+    changed <- c(
+      if (!identical(use_model, original_model)) "model",
+      if (!identical(use_endpoint, original_endpoint)) "endpoint",
+      if (!identical(batch, original_batch)) "batch setting",
+      if (!identical(use_tier, original_tier)) "service tier"
+    )
+    if (length(changed) == 0L) {
+      call_args$prices <- original_prices
+    } else {
+      cli::cli_inform(c(
+        "i" = paste0(
+          "Not carrying over `prices`: the ", paste(changed, collapse = ", "),
+          if (length(changed) == 1L) " differs" else " differ",
+          " from the run that supplied them. Supply this run's rates in `...` ",
+          "to cost it."
+        )
+      ))
     }
   }
 

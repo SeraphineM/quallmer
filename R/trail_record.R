@@ -96,10 +96,11 @@ trail_record <- function(
 
   annotations <- do.call(annotate_fun, args)
 
-  # Attach ID if not present; align by row position
-  if (!id_col %in% names(annotations)) {
-    annotations[[id_col]] <- data[[id_col]]
-  }
+  # Rows come back in input order, so the identifier is restored by position.
+  # annotate() returns its own `id` column of sequential integers; assigning
+  # only when the column is absent kept those in place of the caller's values
+  # whenever id_col was "id".
+  annotations[[id_col]] <- data[[id_col]]
 
   meta <- list(
     timestamp    = Sys.time(),

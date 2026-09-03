@@ -34,6 +34,80 @@
 
 ## Bug fixes
 
+* `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
+  a credential-named `api_headers` entry, or a `base_url` carrying userinfo
+  or a credential-named query parameter, given to `qlm_code()` as a literal,
+  previously appeared verbatim in the report's Call section and in the saved
+  `.rds`. Their values are now replaced by `"<redacted>"` in each run's
+  recorded call and chat arguments, in the returned trail and in both files,
+  and a message says which runs were affected. A `credentials` callback is
+  kept only as `function() Sys.getenv("NAME")`, rebuilt without its
+  environment; any other callback is redacted too. Reading the key where it
+  is needed, through an environment variable or that callback form, keeps
+  it out of the record entirely and is the recommended form (#154).
+
+* `qlm_code()` now says why `cost` will be `NA` when `include_cost = TRUE`
+  cannot be honoured, once and before the run, and keeps the reason with the
+  object so `print()` shows it. ellmer prices from a table fixed at its
+  release, matched exactly on provider and model, and answers `NA` on any
+  miss without saying which kind: DeepSeek and six other providers are absent
+  from the table altogether, so no model of theirs is ever priced; a model
+  newer than the installed ellmer is missed on a provider it otherwise
+  prices; and local endpoints have no per-token charge. Each is now named,
+  since the remedies differ, and the message says whether the token counts a
+  cost could be worked out from are being recorded, which needs
+  `include_tokens = TRUE` (#135).
+
+* `qlm_code()` gains `prices`, rates in US dollars per million tokens that
+  cost a run ellmer cannot price, from the token counts it records. Only the
+  rows ellmer leaves `NA` are filled, by the sum ellmer applies to its own
+  table; where ellmer prices the model its figure stands. The rates are kept
+  in the run's metadata, shown by `print()` and the trail report, and reused
+  by `qlm_replicate()` when the model, endpoint, batch setting and service
+  tier are unchanged, so a cost resting on entered figures is always
+  labelled as such. quallmer bundles no prices of its own
+  (#135).
+
+* `qlm_compare()` now honours `tolerance`, and computes its numeric
+  statistics on the ratings' values, when a coder stores the ratings as
+  text. The ratings were assembled into one matrix before their type was
+  examined, and a single character column made the whole matrix character:
+  every unit then fell through to exact text equality with `tolerance`
+  unused, and Krippendorff's alpha, the ICC and Pearson's r ran on factor
+  codes of the sorted strings, where `"10"` falls between `"1"` and `"2"`.
+  Neither showed in the output, so an LLM column parsed as text against a
+  numeric human column gave a flat agreement curve and a wrong alpha. At
+  ordinal, interval and ratio level every column is now read as numbers, as
+  the declared level asserts; a value that does not read as a number is an
+  error naming the coder and the values; ordinal categories given as text
+  are ranked as before, but a positive `tolerance` on them draws a warning;
+  and nominal categories agree only when identical, as the code's own
+  comment already claimed (#150).
+
+* `qlm_validate()` ranked ordinal ratings by their values sorted as strings,
+  so on a 1 to 10 scale `"10"` fell between `"1"` and `"2"` and Spearman's
+  rho, Kendall's tau and MAE were wrong whenever a rating reached 10, even
+  from numeric input. Ordinal and interval values are now read as numbers
+  the same way as in `qlm_compare()` (#150).
+  
+* The deprecated `annotate()` and `trail_record()` run again. `annotate()`
+  passed its `model_name` to `qlm_code()` under that name, whose argument is
+  `model`, so the value fell through to the provider call and every use
+  failed, with `model` reported missing or `model_name` reported unused.
+  `annotate()` again returns its identifier column as `id`, as documented,
+  rather than `qlm_code()`'s `.id`, and `trail_record()` now always restores
+  the caller's `id_col` values in place of the sequential ones `annotate()`
+  generates. Both functions still warn that `qlm_code()` replaces them
+  (#141).
+
+* `qlm_code()` now says when a model name is not one its provider lists,
+  with the nearest names it does have, instead of reporting only the
+  provider's HTTP error. The provider's model list is fetched through
+  ellmer's `models_<provider>()`, only after a run has been rejected in its
+  entirety and at most once per failed run, and only for providers whose
+  listing covers every name they accept; where it cannot decide, the
+  provider's own error is reported unchanged (#133).
+
 * The `.id` column of a `qlm_coded` object must now be a key: unique and
   never missing. Every later operation merges on `.id`, and `qlm_compare()`
   and `qlm_validate()` silently formed a Cartesian product of repeated

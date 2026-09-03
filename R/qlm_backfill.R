@@ -152,7 +152,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
   }
 
   run_model <- meta_attr$object$chat_args$name
-  restored <- restore_run_args(x, overrides = overrides, model = model)
+  restored <- restore_run_args(x, overrides = overrides, model = model, batch = FALSE)
   model_changed <- !identical(restored$model, run_model)
   limit_raised <- raises_output_limit(overrides, meta_attr$object$chat_args)
   call_args <- restored$call_args

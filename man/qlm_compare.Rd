@@ -44,7 +44,10 @@ being compared, so a difference of exactly \code{tolerance} counts as agreement
 and \code{0.1 + 0.2} equals \code{0.3}; it is numerical equality rather than bit
 identity. The allowance is far smaller than any meaningful rating
 difference, so a genuinely different pair is never counted as agreeing.
-Used for percent agreement calculation.}
+Used for percent agreement at ordinal, interval and ratio level, where
+the ratings are numbers. Nominal categories agree only when identical,
+as do ordinal categories given as text, and a positive \code{tolerance} on
+text categories draws a warning since it cannot be applied.}
 
 \item{ci}{Confidence interval method:
 \describe{
@@ -123,6 +126,16 @@ formula which accounts for proportional differences.
 Kendall's W, ICC, and percent agreement are computed using all raters
 simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 computed as the mean of all pairwise correlations between raters.
+
+\strong{How ratings are read.} At ordinal, interval and ratio level every
+coder's ratings are read as numbers, whatever type they are stored as, so a
+column of digits held as text is compared on its values and not on the
+alphabetical order of its strings. A value that does not read as a number
+is an error at interval and ratio level, naming the coder and the values.
+At ordinal level the categories may instead all be text, in which case they
+are ranked by their sorted labels; numbers from one coder and text from
+another cannot be placed on one scale and are an error. Nominal ratings are
+compared as text.
 
 \strong{Per-category statistics.} When \code{by_category = TRUE} and \code{level = "nominal"},
 the result also includes one row per category for \code{alpha_per_value} (from

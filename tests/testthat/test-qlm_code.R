@@ -453,7 +453,7 @@ test_that("qlm_code delegates to the handler and records the backend", {
 
   handler_args <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries = 2L) {
+                           max_retries = 2L, model_hint = NULL, ...) {
     handler_args <<- list(model = model, batch = batch, max_retries = max_retries,
                           chat_args = chat_args, execution_args = execution_args)
     results <- tibble::tibble(score = c(0.5, 0.8))
@@ -542,7 +542,7 @@ test_that("qlm_code passes its max_retries default to the handler", {
 
   seen <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries) {
+                           max_retries, model_hint = NULL, ...) {
     seen <<- max_retries
     tibble::tibble(score = 0.5)
   }
@@ -589,10 +589,12 @@ structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
 }
 
 json_stub <- function(calls = NULL) {
-  function(x, codebook, model, chat_args, execution_args, batch, max_retries) {
+  function(x, codebook, model, chat_args, execution_args, batch, max_retries,
+           model_hint = NULL, ...) {
     if (!is.null(calls)) {
       calls$json <- TRUE
       calls$max_retries <- max_retries
+      calls$model_hint <- model_hint
     }
     results <- tibble::tibble(score = rep(0.99, length(x)))
     attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
@@ -724,6 +726,65 @@ test_that("structured = 'auto' still falls back when the endpoint answered in pr
   )
   expect_true(calls$json)
   expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
+})
+
+
+test_that("a structured run the provider rejects outright names the model (#133)", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # ellmer's parallel path hands back every rejected request as a row whose
+  # .error is the HTTP condition, all fields NA
+  http_400 <- function() {
+    structure(
+      list(message = "HTTP 400 Bad Request.", status = 400L, call = NULL),
+      class = c("httr2_http_400", "httr2_http", "httr2_error", "rlang_error", "error", "condition")
+    )
+  }
+  rejected <- tibble::tibble(
+    score = c(NA_real_, NA_real_),
+    .error = list(http_400(), http_400())
+  )
+  expect_true(all_rejected(rejected))
+  expect_false(all_rejected(tibble::tibble(score = NA_real_, .error = list(simpleError("cut off")))))
+  expect_false(all_rejected(tibble::tibble(score = c(NA_real_, 1), .error = list(http_400(), NULL))))
+  expect_false(all_rejected(tibble::tibble(score = NA_real_)))
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = rejected))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+  mockery::stub(f, "model_name_hint", function(model, chat_args) {
+    c("i" = "\"gpt-4o-mimi\" is not a model that \"openai\" lists.")
+  })
+
+  # The provider confirms the name is wrong: stop, rather than send it again
+  # in JSON mode
+  expect_error(
+    f(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mimi"),
+    "is not a model that"
+  )
+  expect_null(calls$json)
+
+  # Without that confirmation, a rejection may be the provider refusing the
+  # schema-constrained request itself, so the fallback runs as before
+  g <- qlm_code
+  mockery::stub(g, "try_structured_call", structured_stub(results = rejected))
+  mockery::stub(g, "code_handler_json", json_stub(calls))
+  mockery::stub(g, "model_name_hint", function(model, chat_args) character())
+  expect_warning(
+    g(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mimi"),
+    "falling back to JSON mode"
+  )
+  expect_true(calls$json)
+  # The provider was asked once; the JSON path is told the answer, not sent to ask again
+  expect_identical(calls$model_hint, character())
+
+  # And under structured = "structured" the rejection is the reported failure
+  expect_error(
+    g(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mimi",
+      structured = "structured"),
+    "HTTP 400 Bad Request"
+  )
 })
 
 
@@ -1403,4 +1464,179 @@ test_that("every entry point refuses an object a row operation has left with a r
   expect_error(qlm_validate(doubled, gold = x, by = "score", level = "interval"), "must be unique")
   expect_error(qlm_trail(doubled), "must be unique")
   expect_error(qlm_replicate(doubled), "must be unique")
+})
+
+
+# cost that cannot be priced (#135) --------------------------------------------
+
+# qlm_code() with the structured call stubbed to return `results`, and the
+# chat built for real, off the environment and sending nothing, so that the
+# diagnosis reads the provider the run would use. Callers pin
+# structured = "structured": DeepSeek defaults to the JSON path.
+coding_run <- function(results) {
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  f
+}
+offline <- function() list(Authorization = "Bearer x")
+
+test_that("qlm_code says once, before the run, why cost will be NA (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), cost = c(NA_real_, NA_real_))
+
+  f <- coding_run(results)
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, include_cost = TRUE, structured = "structured"),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(qlm_meta(coded)$cost_note, "NA (ellmer has no prices for DeepSeek models)")
+  expect_output(print(coded), "# Cost:     NA (ellmer has no prices for DeepSeek models)",
+                fixed = TRUE)
+})
+
+test_that("qlm_code's cost message says whether token counts are recorded (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+
+  # include_cost alone: no token columns come back, and the message says so
+  f <- coding_run(data.frame(score = c(0.5, 0.8), cost = c(NA_real_, NA_real_)))
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, include_cost = TRUE, structured = "structured"),
+    "Supply the provider's published rates as `prices`"
+  )
+  expect_false("input_tokens" %in% names(coded))
+
+  # With include_tokens the counts are there, and the message says that instead
+  with_tokens <- data.frame(score = c(0.5, 0.8), input_tokens = c(10, 12),
+                            output_tokens = c(3, 4), cached_input_tokens = c(0, 0),
+                            cost = c(NA_real_, NA_real_))
+  f <- coding_run(with_tokens)
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, include_cost = TRUE, include_tokens = TRUE,
+               structured = "structured"),
+    "Token counts are recorded; supply"
+  )
+  expect_true("input_tokens" %in% names(coded))
+})
+
+test_that("qlm_code is silent about cost when it was not asked for, or is priced (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8))
+
+  # Not asked for: the lookup is not even made
+  f <- coding_run(results)
+  expect_no_message(coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+                               credentials = offline, structured = "structured"))
+  expect_null(qlm_meta(coded)$cost_note)
+  expect_output(print(coded), "# Units:")
+  expect_no_match(paste(capture.output(print(coded)), collapse = "\n"), "# Cost:")
+
+  # Asked for and priced: nothing to say
+  expect_no_message(coded <- f(c("a", "b"), codebook, model = "openai/gpt-4.1-mini",
+                               credentials = offline, include_cost = TRUE,
+                               structured = "structured"))
+  expect_null(qlm_meta(coded)$cost_note)
+})
+
+
+# cost from supplied rates (#135) ----------------------------------------------
+
+# coding_run() from above, with the execution arguments the structured call
+# received recorded in `seen`.
+priced_run <- function(results, seen) {
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
+    seen$execution_args <- list(...)
+    results
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  f
+}
+
+test_that("qlm_code costs an unpriced run from supplied rates (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(1e6, 2e6),
+                        output_tokens = c(1e5, 1e5), cached_input_tokens = c(0, 5e5),
+                        cost = c(NA_real_, NA_real_))
+  seen <- new.env()
+
+  f <- priced_run(results, seen)
+  # No "cost will be NA" message: it will not be
+  expect_no_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10, cached_input = 0.1))
+  )
+
+  # Costed by ellmer's sum, per million tokens
+  expect_equal(coded$cost, c(2, (2e6 + 5e5 * 0.1 + 1e6) / 1e6))
+  # Supplying rates asked ellmer for tokens and cost
+  expect_true(isTRUE(seen$execution_args$include_tokens))
+  expect_true(isTRUE(seen$execution_args$include_cost))
+  # The rates travel with the object, and print says where the cost came from
+  expect_equal(qlm_meta(coded)$prices, c(input = 1, output = 10, cached_input = 0.1))
+  expect_equal(qlm_meta(coded)$cost_note,
+               "from supplied rates: $1 input, $10 output, $0.1 cached input, per million tokens")
+  expect_output(print(coded), "# Cost:     from supplied rates: $1 input", fixed = TRUE)
+})
+
+test_that("qlm_code leaves ellmer's own prices in charge (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(1e6, 2e6),
+                        output_tokens = c(1e5, 1e5), cached_input_tokens = c(0, 0),
+                        cost = c(0.3, 0.6))
+
+  f <- priced_run(results, new.env())
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "openai/gpt-4.1-mini",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10)),
+    "prices.*is not used"
+  )
+  expect_equal(coded$cost, c(0.3, 0.6))
+  expect_null(qlm_meta(coded)$prices)
+  expect_null(qlm_meta(coded)$cost_note)
+})
+
+test_that("qlm_code says when supplied rates could not be applied (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  # Unpriced, and no counts came back to cost it from
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(NA_real_, NA_real_),
+                        output_tokens = c(NA_real_, NA_real_),
+                        cached_input_tokens = c(NA_real_, NA_real_),
+                        cost = c(NA_real_, NA_real_))
+
+  f <- priced_run(results, new.env())
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10)),
+    "could not be applied"
+  )
+  expect_true(all(is.na(coded$cost)))
+  # The rates are not recorded, and the note says why the cost is NA
+  expect_null(qlm_meta(coded)$prices)
+  expect_equal(qlm_meta(coded)$cost_note, "NA (ellmer has no prices for DeepSeek models)")
+})
+
+test_that("qlm_code rejects malformed prices before any request (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- priced_run(data.frame(score = 1), new.env())
+  expect_error(
+    f("a", codebook, model = "openai/gpt-4.1-mini", credentials = offline,
+      prices = c(input = 1), structured = "structured"),
+    "Missing: output"
+  )
 })

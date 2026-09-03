@@ -42,7 +42,7 @@
 #' - [qlm_failures()]: List the units a coding run failed on, with reasons
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create a coded object
 #' texts <- c("I love this!", "Terrible.", "It's okay.")
 #' coded <- qlm_code(

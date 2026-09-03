@@ -141,3 +141,284 @@ test_that("qlm_code() still reports a malformed model before looking at the prov
     "must be a single string"
   )
 })
+
+
+# Model-name diagnosis (#133) --------------------------------------------------
+
+test_that("models_lister() finds ellmer's listing function, or nothing", {
+  expect_identical(models_lister("openai"), ellmer::models_openai)
+  expect_identical(models_lister("deepseek"), ellmer::models_deepseek)
+  # Bring-your-own-endpoint providers publish no list
+  expect_null(models_lister("openai_compatible"))
+  expect_null(models_lister("not_a_provider"))
+})
+
+test_that("provider_models() asks afresh each time, with the run's own credentials", {
+  calls <- new.env()
+  lister <- function(base_url = "https://api.example", api_key = NULL, credentials = NULL) {
+    calls$n <- (calls$n %||% 0L) + 1L
+    calls$base_url <- base_url
+    if (grepl("down", base_url)) stop("HTTP 503 Service Unavailable.")
+    data.frame(id = paste0("model-for-", api_key %||% "default"), created_at = Sys.Date())
+  }
+  f <- provider_models
+  mockery::stub(f, "models_lister", function(provider) if (provider == "acme") lister else NULL)
+
+  # The answer depends on who asks, so nothing is remembered between calls
+  expect_equal(f("acme", list(api_key = "account-A")), "model-for-account-A")
+  expect_equal(f("acme", list(api_key = "account-B")), "model-for-account-B")
+  expect_equal(calls$n, 2)
+
+  # Only the arguments the lister takes travel
+  expect_equal(
+    f("acme", chat_args = list(base_url = "https://eu.example", params = list(), api_args = list())),
+    "model-for-default"
+  )
+  expect_equal(calls$base_url, "https://eu.example")
+
+  # A failed lookup is NULL, and a later call after the cause is repaired asks again
+  expect_null(f("acme", chat_args = list(base_url = "https://down.example")))
+  expect_equal(f("acme"), "model-for-default")
+
+  # No lister, no lookup
+  expect_null(f("openai_compatible"))
+  expect_equal(calls$n, 5)
+})
+
+test_that("provider_models() passes project, location and profile where the lister takes them", {
+  seen <- NULL
+  f <- provider_models
+  mockery::stub(f, "models_lister", function(provider) {
+    switch(provider,
+      google_vertex = function(location = NULL, project_id = NULL, credentials = NULL) {
+        seen <<- list(location = location, project_id = project_id)
+        data.frame(id = "gemini-x")
+      },
+      aws_bedrock = function(profile = NULL, base_url = NULL) {
+        seen <<- list(profile = profile)
+        data.frame(id = "anthropic.claude-x")
+      }
+    )
+  })
+  f("google_vertex", list(location = "europe-west1", project_id = "p-1", api_key = "unused"))
+  expect_equal(seen, list(location = "europe-west1", project_id = "p-1"))
+  f("aws_bedrock", list(profile = "research"))
+  expect_equal(seen, list(profile = "research"))
+})
+
+test_that("listing_is_complete() trusts absence only where the listing is exhaustive", {
+  expect_true(listing_is_complete("openai", "gpt-4o-mimi"))
+  expect_true(listing_is_complete("anthropic", "claude-sonnet-4"))
+  expect_true(listing_is_complete("google_gemini", "gemini-2.5-pro"))
+  # Bedrock invokes inference profiles, ARNs and custom models its listing omits
+  expect_false(listing_is_complete("aws_bedrock", "us.anthropic.claude-3-5-sonnet-20241022-v2:0"))
+  expect_false(listing_is_complete("aws_bedrock", "anthropic.claude-3-5-sonnet-20241022-v2:0"))
+  # Tuned Gemini models live outside the listing
+  expect_false(listing_is_complete("google_gemini", "tunedModels/my-classifier"))
+  expect_false(listing_is_complete("google_vertex", "gemini-2.5-pro"))
+  expect_false(listing_is_complete("portkey", "gpt-4o"))
+  # A provider not yet checked gets no claim rather than a false one
+  expect_false(listing_is_complete("some_new_provider", "m"))
+})
+
+test_that("closest_model_names() suggests near misses and nothing for the rest", {
+  models <- c("gpt-4o-mini", "gpt-4o", "gpt-4.1", "o3-mini", "text-embedding-3-small")
+  expect_equal(closest_model_names("gpt-4o-mimi", models)[1], "gpt-4o-mini")
+  expect_equal(closest_model_names("GPT-4O", models)[1], "gpt-4o")
+  # Compared as the alias people type, suggesting the listed name
+  dated <- c("claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929")
+  expect_equal(closest_model_names("claude-haiku-4-6", dated)[1], "claude-haiku-4-5-20251001")
+  expect_length(closest_model_names("gpt-4o-mimi", models, n = 1L), 1)
+  expect_length(closest_model_names("llama-3.3-70b-versatile", models), 0)
+})
+
+test_that("model_name_hint() speaks only when the provider has no such model", {
+  f <- model_name_hint
+  mockery::stub(f, "provider_models", function(provider, chat_args) {
+    if (provider == "acme") c("m-large", "m-small") else NULL
+  })
+  mockery::stub(f, "listing_is_complete", function(provider, id) provider == "acme")
+
+  hint <- f("acme/m-lrage")
+  expect_named(hint, c("i", "i"))
+  expect_match(hint[[1]], "\"m-lrage\" is not a model that \"acme\" lists")
+  expect_match(hint[[1]], "ellmer::models_acme\\(\\)")
+  expect_match(hint[[2]], "Did you mean \"m-large\"")
+
+  # A name unlike anything on the list gets the list pointer but no guess
+  hint <- f("acme/completely-different")
+  expect_length(hint, 1)
+  # A name that begins a listed one may be an alias, so it gets no claim
+  expect_length(f("acme/m-larg"), 0)
+
+  # Listed: the cause is something else, so nothing is added
+  expect_length(f("acme/m-large"), 0)
+  # No list to consult: nothing is claimed either way
+  expect_length(f("openai_compatible/m-large"), 0)
+  # A bare provider means its default model, which exists
+  expect_length(f("acme"), 0)
+  expect_length(f(NA_character_), 0)
+})
+
+test_that("may_be_alias() treats a name that begins a listed one as possibly valid", {
+  listed <- c("claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", "claude-opus-5")
+  expect_true(may_be_alias("claude-haiku-4-5", listed))
+  expect_true(may_be_alias("claude-sonnet-4-5-latest", listed))
+  expect_true(may_be_alias("claude-opus-5", listed))
+  expect_false(may_be_alias("claude-haiku-4-6", listed))
+  expect_false(may_be_alias("claude-haiku-4-5-20251002", listed))
+  expect_false(may_be_alias("", listed))
+  expect_false(may_be_alias("-latest", listed))
+})
+
+test_that("model_name_hint() leaves an Anthropic alias alone against a canonical-only listing", {
+  # Anthropic lists dated identifiers; the API also accepts the undated
+  # alias, which a listing-only check would have called wrong and, worse,
+  # used to stop the JSON-mode fallback
+  f <- model_name_hint
+  mockery::stub(f, "provider_models", function(provider, chat_args) {
+    c("claude-opus-4-5-20251101", "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929")
+  })
+  expect_length(f("anthropic/claude-haiku-4-5"), 0)
+  expect_length(f("claude/claude-sonnet-4-5"), 0)
+  expect_length(f("anthropic/claude-sonnet-4-5-latest"), 0)
+  # A name that begins nothing listed is still a typo, with the nearest names
+  hint <- f("anthropic/claude-haiku-4-6")
+  expect_match(hint[[1]], "\"claude-haiku-4-6\" is not a model")
+  expect_match(hint[[2]], "claude-haiku-4-5-20251001")
+})
+
+test_that("model_name_hint() makes no claim where the listing is not exhaustive (Bedrock)", {
+  f <- model_name_hint
+  asked <- FALSE
+  mockery::stub(f, "provider_models", function(provider, chat_args) {
+    asked <<- TRUE
+    "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  })
+  # A valid cross-region inference profile, absent from ListFoundationModels:
+  # calling it wrong would also have stopped the JSON-mode fallback
+  expect_length(f("aws_bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0"), 0)
+  expect_false(asked)
+})
+
+test_that("a diagnosis never reaches the network in tests", {
+  # The lookups above are all stubbed; the real lister must fail closed when
+  # it cannot run, returning nothing rather than raising
+  withr::local_envvar(OPENAI_API_KEY = NA)
+  f <- provider_models
+  mockery::stub(f, "models_lister", function(provider) function(...) stop("no key"))
+  expect_null(f("openai"))
+})
+
+
+# unpriced_reason() -----------------------------------------------------------
+
+# A chat as the run would build it. The credentials function keeps
+# construction off the environment, and construction sends nothing.
+test_chat <- function(model) {
+  ellmer::chat(model, credentials = function() list(Authorization = "Bearer x"))
+}
+
+test_that("unpriced_reason() is NULL for a model ellmer prices (#135)", {
+  expect_null(unpriced_reason(test_chat("openai/gpt-4.1-mini"), "openai/gpt-4.1-mini"))
+  expect_null(unpriced_reason(test_chat("anthropic/claude-sonnet-4-5"),
+                              "anthropic/claude-sonnet-4-5"))
+})
+
+test_that("unpriced_reason() tells a provider gap from a model gap (#135)", {
+  # DeepSeek is absent from ellmer's table as a whole
+  r <- unpriced_reason(test_chat("deepseek/deepseek-chat"), "deepseek/deepseek-chat")
+  expect_equal(r$kind, "provider")
+  expect_equal(r$provider, "DeepSeek")
+  expect_equal(r$model, "deepseek-chat")
+
+  # OpenAI is priced, this model is not
+  r <- unpriced_reason(test_chat("openai/gpt-99-not-yet-released"),
+                       "openai/gpt-99-not-yet-released")
+  expect_equal(r$kind, "model")
+  expect_equal(r$provider, "OpenAI")
+  expect_equal(r$model, "gpt-99-not-yet-released")
+})
+
+test_that("unpriced_reason() names a local endpoint from the prefix alone (#135)", {
+  # No chat is consulted: ellmer's ollama constructor looks for a running server
+  r <- unpriced_reason(NULL, "ollama/llama3")
+  expect_equal(r$kind, "local")
+  expect_equal(r$provider, "ollama")
+  expect_equal(r$model, "llama3")
+  expect_equal(unpriced_reason(NULL, "vllm/x")$kind, "local")
+  expect_equal(unpriced_reason(NULL, "lmstudio/x")$kind, "local")
+})
+
+test_that("unpriced_reason() stays silent where it cannot decide (#135)", {
+  # Not an ellmer chat, so no provider to read
+  expect_null(unpriced_reason(structure(list(), class = "fake_chat"), "deepseek/deepseek-chat"))
+  expect_null(unpriced_reason(NULL, "deepseek/deepseek-chat"))
+
+  # ellmer without the price table or its predicate: no diagnosis
+  f <- unpriced_reason
+  mockery::stub(f, "get0", function(x, ...) NULL)
+  expect_null(f(test_chat("deepseek/deepseek-chat"), "deepseek/deepseek-chat"))
+})
+
+test_that("cost_diagnosis() speaks only when a cost was asked for, and only when told to (#135)", {
+  chat <- test_chat("deepseek/deepseek-chat")
+
+  # No cost asked for: no lookup, nothing said
+  expect_no_message(r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list()))
+  expect_null(r)
+  expect_no_message(r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list(include_cost = FALSE)))
+  expect_null(r)
+
+  # Asked for and unpriced: said once, and the reason comes back
+  expect_message(
+    r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list(include_cost = TRUE)),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(r$kind, "provider")
+
+  # The fallback path is told not to repeat it, but still learns the reason
+  expect_no_message(
+    r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list(include_cost = TRUE), say = FALSE)
+  )
+  expect_equal(r$kind, "provider")
+
+  # Priced: nothing to say
+  expect_no_message(
+    r <- cost_diagnosis(test_chat("openai/gpt-4.1-mini"), "openai/gpt-4.1-mini",
+                        list(include_cost = TRUE))
+  )
+  expect_null(r)
+})
+
+test_that("unpriced_message() says whether the token counts are being recorded (#135)", {
+  provider <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+  model <- list(kind = "model", provider = "OpenAI", model = "gpt-99")
+
+  # include_cost alone records no counts, and the message must not claim it does
+  # Supplying `prices` records the counts itself, so that is the advice
+  expect_match(unpriced_message(provider)[[2]],
+               "^Supply the provider's published rates as `prices`")
+  expect_match(unpriced_message(model)[[2]], "Supply the provider's published rates as `prices`")
+  expect_match(unpriced_message(provider, tokens_recorded = TRUE)[[2]],
+               "^Token counts are recorded; supply")
+  expect_match(unpriced_message(model, tokens_recorded = TRUE)[[2]],
+               "Token counts are recorded; supply")
+})
+
+test_that("unpriced_message() and unpriced_note() cover every kind (#135)", {
+  provider <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+  model <- list(kind = "model", provider = "OpenAI", model = "gpt-99")
+  local <- list(kind = "local", provider = "ollama", model = "llama3")
+
+  expect_match(unpriced_message(provider)[["i"]], "no prices for DeepSeek models")
+  expect_match(unpriced_message(model)[["i"]], "no price for \"gpt-99\"")
+  expect_match(unpriced_message(model)[["i"]], "other OpenAI models")
+  expect_match(unpriced_message(local)[["i"]], "runs locally")
+  expect_length(unpriced_message(provider), 2)
+  expect_length(unpriced_message(local), 1)
+
+  expect_equal(unpriced_note(provider), "ellmer has no prices for DeepSeek models")
+  expect_match(unpriced_note(model), "^ellmer [0-9.]+ has no price for gpt-99$")
+  expect_equal(unpriced_note(local), "ollama runs locally; no per-token charge")
+})

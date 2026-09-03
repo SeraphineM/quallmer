@@ -39,6 +39,13 @@
 #'   settings, and is recorded in the object's metadata; a pass that recovers
 #'   nothing ends the backfill early. Default is 0, no backfilling. See
 #'   [qlm_backfill()] for what is retried and what is left alone.
+#' @param prices Optional. Rates for costing the run when ellmer cannot: a
+#'   named numeric vector or list with `input` and `output`, and optionally
+#'   `cached_input`, in US dollars per million tokens, for example
+#'   `c(input = 0.435, output = 0.87, cached_input = 0.0036)`. Where ellmer
+#'   prices the model itself its figure stands and these are not used. A
+#'   `cached_input` rate that is not given is taken as the `input` rate. See
+#'   the section on cost. Default is `NULL`.
 #' @param batch logical; if `TRUE`, uses [ellmer::batch_chat_structured()]
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
@@ -107,6 +114,32 @@
 #' level does not work: those reach [ellmer::chat()], which has no such
 #' argument. Use `params`.
 #'
+#' @section Cost:
+#'
+#' `include_tokens = TRUE` and `include_cost = TRUE` are forwarded to ellmer,
+#' which adds per-unit token counts and a `cost` column in US dollars. ellmer
+#' prices from a table fixed at its release, matched exactly on provider and
+#' model, and returns `NA` on any miss. Some providers are absent from that
+#' table altogether, DeepSeek among them, so no model of theirs is ever priced;
+#' a model newer than the installed ellmer is missed on a provider it otherwise
+#' prices, which upgrading fixes; and local endpoints such as ollama have no
+#' per-token charge. In each case `qlm_code()` says so once before the run,
+#' and the reason is kept with the object and shown when it is printed. With
+#' `include_tokens = TRUE` the token counts are recorded, from which such a
+#' run can be costed at the provider's published rates.
+#'
+#' `prices` does that costing, at rates you supply from the provider's
+#' published price list. Supplying them implies `include_tokens = TRUE` and
+#' `include_cost = TRUE`. Only rows ellmer left `NA` are filled, by the same
+#' sum ellmer applies to its own table: uncached input tokens at the `input`
+#' rate, cache hits at the `cached_input` rate, output at the `output` rate,
+#' each per million. Where ellmer priced every row itself the rates are not
+#' used, and you are told so. The rates are kept in the run's metadata, shown
+#' by `print()` and in the trail report, and reused by [qlm_replicate()] when
+#' the model, the endpoint, the batch setting and the service tier are
+#' unchanged, so a cost that rests on entered figures is always labelled as
+#' such. quallmer bundles no prices of its own.
+#'
 #' @section Schema enforcement:
 #'
 #' Some providers accept a JSON Schema without enforcing it, so a response can
@@ -161,6 +194,20 @@
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
 #' `backend`.
+#'
+#' @section Rejected runs:
+#' When the provider rejects every request with a status that will not change
+#' on retry (400, 401, 403, 404 or 422), `qlm_code()` stops rather than
+#' returning a table of `NA`s. The most common cause is a model name the
+#' provider does not have, and providers rarely say so; many answer with a
+#' bare "HTTP 400 Bad Request". So before reporting, `qlm_code()` asks the
+#' provider for its model list, through ellmer's `models_<provider>()`, and
+#' says when the name is not on it, with the nearest names it does have. The
+#' lookup runs only after a run has failed, once per failed run, and only for
+#' providers whose listing is known to cover every name they will invoke
+#' (Bedrock, for one, invokes inference profiles its listing omits). Where
+#' it cannot run, or the name is on the list, the provider's own error is
+#' reported unchanged.
 #'
 #' @section Truncated responses:
 #'
@@ -229,7 +276,7 @@
 qlm_code <- function(x, codebook, model, ...,
                      batch = FALSE,
                      structured = c("auto", "structured", "json"),
-                     max_retries = 2L, backfill_attempts = 0L,
+                     max_retries = 2L, backfill_attempts = 0L, prices = NULL,
                      name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
@@ -323,6 +370,14 @@ qlm_code <- function(x, codebook, model, ...,
   # to pass through to ellmer::chat() which forwards them to the provider
   chat_args <- dots[!dot_names %in% execution_arg_names]
 
+  # Supplied rates cost the run from its token counts, so both must be asked
+  # of ellmer; the caller asked for a cost by supplying them.
+  prices <- check_prices(prices)
+  if (!is.null(prices)) {
+    execution_args$include_tokens <- TRUE
+    execution_args$include_cost <- TRUE
+  }
+
   # ellmer returns a bare list under convert = FALSE, which has no rows to
   # merge an .id into and no columns for new_qlm_coded() to reorder. It has
   # never worked here; say so rather than failing later with "incorrect number
@@ -338,15 +393,25 @@ qlm_code <- function(x, codebook, model, ...,
   # Metadata contributed by the coding path
   backend_meta <- list()
   results <- NULL
+
+  # Whether the cost will come back NA, and why, is read by each path from
+  # the chat it builds, before it sends anything (#135). Kept here so the
+  # reason outlives the console: it travels with the object.
+  unpriced <- NULL
+  attempt <- NULL
   fallback_reason <- NULL
+  model_hint <- NULL
 
   # ---- schema-constrained structured output -------------------------------
   if (structured %in% c("auto", "structured")) {
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
-      allow_skip = identical(structured, "auto") && !batch
+      allow_skip = identical(structured, "auto") && !batch,
+      cost_message = is.null(prices)
     )
+
+    unpriced <- attempt$unpriced
 
     if (isTRUE(attempt$ok)) {
       results <- attempt$value
@@ -366,6 +431,19 @@ qlm_code <- function(x, codebook, model, ...,
         "i" = "Coding {.val {model}} in JSON mode with local validation.",
         "i" = attempt$error,
         "i" = "Use {.code structured = \"structured\"} to rely on the provider instead."
+      ))
+    } else if (isTRUE(attempt$rejected) &&
+               length(model_hint <- model_name_hint(model, chat_args))) {
+      # The provider refused every request, and confirms it has no such
+      # model. Falling back to JSON mode would only send the same name again,
+      # so stop here. A refusal the provider does not explain that way may
+      # be its answer to the schema-constrained request itself, which JSON
+      # mode is the cure for, so that case falls through as before, carrying
+      # the (empty) answer so the JSON path does not ask again.
+      cli::cli_abort(c(
+        "Every request to model {.val {model}} was rejected by the provider.",
+        set_bullets(attempt$error),
+        model_hint
       ))
     } else if (identical(structured, "structured")) {
       cli::cli_abort(c(
@@ -401,10 +479,16 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args,
       execution_args = execution_args,
       batch = batch,
-      max_retries = max_retries
+      max_retries = max_retries,
+      model_hint = model_hint,
+      cost_message = is.null(attempt) && is.null(prices)
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL
+    if (is.null(unpriced)) {
+      unpriced <- backend_meta$unpriced
+    }
+    backend_meta$unpriced <- NULL
   }
 
   backend_meta$structured <- structured
@@ -414,6 +498,34 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Add ID column from input names or sequence
   results$id <- names(x) %||% seq_along(x)
+
+  # Where the cost came from, when ellmer could not fill it (#135). Supplied
+  # rates cost the rows ellmer left NA from their token counts, which is
+  # decided from the table rather than from the diagnosis, since that cannot
+  # always be made. Three outcomes: no row was NA, so ellmer priced the run
+  # itself at the published rates and the supplied ones have nothing to do;
+  # rows were NA but none had the counts to cost them, so the rates could not
+  # be applied; or some were costed. Only the last records the rates.
+  cost_note <- if (!is.null(unpriced)) paste0("NA (", unpriced_note(unpriced), ")")
+  if (!is.null(prices)) {
+    before <- results$cost %||% rep(NA_real_, nrow(results))
+    results <- price_from_tokens(results, prices)
+    filled <- is.na(before) & !is.na(results$cost)
+    if (!anyNA(before)) {
+      cli::cli_inform(c(
+        "i" = "ellmer priced this run itself; {.arg prices} is not used."
+      ))
+      prices <- NULL
+    } else if (!any(filled)) {
+      cli::cli_inform(c(
+        "i" = paste0("{.arg prices} could not be applied: no token counts came back ",
+                     "for the unpriced units, so their {.field cost} stays {.code NA}.")
+      ))
+      prices <- NULL
+    } else {
+      cost_note <- prices_note(prices)
+    }
+  }
 
   # Build metadata list
   metadata <- list(
@@ -433,6 +545,12 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Fields contributed by a provider-specific handler (backend, max_retries, ...)
   metadata <- c(metadata, backend_meta)
+  if (!is.null(cost_note)) {
+    metadata$cost_note <- cost_note
+  }
+  if (!is.null(prices)) {
+    metadata$prices <- prices
+  }
 
   # Add model to chat_args for easy access
   chat_args$name <- model
@@ -497,7 +615,7 @@ default_structured_mode <- function(model) {
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
-                                allow_skip = FALSE) {
+                                allow_skip = FALSE, cost_message = TRUE) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -514,6 +632,9 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
   }
   chat <- build_chat(system_prompt)
+
+  # From the chat the run will use, before anything is sent (#135)
+  unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
 
   # Whether a failed structured call would even be visible depends on the
   # codebook. Failure is detected from required scalar fields coming back all
@@ -534,6 +655,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   if (undetectable) {
     return(list(
       ok = FALSE,
+      unpriced = unpriced,
       undetectable = TRUE,
       error = paste0(
         "this endpoint's schema enforcement cannot be verified, and the ",
@@ -569,9 +691,15 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     }
   }
 
+  # `rejected` records whether the provider refused the run with a status
+  # that will not change on retry, so qlm_code() can ask about the model
+  # name when it reports; the message alone rarely says.
   attempt <- tryCatch(
     list(ok = TRUE, value = run(chat)),
-    error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+    error = function(e) list(
+      ok = FALSE, error = strip_ansi(conditionMessage(e)),
+      rejected = is_fatal_status(api_error_status(e))
+    )
   )
 
   # Alibaba Model Studio refuses `response_format` unless the word "json"
@@ -591,13 +719,30 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     )
     attempt <- tryCatch(
       list(ok = TRUE, value = run(build_chat(retry_prompt))),
-      error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+      error = function(e) list(
+        ok = FALSE, error = strip_ansi(conditionMessage(e)),
+        rejected = is_fatal_status(api_error_status(e))
+      )
     )
   }
 
   if (isTRUE(attempt$ok)) {
     attempt$value <- mark_truncated_rows(
       attempt$value, codebook$schema, cap, keep_tokens = keep_tokens
+    )
+  }
+
+  # Every request refused with a status that will not change on retry is
+  # misconfiguration, most often a model name the provider does not have.
+  # Returned as a failed attempt, with the reasons, so that qlm_code() can ask
+  # the provider about the name rather than hand back a table of NAs.
+  if (isTRUE(attempt$ok) && all_rejected(attempt$value)) {
+    attempt <- list(
+      ok = FALSE,
+      rejected = TRUE,
+      error = unique(failure_reasons(
+        recorded_errors(attempt$value), errored_rows(attempt$value)
+      ))
     )
   }
 
@@ -614,6 +759,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     )
   }
 
+  attempt$unpriced <- unpriced
   attempt
 }
 
@@ -1181,6 +1327,12 @@ print.qlm_coded <- function(x, ...) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
   }
 
+  # Where the cost column came from, when ellmer could not fill it: why it
+  # is NA, or the supplied rates it was computed from
+  if (!is.null(meta_attr$user$cost_note)) {
+    cat("# Cost:     ", meta_attr$user$cost_note, "\n", sep = "")
+  }
+
   # Show notes if present
   if (!is.null(meta_attr$user$notes)) {
     cat("# Notes:    ", meta_attr$user$notes, "\n", sep = "")
@@ -1192,3 +1344,29 @@ print.qlm_coded <- function(x, ...) {
   NextMethod()
 }
 
+
+
+#' Did the provider reject every row of a structured result?
+#'
+#' On the structured path a rejected request arrives as a row whose `.error`
+#' is the HTTP condition, with every field `NA`. A run rejected in its
+#' entirety is misconfiguration, not a schema problem, and should be reported
+#' as such.
+#'
+#' @param results What the structured call returned.
+#'
+#' @return `TRUE` when every row carries an error with a status that will not
+#'   change on retry.
+#' @keywords internal
+#' @noRd
+all_rejected <- function(results) {
+  errors <- recorded_errors(results)
+  if (!length(errors)) {
+    return(FALSE)
+  }
+  all(vapply(
+    errors,
+    function(e) !is.null(e) && is_fatal_status(api_error_status(e)),
+    logical(1)
+  ))
+}

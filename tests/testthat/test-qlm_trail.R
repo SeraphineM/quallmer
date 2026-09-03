@@ -764,10 +764,8 @@ test_that("OpenAI-compatible endpoints are no longer collapsed into one (#130)",
 
 
 test_that("a credential in the URL does not appear in the endpoint label (#130)", {
-  # Scoped deliberately to the label. The report is not credential-free: the
-  # Call section prints deparse(run$call), so a base_url written as a literal
-  # at the call site still appears there, and the .rds keeps chat_args whole.
-  # That is a separate problem; this asserts only what this section controls.
+  # Scoped to the label. The recorded call and chat_args are redacted when
+  # the trail is built (#154); this asserts only what this section controls.
   section <- setup_section(endpoint_fixture(
     "openai_compatible/m", "https://user:tok3n@api.example.com/v1?api_key=abc#frag"
   ))
@@ -876,4 +874,175 @@ test_that("a run with no recorded model name does not break the section (#130)",
   # qlm_trail() reports where it saved, so silence is not the assertion here.
   expect_no_error(section <- setup_section(coded))
   expect_length(section, 0)
+})
+
+
+# ---- credentials never reach the trail (#154) --------------------------------
+
+credential_fixture <- function(run = "run1") {
+  coded <- data.frame(.id = 1:2, polarity = c("pos", "neg"))
+  class(coded) <- c("qlm_coded", "data.frame")
+  attr(coded, "run") <- list(
+    name = run, parent = NULL,
+    call = quote(qlm_code(
+      x, cb, model = "openai_compatible/m",
+      base_url = "https://user:s3cret@host/v1?api_key=qs3cret&api-version=2024",
+      api_key = "sk-lit3ral",
+      api_headers = c(Authorization = "Bearer hdr3cret", `anthropic-beta` = "tools-2024"),
+      credentials = function() "cb3cret"
+    )),
+    metadata = list(timestamp = as.POSIXct("2024-01-01 12:00:00"), n_units = 2),
+    chat_args = list(
+      name = "openai_compatible/m",
+      base_url = "https://user:s3cret@host/v1?api_key=qs3cret&api-version=2024",
+      api_key = "sk-lit3ral",
+      api_headers = c(Authorization = "Bearer hdr3cret", `anthropic-beta` = "tools-2024"),
+      credentials = local({ captured <- "env3cret"; function() "cb3cret" })
+    ),
+    codebook = list(name = "sentiment", instructions = "Code sentiment")
+  )
+  coded
+}
+
+secrets <- c("s3cret", "qs3cret", "sk-lit3ral", "hdr3cret", "cb3cret", "env3cret")
+
+expect_no_secret <- function(text) {
+  for (secret in secrets) {
+    expect_false(any(grepl(secret, text, fixed = TRUE)), label = secret)
+  }
+}
+
+test_that("qlm_trail() writes no credential into the report or the .rds (#154)", {
+  path <- file.path(tempdir(), "test_trail_credentials")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+
+  expect_message(
+    qlm_trail(credential_fixture(), path = path),
+    "Credential values recorded for \"run1\""
+  )
+
+  report <- readLines(paste0(path, ".qmd"))
+  expect_no_secret(report)
+  # The call is still there, with the shape of what was passed
+  expect_true(any(grepl('api_key = "<redacted>"', report, fixed = TRUE)))
+  expect_true(any(grepl('Authorization = "<redacted>"', report, fixed = TRUE)))
+  expect_true(any(grepl("api-version=2024", report, fixed = TRUE)))
+  expect_true(any(grepl('`anthropic-beta` = "tools-2024"', report, fixed = TRUE)))
+
+  saved <- readRDS(paste0(path, ".rds"))
+  run <- saved$runs[[1]]
+  expect_no_secret(deparse(run$call))
+  expect_no_secret(unlist(run$chat_args[c("base_url", "api_key", "api_headers")]))
+  # The mirror and the object it mirrors agree
+  meta <- attr(run$coded, "meta")$object
+  expect_identical(meta$chat_args[c("base_url", "api_key", "api_headers")],
+                   run$chat_args[c("base_url", "api_key", "api_headers")])
+  expect_identical(meta$call, run$call)
+  # A callback that returns a literal is gone, and so is its environment:
+  # the whole file holds neither the literal nor what the closure captured
+  expect_equal(run$chat_args$credentials, "<redacted>")
+  expect_true(any(grepl('credentials = "<redacted>"', report, fixed = TRUE)))
+  rds_file <- paste0(path, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  for (secret in secrets) {
+    expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+  }
+})
+
+test_that("a Sys.getenv() credentials callback survives the trail (#154)", {
+  coded <- credential_fixture()
+  attr(coded, "run")$chat_args$credentials <- function() Sys.getenv("MY_KEY")
+  attr(coded, "run")$call <- quote(qlm_code(x, cb, credentials = function() Sys.getenv("MY_KEY")))
+  trail <- suppressMessages(qlm_trail(coded))
+  run <- trail$runs[[1]]
+  expect_true(is.function(run$chat_args$credentials))
+  expect_identical(body(run$chat_args$credentials), quote(Sys.getenv("MY_KEY")))
+  expect_identical(run$call, quote(qlm_code(x, cb, credentials = function() Sys.getenv("MY_KEY"))))
+})
+
+test_that("the returned trail is redacted like the files (#154)", {
+  trail <- suppressMessages(qlm_trail(credential_fixture()))
+  run <- trail$runs[[1]]
+  expect_no_secret(deparse(run$call))
+  expect_no_secret(unlist(run$chat_args[c("base_url", "api_key", "api_headers")]))
+  expect_equal(run$chat_args$api_key, "<redacted>")
+  expect_equal(run$chat_args$base_url, "https://host/v1?api_key=<redacted>&api-version=2024")
+})
+
+test_that("a run with nothing to redact is untouched and gets no message (#154)", {
+  coded <- endpoint_fixture("openai/gpt-4o", "https://api.example.com/v1?api-version=2024")
+  expect_silent(trail <- qlm_trail(coded))
+  run <- trail$runs[[1]]
+  expect_identical(run$call, quote(qlm_code(x, cb)))
+  expect_identical(run$chat_args$base_url, "https://api.example.com/v1?api-version=2024")
+  expect_identical(attr(run$coded, "meta")$object$chat_args, run$chat_args)
+})
+
+test_that("redaction names every affected run once (#154)", {
+  expect_message(
+    qlm_trail(credential_fixture("one"), credential_fixture("two")),
+    "\"one\" and \"two\""
+  )
+})
+
+
+# cost provenance (#135) -------------------------------------------------------
+
+test_that("qlm_trail() report states where a cost came from and reproduces the rates (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8), cost = c(2, 3)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"),
+    execution_args = list(include_tokens = TRUE, include_cost = TRUE),
+    batch = FALSE,
+    metadata = list(
+      n_units = 2,
+      prices = c(input = 1, output = 10, cached_input = 0.1),
+      cost_note = "from supplied rates: $1 input, $10 output, $0.1 cached input, per million tokens"
+    ),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+
+  path <- file.path(tempdir(), "test_trail_prices")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  expect_true(any(grepl("^\\*\\*Cost:\\*\\* from supplied rates: \\$1 input", content)))
+
+  # The replication call carries the rates, so the script costs the run the same way
+  args <- qlm_code_call(content)
+  expect_equal(eval(args$prices), c(input = 1, output = 10, cached_input = 0.1))
+})
+
+test_that("qlm_trail() report says why a cost is NA (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8), cost = c(NA_real_, NA_real_)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"),
+    execution_args = list(include_cost = TRUE),
+    batch = FALSE,
+    metadata = list(n_units = 2, cost_note = "NA (ellmer has no prices for DeepSeek models)"),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+
+  path <- file.path(tempdir(), "test_trail_cost_na")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  expect_true(any(grepl(
+    "^\\*\\*Cost:\\*\\* NA \\(ellmer has no prices for DeepSeek models\\)$", content
+  )))
+  expect_null(qlm_code_call(content)$prices)
 })

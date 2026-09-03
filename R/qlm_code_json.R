@@ -22,6 +22,11 @@
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
 #' @param max_retries Number of repair attempts for each empty, unparsable, or
 #'   schema-invalid response. Default is 2.
+#' @param model_hint What `model_name_hint()` answered when [qlm_code()]
+#'   already asked it for this run, so a wholly rejected run asks the provider
+#'   at most once; `NULL` when it has not been asked.
+#' @param cost_message Whether to say so when the cost will be `NA`. `FALSE`
+#'   when the structured path already has, for this run.
 #'
 #' @return A data frame with one row per unit, carrying `.error` for units that
 #'   never validated, plus token and cost columns when requested. Handler
@@ -29,7 +34,8 @@
 #' @keywords internal
 #' @noRd
 code_handler_json <- function(x, codebook, model, chat_args, execution_args,
-                              batch = FALSE, max_retries = 2L) {
+                              batch = FALSE, max_retries = 2L,
+                              model_hint = NULL, cost_message = TRUE) {
   # The handler is reached via do.call(), so report guard failures against
   # qlm_code() rather than against an anonymous function.
   error_call <- rlang::caller_env()
@@ -78,6 +84,10 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     ),
     chat_args
   ))
+
+  # From the chat the run will use, before anything is sent (#135). Silent
+  # when the structured path already said it for this run.
+  unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
 
   include_tokens <- isTRUE(execution_args$include_tokens)
   include_cost <- isTRUE(execution_args$include_cost)
@@ -210,10 +220,16 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   # Nothing was coded and the provider rejected every request outright: the run
   # is misconfigured, so say so rather than handing back a tibble of NAs.
   if (all(failed) && all(fatal)) {
+    # A wrong model name is the usual cause and the worst reported, so ask the
+    # provider whether the name exists before telling the user to check it.
+    hint <- if (is.null(model_hint)) model_name_hint(model, chat_args) else model_hint
+    if (!length(hint)) {
+      hint <- c("i" = "Check the model name, your credentials, and any {.arg base_url}.")
+    }
     cli::cli_abort(c(
       "Every request to model {.val {model}} was rejected by the provider.",
       set_bullets(unique(unlist(problems))),
-      "i" = "Check the model name, your credentials, and any {.arg base_url}."
+      hint
     ), call = error_call)
   }
 
@@ -249,7 +265,8 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   attr(results, "qlm_backend_meta") <- list(
     backend = "json_mode",
     max_retries = max_retries,
-    n_invalid = sum(failed)
+    n_invalid = sum(failed),
+    unpriced = unpriced
   )
   results
 }
@@ -732,11 +749,13 @@ is_fatal_status <- function(status) {
 #' interpolated. Doubling them makes cli emit them literally.
 #'
 #' @param x A character vector of messages.
+#' @param n Keep at most this many, noting how many were dropped.
+#' @param bullet The cli bullet to name them with, `"x"` by default.
 #'
-#' @return A character vector named `"x"`, truncated to the first three.
+#' @return A character vector named `bullet`, truncated to the first `n`.
 #' @keywords internal
 #' @noRd
-set_bullets <- function(x, n = 3L) {
+set_bullets <- function(x, n = 3L, bullet = "x") {
   x <- x[!is.na(x) & nzchar(x)]
   if (!length(x)) {
     return(character())
@@ -745,7 +764,7 @@ set_bullets <- function(x, n = 3L) {
     x <- c(x[seq_len(n)], paste0("... and ", length(x) - n, " other reason(s)"))
   }
   x <- gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
-  stats::setNames(x, rep("x", length(x)))
+  stats::setNames(x, rep(bullet, length(x)))
 }
 
 

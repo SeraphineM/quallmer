@@ -987,3 +987,83 @@ test_that("qlm_replicate leaves completion to backfill, not backfill_attempts", 
   )
   expect_error(qlm_replicate(coded, backfill_attempts = 2), "Use `backfill`")
 })
+
+
+# supplied prices (#135) -------------------------------------------------------
+
+priced_coded <- function() {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"),
+    execution_args = list(include_tokens = TRUE, include_cost = TRUE),
+    batch = FALSE,
+    metadata = list(n_units = 2, prices = c(input = 1, output = 10, cached_input = 0.1)),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+}
+
+test_that("qlm_replicate carries supplied prices to the same model, not to another (#135)", {
+  coded <- priced_coded()
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+
+  # Same model: the rates come back
+  f(coded, name = "again")
+  expect_equal(seen$prices, c(input = 1, output = 10, cached_input = 0.1))
+
+  # Different model: dropped, with a note
+  expect_message(f(coded, model = "deepseek/deepseek-reasoner", name = "other"),
+                 "Not carrying over `prices`: the model differs")
+  expect_null(seen$prices)
+
+  # Same model string reached through another endpoint: a different price
+  # list, so dropped too
+  expect_message(
+    f(coded, base_url = "https://other.example/v1", credentials = function() list(),
+      name = "moved"),
+    "the endpoint differs"
+  )
+  expect_null(seen$prices)
+
+  # Same model and endpoint, run as a batch: providers price batches
+  # differently, so dropped
+  expect_message(f(coded, batch = TRUE, name = "batched"), "the batch setting differs")
+  expect_null(seen$prices)
+
+  # Several changes are all named
+  expect_message(f(coded, model = "deepseek/deepseek-reasoner", batch = TRUE, name = "both"),
+                 "the model, batch setting differ")
+
+  # A service tier is priced on its own: from unset (ellmer's "auto") to an
+  # explicit tier, dropped; the same tier again, carried
+  expect_message(f(coded, service_tier = "priority", name = "fast"),
+                 "the service tier differs")
+  expect_null(seen$prices)
+  expect_message(f(coded, service_tier = "default", name = "std"),
+                 "the service tier differs")
+  expect_null(seen$prices)
+  f(coded, service_tier = "auto", name = "same")
+  expect_equal(seen$prices, c(input = 1, output = 10, cached_input = 0.1))
+
+  # An original run on an explicit tier carries to the same tier only
+  tiered <- priced_coded()
+  attr(tiered, "meta")$object$chat_args$service_tier <- "priority"
+  f(tiered, name = "again")
+  expect_equal(seen$prices, c(input = 1, output = 10, cached_input = 0.1))
+  expect_message(f(tiered, service_tier = "flex", name = "cheap"), "the service tier differs")
+  expect_null(seen$prices)
+
+  # An explicit override is left alone
+  f(coded, model = "deepseek/deepseek-reasoner", prices = c(input = 2, output = 20))
+  expect_equal(seen$prices, c(input = 2, output = 20))
+})

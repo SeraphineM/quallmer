@@ -24,10 +24,13 @@ json_test_usage <- function(n) {
 
 # A code_handler_json() with ellmer::chat() and json_chat_turns() stubbed out.
 # `attempts` is a list of list(text =, error =, status =, finish =), one per
-# expected round trip; `error`, `status` and `finish` default to NA.
-json_test_handler <- function(attempts, calls = NULL) {
+# expected round trip; `error`, `status` and `finish` default to NA. The
+# model-name lookup a wholly rejected run makes is stubbed out too, since it
+# would otherwise ask the provider; `hint` is what it answers.
+json_test_handler <- function(attempts, calls = NULL, hint = character()) {
   h <- code_handler_json
   mockery::stub(h, "ellmer::chat", function(...) structure(list(), class = "fake_chat"))
+  mockery::stub(h, "model_name_hint", function(...) hint)
   i <- 0L
   mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
     i <<- i + 1L
@@ -790,6 +793,44 @@ test_that("code_handler_json aborts when the provider rejects every request", {
   expect_equal(calls$n, 1)
 })
 
+test_that("code_handler_json names the model when the provider does not list it (#133)", {
+  rejected <- list(
+    text = c(NA_character_, NA_character_),
+    error = rep("HTTP 400 Bad Request.", 2),
+    status = c(400L, 400L)
+  )
+  hint <- c("i" = "\"gpt-4o-mimi\" is not a model that \"openai\" lists.",
+            "i" = "Did you mean \"gpt-4o-mini\"?")
+  h <- json_test_handler(list(rejected), hint = hint)
+
+  err <- tryCatch(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list()),
+    error = function(e) e
+  )
+  msg <- strip_ansi(conditionMessage(err))
+  expect_match(msg, "Every request to model \"openai/gpt-4o-mimi\" was rejected")
+  expect_match(msg, "Did you mean \"gpt-4o-mini\"")
+  # The provider has answered the question, so the generic advice is dropped
+  expect_no_match(msg, "Check the model name")
+
+  # With nothing to add, the provider's error and the generic advice stand
+  h <- json_test_handler(list(rejected))
+  expect_error(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list()),
+    "Check the model name"
+  )
+
+  # An answer qlm_code() already has is used rather than asked for again
+  h <- json_test_handler(list(rejected), hint = hint)
+  expect_error(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list(), model_hint = character()),
+    "Check the model name"
+  )
+})
+
 test_that("code_handler_json does not retry a fatal failure in a mixed batch", {
   calls <- new.env()
   h <- json_test_handler(
@@ -979,4 +1020,60 @@ test_that("is_json_word_error recognises the DashScope rejection", {
   expect_false(is_json_word_error("HTTP 429 Too Many Requests."))
   expect_false(is_json_word_error(NA_character_))
   expect_false(is_json_word_error(character(0)))
+})
+
+
+# cost that cannot be priced (#135) --------------------------------------------
+
+# The handler with only the round trip stubbed out: the chat is built for
+# real, off the environment, so the diagnosis reads the provider the run
+# would use.
+json_offline_handler <- function(attempts) {
+  h <- code_handler_json
+  mockery::stub(h, "model_name_hint", function(...) character())
+  i <- 0L
+  mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
+    i <<- i + 1L
+    attempt <- attempts[[i]]
+    n <- length(attempt$text)
+    list(
+      text = attempt$text,
+      error = rep(NA_character_, n),
+      status = rep(NA_integer_, n),
+      finish = rep(NA_character_, n),
+      usage = json_test_usage(n)
+    )
+  })
+  h
+}
+offline_args <- list(credentials = function() list(Authorization = "Bearer x"))
+
+test_that("the JSON path diagnoses cost from its own chat, and stays quiet when told (#135)", {
+  attempts <- list(list(text = "{\"score\":1,\"lab\":\"pos\"}"))
+
+  h <- json_offline_handler(attempts)
+  expect_message(
+    result <- h(x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
+                chat_args = offline_args, execution_args = list(include_cost = TRUE)),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(attr(result, "qlm_backend_meta")$unpriced$kind, "provider")
+  expect_equal(attr(result, "qlm_backend_meta")$unpriced$provider, "DeepSeek")
+
+  # As the fallback after a structured attempt that already said it
+  h <- json_offline_handler(attempts)
+  expect_no_message(
+    result <- h(x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
+                chat_args = offline_args, execution_args = list(include_cost = TRUE),
+                cost_message = FALSE)
+  )
+  expect_equal(attr(result, "qlm_backend_meta")$unpriced$kind, "provider")
+
+  # No cost asked for: nothing said, nothing kept
+  h <- json_offline_handler(attempts)
+  expect_no_message(
+    result <- h(x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
+                chat_args = offline_args, execution_args = list())
+  )
+  expect_null(attr(result, "qlm_backend_meta")$unpriced)
 })

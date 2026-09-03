@@ -102,9 +102,8 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       }
 
     } else if (var_level == "ordinal") {
-      # Convert to numeric for ordinal measures
-      estimate_num <- as.numeric(boot_merged$estimate)
-      truth_num <- as.numeric(boot_merged$truth)
+      estimate_num <- boot_merged$estimate_num
+      truth_num <- boot_merged$truth_num
 
       # Spearman's rho
       if ("rho" %in% metrics_to_compute) {
@@ -129,9 +128,8 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
       }
 
     } else if (var_level == "interval") {
-      # Convert to numeric for interval measures
-      estimate_num <- as.numeric(as.character(boot_merged$estimate))
-      truth_num <- as.numeric(as.character(boot_merged$truth))
+      estimate_num <- boot_merged$estimate_num
+      truth_num <- boot_merged$truth_num
 
       numeric_data <- data.frame(truth = truth_num, estimate = estimate_num)
 
@@ -280,6 +278,13 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
 #'   continuous measurements). Metrics: ICC (intraclass correlation), Pearson's r
 #'   (linear correlation), MAE (mean absolute error), and RMSE (root mean squared
 #'   error).
+#'
+#' At ordinal and interval level the predictions and the gold standard are
+#' read as numbers, whatever type they are stored as, so a column of digits
+#' held as text is compared on its values and not on the alphabetical order of
+#' its strings. A value that does not read as a number is an error at interval
+#' level. Ordinal categories may instead all be text, in which case they are
+#' ranked by their sorted labels.
 #'
 #' For multiclass problems with nominal data, the `average` parameter controls
 #' how per-class metrics are aggregated:
@@ -765,6 +770,26 @@ qlm_validate <- function(
       merged$truth <- factor(merged$truth, levels = all_levels)
     }
 
+    # Numbers for the ordinal and interval measures, read by the declared
+    # level rather than taken as codes of the string-sorted factor levels,
+    # which ranked "10" between "1" and "2" (#150). Ordinal categories that
+    # are all text keep those codes: their sorted labels are the only order
+    # there is.
+    if (var_level != "nominal") {
+      numbers <- ratings_matrix(
+        merged[, c("estimate", "truth")], var_level, var,
+        coders = c(if (is.na(x_obj_name)) "x" else x_obj_name,
+                   if (is.na(gold_name)) "gold" else gold_name)
+      )
+      if (is.numeric(numbers)) {
+        merged$estimate_num <- numbers[, "estimate"]
+        merged$truth_num <- numbers[, "truth"]
+      } else {
+        merged$estimate_num <- as.numeric(merged$estimate)
+        merged$truth_num <- as.numeric(merged$truth)
+      }
+    }
+
     # Map `average` to the estimator label used by the metric_* functions.
     estimator <- switch(average,
       "macro" = "macro",
@@ -822,11 +847,10 @@ qlm_validate <- function(
       )$value
     }
 
-    # Ordinal measures (require numeric conversion)
+    # Ordinal measures
     if (var_level == "ordinal") {
-      # Convert ordered factors to numeric for correlation and distance measures
-      estimate_num <- as.numeric(merged$estimate)
-      truth_num <- as.numeric(merged$truth)
+      estimate_num <- merged$estimate_num
+      truth_num <- merged$truth_num
 
       # Spearman's rho (rank correlation)
       # Note: cor.test does not provide CIs for Spearman's rho
@@ -848,11 +872,10 @@ qlm_validate <- function(
       }
     }
 
-    # Interval measures (require numeric conversion)
+    # Interval measures
     if (var_level == "interval") {
-      # For interval data, convert to numeric
-      estimate_num <- as.numeric(as.character(merged$estimate))
-      truth_num <- as.numeric(as.character(merged$truth))
+      estimate_num <- merged$estimate_num
+      truth_num <- merged$truth_num
 
       numeric_data <- data.frame(
         truth = truth_num,

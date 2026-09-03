@@ -12,19 +12,27 @@ name: pkgdown.yaml
 
 permissions: read-all
 
+# One non-PR run at a time, build and deploy together. Serialising only the
+# deploy job is not enough: builds would overlap, and a slow build for an
+# older commit could deploy after a fast one for a newer commit and leave
+# gh-pages stale. PR runs get a group of their own and never queue.
+concurrency:
+  group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+
 jobs:
-  pkgdown:
+  # Build and deploy are separate jobs so that the write token exists only in
+  # the deploy job, which runs no code from the commit under test. The build
+  # job installs the package and runs pkgdown on it, and on a pull request
+  # that is the PR's own code; it gets a read-only token. See #147.
+  pkgdown-build:
     runs-on: ubuntu-latest
     # Healthy runs take ~2m30s. See #126.
     timeout-minutes: 20
-    # Only restrict concurrency for non-PR jobs
-    concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       # API keys removed - no longer needed without article builds
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v7
 
@@ -39,8 +47,6 @@ jobs:
           extra-packages: any::pkgdown, local::.
           needs: website
 
-      # Debug step removed - was for API key troubleshooting
-
       - name: Build site (reference only, preserve articles)
         run: |
           pkgdown::init_site()
@@ -50,8 +56,32 @@ jobs:
           # Deliberately skip build_articles()
         shell: Rscript {0}
 
+      - name: Upload site
+        uses: actions/upload-artifact@v7
+        with:
+          name: pkgdown-site
+          path: docs
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  pkgdown-deploy:
+    needs: pkgdown-build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download site
+        uses: actions/download-artifact@v8
+        with:
+          name: pkgdown-site
+          path: docs
+
       - name: Deploy to GitHub pages 🚀
-        if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
           clean: false    # Critical: preserves existing articles
