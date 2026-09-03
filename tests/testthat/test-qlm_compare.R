@@ -668,6 +668,129 @@ test_that("nominal comparison is unaffected by the tolerance change (#121)", {
 })
 
 
+# ---- ratings typed by the declared level, not by storage (#150) --------------
+
+test_that("tolerance is honoured when one coder stores the ratings as text (#150)", {
+  # The issue's example: one genuine difference of 1, compared at tolerance 1
+  expect_equal(compare_pair(c(1, 2, 3, 4), c("1", "2", "3", "5"), tolerance = 1), 1)
+  expect_equal(compare_pair(c(1, 2, 3, 4), c("1", "2", "3", "5"), tolerance = 0), 0.75)
+  expect_equal(compare_pair(c(1, 2, 3, 4), c("1", "2", "3", "5"), tolerance = 1,
+                            level = "ordinal"), 1)
+})
+
+
+test_that("text digits are compared on their values, not their sorted strings (#150)", {
+  numbers <- list(A = c(1, 2, 10, 3), B = c(1, 2, 9, 3))
+  text <- lapply(numbers, as.character)
+
+  for (level in c("ordinal", "interval", "ratio")) {
+    from_numbers <- as.data.frame(qlm_compare(
+      as_qlm_coded(data.frame(.id = 1:4, g = numbers$A), id = .id, name = "A"),
+      as_qlm_coded(data.frame(.id = 1:4, g = numbers$B), id = .id, name = "B"),
+      by = "g", level = level
+    ))
+    from_text <- as.data.frame(qlm_compare(
+      as_qlm_coded(data.frame(.id = 1:4, g = text$A), id = .id, name = "A"),
+      as_qlm_coded(data.frame(.id = 1:4, g = text$B), id = .id, name = "B"),
+      by = "g", level = level
+    ))
+    mixed <- as.data.frame(qlm_compare(
+      as_qlm_coded(data.frame(.id = 1:4, g = numbers$A), id = .id, name = "A"),
+      as_qlm_coded(data.frame(.id = 1:4, g = text$B), id = .id, name = "B"),
+      by = "g", level = level
+    ))
+    expect_equal(from_text$measure, from_numbers$measure)
+    expect_equal(from_text$value, from_numbers$value)
+    expect_equal(mixed$value, from_numbers$value)
+  }
+})
+
+
+test_that("a rating that is not a number is an error at interval level (#150)", {
+  x <- as_qlm_coded(data.frame(.id = 1:3, g = c(1, 2, 3)), id = .id, name = "human")
+  y <- as_qlm_coded(data.frame(.id = 1:3, g = c("1", "high", "n/a")), id = .id, name = "llm")
+
+  err <- expect_error(qlm_compare(x, y, by = "g", level = "interval"), "must be numbers")
+  expect_match(conditionMessage(err), "llm")
+  expect_match(conditionMessage(err), "high")
+  expect_match(conditionMessage(err), "n/a")
+  expect_no_match(conditionMessage(err), "human")
+
+  expect_error(qlm_compare(x, y, by = "g", level = "ratio"), "must be numbers")
+  # Nominal has no such requirement
+  expect_no_error(qlm_compare(x, y, by = "g", level = "nominal"))
+})
+
+
+test_that("ordinal text categories rank as before, and a tolerance on them warns (#150)", {
+  a <- c("low", "mid", "high", "low")
+  b <- c("low", "high", "high", "mid")
+
+  expect_no_warning(pct <- compare_pair(a, b, tolerance = 0, level = "ordinal"))
+  expect_equal(pct, 0.5)
+
+  expect_warning(
+    pct_tol <- compare_pair(a, b, tolerance = 1, level = "ordinal"),
+    "Ignoring `tolerance`"
+  )
+  expect_equal(pct_tol, 0.5)
+})
+
+
+test_that("numbers from one coder and text from another is an error at ordinal level (#150)", {
+  expect_error(
+    compare_pair(c(1, 2, 3), c("low", "mid", "high"), tolerance = 0, level = "ordinal"),
+    "must be numbers"
+  )
+})
+
+
+test_that("nominal categories agree only when identical, whatever the tolerance (#150)", {
+  expect_equal(compare_pair(c(1, 2), c(1, 3), tolerance = 1, level = "nominal"), 0.5)
+  expect_equal(compare_pair(c(1, 2), c("1", "2"), tolerance = 0, level = "nominal"), 1)
+})
+
+
+test_that("factor ratings are read by their labels at a numeric level (#150)", {
+  expect_equal(compare_pair(factor(c("1", "2", "10")), c(1, 2, 10), tolerance = 0), 1)
+  expect_equal(compare_pair(factor(c("1", "2", "10")), c(1, 2, 9), tolerance = 1), 1)
+})
+
+
+test_that("bootstrap CIs use the typed ratings too (#150)", {
+  x <- as_qlm_coded(data.frame(.id = 1:6, g = c(1, 2, 3, 4, 5, 6)), id = .id, name = "A")
+  y <- as_qlm_coded(data.frame(.id = 1:6, g = c("1", "2", "3", "5", "5", "6")),
+                    id = .id, name = "B")
+
+  set.seed(150)
+  res <- as.data.frame(qlm_compare(x, y, by = "g", level = "interval", tolerance = 1,
+                                   ci = "bootstrap", bootstrap_n = 20))
+  pct <- res[res$measure == "percent_agreement", ]
+  expect_equal(pct$value, 1)
+  expect_equal(pct$ci_lower, 1)
+  expect_equal(pct$ci_upper, 1)
+})
+
+
+test_that("ratings_matrix() types the columns by level (#150)", {
+  cols <- data.frame(A = c(1, 2), B = c("1", "2"), stringsAsFactors = FALSE)
+
+  expect_true(is.numeric(ratings_matrix(cols, "interval", "g")))
+  expect_true(is.numeric(ratings_matrix(cols, "ratio", "g")))
+  expect_true(is.numeric(ratings_matrix(cols, "ordinal", "g")))
+  expect_equal(unname(ratings_matrix(cols, "interval", "g")[, "B"]), c(1, 2))
+  expect_equal(colnames(ratings_matrix(cols, "interval", "g")), c("A", "B"))
+
+  # Nominal keeps the stored types, so a mixed frame is text
+  expect_true(is.character(ratings_matrix(cols, "nominal", "g")))
+  expect_true(is.numeric(ratings_matrix(cols["A"], "nominal", "g")))
+
+  # A missing rating is not an unreadable one
+  with_na <- data.frame(A = c(1, NA), B = c("1", NA), stringsAsFactors = FALSE)
+  expect_true(is.numeric(ratings_matrix(with_na, "interval", "g")))
+})
+
+
 test_that("qlm_compare refuses objects whose .id is not a key, whatever their class", {
   x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
   # Row subsetting keeps the class, and refuses to repeat an identifier

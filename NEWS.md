@@ -2,6 +2,28 @@
 
 ## Bug fixes
 
+* `qlm_compare()` now honours `tolerance`, and computes its numeric
+  statistics on the ratings' values, when a coder stores the ratings as
+  text. The ratings were assembled into one matrix before their type was
+  examined, and a single character column made the whole matrix character:
+  every unit then fell through to exact text equality with `tolerance`
+  unused, and Krippendorff's alpha, the ICC and Pearson's r ran on factor
+  codes of the sorted strings, where `"10"` falls between `"1"` and `"2"`.
+  Neither showed in the output, so an LLM column parsed as text against a
+  numeric human column gave a flat agreement curve and a wrong alpha. At
+  ordinal, interval and ratio level every column is now read as numbers, as
+  the declared level asserts; a value that does not read as a number is an
+  error naming the coder and the values; ordinal categories given as text
+  are ranked as before, but a positive `tolerance` on them draws a warning;
+  and nominal categories agree only when identical, as the code's own
+  comment already claimed (#150).
+
+* `qlm_validate()` ranked ordinal ratings by their values sorted as strings,
+  so on a 1 to 10 scale `"10"` fell between `"1"` and `"2"` and Spearman's
+  rho, Kendall's tau and MAE were wrong whenever a rating reached 10, even
+  from numeric input. Ordinal and interval values are now read as numbers
+  the same way as in `qlm_compare()` (#150).
+
 * `qlm_code()` now says when a model name is not one its provider lists,
   with the nearest names it does have, instead of reporting only the
   provider's HTTP error. The provider's model list is fetched through

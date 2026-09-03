@@ -31,7 +31,10 @@
 #'   and `0.1 + 0.2` equals `0.3`; it is numerical equality rather than bit
 #'   identity. The allowance is far smaller than any meaningful rating
 #'   difference, so a genuinely different pair is never counted as agreeing.
-#'   Used for percent agreement calculation.
+#'   Used for percent agreement at ordinal, interval and ratio level, where
+#'   the ratings are numbers. Nominal categories agree only when identical,
+#'   as do ordinal categories given as text, and a positive `tolerance` on
+#'   text categories draws a warning since it cannot be applied.
 #' @param ci Confidence interval method:
 #'   \describe{
 #'     \item{`"none"`}{No confidence intervals (default)}
@@ -96,6 +99,16 @@
 #' Kendall's W, ICC, and percent agreement are computed using all raters
 #' simultaneously. For 3 or more raters, Spearman's rho and Pearson's r are
 #' computed as the mean of all pairwise correlations between raters.
+#'
+#' **How ratings are read.** At ordinal, interval and ratio level every
+#' coder's ratings are read as numbers, whatever type they are stored as, so a
+#' column of digits held as text is compared on its values and not on the
+#' alphabetical order of its strings. A value that does not read as a number
+#' is an error at interval and ratio level, naming the coder and the values.
+#' At ordinal level the categories may instead all be text, in which case they
+#' are ranked by their sorted labels; numbers from one coder and text from
+#' another cannot be placed on one scale and are an error. Nominal ratings are
+#' compared as text.
 #'
 #' **Per-category statistics.** When `by_category = TRUE` and `level = "nominal"`,
 #' the result also includes one row per category for `alpha_per_value` (from
@@ -407,6 +420,9 @@ qlm_compare <- function(...,
     rater_names[empty] <- paste0("rater", seq_len(n_raters))[empty]
   }
 
+  # How each coder is named in messages: its recorded name where it has one
+  coder_labels <- ifelse(is.na(object_names), rater_names, object_names)
+
   # Initialize results list
   all_results <- list()
   n_subjects_total <- NULL
@@ -441,8 +457,10 @@ qlm_compare <- function(...,
       next
     }
 
-    # Extract rating matrix (exclude .id column)
-    ratings <- as.matrix(merged[, -1, drop = FALSE])
+    # Rating matrix, typed by the level rather than by how each coder stored
+    # the values (#150)
+    ratings <- ratings_matrix(merged[, -1, drop = FALSE], var_level, var,
+                              coders = coder_labels, tolerance = tolerance)
 
     # Remove rows with any NA values
     complete_rows <- stats::complete.cases(ratings)
@@ -586,6 +604,92 @@ qlm_compare <- function(...,
       )
     )
   )
+}
+
+
+#' Type the ratings matrix by the declared measurement level
+#'
+#' `as.matrix()` on the merged coder columns gives a matrix of one type, and a
+#' single character column makes every column character. Every rating then
+#' reaches the agreement test as text, so `tolerance` is never applied, and
+#' the numeric statistics run on factor codes of the sorted strings, where
+#' `"10"` falls between `"1"` and `"2"`. Neither failure shows in the output
+#' (#150). So the type is settled here, per column and before the matrix
+#' exists, from the level the caller declared rather than from how each coder
+#' happened to store the values.
+#'
+#' At ordinal, interval and ratio level every column is read as numbers. A
+#' value that does not read as a number is an error at interval and ratio
+#' level, which assert numeric data. Ordinal categories may be text, so when
+#' no column reads as numbers the ratings stay text and are ranked by their
+#' sorted labels, as before; a positive `tolerance` cannot be honoured on
+#' labels and draws a warning rather than being ignored. A mix of numeric and
+#' text columns at ordinal level is an error, since the ranks of one cannot be
+#' placed against the other. Nominal ratings are left as stored: categories
+#' are compared as text and no tolerance applies.
+#'
+#' @param columns Data frame with one column per coder and no `.id`.
+#' @param level Character; the measurement level.
+#' @param var Character; the variable's name, for messages.
+#' @param coders Character; one label per column, for messages.
+#' @param tolerance Numeric; the tolerance the caller asked for.
+#'
+#' @return A matrix with one column per coder: numeric where the level is
+#'   numeric and every column reads as numbers, otherwise of the stored type.
+#' @keywords internal
+#' @noRd
+ratings_matrix <- function(columns, level, var, coders = names(columns),
+                           tolerance = 0) {
+  if (level == "nominal") {
+    return(as.matrix(columns))
+  }
+
+  numbers <- lapply(columns, function(col) {
+    if (is.factor(col)) col <- as.character(col)
+    if (is.character(col)) suppressWarnings(as.numeric(col)) else as.numeric(col)
+  })
+  unreadable <- vapply(seq_along(numbers), function(i) {
+    any(!is.na(columns[[i]]) & is.na(numbers[[i]]))
+  }, logical(1))
+
+  if (!any(unreadable)) {
+    ratings <- do.call(cbind, numbers)
+    colnames(ratings) <- names(columns)
+    return(ratings)
+  }
+
+  if (level == "ordinal" && all(unreadable)) {
+    if (tolerance > 0) {
+      cli::cli_warn(c(
+        "Ignoring {.arg tolerance} for variable {.var {var}}: its ordinal categories are text.",
+        "i" = "A tolerance applies only to numbers; text categories agree only when identical.",
+        "i" = "Store the categories as numbers to compare them within a tolerance."
+      ))
+    }
+    return(as.matrix(columns))
+  }
+
+  offending <- vapply(which(unreadable), function(i) {
+    bad <- columns[[i]][!is.na(columns[[i]]) & is.na(numbers[[i]])]
+    bad <- unique(as.character(bad))
+    shown <- utils::head(bad, 5)
+    more <- length(bad) - length(shown)
+    cli::format_inline(
+      "{.val {coders[i]}}: {.val {shown}}{if (more > 0) paste0(' and ', more, ' more') else ''}"
+    )
+  }, character(1))
+  names(offending) <- rep("x", length(offending))
+
+  hint <- if (level == "ordinal") {
+    "At ordinal level every coder's ratings must be numbers, or all must be text categories."
+  } else {
+    "Store the ratings as numbers, or compare at {.val nominal} level."
+  }
+  cli::cli_abort(c(
+    "Ratings for {.var {var}} at {.val {level}} level must be numbers, but some are not:",
+    offending,
+    "i" = hint
+  ))
 }
 
 
@@ -733,16 +837,17 @@ compute_reliability_by_level <- function(ratings, n_raters, level, tolerance, us
   results <- list()
   cis <- list()  # Store confidence intervals separately
 
-  # Percent agreement (computed for all levels)
-  # For nominal data: exact agreement (tolerance is ignored)
-  # For ordinal/interval/ratio: agreement within tolerance
-  agrees <- apply(ratings, 1, function(row) {
-    if (is.numeric(row)) {
-      agrees_within_tolerance(row, tolerance)
-    } else {
-      length(unique(as.character(row))) == 1
-    }
-  })
+  # Percent agreement, for every level. The tolerance applies to numbers on a
+  # scale: ordinal, interval and ratio ratings that arrived as numbers. Nominal
+  # categories, and ordinal categories given as text, agree only when
+  # identical. Decided once from the matrix rather than per row: apply() hands
+  # every row the matrix's single type, so a per-row test never saw a mixed
+  # frame and fell through to text equality with the tolerance unused (#150).
+  agrees <- if (level != "nominal" && is.numeric(ratings)) {
+    apply(ratings, 1, agrees_within_tolerance, tolerance = tolerance)
+  } else {
+    apply(ratings, 1, function(row) length(unique(row)) == 1)
+  }
   results$percent_agreement <- mean(agrees)
 
   if (level == "nominal") {
