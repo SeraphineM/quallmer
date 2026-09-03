@@ -700,6 +700,33 @@ test_that("a partly incomplete structured result warns without falling back", {
 })
 
 
+test_that("structured = 'auto' still falls back when the endpoint answered in prose", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # Every row carries the extraction error qlm_code() records from ellmer's
+  # warning: the endpoint answered, but not with the schema
+  prose <- tibble::tibble(
+    score = c(NA_real_, NA_real_),
+    .error = list(
+      extraction_error("Data extraction failed: no JSON responses found."),
+      extraction_error("Data extraction failed: no JSON responses found.")
+    )
+  )
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = prose))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(), model = "openai_compatible/x",
+                base_url = "https://example.com/v1"),
+    "no usable values"
+  )
+  expect_true(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
+})
+
+
 test_that("a wholly failed structured run is reported, not re-coded in JSON mode", {
   skip_if_not_installed("mockery")
   calls <- new.env()

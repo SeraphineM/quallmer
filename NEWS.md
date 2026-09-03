@@ -16,10 +16,12 @@
   `params(max_tokens = )` is set, a row that used the whole budget and
   returned nothing is recorded in `.error` as cut off. Without a declared
   limit the cap is not known and such a row stays silent, which needs an
-  ellmer change to close. Rows carrying an `.error` are also no longer read as
-  evidence that an endpoint ignored the schema, so a run whose every unit
-  failed for a recorded reason is reported as failed rather than re-coded in
-  JSON mode (#153).
+  ellmer change to close. Rows whose request failed, or whose response was
+  cut off, are also no longer read as evidence that an endpoint ignored the
+  schema, so a run whose every unit failed that way is reported as failed
+  rather than re-coded in JSON mode; a response ellmer could extract nothing
+  from still counts, so `"auto"` still falls back for an endpoint that
+  answers in prose (#153).
 
 * `qlm_codebook(levels = )` accepts variables nested inside a `type_array()`
   or a nested `type_object()`. The check matched names against top-level

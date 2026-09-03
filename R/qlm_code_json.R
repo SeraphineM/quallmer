@@ -131,19 +131,20 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
         checked$error <- paste0("API request failed: ", turns$error[[j]])
       }
       # A response the provider itself reports as incomplete -- cut off at
-      # max_tokens, withheld by a content filter -- fails validation for that
-      # reason, not for anything the model chose to write, so record the
-      # provider's reason rather than "Invalid JSON". `turns$finish` is NA for
-      # a request that failed outright, so the two cannot collide.
+      # max_tokens, withheld by a content filter -- is a failure whatever the
+      # text looks like. Cut-off JSON usually fails to parse, and then the
+      # provider's reason is the one to record rather than "Invalid JSON"; an
+      # object that happened to close just before the limit parses cleanly,
+      # and the provider's word still wins, as it does in ellmer's own
+      # check_finish_reason(). `turns$finish` is NA for a request that failed
+      # outright, so this can never override a transport error.
       truncated <- FALSE
-      if (!isTRUE(checked$ok)) {
-        reason <- incomplete_response_reason(
-          turns$finish[[j]], turns$usage[j, "output_tokens"]
-        )
-        if (!is.null(reason)) {
-          checked$error <- reason
-          truncated <- is_truncation(turns$finish[[j]])
-        }
+      reason <- incomplete_response_reason(
+        turns$finish[[j]], turns$usage[j, "output_tokens"]
+      )
+      if (!is.null(reason)) {
+        checked <- list(ok = FALSE, error = reason)
+        truncated <- is_truncation(turns$finish[[j]])
       }
       if (isTRUE(checked$ok)) {
         parsed[[i]] <- checked$value
@@ -966,11 +967,18 @@ all_required_missing <- function(results, schema) {
   if (!length(fields)) {
     return(FALSE)
   }
-  # A row with a recorded error failed for that reason -- a rejected request,
-  # a response cut off at max_tokens -- and says nothing about whether the
-  # endpoint honours the schema. Enforcement is judged from the rows that
-  # came back intact; if there are none, there is nothing to judge.
-  judged <- !errored_rows(results)
+  # A row with a recorded error is evidence only if the endpoint answered. A
+  # rejected request, or a response cut off at max_tokens, says nothing about
+  # whether the endpoint honours the schema, so those rows are set aside. A
+  # response ellmer could extract nothing from -- prose where JSON was asked
+  # for -- is exactly what an endpoint that ignored the schema produces, so
+  # those rows are judged alongside the intact ones. If nothing is left to
+  # judge, there is nothing to conclude.
+  judged <- vapply(
+    recorded_errors(results),
+    function(e) is.null(e) || is_extraction_error(e),
+    logical(1)
+  )
   if (!any(judged)) {
     return(FALSE)
   }

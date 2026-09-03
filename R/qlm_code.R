@@ -120,9 +120,11 @@
 #'   \item{`"auto"`}{Attempt the structured call; fall back to `"json"` if it
 #'     errors, or if it returns a result in which every required field is `NA`
 #'     in every row, which is what an endpoint that ignored the schema
-#'     produces. Rows carrying an `.error` are left out of that judgement:
-#'     they failed for a recorded reason, which says nothing about the
-#'     schema.}
+#'     produces. Rows whose request failed, or whose response was cut off
+#'     at `max_tokens`, are left out of that judgement, since neither says
+#'     anything about the schema; a row from which ellmer could extract no
+#'     structured data counts, since that is what an endpoint that ignored
+#'     the schema produces.}
 #' }
 #'
 #' `"auto"` catches wholesale non-enforcement, not the intermittent kind: a
@@ -684,7 +686,7 @@ attach_extraction_errors <- function(results, failures) {
   for (k in seq_len(nrow(failures))) {
     i <- failures$index[k]
     if (is.null(errors[[i]])) {
-      errors[[i]] <- simpleError(failures$message[k])
+      errors[[i]] <- extraction_error(failures$message[k])
     }
   }
   results$.error <- errors
@@ -858,6 +860,32 @@ blank_cell <- function(x) {
     return(nrow(x) == 0L)
   }
   length(x) == 0L
+}
+
+
+#' An error recorded for a response ellmer could extract nothing from
+#'
+#' Carries a class of its own so that the schema-enforcement check in
+#' `all_required_missing()` can tell it from a request failure or a cut-off
+#' response. The distinction matters: here the endpoint did answer, and the
+#' answer was not the schema, which is precisely the evidence that check
+#' looks for; a request that never got an answer, or an answer the provider
+#' cut short, is not.
+#'
+#' @param message The message ellmer gave for the row.
+#'
+#' @return A condition inheriting from `simpleError`.
+#' @keywords internal
+#' @noRd
+extraction_error <- function(message) {
+  structure(
+    simpleError(message),
+    class = c("quallmer_extraction_error", "simpleError", "error", "condition")
+  )
+}
+
+is_extraction_error <- function(e) {
+  inherits(e, "quallmer_extraction_error")
 }
 
 

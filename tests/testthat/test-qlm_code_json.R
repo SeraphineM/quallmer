@@ -397,20 +397,26 @@ test_that("code_handler_json records a cut-off response and does not retry it", 
   expect_equal(attr(result, "qlm_backend_meta")$n_invalid, 1)
 })
 
-test_that("code_handler_json accepts a response that validates despite hitting the limit", {
+test_that("code_handler_json rejects a response reported as cut off even when it parses", {
+  # The provider's word wins over a clean parse, as in ellmer's own
+  # check_finish_reason(): an object that closed just before the limit may
+  # still be short of what the model would have written
   calls <- new.env()
   h <- json_test_handler(list(
     list(text = "{\"score\":1,\"lab\":\"pos\"}", finish = "max_tokens")
   ), calls)
 
-  result <- h(
-    x = "a", codebook = json_test_codebook(),
-    model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list()
+  expect_warning(
+    result <- h(
+      x = "a", codebook = json_test_codebook(),
+      model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list()
+    ),
+    "could not be coded"
   )
 
   expect_equal(calls$n, 1)
-  expect_equal(result$score, 1)
-  expect_false(".error" %in% names(result))
+  expect_true(is.na(result$score))
+  expect_match(json_test_messages(result)[[1]], "cut off at the max_tokens limit")
 })
 
 test_that("code_handler_json retries a content-filtered response and names the filter", {
@@ -924,6 +930,16 @@ test_that("rows with a recorded error are not evidence about schema enforcement"
   mixed$.error <- list(simpleError("HTTP 401"), NULL)
   expect_true(all_required_missing(mixed, schema))
   expect_equal(n_incomplete(mixed, schema), 1L)
+
+  # A response ellmer could extract nothing from is the signal itself: the
+  # endpoint answered, in prose, so these rows are judged and "auto" falls back
+  prose <- data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_))
+  prose$.error <- list(
+    extraction_error("Data extraction failed: no JSON responses found."),
+    extraction_error("Data extraction failed: no JSON responses found.")
+  )
+  expect_true(all_required_missing(prose, schema))
+  expect_equal(n_incomplete(prose, schema), 0L)
 })
 
 

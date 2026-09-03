@@ -158,9 +158,11 @@ conform. The reliable choice for an endpoint known not to enforce.}
 \item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} if it
 errors, or if it returns a result in which every required field is \code{NA}
 in every row, which is what an endpoint that ignored the schema
-produces. Rows carrying an \code{.error} are left out of that judgement:
-they failed for a recorded reason, which says nothing about the
-schema.}
+produces. Rows whose request failed, or whose response was cut off
+at \code{max_tokens}, are left out of that judgement, since neither says
+anything about the schema; a row from which ellmer could extract no
+structured data counts, since that is what an endpoint that ignored
+the schema produces.}
 }
 
 \code{"auto"} catches wholesale non-enforcement, not the intermittent kind: a
