@@ -25,6 +25,8 @@
 #' @param model_hint What `model_name_hint()` answered when [qlm_code()]
 #'   already asked it for this run, so a wholly rejected run asks the provider
 #'   at most once; `NULL` when it has not been asked.
+#' @param cost_message Whether to say so when the cost will be `NA`. `FALSE`
+#'   when the structured path already has, for this run.
 #'
 #' @return A data frame with one row per unit, carrying `.error` for units that
 #'   never validated, plus token and cost columns when requested. Handler
@@ -33,7 +35,7 @@
 #' @noRd
 code_handler_json <- function(x, codebook, model, chat_args, execution_args,
                               batch = FALSE, max_retries = 2L,
-                              model_hint = NULL) {
+                              model_hint = NULL, cost_message = TRUE) {
   # The handler is reached via do.call(), so report guard failures against
   # qlm_code() rather than against an anonymous function.
   error_call <- rlang::caller_env()
@@ -82,6 +84,10 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     ),
     chat_args
   ))
+
+  # From the chat the run will use, before anything is sent (#135). Silent
+  # when the structured path already said it for this run.
+  unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
 
   include_tokens <- isTRUE(execution_args$include_tokens)
   include_cost <- isTRUE(execution_args$include_cost)
@@ -253,7 +259,8 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   attr(results, "qlm_backend_meta") <- list(
     backend = "json_mode",
     max_retries = max_retries,
-    n_invalid = sum(failed)
+    n_invalid = sum(failed),
+    unpriced = unpriced
   )
   results
 }

@@ -22,7 +22,9 @@
   from the table altogether, so no model of theirs is ever priced; a model
   newer than the installed ellmer is missed on a provider it otherwise
   prices; and local endpoints have no per-token charge. Each is now named,
-  since the remedies differ. Token counts are recorded regardless (#135).
+  since the remedies differ, and the message says whether the token counts a
+  cost could be worked out from are being recorded, which needs
+  `include_tokens = TRUE` (#135).
 
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as

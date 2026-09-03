@@ -149,9 +149,9 @@ table altogether, DeepSeek among them, so no model of theirs is ever priced;
 a model newer than the installed ellmer is missed on a provider it otherwise
 prices, which upgrading fixes; and local endpoints such as ollama have no
 per-token charge. In each case \code{qlm_code()} says so once before the run,
-and the reason is kept with the object and shown when it is printed. Token
-counts are recorded regardless, so a run can be costed from the provider's
-published rates.
+and the reason is kept with the object and shown when it is printed. With
+\code{include_tokens = TRUE} the token counts are recorded, from which such a
+run can be costed at the provider's published rates.
 }
 
 \section{Schema enforcement}{

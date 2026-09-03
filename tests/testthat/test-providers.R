@@ -313,48 +313,95 @@ test_that("a diagnosis never reaches the network in tests", {
 
 # unpriced_reason() -----------------------------------------------------------
 
-# A credentials function keeps construction off the environment and sends
-# nothing: ellmer builds the provider without contacting it.
-no_creds <- list(credentials = function() list(Authorization = "Bearer x"))
+# A chat as the run would build it. The credentials function keeps
+# construction off the environment, and construction sends nothing.
+test_chat <- function(model) {
+  ellmer::chat(model, credentials = function() list(Authorization = "Bearer x"))
+}
 
 test_that("unpriced_reason() is NULL for a model ellmer prices (#135)", {
-  expect_null(unpriced_reason("openai/gpt-4.1-mini", no_creds))
-  expect_null(unpriced_reason("anthropic/claude-sonnet-4-5", no_creds))
+  expect_null(unpriced_reason(test_chat("openai/gpt-4.1-mini"), "openai/gpt-4.1-mini"))
+  expect_null(unpriced_reason(test_chat("anthropic/claude-sonnet-4-5"),
+                              "anthropic/claude-sonnet-4-5"))
 })
 
 test_that("unpriced_reason() tells a provider gap from a model gap (#135)", {
   # DeepSeek is absent from ellmer's table as a whole
-  r <- unpriced_reason("deepseek/deepseek-chat", no_creds)
+  r <- unpriced_reason(test_chat("deepseek/deepseek-chat"), "deepseek/deepseek-chat")
   expect_equal(r$kind, "provider")
   expect_equal(r$provider, "DeepSeek")
   expect_equal(r$model, "deepseek-chat")
 
   # OpenAI is priced, this model is not
-  r <- unpriced_reason("openai/gpt-99-not-yet-released", no_creds)
+  r <- unpriced_reason(test_chat("openai/gpt-99-not-yet-released"),
+                       "openai/gpt-99-not-yet-released")
   expect_equal(r$kind, "model")
   expect_equal(r$provider, "OpenAI")
   expect_equal(r$model, "gpt-99-not-yet-released")
 })
 
-test_that("unpriced_reason() names a local endpoint without building a chat (#135)", {
-  # ellmer's ollama constructor looks for a running server; none is here
-  r <- unpriced_reason("ollama/llama3")
+test_that("unpriced_reason() names a local endpoint from the prefix alone (#135)", {
+  # No chat is consulted: ellmer's ollama constructor looks for a running server
+  r <- unpriced_reason(NULL, "ollama/llama3")
   expect_equal(r$kind, "local")
   expect_equal(r$provider, "ollama")
   expect_equal(r$model, "llama3")
-  expect_equal(unpriced_reason("vllm/x")$kind, "local")
-  expect_equal(unpriced_reason("lmstudio/x")$kind, "local")
+  expect_equal(unpriced_reason(NULL, "vllm/x")$kind, "local")
+  expect_equal(unpriced_reason(NULL, "lmstudio/x")$kind, "local")
 })
 
 test_that("unpriced_reason() stays silent where it cannot decide (#135)", {
-  # The chat cannot be built: openai_compatible needs a base_url. The run
-  # itself will say so; nothing to add.
-  expect_null(unpriced_reason("openai_compatible/qwen3", no_creds))
+  # Not an ellmer chat, so no provider to read
+  expect_null(unpriced_reason(structure(list(), class = "fake_chat"), "deepseek/deepseek-chat"))
+  expect_null(unpriced_reason(NULL, "deepseek/deepseek-chat"))
 
   # ellmer without the price table or its predicate: no diagnosis
   f <- unpriced_reason
   mockery::stub(f, "get0", function(x, ...) NULL)
-  expect_null(f("deepseek/deepseek-chat", no_creds))
+  expect_null(f(test_chat("deepseek/deepseek-chat"), "deepseek/deepseek-chat"))
+})
+
+test_that("cost_diagnosis() speaks only when a cost was asked for, and only when told to (#135)", {
+  chat <- test_chat("deepseek/deepseek-chat")
+
+  # No cost asked for: no lookup, nothing said
+  expect_no_message(r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list()))
+  expect_null(r)
+  expect_no_message(r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list(include_cost = FALSE)))
+  expect_null(r)
+
+  # Asked for and unpriced: said once, and the reason comes back
+  expect_message(
+    r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list(include_cost = TRUE)),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(r$kind, "provider")
+
+  # The fallback path is told not to repeat it, but still learns the reason
+  expect_no_message(
+    r <- cost_diagnosis(chat, "deepseek/deepseek-chat", list(include_cost = TRUE), say = FALSE)
+  )
+  expect_equal(r$kind, "provider")
+
+  # Priced: nothing to say
+  expect_no_message(
+    r <- cost_diagnosis(test_chat("openai/gpt-4.1-mini"), "openai/gpt-4.1-mini",
+                        list(include_cost = TRUE))
+  )
+  expect_null(r)
+})
+
+test_that("unpriced_message() says whether the token counts are being recorded (#135)", {
+  provider <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+  model <- list(kind = "model", provider = "OpenAI", model = "gpt-99")
+
+  # include_cost alone records no counts, and the message must not claim it does
+  expect_match(unpriced_message(provider)[[2]], "Set `include_tokens = TRUE` to record")
+  expect_match(unpriced_message(model)[[2]], "Set `include_tokens = TRUE` to record")
+  expect_match(unpriced_message(provider, tokens_recorded = TRUE)[[2]],
+               "^Token counts are recorded")
+  expect_match(unpriced_message(model, tokens_recorded = TRUE)[[2]],
+               "Token counts are recorded")
 })
 
 test_that("unpriced_message() and unpriced_note() cover every kind (#135)", {
@@ -367,6 +414,7 @@ test_that("unpriced_message() and unpriced_note() cover every kind (#135)", {
   expect_match(unpriced_message(model)[["i"]], "other OpenAI models")
   expect_match(unpriced_message(local)[["i"]], "runs locally")
   expect_length(unpriced_message(provider), 2)
+  expect_length(unpriced_message(local), 1)
 
   expect_equal(unpriced_note(provider), "ellmer has no prices for DeepSeek models")
   expect_match(unpriced_note(model), "^ellmer [0-9.]+ has no price for gpt-99$")

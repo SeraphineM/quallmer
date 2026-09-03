@@ -1018,3 +1018,59 @@ test_that("is_json_word_error recognises the DashScope rejection", {
   expect_false(is_json_word_error(NA_character_))
   expect_false(is_json_word_error(character(0)))
 })
+
+
+# cost that cannot be priced (#135) --------------------------------------------
+
+# The handler with only the round trip stubbed out: the chat is built for
+# real, off the environment, so the diagnosis reads the provider the run
+# would use.
+json_offline_handler <- function(attempts) {
+  h <- code_handler_json
+  mockery::stub(h, "model_name_hint", function(...) character())
+  i <- 0L
+  mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
+    i <<- i + 1L
+    attempt <- attempts[[i]]
+    n <- length(attempt$text)
+    list(
+      text = attempt$text,
+      error = rep(NA_character_, n),
+      status = rep(NA_integer_, n),
+      finish = rep(NA_character_, n),
+      usage = json_test_usage(n)
+    )
+  })
+  h
+}
+offline_args <- list(credentials = function() list(Authorization = "Bearer x"))
+
+test_that("the JSON path diagnoses cost from its own chat, and stays quiet when told (#135)", {
+  attempts <- list(list(text = "{\"score\":1,\"lab\":\"pos\"}"))
+
+  h <- json_offline_handler(attempts)
+  expect_message(
+    result <- h(x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
+                chat_args = offline_args, execution_args = list(include_cost = TRUE)),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(attr(result, "qlm_backend_meta")$unpriced$kind, "provider")
+  expect_equal(attr(result, "qlm_backend_meta")$unpriced$provider, "DeepSeek")
+
+  # As the fallback after a structured attempt that already said it
+  h <- json_offline_handler(attempts)
+  expect_no_message(
+    result <- h(x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
+                chat_args = offline_args, execution_args = list(include_cost = TRUE),
+                cost_message = FALSE)
+  )
+  expect_equal(attr(result, "qlm_backend_meta")$unpriced$kind, "provider")
+
+  # No cost asked for: nothing said, nothing kept
+  h <- json_offline_handler(attempts)
+  expect_no_message(
+    result <- h(x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
+                chat_args = offline_args, execution_args = list())
+  )
+  expect_null(attr(result, "qlm_backend_meta")$unpriced)
+})

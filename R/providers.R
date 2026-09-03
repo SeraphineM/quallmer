@@ -308,25 +308,27 @@ closest_model_names <- function(id, models, n = 3L) {
 #' remedies differ, so both are told apart here, before a request is spent,
 #' rather than left to be inferred from a column of `NA` (#135).
 #'
-#' Local endpoints charge nothing per token, so their `NA` is expected rather
-#' than a gap, and is described as such without building a chat: ellmer's
-#' constructors for them look for a running server.
+#' Read from the chat the run itself will use, rather than from one built for
+#' the purpose: building a chat evaluates the credentials, which for some
+#' mechanisms means token discovery or a refresh, and prints ellmer's
+#' default-model message. Local endpoints charge nothing per token, so their
+#' `NA` is expected rather than a gap, and is described as such from the
+#' prefix alone.
 #'
 #' The table and ellmer's own predicate are read from its namespace at run
 #' time, as the model listing is. Should a later ellmer drop either, no
 #' diagnosis is made and the `NA` stands unexplained, which is what it did
 #' before.
 #'
+#' @param chat The [ellmer::Chat] the run will use.
 #' @param model The model specification, as passed to [qlm_code()].
-#' @param chat_args Arguments for [ellmer::chat()], since the provider's
-#'   display name is known only once the provider is built.
 #'
-#' @return `NULL` when the model is priced. Otherwise a list with `kind`,
-#'   one of `"local"`, `"provider"` or `"model"`; `provider`, ellmer's name
-#'   for it; and `model`.
+#' @return `NULL` when the model is priced, or when nothing can be said.
+#'   Otherwise a list with `kind`, one of `"local"`, `"provider"` or
+#'   `"model"`; `provider`, ellmer's name for it; and `model`.
 #' @keywords internal
 #' @noRd
-unpriced_reason <- function(model, chat_args = list()) {
+unpriced_reason <- function(chat, model) {
   prefix <- model_provider(model)
   if (prefix %in% c("ollama", "lmstudio", "vllm")) {
     return(list(kind = "local", provider = prefix,
@@ -340,16 +342,10 @@ unpriced_reason <- function(model, chat_args = list()) {
     return(NULL)
   }
 
-  # Building the chat sends nothing. Where it cannot be built, the run itself
-  # will say why; there is nothing to add here.
-  chat <- tryCatch(
-    do.call(ellmer::chat, c(list(name = model), chat_args)),
-    error = function(e) NULL
-  )
-  if (is.null(chat)) {
+  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+  if (is.null(provider)) {
     return(NULL)
   }
-  provider <- chat$get_provider()
   if (isTRUE(has_cost(provider, provider@model))) {
     return(NULL)
   }
@@ -362,19 +358,61 @@ unpriced_reason <- function(model, chat_args = list()) {
 }
 
 
+#' Diagnose an unpriced run from the chat it will use, and say so once
+#'
+#' Called by each coding path right after it builds its chat and before it
+#' sends anything. The structured path may fall back to the JSON path, which
+#' builds a chat of its own; the diagnosis is the same, so the fallback is
+#' told not to repeat the message.
+#'
+#' @param chat The [ellmer::Chat] the path will use.
+#' @param model The model specification.
+#' @param execution_args The caller's execution arguments, for `include_cost`
+#'   and `include_tokens`.
+#' @param say Whether to emit the message.
+#'
+#' @return What `unpriced_reason()` returned, or `NULL` when no cost was
+#'   asked for.
+#' @keywords internal
+#' @noRd
+cost_diagnosis <- function(chat, model, execution_args, say = TRUE) {
+  if (!isTRUE(execution_args$include_cost)) {
+    return(NULL)
+  }
+  reason <- unpriced_reason(chat, model)
+  if (!is.null(reason) && say) {
+    cli::cli_inform(
+      unpriced_message(reason, tokens_recorded = isTRUE(execution_args$include_tokens))
+    )
+  }
+  reason
+}
+
+
 #' The message for an unpriced run, and the note kept on the object
 #'
+#' `include_cost` and `include_tokens` are independent ellmer arguments, so
+#' whether the token counts a cost could be worked out from are being
+#' recorded is a fact about this call, and the message says which.
+#'
 #' @param reason What `unpriced_reason()` returned.
+#' @param tokens_recorded Whether the caller set `include_tokens = TRUE`.
 #'
 #' @return `unpriced_message()`: a character vector for [cli::cli_inform()].
 #'   `unpriced_note()`: one plain sentence, kept in the run's metadata and
 #'   shown by `print.qlm_coded()`.
 #' @keywords internal
 #' @noRd
-unpriced_message <- function(reason) {
+unpriced_message <- function(reason, tokens_recorded = FALSE) {
   v <- as.character(utils::packageVersion("ellmer"))
   # Interpolated here, where `reason` is in scope, rather than by the caller
   line <- function(...) cli::format_inline(paste0(...))
+  tokens <- if (tokens_recorded) {
+    "Token counts are recorded, so the run can be costed from the provider's published rates."
+  } else {
+    line("Set {.code include_tokens = TRUE} to record the token counts, ",
+         "from which the run can be costed at the provider's published rates.")
+  }
   switch(reason$kind,
     local = c(
       "i" = line("{.field cost} will be {.code NA}: {reason$provider} runs locally, ",
@@ -383,14 +421,13 @@ unpriced_message <- function(reason) {
     provider = c(
       "i" = line("{.field cost} will be {.code NA}: ellmer {v} has no prices for ",
                  "{reason$provider} models."),
-      " " = paste0("Token counts are still recorded, so the run can be costed ",
-                   "from the provider's published rates.")
+      " " = tokens
     ),
     model = c(
       "i" = line("{.field cost} will be {.code NA}: ellmer {v} has no price for ",
                  "{.val {reason$model}}, though it prices other ",
                  "{reason$provider} models."),
-      " " = "A newer ellmer may price it. Token counts are still recorded."
+      " " = paste("A newer ellmer may price it.", tokens)
     )
   )
 }

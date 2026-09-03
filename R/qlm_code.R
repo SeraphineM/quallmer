@@ -111,9 +111,9 @@
 #' a model newer than the installed ellmer is missed on a provider it otherwise
 #' prices, which upgrading fixes; and local endpoints such as ollama have no
 #' per-token charge. In each case `qlm_code()` says so once before the run,
-#' and the reason is kept with the object and shown when it is printed. Token
-#' counts are recorded regardless, so a run can be costed from the provider's
-#' published rates.
+#' and the reason is kept with the object and shown when it is printed. With
+#' `include_tokens = TRUE` the token counts are recorded, from which such a
+#' run can be costed at the provider's published rates.
 #'
 #' @section Schema enforcement:
 #'
@@ -351,17 +351,11 @@ qlm_code <- function(x, codebook, model, ...,
   backend_meta <- list()
   results <- NULL
 
-  # A cost that will come back NA is knowable before any request, and the
-  # reason decides the remedy, so say it once here rather than per row (#135).
-  # The note travels with the object so that the answer outlives the console.
-  cost_note <- NULL
-  if (isTRUE(execution_args$include_cost)) {
-    unpriced <- unpriced_reason(model, chat_args)
-    if (!is.null(unpriced)) {
-      cli::cli_inform(unpriced_message(unpriced))
-      cost_note <- unpriced_note(unpriced)
-    }
-  }
+  # Whether the cost will come back NA, and why, is read by each path from
+  # the chat it builds, before it sends anything (#135). Kept here so the
+  # reason outlives the console: it travels with the object.
+  unpriced <- NULL
+  attempt <- NULL
   fallback_reason <- NULL
   model_hint <- NULL
 
@@ -372,6 +366,8 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
       allow_skip = identical(structured, "auto") && !batch
     )
+
+    unpriced <- attempt$unpriced
 
     if (isTRUE(attempt$ok)) {
       results <- attempt$value
@@ -440,10 +436,15 @@ qlm_code <- function(x, codebook, model, ...,
       execution_args = execution_args,
       batch = batch,
       max_retries = max_retries,
-      model_hint = model_hint
+      model_hint = model_hint,
+      cost_message = is.null(attempt)
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL
+    if (is.null(unpriced)) {
+      unpriced <- backend_meta$unpriced
+    }
+    backend_meta$unpriced <- NULL
   }
 
   backend_meta$structured <- structured
@@ -472,8 +473,8 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Fields contributed by a provider-specific handler (backend, max_retries, ...)
   metadata <- c(metadata, backend_meta)
-  if (!is.null(cost_note)) {
-    metadata$cost_note <- cost_note
+  if (!is.null(unpriced)) {
+    metadata$cost_note <- unpriced_note(unpriced)
   }
 
   # Add model to chat_args for easy access
@@ -534,7 +535,7 @@ default_structured_mode <- function(model) {
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
-                                allow_skip = FALSE) {
+                                allow_skip = FALSE, cost_message = TRUE) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -551,6 +552,9 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
   }
   chat <- build_chat(system_prompt)
+
+  # From the chat the run will use, before anything is sent (#135)
+  unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
 
   # Whether a failed structured call would even be visible depends on the
   # codebook. Failure is detected from required scalar fields coming back all
@@ -571,6 +575,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   if (undetectable) {
     return(list(
       ok = FALSE,
+      unpriced = unpriced,
       undetectable = TRUE,
       error = paste0(
         "this endpoint's schema enforcement cannot be verified, and the ",
@@ -674,6 +679,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     )
   }
 
+  attempt$unpriced <- unpriced
   attempt
 }
 
