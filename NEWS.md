@@ -2,6 +2,15 @@
 
 ## Bug fixes
 
+* The `.id` column of a `qlm_coded` object must now be unique, and
+  `qlm_code()` rejects duplicated input names before spending a request.
+  Every later operation merges on `.id`, and `qlm_compare()` and
+  `qlm_validate()` silently formed a Cartesian product of the repeated rows,
+  computing their statistics over the wrong pairs; an unnested table that
+  keeps the document identifier rather than a document-item key is how that
+  arises in practice. A duplicate is now an error at construction, naming
+  the repeated values (#156).
+
 * `qlm_code()` no longer returns a response cut off at the provider's
   `max_tokens` limit as a successful empty result. Such a response is billed
   in full, and arrived as a row of `NA` scalars and zero-length arrays with no

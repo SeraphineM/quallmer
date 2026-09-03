@@ -11,6 +11,8 @@
 #' @param x Input data: a character vector of texts (for text codebooks) or
 #'   file paths to images (for image codebooks). Named vectors will use names
 #'   as identifiers in the output; unnamed vectors will use sequential integers.
+#'   The identifiers become the `.id` column, on which every later operation
+#'   keys, so names must be unique.
 #' @param codebook A codebook object created with [qlm_codebook()]. Also accepts
 #'   deprecated [task()] objects for backward compatibility.
 #' @param model Provider (and optionally model) name in the form
@@ -244,6 +246,11 @@ qlm_code <- function(x, codebook, model, ...,
   }
   if (codebook$input_type == "image" && !is.character(x)) {
     cli::cli_abort("This codebook expects image file paths (a character vector).")
+  }
+  # Names become .id, the key every later operation relies on. Checked here,
+  # before any request is spent, rather than in the constructor afterwards.
+  if (!is.null(names(x))) {
+    check_unique_ids(names(x), what = "{.code names(x)}")
   }
 
   # Get valid argument names from ellmer functions
@@ -961,6 +968,11 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   }
   # Rename id column to .id
   names(results)[names(results) == "id"] <- ".id"
+
+  # A unit identifier that is not unique is not a unit identifier. Every
+  # merge downstream -- comparison, validation, backfill -- keys on .id and
+  # would silently pair the wrong rows (#156).
+  check_unique_ids(results$.id, what = "{.field .id}")
 
   # Reorder columns to put .id first
   results <- results[, c(".id", setdiff(names(results), ".id"))]

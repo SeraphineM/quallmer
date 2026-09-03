@@ -178,19 +178,15 @@ crowd <- as_qlm_coded(
 )
 # Document names automatically become .id, all docvars included
 
-# Use a docvar as identifier with NSE (unquoted)
-crowd_party <- as_qlm_coded(
-  data_corpus_manifsentsUK2010sample,
-  id = party,
-  is_gold = TRUE
-)
-
-# Or use quoted string
-crowd_party2 <- as_qlm_coded(
-  data_corpus_manifsentsUK2010sample,
-  id = "party",
-  is_gold = TRUE
-)
+# Use a docvar as identifier, with NSE (unquoted) or a quoted string. It
+# must identify each unit uniquely: a party repeats across sentences, so
+# give the corpus a sentence identifier first
+if (requireNamespace("quanteda", quietly = TRUE)) {
+  corp <- data_corpus_manifsentsUK2010sample
+  quanteda::docvars(corp, "sentence_id") <- seq_len(quanteda::ndoc(corp))
+  crowd_sent <- as_qlm_coded(corp, id = sentence_id, is_gold = TRUE)
+  crowd_sent2 <- as_qlm_coded(corp, id = "sentence_id", is_gold = TRUE)
+}
 
 # With complete metadata
 expert <- as_qlm_coded(

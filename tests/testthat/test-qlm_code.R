@@ -1246,3 +1246,31 @@ test_that("the JSON path forwards api_args too, adding only the response format"
   # JSON mode is the one thing this path must set
   expect_equal(seen$api_args$response_format, list(type = "json_object"))
 })
+
+
+# Unit identifiers must be unique ---------------------------------------------
+
+test_that("qlm_code rejects duplicated input names before spending a request", {
+  skip_if_not_installed("mockery")
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) stop("a request was made"))
+
+  expect_error(
+    f(c(a = "x", a = "y"), structured_test_codebook(), model = "openai/gpt-4o-mini"),
+    "must be unique"
+  )
+})
+
+test_that("new_qlm_coded rejects a table whose .id repeats", {
+  codebook <- structured_test_codebook()
+  expect_error(
+    new_qlm_coded(
+      results = data.frame(id = c("d1", "d1", "d2"), score = c(1, 2, 3)),
+      codebook = codebook, data = c("a", "b", "c"), input_type = "text",
+      chat_args = list(name = "test/model"), execution_args = list(),
+      metadata = list(timestamp = Sys.time(), n_units = 3),
+      name = "run", call = quote(qlm_code(...)), parent = NULL
+    ),
+    "must be unique"
+  )
+})

@@ -144,3 +144,32 @@ failure_reasons <- function(errors, failed) {
     }
   }, character(1))
 }
+
+
+#' Abort if unit identifiers repeat
+#'
+#' `.id` is the key on which comparison, validation and backfill all merge,
+#' and a duplicate silently pairs the wrong rows (#156). Enforced wherever
+#' identifiers enter: [qlm_code()] on its input names, and the constructor on
+#' the finished table, which every `qlm_coded` object passes through.
+#'
+#' @param ids The identifiers.
+#' @param what cli markup naming what they are, for the message.
+#' @param call The call to report the error against.
+#'
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+check_unique_ids <- function(ids, what = "{.field .id}", call = rlang::caller_env()) {
+  dups <- unique(ids[duplicated(ids)])
+  if (length(dups)) {
+    shown <- utils::head(dups, 5)
+    more <- if (length(dups) > 5) ", ..." else ""
+    cli::cli_abort(c(
+      paste0(what, " must be unique: {length(dups)} value{?s} occur{?s/} more than once."),
+      "x" = "Duplicated: {.val {shown}}{more}",
+      "i" = "Every later operation merges on {.field .id}, and a repeated value would pair the wrong rows."
+    ), call = call)
+  }
+  invisible(NULL)
+}
