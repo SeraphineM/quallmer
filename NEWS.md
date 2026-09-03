@@ -1,5 +1,32 @@
 # quallmer 0.4.0.9000 (development version)
 
+Everything in this section postdates quallmer 0.4.0, released on CRAN on
+2026-05-06.
+
+## Breaking changes
+
+* The `.id` column of a `qlm_coded` object must now be a key: unique and
+  never missing. Every later operation merges on `.id`, and `qlm_compare()`
+  and `qlm_validate()` silently formed a Cartesian product of repeated
+  rows, computing their statistics over the wrong pairs, while a missing
+  identifier was matched to every other missing one; an unnested table that
+  keeps the document identifier rather than a document-item key is how the
+  first arises in practice. Both are now errors, naming the offending
+  values: at construction, in `qlm_code()` before a request is spent, when
+  rows are subset with `[`, and by every function that takes a `qlm_coded`
+  object, which now checks its integrity first: class, run metadata, and
+  exactly one `.id` column that is a key. That last check is
+  what catches objects that dplyr or base row operations have altered
+  (`slice(x, c(1, 1))`, `rbind(x, x)`), which keep the class and
+  attributes, and objects saved before the check existed. `as_qlm_coded()` also
+  refuses an `id` column alongside an existing `.id`, which left two
+  columns of that name with the wrong one read (#156).
+
+* `qlm_code()` now rejects `convert = FALSE` with an explanation. It has never
+  worked: `ellmer` returns a bare list, which has no rows to carry an `.id` and
+  no columns to reorder, and the call failed later with `incorrect number of
+  dimensions` (#134).
+
 ## New features
 
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
@@ -26,343 +53,6 @@
   parent so that a replication of a completed run is complete on the same
   terms. `qlm_trail()` reports the passes and any other model they used, so
   a composite is disclosed in the audit trail as well as when printed (#136).
-
-* `qlm_replicate()` no longer carries the coding path across a change of
-  endpoint, provider or `base_url`. It reproduced the path the parent took,
-  `structured` or `json`, which is right for the same endpoint and wrong for
-  another: a JSON-mode DeepSeek run replicated on OpenAI would skip
-  provider-side enforcement, a structured OpenAI run replicated on DeepSeek
-  would fail outright, and two OpenAI-compatible services behind the same
-  prefix enforce a schema quite differently. With a new endpoint the path is
-  now chosen as for a fresh run; `max_retries` still carries, as before.
-
-## Bug fixes
-
-* `qlm_segment()` now records token counts and cost when asked, and takes
-  `prices` as `qlm_code()` does. It forwarded `include_tokens` and
-  `include_cost` to ellmer, but ellmer attaches usage only to a converted
-  result that is a data frame, and converts the array a segmentation asks
-  for to a plain list, so the counts were lost before quallmer saw them. The
-  array is now requested inside an object, which converts to one row per
-  source document with the usage beside it. Usage belongs to the document,
-  not the segment: it is kept in the corpus metadata as `usage`, one row per
-  input document including those that yielded no segments, and repeated on
-  each segment as docvars; sum the metadata table for the run's total. The
-  four usage names are reserved when usage is requested (#119).
-
-* `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
-  a credential-named `api_headers` entry, or a `base_url` carrying userinfo
-  or a credential-named query parameter, given to `qlm_code()` as a literal,
-  previously appeared verbatim in the report's Call section and in the saved
-  `.rds`. Their values are now replaced by `"<redacted>"` in each run's
-  recorded call and chat arguments, in the returned trail and in both files,
-  and a message says which runs were affected. A `credentials` callback is
-  kept only as `function() Sys.getenv("NAME")`, rebuilt without its
-  environment; any other callback is redacted too. Reading the key where it
-  is needed, through an environment variable or that callback form, keeps
-  it out of the record entirely and is the recommended form (#154).
-
-* `qlm_code()` now says why `cost` will be `NA` when `include_cost = TRUE`
-  cannot be honoured, once and before the run, and keeps the reason with the
-  object so `print()` shows it. ellmer prices from a table fixed at its
-  release, matched exactly on provider and model, and answers `NA` on any
-  miss without saying which kind: DeepSeek and six other providers are absent
-  from the table altogether, so no model of theirs is ever priced; a model
-  newer than the installed ellmer is missed on a provider it otherwise
-  prices; and local endpoints have no per-token charge. Each is now named,
-  since the remedies differ, and the message says whether the token counts a
-  cost could be worked out from are being recorded, which needs
-  `include_tokens = TRUE` (#135).
-
-* `qlm_code()` gains `prices`, rates in US dollars per million tokens that
-  cost a run ellmer cannot price, from the token counts it records. Only the
-  rows ellmer leaves `NA` are filled, by the sum ellmer applies to its own
-  table; where ellmer prices the model its figure stands. The rates are kept
-  in the run's metadata, shown by `print()` and the trail report, and reused
-  by `qlm_replicate()` when the model, endpoint, batch setting and service
-  tier are unchanged, so a cost resting on entered figures is always
-  labelled as such. quallmer bundles no prices of its own
-  (#135).
-
-* `qlm_compare()` now honours `tolerance`, and computes its numeric
-  statistics on the ratings' values, when a coder stores the ratings as
-  text. The ratings were assembled into one matrix before their type was
-  examined, and a single character column made the whole matrix character:
-  every unit then fell through to exact text equality with `tolerance`
-  unused, and Krippendorff's alpha, the ICC and Pearson's r ran on factor
-  codes of the sorted strings, where `"10"` falls between `"1"` and `"2"`.
-  Neither showed in the output, so an LLM column parsed as text against a
-  numeric human column gave a flat agreement curve and a wrong alpha. At
-  ordinal, interval and ratio level every column is now read as numbers, as
-  the declared level asserts; a value that does not read as a number is an
-  error naming the coder and the values; ordinal categories given as text
-  are ranked as before, but a positive `tolerance` on them draws a warning;
-  and nominal categories agree only when identical, as the code's own
-  comment already claimed (#150).
-
-* `qlm_validate()` ranked ordinal ratings by their values sorted as strings,
-  so on a 1 to 10 scale `"10"` fell between `"1"` and `"2"` and Spearman's
-  rho, Kendall's tau and MAE were wrong whenever a rating reached 10, even
-  from numeric input. Ordinal and interval values are now read as numbers
-  the same way as in `qlm_compare()` (#150).
-  
-* The deprecated `annotate()` and `trail_record()` run again. `annotate()`
-  passed its `model_name` to `qlm_code()` under that name, whose argument is
-  `model`, so the value fell through to the provider call and every use
-  failed, with `model` reported missing or `model_name` reported unused.
-  `annotate()` again returns its identifier column as `id`, as documented,
-  rather than `qlm_code()`'s `.id`, and `trail_record()` now always restores
-  the caller's `id_col` values in place of the sequential ones `annotate()`
-  generates. Both functions still warn that `qlm_code()` replaces them
-  (#141).
-
-* `qlm_code()` now says when a model name is not one its provider lists,
-  with the nearest names it does have, instead of reporting only the
-  provider's HTTP error. The provider's model list is fetched through
-  ellmer's `models_<provider>()`, only after a run has been rejected in its
-  entirety and at most once per failed run, and only for providers whose
-  listing covers every name they accept; where it cannot decide, the
-  provider's own error is reported unchanged (#133).
-
-* The `.id` column of a `qlm_coded` object must now be a key: unique and
-  never missing. Every later operation merges on `.id`, and `qlm_compare()`
-  and `qlm_validate()` silently formed a Cartesian product of repeated
-  rows, computing their statistics over the wrong pairs, while a missing
-  identifier was matched to every other missing one; an unnested table that
-  keeps the document identifier rather than a document-item key is how the
-  first arises in practice. Both are now errors, naming the offending
-  values: at construction, in `qlm_code()` before a request is spent, when
-  rows are subset with `[`, and by every function that takes a `qlm_coded`
-  object, which now checks its integrity first: class, run metadata, and
-  exactly one `.id` column that is a key. That last check is
-  what catches objects that dplyr or base row operations have altered
-  (`slice(x, c(1, 1))`, `rbind(x, x)`), which keep the class and
-  attributes, and objects saved before the check existed. `as_qlm_coded()` also
-  refuses an `id` column alongside an existing `.id`, which left two
-  columns of that name with the wrong one read (#156).
-
-* `qlm_code()` no longer returns a response cut off at the provider's
-  `max_tokens` limit as a successful empty result. Such a response is billed
-  in full, and arrived as a row of `NA` scalars and zero-length arrays with no
-  `.error`, indistinguishable from a unit to which nothing applied, so a
-  document that overran the limit read as "nothing here", and the documents
-  that do so are systematically the longest and richest ones. On the JSON
-  path the finish reason that ellmer 0.4.2 attaches to each turn is now read:
-  the unit is recorded in `.error` with the token count, listed by
-  `qlm_failures()`, and not retried, since the same limit reproduces the cut
-  and the retry is billed again. On the structured path ellmer's parallel
-  call discards the turns, so the finish reason is out of reach; there, when
-  `params(max_tokens = )` is set, a row that used the whole budget and
-  returned nothing is recorded in `.error` as cut off. Without a declared
-  limit the cap is not known and such a row stays silent, which needs an
-  ellmer change to close. Rows whose request failed, or whose response was
-  cut off, are also no longer read as evidence that an endpoint ignored the
-  schema, so a run whose every unit failed that way is reported as failed
-  rather than re-coded in JSON mode; a response ellmer could extract nothing
-  from still counts, so `"auto"` still falls back for an endpoint that
-  answers in prose (#153).
-
-* `qlm_codebook(levels = )` accepts variables nested inside a `type_array()`
-  or a nested `type_object()`. The check matched names against top-level
-  schema properties only, so a codebook whose schema returns one array entry
-  per rated item could not declare measurement levels for the very variables
-  `qlm_compare()` and `qlm_validate()` need them for, and the only workaround
-  was to drop `levels` from the codebook and re-attach them by hand after
-  unnesting. Property names are now collected at every depth, and for a
-  schema whose root is a `type_array()` rather than a `type_object()`, which
-  previously skipped the check altogether. A name that occurs at more than
-  one place in the schema is an error rather than being resolved silently to
-  the first match, since a flat `levels` list cannot say which one it means
-  (#131).
-
-* `qlm_trail()` reports which endpoint each run actually used, and points at
-  the right ellmer help page for setting it up. The report derived a provider
-  by splitting the model string and mapped it through a four-name `if/else`
-  chain, which had gone stale three ways. The `google` branch could never fire,
-  because ellmer's providers are `google_gemini` and `google_vertex` and a
-  `google/` prefix does not resolve at all. Every OpenAI-compatible endpoint --
-  Qwen through Alibaba, Kimi through Moonshot, a vLLM box, a laptop -- reported
-  the same provider and the same instruction to configure credentials for
-  "openai_compatible", which for an audit trail whose purpose is telling runs
-  apart was the worst of the three. And roughly twenty providers ellmer ships
-  fell through to "configure credentials as needed". Runs are now identified by
-  provider *and* `base_url`, the rule `qlm_replicate()` already applies, so
-  endpoints differing only by port, path or scheme stay distinct. Credentials
-  embedded in a URL, as userinfo or as a query parameter, are stripped from the
-  endpoint labels this section prints; note that the Call section still shows
-  the call as written and the `.rds` still preserves `chat_args` whole. Ollama
-  is told it needs no key only where a loopback endpoint was recorded, since
-  ellmer reads `OLLAMA_API_KEY` for one served behind a proxy and resolves an
-  unset `base_url` through `OLLAMA_BASE_URL`, which may be remote.
-  The section is now "Provider and endpoint setup" rather than "Configure API
-  credentials", because several providers use IAM, OAuth or platform
-  credentials rather than a key (#130).
-
-* `qlm_compare(level = "interval", tolerance = )` counted a pair differing by
-  exactly `tolerance` as disagreement or agreement depending on how the
-  subtraction happened to round in binary. `1.1 - 1.0` is
-  `0.10000000000000009` and failed at `tolerance = 0.1`, while `1.2 - 1.1` is
-  `0.09999999999999987` and passed -- the same nominal difference, opposite
-  answers. On decimal-increment scales this is common rather than exotic; one
-  reported analysis understated agreement by 23 percentage points, and the
-  result stayed plausible enough that nothing looked wrong. The comparison now
-  allows a few units in the last place, scaled to the magnitudes being
-  compared. Percent agreement can therefore only stay the same or rise: no pair
-  that previously agreed becomes a disagreement. Anyone who has reported a
-  percent agreement computed on a non-integer scale should recompute it.
-  `tolerance = 0` now means numerical equality rather than bit identity, so
-  `0.1 + 0.2` counts as equal to `0.3`, while a genuine difference of `1e-9` is
-  still a difference. A non-finite rating takes the plain comparison, since an
-  infinite magnitude would otherwise scale the allowance to infinity and report
-  a finite rating as agreeing with an infinite one (#121).
-
-* `qlm_code()` and `qlm_segment()` now reject a model parameter passed at the
-  top level. `max_tokens = 100` used to fall through to `chat_args` and reach
-  `ellmer::chat()`, failing with `unused argument (max_tokens = 100)` raised
-  from inside ellmer -- naming the argument but neither of the two places it
-  could have gone. The error now names both: `params` for the settings ellmer
-  standardises, `api_args` for a provider's raw request fields. It deliberately
-  does not prescribe one, because the choice is not a property of the name:
-  `top_k` is a real `ellmer::params()` field, but ellmer maps it onto
-  `top_logprobs` for OpenAI-compatible providers, so a caller wanting a
-  provider's raw `top_k` needs `api_args`. `stop` and `response_format` are
-  unambiguous and do get a specific destination. The rejected set is read from
-  `ellmer::params()` at run time, minus whatever the request path currently
-  accepts, so a name a later ellmer gives a real meaning stops being rejected
-  without an update here (#139).
-
-* `qlm_code()` and `qlm_segment()` now say what to do when a model's provider
-  prefix is not one ellmer can dispatch on. `model = "qwen/qwen3-max"` reached
-  `ellmer::chat()` and failed with `Can't find provider ellmer::chat_qwen()`,
-  which names an ellmer internal and offers no way forward. The error now names
-  every prefix that does work and points at `openai_compatible/<model>` with
-  `base_url` and `credentials`, which is how any other OpenAI-compatible
-  endpoint is reached. The list of working prefixes is derived from the
-  installed ellmer at run time, mirroring both gates `ellmer::chat()` applies,
-  so a provider ellmer adds or drops later needs no change here. Checked before
-  any request is made, since the answer does not depend on asking the provider
-  anything (#129).
-
-* `qlm_trail()` no longer advertises or generates a top-level `temperature`
-  argument. That form does not work -- it reaches `ellmer::chat()`, which has no
-  such argument -- so the replication script the audit trail generated could not
-  run, in the one document meant to show that a run can be reproduced. The
-  report now reads the sampling settings a run actually recorded, in
-  `chat_args$params`, and emits them as `params = ellmer::params()`. A legacy
-  `chat_args$temperature`, which older objects carry from the routing that was
-  never implemented, is folded into `params` on read, so an old trail file still
-  describes and reproduces itself in the form that works; `params$temperature`
-  is canonical and wins when both are present. Values are serialised one at a
-  time rather than through `unlist()`, so a vector-valued parameter such as
-  `stop = c("END", "STOP")` survives into the generated call (#127).
-
-* `qlm_code()` gains a `structured` argument controlling how the output schema
-  is obtained, generalising the local-validation path added in #128 beyond
-  DeepSeek. `"structured"` trusts the provider; `"json"` puts the schema in the
-  system prompt and validates every response against `codebook$schema` locally;
-  `"auto"` (the default) attempts the structured call and falls back to
-  `"json"` when it fails. This matters because ellmer sends
-  `response_format = {type: "json_schema", strict: true}` to every
-  OpenAI-compatible provider and takes the result on trust, and measurement
-  shows several do not honour it — Kimi violated a schema it was given on 2 of
-  3 identical requests through one gateway. Non-conformance arrives as `NA`,
-  indistinguishable from missing data, so `qlm_code()` now also emits a
-  one-time note when coding against an endpoint whose enforcement it cannot
-  verify, silenced with `options(quallmer.quiet_schema_note = TRUE)`. Whether
-  an endpoint is trusted is derived from ellmer's own request path rather than
-  a list of vendors, so a provider added to ellmer later defaults to
-  unverified. Failure is detected both from an error and from a result in which
-  every required field is `NA` in every row, which is what an endpoint that
-  accepted the schema and ignored it produces. That check reads required
-  scalar properties, since required arrays and nested objects become
-  list-columns in which a missing value and a schema-valid empty one are
-  indistinguishable -- so for a codebook whose required properties are all
-  arrays or nested objects, `"auto"` on an unverified endpoint validates
-  locally from the start rather than making a call it could not check, and
-  reports why (#134).
-
-* `qlm_code()` now rejects `convert = FALSE` with an explanation. It has never
-  worked: `ellmer` returns a bare list, which has no rows to carry an `.id` and
-  no columns to reorder, and the call failed later with `incorrect number of
-  dimensions` (#134).
-
-* `qlm_code()` can now code with DeepSeek, and no longer trusts providers that
-  accept a JSON Schema without enforcing it. The DeepSeek API rejects the
-  `response_format` that `ellmer::parallel_chat_structured()` sends
-  ("This response_format type is unavailable now"), so every request failed;
-  and its JSON mode guarantees JSON syntax, not schema conformance, so simply
-  switching to JSON mode would trade a loud failure for a silent one. ellmer
-  converts every non-conformance -- wrong field type, missing required field,
-  out-of-range enum value -- to `NA` without warning, so a run could come back
-  looking plausible but wrong. `qlm_code()` now routes `model = "deepseek/..."`
-  to a handler that requests JSON mode, puts the codebook schema in the system
-  prompt, validates each response locally against `codebook$schema`, and
-  re-prompts the model with the specific validation error
-  (`$.claims[2].salience must be a number`) when a response does not conform.
-  Repair attempts default to 2 and are configurable with `max_retries`. Units
-  that never validate have `NA` coded values and a `.error` list-column
-  recording why, and token and cost accounting sums across repair attempts. A
-  document the provider rejects as too long is not re-sent, but a content
-  refusal is: refusals are not deterministic -- the same document is refused on
-  one pass and coded on the next, at more than one provider -- and are rejected
-  before generation, so a further attempt is free. No other provider's
-  behaviour changes (#128).
-
-* `qlm_code()` no longer retries a request the provider has rejected outright,
-  and reports why it was rejected. A wrong model name previously produced three
-  rounds of retries and four warnings, none of which mentioned the model; it
-  now aborts once, quoting the provider's own message (which for DeepSeek lists
-  the valid model names). Failures with a fatal HTTP status (400, 401, 403,
-  404, 422) are not retried, unlike rate limits and server errors, and the
-  provider's error body is read directly off the response, since httr2 will
-  only parse a body served as JSON and several providers do not label theirs
-  correctly. A run in which every request is rejected as malformed or
-  unauthorised stops after the first pass rather than retrying; a refusal or an
-  over-long document does not count towards that, so a single failing unit is
-  still retried (#128).
-
-* `qlm_replicate()` now reproduces the settings it claims to. It restored only
-  the execution arguments, silently dropping everything the original run passed
-  to `ellmer::chat()` -- `params`, `api_args`, `base_url`, `credentials` -- so a
-  replication could run at a different temperature than the run it replicated,
-  and the resulting `qlm_compare()` would read as a model-stability measurement
-  when it was partly a settings-difference measurement. Chat arguments are now
-  restored alongside execution arguments, with overrides in `...` taking
-  precedence. Provider-specific arguments such as credentials and endpoint
-  settings are restored only when the provider is unchanged; when changing
-  endpoint, an informational message names any inherited arguments that were
-  omitted and not explicitly replaced. An endpoint is identified by both the
-  provider prefix and `base_url`, because every provider ellmer has no
-  `chat_*()` for is reached as `openai_compatible/<model>` -- so Qwen through
-  Alibaba Model Studio and Kimi through Moonshot share a prefix while being
-  different services with different credentials, and a prefix-only check would
-  send one vendor's credential to the other. The model is still passed as
-  `model`, and registered `tools` are never carried over (#125).
-
-* `qlm_replicate()` also reproduces the coding path and `max_retries` of the
-  original run. The path is derived from the backend the run actually used
-  rather than the mode it requested, so a run that asked for
-  `structured = "auto"` and fell back to JSON mode replicates as `"json"`:
-  requesting `"auto"` again would let an intermittently conforming endpoint
-  take the structured path instead, silently skipping the local validation the
-  original relied on and leaving the two runs incomparable (#128, #134).
-
-* `qlm_trail()` no longer emits "unknown column" warnings or crashes with
-  `the condition has length > 1` when passed a `qlm_comparison` or
-  `qlm_validation` object. The trail now stores these (and `qlm_coded`)
-  objects as-is rather than copying selected fields into a parallel
-  structure, so they round-trip with their class and metadata intact and
-  can be extracted from the trail for replication without modification
-  (#93).
-
-* `qlm_validate(..., average = "none")` was reporting per-class
-  precision and recall swapped: the helper that derived FP and FN
-  from the confusion matrix had its row and column sums transposed
-  relative to the orientation produced by `yardstick::conf_mat()`.
-  Macro-averaged precision/recall (computed via `yardstick` directly)
-  were correct; only the per-class breakdown was affected.
-
-## New features
 
 * New `qlm_failures()` lists the units a coding run failed on, with the
   reason for each, and `print()` of a `qlm_coded` object now reports
@@ -392,6 +82,325 @@
   unitizing comparisons. The marginal count `n` is reported in the
   `docid` column. Per-category rows are only produced for
   nominal-level data (#112).
+
+* `qlm_code()` gains a `structured` argument controlling how the output schema
+  is obtained, generalising the local-validation path added in #128 beyond
+  DeepSeek. `"structured"` trusts the provider; `"json"` puts the schema in the
+  system prompt and validates every response against `codebook$schema` locally;
+  `"auto"` (the default) attempts the structured call and falls back to
+  `"json"` when it fails. This matters because ellmer sends
+  `response_format = {type: "json_schema", strict: true}` to every
+  OpenAI-compatible provider and takes the result on trust, and measurement
+  shows several do not honour it — Kimi violated a schema it was given on 2 of
+  3 identical requests through one gateway. Non-conformance arrives as `NA`,
+  indistinguishable from missing data, so `qlm_code()` now also emits a
+  one-time note when coding against an endpoint whose enforcement it cannot
+  verify, silenced with `options(quallmer.quiet_schema_note = TRUE)`. Whether
+  an endpoint is trusted is derived from ellmer's own request path rather than
+  a list of vendors, so a provider added to ellmer later defaults to
+  unverified. Failure is detected both from an error and from a result in which
+  every required field is `NA` in every row, which is what an endpoint that
+  accepted the schema and ignored it produces. That check reads required
+  scalar properties, since required arrays and nested objects become
+  list-columns in which a missing value and a schema-valid empty one are
+  indistinguishable -- so for a codebook whose required properties are all
+  arrays or nested objects, `"auto"` on an unverified endpoint validates
+  locally from the start rather than making a call it could not check, and
+  reports why (#134).
+
+* `qlm_code()` can now code with DeepSeek, and no longer trusts providers that
+  accept a JSON Schema without enforcing it. The DeepSeek API rejects the
+  `response_format` that `ellmer::parallel_chat_structured()` sends
+  ("This response_format type is unavailable now"), so every request failed;
+  and its JSON mode guarantees JSON syntax, not schema conformance, so simply
+  switching to JSON mode would trade a loud failure for a silent one. ellmer
+  converts every non-conformance -- wrong field type, missing required field,
+  out-of-range enum value -- to `NA` without warning, so a run could come back
+  looking plausible but wrong. `qlm_code()` now routes `model = "deepseek/..."`
+  to a handler that requests JSON mode, puts the codebook schema in the system
+  prompt, validates each response locally against `codebook$schema`, and
+  re-prompts the model with the specific validation error
+  (`$.claims[2].salience must be a number`) when a response does not conform.
+  Repair attempts default to 2 and are configurable with `max_retries`. Units
+  that never validate have `NA` coded values and a `.error` list-column
+  recording why, and token and cost accounting sums across repair attempts. A
+  document the provider rejects as too long is not re-sent, but a content
+  refusal is: refusals are not deterministic -- the same document is refused on
+  one pass and coded on the next, at more than one provider -- and are rejected
+  before generation, so a further attempt is free. No other provider's
+  behaviour changes (#128).
+
+* `qlm_code()` gains `prices`, rates in US dollars per million tokens that
+  cost a run ellmer cannot price, from the token counts it records. Only the
+  rows ellmer leaves `NA` are filled, by the sum ellmer applies to its own
+  table; where ellmer prices the model its figure stands. The rates are kept
+  in the run's metadata, shown by `print()` and the trail report, and reused
+  by `qlm_replicate()` when the model, endpoint, batch setting and service
+  tier are unchanged, so a cost resting on entered figures is always
+  labelled as such. quallmer bundles no prices of its own
+  (#135).
+
+* `qlm_codebook(levels = )` accepts variables nested inside a `type_array()`
+  or a nested `type_object()`. The check matched names against top-level
+  schema properties only, so a codebook whose schema returns one array entry
+  per rated item could not declare measurement levels for the very variables
+  `qlm_compare()` and `qlm_validate()` need them for, and the only workaround
+  was to drop `levels` from the codebook and re-attach them by hand after
+  unnesting. Property names are now collected at every depth, and for a
+  schema whose root is a `type_array()` rather than a `type_object()`, which
+  previously skipped the check altogether. A name that occurs at more than
+  one place in the schema is an error rather than being resolved silently to
+  the first match, since a flat `levels` list cannot say which one it means
+  (#131).
+
+* `qlm_code()` now says when a model name is not one its provider lists,
+  with the nearest names it does have, instead of reporting only the
+  provider's HTTP error. The provider's model list is fetched through
+  ellmer's `models_<provider>()`, only after a run has been rejected in its
+  entirety and at most once per failed run, and only for providers whose
+  listing covers every name they accept; where it cannot decide, the
+  provider's own error is reported unchanged (#133).
+
+* `qlm_code()` now says why `cost` will be `NA` when `include_cost = TRUE`
+  cannot be honoured, once and before the run, and keeps the reason with the
+  object so `print()` shows it. ellmer prices from a table fixed at its
+  release, matched exactly on provider and model, and answers `NA` on any
+  miss without saying which kind: DeepSeek and six other providers are absent
+  from the table altogether, so no model of theirs is ever priced; a model
+  newer than the installed ellmer is missed on a provider it otherwise
+  prices; and local endpoints have no per-token charge. Each is now named,
+  since the remedies differ, and the message says whether the token counts a
+  cost could be worked out from are being recorded, which needs
+  `include_tokens = TRUE` (#135).
+
+## Bug fixes
+
+### Coding runs
+
+* `qlm_segment()` now records token counts and cost when asked, and takes
+  `prices` as `qlm_code()` does. It forwarded `include_tokens` and
+  `include_cost` to ellmer, but ellmer attaches usage only to a converted
+  result that is a data frame, and converts the array a segmentation asks
+  for to a plain list, so the counts were lost before quallmer saw them. The
+  array is now requested inside an object, which converts to one row per
+  source document with the usage beside it. Usage belongs to the document,
+  not the segment: it is kept in the corpus metadata as `usage`, one row per
+  input document including those that yielded no segments, and repeated on
+  each segment as docvars; sum the metadata table for the run's total. The
+  four usage names are reserved when usage is requested (#119).
+
+* `qlm_code()` no longer returns a response cut off at the provider's
+  `max_tokens` limit as a successful empty result. Such a response is billed
+  in full, and arrived as a row of `NA` scalars and zero-length arrays with no
+  `.error`, indistinguishable from a unit to which nothing applied, so a
+  document that overran the limit read as "nothing here", and the documents
+  that do so are systematically the longest and richest ones. On the JSON
+  path the finish reason that ellmer 0.4.2 attaches to each turn is now read:
+  the unit is recorded in `.error` with the token count, listed by
+  `qlm_failures()`, and not retried, since the same limit reproduces the cut
+  and the retry is billed again. On the structured path ellmer's parallel
+  call discards the turns, so the finish reason is out of reach; there, when
+  `params(max_tokens = )` is set, a row that used the whole budget and
+  returned nothing is recorded in `.error` as cut off. Without a declared
+  limit the cap is not known and such a row stays silent, which needs an
+  ellmer change to close. Rows whose request failed, or whose response was
+  cut off, are also no longer read as evidence that an endpoint ignored the
+  schema, so a run whose every unit failed that way is reported as failed
+  rather than re-coded in JSON mode; a response ellmer could extract nothing
+  from still counts, so `"auto"` still falls back for an endpoint that
+  answers in prose (#153).
+
+* `qlm_code()` and `qlm_segment()` now reject a model parameter passed at the
+  top level. `max_tokens = 100` used to fall through to `chat_args` and reach
+  `ellmer::chat()`, failing with `unused argument (max_tokens = 100)` raised
+  from inside ellmer -- naming the argument but neither of the two places it
+  could have gone. The error now names both: `params` for the settings ellmer
+  standardises, `api_args` for a provider's raw request fields. It deliberately
+  does not prescribe one, because the choice is not a property of the name:
+  `top_k` is a real `ellmer::params()` field, but ellmer maps it onto
+  `top_logprobs` for OpenAI-compatible providers, so a caller wanting a
+  provider's raw `top_k` needs `api_args`. `stop` and `response_format` are
+  unambiguous and do get a specific destination. The rejected set is read from
+  `ellmer::params()` at run time, minus whatever the request path currently
+  accepts, so a name a later ellmer gives a real meaning stops being rejected
+  without an update here (#139).
+
+* `qlm_code()` and `qlm_segment()` now say what to do when a model's provider
+  prefix is not one ellmer can dispatch on. `model = "qwen/qwen3-max"` reached
+  `ellmer::chat()` and failed with `Can't find provider ellmer::chat_qwen()`,
+  which names an ellmer internal and offers no way forward. The error now names
+  every prefix that does work and points at `openai_compatible/<model>` with
+  `base_url` and `credentials`, which is how any other OpenAI-compatible
+  endpoint is reached. The list of working prefixes is derived from the
+  installed ellmer at run time, mirroring both gates `ellmer::chat()` applies,
+  so a provider ellmer adds or drops later needs no change here. Checked before
+  any request is made, since the answer does not depend on asking the provider
+  anything (#129).
+
+* `qlm_code()` no longer retries a request the provider has rejected outright,
+  and reports why it was rejected. A wrong model name previously produced three
+  rounds of retries and four warnings, none of which mentioned the model; it
+  now aborts once, quoting the provider's own message (which for DeepSeek lists
+  the valid model names). Failures with a fatal HTTP status (400, 401, 403,
+  404, 422) are not retried, unlike rate limits and server errors, and the
+  provider's error body is read directly off the response, since httr2 will
+  only parse a body served as JSON and several providers do not label theirs
+  correctly. A run in which every request is rejected as malformed or
+  unauthorised stops after the first pass rather than retrying; a refusal or an
+  over-long document does not count towards that, so a single failing unit is
+  still retried (#128).
+
+* The deprecated `annotate()` and `trail_record()` run again. `annotate()`
+  passed its `model_name` to `qlm_code()` under that name, whose argument is
+  `model`, so the value fell through to the provider call and every use
+  failed, with `model` reported missing or `model_name` reported unused.
+  `annotate()` again returns its identifier column as `id`, as documented,
+  rather than `qlm_code()`'s `.id`, and `trail_record()` now always restores
+  the caller's `id_col` values in place of the sequential ones `annotate()`
+  generates. Both functions still warn that `qlm_code()` replaces them
+  (#141).
+
+### Reliability and validation
+
+* `qlm_compare()` now honours `tolerance`, and computes its numeric
+  statistics on the ratings' values, when a coder stores the ratings as
+  text. The ratings were assembled into one matrix before their type was
+  examined, and a single character column made the whole matrix character:
+  every unit then fell through to exact text equality with `tolerance`
+  unused, and Krippendorff's alpha, the ICC and Pearson's r ran on factor
+  codes of the sorted strings, where `"10"` falls between `"1"` and `"2"`.
+  Neither showed in the output, so an LLM column parsed as text against a
+  numeric human column gave a flat agreement curve and a wrong alpha. At
+  ordinal, interval and ratio level every column is now read as numbers, as
+  the declared level asserts; a value that does not read as a number is an
+  error naming the coder and the values; ordinal categories given as text
+  are ranked as before, but a positive `tolerance` on them draws a warning;
+  and nominal categories agree only when identical, as the code's own
+  comment already claimed (#150).
+
+* `qlm_validate()` ranked ordinal ratings by their values sorted as strings,
+  so on a 1 to 10 scale `"10"` fell between `"1"` and `"2"` and Spearman's
+  rho, Kendall's tau and MAE were wrong whenever a rating reached 10, even
+  from numeric input. Ordinal and interval values are now read as numbers
+  the same way as in `qlm_compare()` (#150).
+
+* `qlm_compare(level = "interval", tolerance = )` counted a pair differing by
+  exactly `tolerance` as disagreement or agreement depending on how the
+  subtraction happened to round in binary. `1.1 - 1.0` is
+  `0.10000000000000009` and failed at `tolerance = 0.1`, while `1.2 - 1.1` is
+  `0.09999999999999987` and passed -- the same nominal difference, opposite
+  answers. On decimal-increment scales this is common rather than exotic; one
+  reported analysis understated agreement by 23 percentage points, and the
+  result stayed plausible enough that nothing looked wrong. The comparison now
+  allows a few units in the last place, scaled to the magnitudes being
+  compared. Percent agreement can therefore only stay the same or rise: no pair
+  that previously agreed becomes a disagreement. Anyone who has reported a
+  percent agreement computed on a non-integer scale should recompute it.
+  `tolerance = 0` now means numerical equality rather than bit identity, so
+  `0.1 + 0.2` counts as equal to `0.3`, while a genuine difference of `1e-9` is
+  still a difference. A non-finite rating takes the plain comparison, since an
+  infinite magnitude would otherwise scale the allowance to infinity and report
+  a finite rating as agreeing with an infinite one (#121).
+
+* `qlm_validate(..., average = "none")` was reporting per-class
+  precision and recall swapped: the helper that derived FP and FN
+  from the confusion matrix had its row and column sums transposed
+  relative to the orientation produced by `yardstick::conf_mat()`.
+  Macro-averaged precision/recall (computed via `yardstick` directly)
+  were correct; only the per-class breakdown was affected.
+
+### Audit trail and replication
+
+* `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
+  a credential-named `api_headers` entry, or a `base_url` carrying userinfo
+  or a credential-named query parameter, given to `qlm_code()` as a literal,
+  previously appeared verbatim in the report's Call section and in the saved
+  `.rds`. Their values are now replaced by `"<redacted>"` in each run's
+  recorded call and chat arguments, in the returned trail and in both files,
+  and a message says which runs were affected. A `credentials` callback is
+  kept only as `function() Sys.getenv("NAME")`, rebuilt without its
+  environment; any other callback is redacted too. Reading the key where it
+  is needed, through an environment variable or that callback form, keeps
+  it out of the record entirely and is the recommended form (#154).
+
+* `qlm_trail()` reports which endpoint each run actually used, and points at
+  the right ellmer help page for setting it up. The report derived a provider
+  by splitting the model string and mapped it through a four-name `if/else`
+  chain, which had gone stale three ways. The `google` branch could never fire,
+  because ellmer's providers are `google_gemini` and `google_vertex` and a
+  `google/` prefix does not resolve at all. Every OpenAI-compatible endpoint --
+  Qwen through Alibaba, Kimi through Moonshot, a vLLM box, a laptop -- reported
+  the same provider and the same instruction to configure credentials for
+  "openai_compatible", which for an audit trail whose purpose is telling runs
+  apart was the worst of the three. And roughly twenty providers ellmer ships
+  fell through to "configure credentials as needed". Runs are now identified by
+  provider *and* `base_url`, the rule `qlm_replicate()` already applies, so
+  endpoints differing only by port, path or scheme stay distinct. Credentials
+  embedded in a URL, as userinfo or as a query parameter, are stripped from the
+  endpoint labels this section prints; note that the Call section still shows
+  the call as written and the `.rds` still preserves `chat_args` whole. Ollama
+  is told it needs no key only where a loopback endpoint was recorded, since
+  ellmer reads `OLLAMA_API_KEY` for one served behind a proxy and resolves an
+  unset `base_url` through `OLLAMA_BASE_URL`, which may be remote.
+  The section is now "Provider and endpoint setup" rather than "Configure API
+  credentials", because several providers use IAM, OAuth or platform
+  credentials rather than a key (#130).
+
+* `qlm_trail()` no longer advertises or generates a top-level `temperature`
+  argument. That form does not work -- it reaches `ellmer::chat()`, which has no
+  such argument -- so the replication script the audit trail generated could not
+  run, in the one document meant to show that a run can be reproduced. The
+  report now reads the sampling settings a run actually recorded, in
+  `chat_args$params`, and emits them as `params = ellmer::params()`. A legacy
+  `chat_args$temperature`, which older objects carry from the routing that was
+  never implemented, is folded into `params` on read, so an old trail file still
+  describes and reproduces itself in the form that works; `params$temperature`
+  is canonical and wins when both are present. Values are serialised one at a
+  time rather than through `unlist()`, so a vector-valued parameter such as
+  `stop = c("END", "STOP")` survives into the generated call (#127).
+
+* `qlm_replicate()` now reproduces the settings it claims to. It restored only
+  the execution arguments, silently dropping everything the original run passed
+  to `ellmer::chat()` -- `params`, `api_args`, `base_url`, `credentials` -- so a
+  replication could run at a different temperature than the run it replicated,
+  and the resulting `qlm_compare()` would read as a model-stability measurement
+  when it was partly a settings-difference measurement. Chat arguments are now
+  restored alongside execution arguments, with overrides in `...` taking
+  precedence. Provider-specific arguments such as credentials and endpoint
+  settings are restored only when the provider is unchanged; when changing
+  endpoint, an informational message names any inherited arguments that were
+  omitted and not explicitly replaced. An endpoint is identified by both the
+  provider prefix and `base_url`, because every provider ellmer has no
+  `chat_*()` for is reached as `openai_compatible/<model>` -- so Qwen through
+  Alibaba Model Studio and Kimi through Moonshot share a prefix while being
+  different services with different credentials, and a prefix-only check would
+  send one vendor's credential to the other. The model is still passed as
+  `model`, and registered `tools` are never carried over (#125).
+
+* `qlm_replicate()` also reproduces the coding path and `max_retries` of the
+  original run. The path is derived from the backend the run actually used
+  rather than the mode it requested, so a run that asked for
+  `structured = "auto"` and fell back to JSON mode replicates as `"json"`:
+  requesting `"auto"` again would let an intermittently conforming endpoint
+  take the structured path instead, silently skipping the local validation the
+  original relied on and leaving the two runs incomparable (#128, #134).
+
+* `qlm_replicate()` no longer carries the coding path across a change of
+  endpoint, provider or `base_url`. It reproduced the path the parent took,
+  `structured` or `json`, which is right for the same endpoint and wrong for
+  another: a JSON-mode DeepSeek run replicated on OpenAI would skip
+  provider-side enforcement, a structured OpenAI run replicated on DeepSeek
+  would fail outright, and two OpenAI-compatible services behind the same
+  prefix enforce a schema quite differently. With a new endpoint the path is
+  now chosen as for a fresh run; `max_retries` still carries, as before.
+
+* `qlm_trail()` no longer emits "unknown column" warnings or crashes with
+  `the condition has length > 1` when passed a `qlm_comparison` or
+  `qlm_validation` object. The trail now stores these (and `qlm_coded`)
+  objects as-is rather than copying selected fields into a parallel
+  structure, so they round-trip with their class and metadata intact and
+  can be extracted from the trail for replication without modification
+  (#93).
 
 ## Internal changes
 
@@ -433,7 +442,6 @@
   yardstick / scikit-learn convention. Output verified identical to
   `yardstick`'s on both the binary case and a 4-class noisy
   multi-class example. `yardstick` removed from `Imports`.
-
 # quallmer 0.4.0
 
 ## New features
