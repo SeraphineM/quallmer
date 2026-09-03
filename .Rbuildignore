@@ -29,3 +29,4 @@
 ^quallmer-context\.xml$
 ^sources$
 ^dev$
+^\.git$
