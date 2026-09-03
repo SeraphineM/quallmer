@@ -73,6 +73,7 @@ metadata for reproducibility.</p>
 <span>  batch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  structured <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"structured"</span>, <span class="st">"json"</span><span class="op">)</span>,</span>
 <span>  max_retries <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  prices <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  notes <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -136,6 +137,16 @@ error. Default is 2, giving at most three attempts per unit. This is
 separate from ellmer's transport-level retries for rate limits and server
 errors, which apply to every provider and are set with
 <code>options(ellmer_max_tries = )</code>.</p></dd>
+
+
+<dt id="arg-prices">prices<a class="anchor" aria-label="anchor" href="#arg-prices"></a></dt>
+<dd><p>Optional. Rates for costing the run when ellmer cannot: a
+named numeric vector or list with <code>input</code> and <code>output</code>, and optionally
+<code>cached_input</code>, in US dollars per million tokens, for example
+<code>c(input = 0.435, output = 0.87, cached_input = 0.0036)</code>. Where ellmer
+prices the model itself its figure stands and these are not used. A
+<code>cached_input</code> rate that is not given is taken as the <code>input</code> rate. See
+the section on cost. Default is <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
@@ -232,6 +243,17 @@ per-token charge. In each case <code>qlm_code()</code> says so once before the r
 and the reason is kept with the object and shown when it is printed. With
 <code>include_tokens = TRUE</code> the token counts are recorded, from which such a
 run can be costed at the provider's published rates.</p>
+<p><code>prices</code> does that costing, at rates you supply from the provider's
+published price list. Supplying them implies <code>include_tokens = TRUE</code> and
+<code>include_cost = TRUE</code>. Only rows ellmer left <code>NA</code> are filled, by the same
+sum ellmer applies to its own table: uncached input tokens at the <code>input</code>
+rate, cache hits at the <code>cached_input</code> rate, output at the <code>output</code> rate,
+each per million. Where ellmer priced every row itself the rates are not
+used, and you are told so. The rates are kept in the run's metadata, shown
+by <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and in the trail report, and reused by <code><a href="qlm_replicate.html">qlm_replicate()</a></code> when
+the model, the endpoint, the batch setting and the service tier are
+unchanged, so a cost that rests on entered figures is always labelled as
+such. quallmer bundles no prices of its own.</p>
     </div>
     <div class="section level2">
     <h2 id="schema-enforcement">Schema enforcement<a class="anchor" aria-label="anchor" href="#schema-enforcement"></a></h2>
