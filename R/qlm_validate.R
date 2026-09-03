@@ -525,6 +525,14 @@ qlm_validate <- function(
     gold <- as_qlm_coded(gold, name = "auto_converted_gold")
   }
 
+  # A classed object is no guarantee of a key: row subsetting keeps the
+  # class, and objects from before the constructor checked exist. Merging on
+  # a repeated or missing .id pairs the wrong rows silently (#156).
+  for (i in seq_along(x_list)) {
+    check_ids(x_list[[i]][[".id"]], what = sprintf("{.field .id} of object %d in {.arg x}", i))
+  }
+  check_ids(gold[[".id"]], what = "{.field .id} of {.arg gold}")
+
   # Extract object names from metadata
   object_names <- vapply(x_list, function(obj) {
     name <- tryCatch(qlm_meta(obj, "name"), error = function(e) NULL)

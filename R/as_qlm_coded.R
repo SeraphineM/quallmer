@@ -218,8 +218,16 @@ as_qlm_coded.data.frame <- function(
     ))
   }
 
-  # Rename id column to .id if needed
+  # Rename id column to .id if needed. An existing .id alongside it would
+  # leave two columns of that name, and the first, not the chosen one, would
+  # be read everywhere; refuse rather than pick.
   if (id != ".id") {
+    if (".id" %in% names(x)) {
+      cli::cli_abort(c(
+        "{.arg x} already has a {.field .id} column, so {.val {id}} cannot become the identifier.",
+        "i" = "Drop or rename the existing {.field .id} column, or use it with {.code id = .id}."
+      ))
+    }
     names(x)[names(x) == id] <- ".id"
   }
 

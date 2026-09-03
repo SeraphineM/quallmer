@@ -768,3 +768,26 @@ test_that("qlm_validate supports non-standard evaluation for by argument", {
   expect_equal(attr(validation_nse, "n"), attr(validation_quoted, "n"))
   expect_equal(unique(validation_nse$variable), unique(validation_quoted$variable))
 })
+
+
+test_that("qlm_validate refuses objects whose .id is not a key, whatever their class", {
+  a <- as_qlm_coded(data.frame(.id = c("u0", "u1"), score = c(0, 1)), name = "A")
+  gold <- as_qlm_coded(data.frame(.id = c("u0", "u1"), score = c(9, 1)), name = "G", is_gold = TRUE)
+
+  missing <- a
+  missing$.id[1] <- NA
+  expect_error(
+    qlm_validate(missing, gold = gold, by = "score", level = "interval"),
+    "must not be missing"
+  )
+  duplicate <- a[c(1, 1), ]
+  expect_error(
+    qlm_validate(duplicate, gold = gold, by = "score", level = "interval"),
+    "must be unique"
+  )
+  bad_gold <- gold[c(1, 1), ]
+  expect_error(
+    qlm_validate(a, gold = bad_gold, by = "score", level = "interval"),
+    "must be unique"
+  )
+})

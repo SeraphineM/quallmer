@@ -250,7 +250,7 @@ qlm_code <- function(x, codebook, model, ...,
   # Names become .id, the key every later operation relies on. Checked here,
   # before any request is spent, rather than in the constructor afterwards.
   if (!is.null(names(x))) {
-    check_unique_ids(names(x), what = "{.code names(x)}")
+    check_ids(names(x), what = "{.code names(x)}")
   }
 
   # Get valid argument names from ellmer functions
@@ -969,10 +969,16 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   # Rename id column to .id
   names(results)[names(results) == "id"] <- ".id"
 
-  # A unit identifier that is not unique is not a unit identifier. Every
-  # merge downstream -- comparison, validation, backfill -- keys on .id and
-  # would silently pair the wrong rows (#156).
-  check_unique_ids(results$.id, what = "{.field .id}")
+  # Exactly one identifier column, holding a key. Every merge downstream --
+  # comparison, validation, backfill -- keys on .id and would silently pair
+  # the wrong rows (#156).
+  if (sum(names(results) == ".id") != 1L) {
+    cli::cli_abort(c(
+      "{.arg results} must have exactly one {.field .id} column; found {sum(names(results) == '.id')}.",
+      "i" = "An {.code id} column is renamed to {.field .id}, so the two must not both be present."
+    ))
+  }
+  check_ids(results$.id, what = "{.field .id}")
 
   # Reorder columns to put .id first
   results <- results[, c(".id", setdiff(names(results), ".id"))]

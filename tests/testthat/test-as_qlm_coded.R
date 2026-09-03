@@ -445,3 +445,18 @@ test_that("as_qlm_coded rejects duplicated .id values", {
   expect_error(as_qlm_coded(a, name = "A"), "must be unique")
   expect_error(as_qlm_coded(a, name = "A"), "d1")
 })
+
+test_that("as_qlm_coded rejects a missing .id, and an id= beside an existing .id", {
+  # A missing identifier would be matched to every other missing one
+  expect_error(
+    as_qlm_coded(data.frame(.id = c(NA, "u1"), score = c(0, 1)), name = "A"),
+    "must not be missing"
+  )
+
+  # The chosen column would sit beside the old .id and lose to it
+  x <- data.frame(.id = c("old1", "old2"), chosen = c("new1", "new2"), score = 1:2)
+  expect_error(as_qlm_coded(x, id = chosen), "already has a")
+  expect_error(as_qlm_coded(x, id = "chosen"), "already has a")
+  # ... whereas naming the existing column is fine
+  expect_equal(as_qlm_coded(x, id = .id)$.id, c("old1", "old2"))
+})

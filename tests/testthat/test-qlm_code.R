@@ -1261,6 +1261,30 @@ test_that("qlm_code rejects duplicated input names before spending a request", {
   )
 })
 
+test_that("check_ids refuses missing identifiers before repeated ones", {
+  expect_silent(check_ids(c("a", "b", "c")))
+  expect_silent(check_ids(1:3))
+  expect_error(check_ids(c("a", NA, "c")), "must not be missing")
+  expect_error(check_ids(c("a", "", "c")), "must not be missing")
+  expect_error(check_ids(c(NA, "a", "a")), "must not be missing")
+  expect_error(check_ids(c("a", "b", "a")), "must be unique")
+  expect_error(check_ids(c("a", "b", "a")), "\\ba\\b")
+})
+
+test_that("new_qlm_coded requires exactly one .id column", {
+  codebook <- structured_test_codebook()
+  two <- data.frame(id = c("a", "b"), .id = c("x", "y"), score = c(1, 2))
+  expect_error(
+    new_qlm_coded(
+      results = two, codebook = codebook, data = c("a", "b"), input_type = "text",
+      chat_args = list(name = "test/model"), execution_args = list(),
+      metadata = list(timestamp = Sys.time(), n_units = 2),
+      name = "run", call = quote(qlm_code(...)), parent = NULL
+    ),
+    "exactly one"
+  )
+})
+
 test_that("new_qlm_coded rejects a table whose .id repeats", {
   codebook <- structured_test_codebook()
   expect_error(

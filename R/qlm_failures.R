@@ -146,12 +146,16 @@ failure_reasons <- function(errors, failed) {
 }
 
 
-#' Abort if unit identifiers repeat
+#' Abort unless unit identifiers form a key
 #'
-#' `.id` is the key on which comparison, validation and backfill all merge,
-#' and a duplicate silently pairs the wrong rows (#156). Enforced wherever
-#' identifiers enter: [qlm_code()] on its input names, and the constructor on
-#' the finished table, which every `qlm_coded` object passes through.
+#' `.id` is the key on which comparison, validation and backfill all merge.
+#' A missing value is not an identity, and base `merge()` pairs `NA` with
+#' `NA`, so two units with no identity would be matched with each other; a
+#' repeated value pairs the wrong rows as a Cartesian product (#156). Both
+#' are refused. Enforced wherever identifiers enter, [qlm_code()] on its
+#' input names and the constructor on the finished table, and again at each
+#' public merge boundary, since ordinary row subsetting keeps the class and
+#' objects from before the check exist.
 #'
 #' @param ids The identifiers.
 #' @param what cli markup naming what they are, for the message.
@@ -160,7 +164,17 @@ failure_reasons <- function(errors, failed) {
 #' @return Invisibly `NULL`.
 #' @keywords internal
 #' @noRd
-check_unique_ids <- function(ids, what = "{.field .id}", call = rlang::caller_env()) {
+check_ids <- function(ids, what = "{.field .id}", call = rlang::caller_env()) {
+  missing <- is.na(ids)
+  if (is.character(ids)) {
+    missing <- missing | !nzchar(ids)
+  }
+  if (any(missing)) {
+    cli::cli_abort(c(
+      paste0(what, " must not be missing: {sum(missing)} value{?s} {?is/are} {.code NA} or empty."),
+      "i" = "A unit without an identifier cannot be matched to anything, and would be matched to every other unit without one."
+    ), call = call)
+  }
   dups <- unique(ids[duplicated(ids)])
   if (length(dups)) {
     shown <- utils::head(dups, 5)

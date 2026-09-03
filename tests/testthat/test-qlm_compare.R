@@ -666,3 +666,23 @@ test_that("nominal comparison is unaffected by the tolerance change (#121)", {
   expect_equal(compare_pair(c("a", "b"), c("a", "b"), tolerance = 0, level = "nominal"), 1)
   expect_equal(compare_pair(c("a", "b"), c("a", "c"), tolerance = 0, level = "nominal"), 0.5)
 })
+
+
+test_that("qlm_compare refuses objects whose .id is not a key, whatever their class", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  # Row subsetting keeps the class, so the constructor's check is bypassed
+  duplicate <- x[c(1, 1), ]
+  expect_s3_class(duplicate, "qlm_coded")
+  expect_error(
+    qlm_compare(duplicate, duplicate, by = "score", level = "interval"),
+    "must be unique"
+  )
+
+  # A missing identifier, forged after construction
+  missing <- x
+  missing$.id[1] <- NA
+  expect_error(
+    qlm_compare(missing, x, by = "score", level = "interval"),
+    "must not be missing"
+  )
+})
