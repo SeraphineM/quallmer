@@ -75,7 +75,7 @@
 #'   levels = list(score = "interval", explanation = "nominal")
 #' )
 #'
-#' \donttest{
+#' \dontrun{
 #' # Use with qlm_code() (requires API key)
 #' texts <- c("I love this!", "This is terrible.")
 #' coded <- qlm_code(texts, my_codebook, model = "openai/gpt-4o-mini")

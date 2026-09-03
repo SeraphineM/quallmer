@@ -47,7 +47,7 @@
 #'   replicated results.
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # First create a coded object
 #' texts <- c("I love this!", "Terrible.", "It's okay.")
 #' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", name = "run1")

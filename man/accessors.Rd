@@ -55,7 +55,7 @@ quallmer objects store metadata in three categories:
 }
 
 \examples{
-\donttest{
+\dontrun{
 # Create a coded object
 texts <- c("I love this!", "Terrible.", "It's okay.")
 coded <- qlm_code(
