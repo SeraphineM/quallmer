@@ -700,6 +700,187 @@ test_that("a partly incomplete structured result warns without falling back", {
 })
 
 
+test_that("a wholly failed structured run is reported, not re-coded in JSON mode", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # Every row carries a reason -- here, as ellmer will report a cut-off
+  # response once it consults the finish reason on the parallel path
+  failed <- tibble::tibble(score = NA_real_, .error = list(simpleError("cut off")))
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = failed))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini")
+
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  expect_equal(qlm_failures(result)$reason, "cut off")
+})
+
+
+# Truncated structured responses ----------------------------------------------
+
+test_that("declared_max_tokens reads params() and nothing else", {
+  expect_equal(declared_max_tokens(list(params = ellmer::params(max_tokens = 200))), 200)
+  expect_null(declared_max_tokens(list()))
+  expect_null(declared_max_tokens(list(params = ellmer::params(temperature = 0))))
+  expect_null(declared_max_tokens(list(params = "not a list")))
+  expect_null(declared_max_tokens(list(params = list(max_tokens = -1))))
+  # api_args is forwarded unread
+  expect_null(declared_max_tokens(list(api_args = list(max_tokens = 5))))
+})
+
+test_that("mark_truncated_rows flags only rows that spent the whole limit and hold nothing", {
+  schema <- structured_test_codebook()$schema
+  results <- tibble::tibble(
+    score = c(NA_real_, 0.4, NA_real_),
+    input_tokens = c(10, 10, 10),
+    output_tokens = c(100, 100, 30),
+    cached_input_tokens = c(0, 0, 0)
+  )
+
+  expect_warning(
+    out <- mark_truncated_rows(results, schema, cap = 100),
+    "1 response from the structured call used the whole"
+  )
+  errors <- out$.error
+  expect_s3_class(errors[[1]], "simpleError")  # spent it all, nothing back
+  expect_null(errors[[2]])                      # spent it all, but answered
+  expect_null(errors[[3]])                      # nothing back, but well under the limit
+  expect_match(conditionMessage(errors[[1]]), "max_tokens limit of 100")
+  expect_match(conditionMessage(errors[[1]]), "params\\(max_tokens = \\)")
+  # ellmer's column order: coded values, .error, usage
+  expect_equal(
+    names(out),
+    c("score", ".error", "input_tokens", "output_tokens", "cached_input_tokens")
+  )
+})
+
+test_that("mark_truncated_rows keeps a request failure but replaces a parse symptom", {
+  schema <- structured_test_codebook()$schema
+  results <- tibble::tibble(
+    score = c(NA_real_, NA_real_, NA_real_),
+    # A failed request spends nothing; an extraction failure at the limit is
+    # what a cut-off response looks like after with_extraction_errors()
+    .error = list(simpleError("HTTP 500"), simpleError("parse error: premature EOF"), NULL),
+    input_tokens = c(0, 3, 3), output_tokens = c(0, 100, 100), cached_input_tokens = c(0, 0, 0)
+  )
+
+  expect_warning(out <- mark_truncated_rows(results, schema, cap = 100), "2 responses")
+  expect_equal(conditionMessage(out$.error[[1]]), "HTTP 500")
+  expect_match(conditionMessage(out$.error[[2]]), "most likely cut off")
+  expect_match(conditionMessage(out$.error[[3]]), "most likely cut off")
+})
+
+test_that("mark_truncated_rows removes token columns it asked for itself", {
+  schema <- structured_test_codebook()$schema
+  results <- tibble::tibble(
+    score = 0.4, input_tokens = 1, output_tokens = 5, cached_input_tokens = 0, cost = 0.01
+  )
+
+  expect_equal(names(mark_truncated_rows(results, schema, cap = 100, keep_tokens = FALSE)),
+               c("score", "cost"))
+  expect_equal(names(mark_truncated_rows(results, schema, cap = 100, keep_tokens = TRUE)),
+               names(results))
+})
+
+test_that("mark_truncated_rows is a no-op without a declared limit or token counts", {
+  schema <- structured_test_codebook()$schema
+  results <- tibble::tibble(score = NA_real_)
+
+  expect_identical(mark_truncated_rows(results, schema, cap = NULL), results)
+  expect_identical(mark_truncated_rows(results, schema, cap = 100), results)
+  # convert = FALSE would hand back a list; there is no table to mark
+  expect_identical(mark_truncated_rows(list(1), schema, cap = 100), list(1))
+  expect_identical(mark_truncated_rows(tibble::tibble(), schema, cap = 100), tibble::tibble())
+})
+
+test_that("mark_truncated_rows reads arrays and nested objects as blank when empty", {
+  # The shape from the issue: the content sits inside a type_array(), so a
+  # cut-off response converts to a zero-row tibble, not NA
+  schema <- ellmer::type_object(
+    domains = ellmer::type_array(ellmer::type_object(name = ellmer::type_string())),
+    meta = ellmer::type_object(a = ellmer::type_string(), b = ellmer::type_integer())
+  )
+  converted <- ellmer:::convert_from_type(
+    list(
+      NULL,
+      list(domains = list(list(name = "x")), meta = list(a = "q", b = 1L)),
+      list(domains = list(), meta = list(a = "q", b = 1L))
+    ),
+    ellmer::type_array(schema)
+  )
+  expect_equal(NROW(converted$domains[[1]]), 0)
+  converted$input_tokens <- c(5, 5, 5)
+  converted$output_tokens <- c(4096, 4096, 4096)
+  converted$cached_input_tokens <- c(0, 0, 0)
+
+  expect_warning(out <- mark_truncated_rows(converted, schema, cap = 4096), "1 response")
+  expect_s3_class(out$.error[[1]], "simpleError")
+  expect_null(out$.error[[2]])
+  # An empty array beside a filled nested object is an answer, not a blank
+  expect_null(out$.error[[3]])
+})
+
+test_that("a declared max_tokens lets the structured path flag a cut-off response", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
+  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
+    calls$args <- list(...)
+    tibble::tibble(
+      score = c(NA_real_, 0.7),
+      input_tokens = c(50, 40), output_tokens = c(100, 12), cached_input_tokens = c(0, 0)
+    )
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(),
+                model = "anthropic/claude-sonnet-5",
+                params = ellmer::params(max_tokens = 100)),
+    "used the whole"
+  )
+
+  # Token counts were requested for the check, and not handed on
+  expect_true(isTRUE(calls$args$include_tokens))
+  expect_false("output_tokens" %in% names(result))
+  # The cut-off row is a failure with a reason, not grounds for a JSON re-run
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  failures <- qlm_failures(result)
+  expect_equal(nrow(failures), 1)
+  expect_match(failures$reason, "max_tokens")
+  expect_equal(result$score[[2]], 0.7)
+})
+
+test_that("without a declared limit the structured path asks for nothing extra", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
+  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
+    calls$args <- list(...)
+    tibble::tibble(score = 0.7)
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+
+  result <- f("a", structured_test_codebook(), model = "anthropic/claude-sonnet-5")
+
+  expect_null(calls$args$include_tokens)
+  expect_equal(result$score, 0.7)
+})
+
+
 test_that("structured = 'structured' aborts rather than falling back", {
   skip_if_not_installed("mockery")
 

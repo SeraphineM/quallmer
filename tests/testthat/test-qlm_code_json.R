@@ -23,8 +23,8 @@ json_test_usage <- function(n) {
 }
 
 # A code_handler_json() with ellmer::chat() and json_chat_turns() stubbed out.
-# `attempts` is a list of list(text =, error =, status =), one per expected
-# round trip; `error` and `status` default to NA.
+# `attempts` is a list of list(text =, error =, status =, finish =), one per
+# expected round trip; `error`, `status` and `finish` default to NA.
 json_test_handler <- function(attempts, calls = NULL) {
   h <- code_handler_json
   mockery::stub(h, "ellmer::chat", function(...) structure(list(), class = "fake_chat"))
@@ -41,6 +41,7 @@ json_test_handler <- function(attempts, calls = NULL) {
       text = attempt$text,
       error = attempt$error %||% rep(NA_character_, n),
       status = attempt$status %||% rep(NA_integer_, n),
+      finish = attempt$finish %||% rep(NA_character_, n),
       usage = json_test_usage(n)
     )
   })
@@ -280,6 +281,7 @@ test_that("json_chat_turns extracts text, tokens and cost from turns", {
   expect_equal(result$text, "{\"score\":1}")
   expect_true(is.na(result$error))
   expect_true(is.na(result$status))
+  expect_true(is.na(result$finish))
   expect_equal(unname(result$usage[1, ]), c(10, 5, 2, 0.004))
 })
 
@@ -293,7 +295,149 @@ test_that("json_chat_turns captures the reason a request failed", {
   expect_equal(result$error[[1]], "context length exceeded")
   expect_equal(result$error[[2]], "the request failed")
   expect_true(all(is.na(result$text)))
+  expect_true(all(is.na(result$finish)))
   expect_equal(sum(result$usage), 0)
+})
+
+test_that("json_chat_turns keeps the finish reason of each turn", {
+  cut <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText("{\"score\":")),
+    tokens = c(10L, 60L, 0L), cost = 0.01, finish_reason = "max_tokens"
+  )
+  done <- ellmer::AssistantTurn(
+    contents = list(ellmer::ContentText("{\"score\":1}")),
+    tokens = c(10L, 5L, 0L), cost = 0.01, finish_reason = "success"
+  )
+
+  f <- json_chat_turns
+  mockery::stub(f, "ellmer::parallel_chat", list(
+    list(last_turn = function() cut),
+    list(last_turn = function() done),
+    simpleError("boom")
+  ))
+  result <- f(structure(list(), class = "fake_chat"), list("a", "b", "c"), list())
+
+  expect_equal(result$finish, c("max_tokens", "success", NA))
+})
+
+test_that("turn_finish_reason reads what is there and shrugs at what is not", {
+  turn <- function(...) {
+    ellmer::AssistantTurn(
+      contents = list(ellmer::ContentText("x")), tokens = c(1L, 1L, 0L), cost = 0, ...
+    )
+  }
+  expect_true(is.na(turn_finish_reason(turn())))
+  expect_identical(turn_finish_reason(turn(finish_reason = "max_tokens")), "max_tokens")
+  # ellmer wraps a reason it did not recognise in I(); the marker is dropped
+  expect_identical(turn_finish_reason(turn(finish_reason = I("odd"))), "odd")
+  # A turn class without the property, as older ellmer versions produce
+  expect_true(is.na(turn_finish_reason(structure(list(), class = "not_a_turn"))))
+})
+
+
+# Incomplete responses --------------------------------------------------------
+
+test_that("incomplete_response_reason names the provider's reason, and only when there is one", {
+  expect_null(incomplete_response_reason(NA_character_))
+  expect_null(incomplete_response_reason(character()))
+  expect_null(incomplete_response_reason("success"))
+  expect_null(incomplete_response_reason("tool_use"))
+  expect_null(incomplete_response_reason("stop_sequence"))
+
+  expect_match(
+    incomplete_response_reason("max_tokens", 4096),
+    "cut off at the max_tokens limit after 4,096 output tokens; raise"
+  )
+  # No token count to report: the sentence still reads
+  expect_match(
+    incomplete_response_reason("max_tokens"),
+    "cut off at the max_tokens limit; raise"
+  )
+  expect_match(incomplete_response_reason("context_window"), "context window")
+  expect_match(incomplete_response_reason("content_filter"), "content filter")
+  # ... and that wording is what is_content_refusal() recognises
+  expect_true(is_content_refusal(incomplete_response_reason("content_filter")))
+  expect_match(incomplete_response_reason("odd"), "finish reason \"odd\"")
+})
+
+test_that("is_truncation covers the limits a retry cannot lift", {
+  expect_true(is_truncation("max_tokens"))
+  expect_true(is_truncation("context_window"))
+  expect_false(is_truncation("content_filter"))
+  expect_false(is_truncation("success"))
+  expect_false(is_truncation(NA_character_))
+  expect_false(is_truncation(character()))
+})
+
+test_that("code_handler_json records a cut-off response and does not retry it", {
+  calls <- new.env()
+  h <- json_test_handler(list(
+    list(
+      text = c("{\"score\":1,\"lab\":", "{\"score\":1,\"lab\":\"pos\"}"),
+      finish = c("max_tokens", "success")
+    )
+  ), calls)
+
+  expect_warning(
+    result <- h(
+      x = c("a", "b"), codebook = json_test_codebook(),
+      model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list()
+    ),
+    "1 response could not be coded"
+  )
+
+  # One round trip: no repair attempt was spent on a response the same
+  # limit would cut again
+  expect_equal(calls$n, 1)
+  msgs <- json_test_messages(result)
+  expect_match(msgs[[1]], "cut off at the max_tokens limit after 5 output tokens")
+  expect_match(msgs[[1]], "params\\(max_tokens = \\)")
+  expect_true(is.na(msgs[[2]]))
+  expect_equal(result$score, c(NA, 1))
+  expect_equal(attr(result, "qlm_backend_meta")$n_invalid, 1)
+})
+
+test_that("code_handler_json accepts a response that validates despite hitting the limit", {
+  calls <- new.env()
+  h <- json_test_handler(list(
+    list(text = "{\"score\":1,\"lab\":\"pos\"}", finish = "max_tokens")
+  ), calls)
+
+  result <- h(
+    x = "a", codebook = json_test_codebook(),
+    model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list()
+  )
+
+  expect_equal(calls$n, 1)
+  expect_equal(result$score, 1)
+  expect_false(".error" %in% names(result))
+})
+
+test_that("code_handler_json retries a content-filtered response and names the filter", {
+  calls <- new.env()
+  h <- json_test_handler(list(
+    list(text = "", finish = "content_filter"),
+    list(text = "{\"score\":1,\"lab\":\"pos\"}", finish = "success")
+  ), calls)
+
+  result <- h(
+    x = "a", codebook = json_test_codebook(),
+    model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list()
+  )
+  expect_equal(calls$n, 2)
+  expect_equal(result$score, 1)
+
+  # One that never clears records the provider's reason, not "empty response"
+  h2 <- json_test_handler(rep(list(list(text = "", finish = "content_filter")), 3))
+  expect_warning(
+    result2 <- h2(
+      x = "a", codebook = json_test_codebook(),
+      model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list(),
+      max_retries = 2
+    ),
+    "content filter"
+  )
+  expect_match(json_test_messages(result2)[[1]], "withheld by the provider's content filter")
 })
 
 
@@ -763,6 +907,23 @@ test_that("n_incomplete counts partially failed rows", {
   expect_equal(n_incomplete(results, schema), 2)
   expect_equal(n_incomplete(data.frame(score = 1, lab = "pos"), schema), 0)
   expect_equal(n_incomplete(list(), schema), 0L)
+})
+
+test_that("rows with a recorded error are not evidence about schema enforcement", {
+  schema <- json_test_codebook()$schema
+
+  # Every row failed for a recorded reason: nothing to judge enforcement from,
+  # and nothing to count as incomplete that is not already counted as failed
+  failed <- data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_))
+  failed$.error <- list(simpleError("HTTP 401"), simpleError("cut off"))
+  expect_false(all_required_missing(failed, schema))
+  expect_equal(n_incomplete(failed, schema), 0L)
+
+  # The one intact row is all NA: that is the non-enforcement signal
+  mixed <- data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_))
+  mixed$.error <- list(simpleError("HTTP 401"), NULL)
+  expect_true(all_required_missing(mixed, schema))
+  expect_equal(n_incomplete(mixed, schema), 1L)
 })
 
 

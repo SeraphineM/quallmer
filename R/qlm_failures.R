@@ -14,7 +14,10 @@
 #' * it carries an `.error`. ellmer records one when the request failed.
 #'   [qlm_code()] records one when a response came back but ellmer could
 #'   extract no structured data from it, which ellmer reports only by
-#'   warning, and on the JSON path when a response never validated; or
+#'   warning; when a response used the whole declared `max_tokens` limit and
+#'   returned nothing; and on the JSON path when a response never validated
+#'   or was cut off at that limit (see the *Truncated responses* section of
+#'   [qlm_code()]); or
 #' * every required scalar property of the codebook schema is `NA` for it.
 #'   A structured call can succeed at the HTTP level and still return nothing
 #'   usable, when the endpoint accepted the JSON schema and ignored it, so an
@@ -73,7 +76,7 @@ qlm_failures <- function(x) {
 #' @keywords internal
 #' @noRd
 failed_units <- function(x) {
-  errored <- !vapply(recorded_errors(x), is.null, logical(1))
+  errored <- errored_rows(x)
 
   # required_scalar_fields() ignores arrays and nested objects deliberately;
   # for those, empty is not missing.
@@ -104,6 +107,18 @@ recorded_errors <- function(x) {
   } else {
     vector("list", nrow(x))
   }
+}
+
+
+#' Which rows carry a recorded error?
+#'
+#' @param x A `qlm_coded` object, or any data frame that may have an `.error`
+#'   list-column.
+#' @return A logical vector of length `nrow(x)`.
+#' @keywords internal
+#' @noRd
+errored_rows <- function(x) {
+  !vapply(recorded_errors(x), is.null, logical(1))
 }
 
 
