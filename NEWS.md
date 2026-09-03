@@ -2,6 +2,16 @@
 
 ## Bug fixes
 
+* The deprecated `annotate()` and `trail_record()` run again. `annotate()`
+  passed its `model_name` to `qlm_code()` under that name, whose argument is
+  `model`, so the value fell through to the provider call and every use
+  failed, with `model` reported missing or `model_name` reported unused.
+  `annotate()` again returns its identifier column as `id`, as documented,
+  rather than `qlm_code()`'s `.id`, and `trail_record()` now always restores
+  the caller's `id_col` values in place of the sequential ones `annotate()`
+  generates. Both functions still warn that `qlm_code()` replaces them
+  (#141).
+
 * `qlm_code()` now says when a model name is not one its provider lists,
   with the nearest names it does have, instead of reporting only the
   provider's HTTP error. The provider's model list is fetched through
