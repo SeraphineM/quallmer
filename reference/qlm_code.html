@@ -256,7 +256,12 @@ start rather than making a call it could not check, and says so. Use
 <code>"structured"</code> to rely on the provider regardless.</p>
 <p>On the JSON path, units that never validate have <code>NA</code> coded values and a
 <code>.error</code> list-column recording the reason, and <code>max_retries</code> controls how
-many repair attempts each unit gets. Batch processing and image codebooks
+many repair attempts each unit gets. On the structured path, a response
+from which ellmer could extract no structured data, which it reports only
+by warning, is likewise given an <code>.error</code>. On either path, <code><a href="qlm_failures.html">qlm_failures()</a></code>
+lists the units that produced no usable coding, with the reason for each,
+and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> reports how many there were. Batch processing and image
+codebooks
 are not supported there, so <code>"auto"</code> will not fall back under
 <code>batch = TRUE</code>. The path actually taken is recorded in the run metadata as
 <code>backend</code>.</p>
