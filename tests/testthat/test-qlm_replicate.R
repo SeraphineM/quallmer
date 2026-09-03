@@ -835,3 +835,66 @@ test_that("qlm_replicate keeps an explicitly supplied credential across an endpo
     seen$credentials()$Authorization, "Bearer dashscope-key"
   )
 })
+
+
+test_that("qlm_replicate completes the replication as its parent was completed", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "test/model"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+
+  seen <- new.env()
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", coded)
+  mockery::stub(f, "replay_backfill", function(result, parent, backfill = NULL) {
+    seen$parent <- parent
+    seen$backfill <- backfill
+    result
+  })
+
+  f(coded)
+  expect_identical(seen$parent, coded)
+  expect_null(seen$backfill)
+
+  f(coded, backfill = FALSE)
+  expect_false(seen$backfill)
+})
+
+test_that("qlm_replicate leaves the coding path to a new provider", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2, backend = "json_mode",
+                    max_retries = 3L),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+
+  seen <- new.env()
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen$args <- list(...)
+    coded
+  })
+  mockery::stub(f, "replay_backfill", function(result, ...) result)
+
+  # Same provider: the JSON path and its retries travel
+  f(coded)
+  expect_equal(seen$args$structured, "json")
+  expect_equal(seen$args$max_retries, 3L)
+
+  # Another provider: the path does not, so qlm_code() chooses for it; the
+  # retry budget still applies wherever JSON mode is taken
+  f(coded, model = "openai/gpt-4o-mini")
+  expect_null(seen$args$structured)
+  expect_equal(seen$args$max_retries, 3L)
+})

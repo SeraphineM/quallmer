@@ -1,5 +1,35 @@
 # quallmer 0.4.0.9000 (development version)
 
+## New features
+
+* New `qlm_backfill()` re-codes only the units a run failed on and merges the
+  results into the original object, instead of re-running the whole corpus
+  to recover a handful of transient failures. Which units to retry is
+  decided afresh on each pass by the test `qlm_failures()` uses, so a
+  request rejected on length drops out as soon as a pass records it, and a
+  response cut off at `max_tokens` is retried only when the backfill raises
+  the limit through `params`; content refusals are retried, because they are
+  not deterministic. A pass that recovers nothing ends the backfill early.
+  Passes run with the run's own model and settings by default, on the path
+  the run actually took. A different `model` may be given, for units the
+  original model consistently refuses or cannot fit in its context window,
+  and the result then records which units came from which model and says so
+  when printed, since a coding by two instruments has to be disclosed as
+  one. Rows keep their order, a failed retry never overwrites anything, and
+  token and cost columns are summed across attempts. `qlm_code()` gains
+  `backfill = TRUE` to complete a run in the same call, and `qlm_replicate()`
+  gains `backfill`, which by default replays the passes recorded on the
+  parent so that a replication of a completed run is complete on the same
+  terms (#136).
+
+* `qlm_replicate()` no longer carries the coding path across a change of
+  provider. It reproduced the path the parent took, `structured` or `json`,
+  which is right for the same provider and wrong for another: a JSON-mode
+  DeepSeek run replicated on OpenAI would skip provider-side enforcement, and
+  a structured OpenAI run replicated on DeepSeek would fail outright. With a
+  new provider the path is now chosen as for a fresh run; `max_retries`
+  still carries, as before.
+
 ## Bug fixes
 
 * The `.id` column of a `qlm_coded` object must now be a key: unique and

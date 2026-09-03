@@ -10,6 +10,7 @@ qlm_replicate(
   codebook = NULL,
   model = NULL,
   batch = NULL,
+  backfill = NULL,
   name = NULL,
   notes = NULL
 )
@@ -42,6 +43,12 @@ the codebook from \code{x}.}
 processing or \code{FALSE} to use parallel processing, regardless of the
 original setting.}
 
+\item{backfill}{Whether to complete the replication with \code{\link[=qlm_backfill]{qlm_backfill()}}.
+\code{NULL} (default) replays the passes recorded on \code{x}, if any, with the same
+models and overrides in the same order; \code{TRUE} runs a default backfill
+with the replication's own model whether or not \code{x} had one; \code{FALSE}
+leaves the replication as it came back.}
+
 \item{name}{Optional name for this run. If \code{NULL}, defaults to the model
 name (if changed) or \code{"replication_N"} where N is the replication count.}
 
@@ -65,7 +72,11 @@ The coding path is reproduced from the path the original run actually took,
 not the \code{structured} mode it requested: a run that asked for \code{"auto"} and
 fell back to JSON mode replicates as \code{"json"}, so that an intermittently
 conforming endpoint cannot quietly skip the local validation the original
-relied on. Pass \code{structured} explicitly to override.
+relied on. Pass \code{structured} explicitly to override. When the provider
+changes, the path is chosen afresh for the new provider. By the same rule,
+a parent that was completed with \code{\link[=qlm_backfill]{qlm_backfill()}} has its passes replayed
+on the replication, so the two are complete on the same terms; see
+\code{backfill}.
 }
 \examples{
 \donttest{
@@ -83,5 +94,6 @@ qlm_compare(coded, coded2, by = "sentiment", level = "nominal")
 }
 \seealso{
 \code{\link[=qlm_code]{qlm_code()}} for initial coding, \code{\link[=qlm_compare]{qlm_compare()}} for comparing
-replicated results.
+replicated results, \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code only the units a run
+failed on.
 }

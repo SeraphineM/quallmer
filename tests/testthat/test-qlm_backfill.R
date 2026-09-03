@@ -1,0 +1,506 @@
+# Helpers ---------------------------------------------------------------------
+
+backfill_schema <- ellmer::type_object(
+  score = ellmer::type_integer("Score."),
+  note = ellmer::type_string("Optional note.", required = FALSE)
+)
+
+# A coded object built directly, so no API is needed. `results` carries an
+# `id` column; the inputs are named by it so the backfill can subset them.
+make_run <- function(results, schema = backfill_schema, chat_args = list(),
+                     execution_args = list(), backend = "structured",
+                     name = "run1", n_units = nrow(results)) {
+  codebook <- qlm_codebook("Test", "Test prompt", schema)
+  data <- stats::setNames(paste0("text ", results$id), results$id)
+  new_qlm_coded(
+    results = results,
+    codebook = codebook,
+    data = data,
+    input_type = "text",
+    chat_args = c(list(name = "openai/gpt-4o-mini"), chat_args),
+    execution_args = execution_args,
+    batch = FALSE,
+    metadata = list(timestamp = Sys.time(), n_units = n_units, backend = backend),
+    name = name,
+    call = quote(qlm_code(...)),
+    parent = NULL
+  )
+}
+
+# A stand-in for qlm_code(): pass k answers with the k-th table in `passes`,
+# each a data frame with an `id` column, from which the rows for the units
+# asked for are taken. Records every call in `calls`.
+fake_qlm_code <- function(passes, calls = new.env()) {
+  function(x, codebook, model, ..., batch = FALSE, name = NULL) {
+    k <- (calls$n %||% 0L) + 1L
+    calls$n <- k
+    calls$args[[k]] <- c(list(x = x, model = model, batch = batch, name = name), list(...))
+    table <- passes[[k]]
+    rows <- table[match(names(x), table$id), , drop = FALSE]
+    rows$id <- names(x)
+    rownames(rows) <- NULL
+    new_qlm_coded(
+      results = rows,
+      codebook = codebook,
+      data = x,
+      input_type = "text",
+      chat_args = list(name = model),
+      execution_args = list(),
+      metadata = list(timestamp = Sys.time(), n_units = length(x)),
+      name = name,
+      call = quote(qlm_code(...)),
+      parent = NULL
+    )
+  }
+}
+
+backfill_with <- function(passes, calls = new.env()) {
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", fake_qlm_code(passes, calls))
+  f
+}
+
+error_col <- function(...) {
+  lapply(list(...), function(m) if (is.null(m)) NULL else simpleError(m))
+}
+
+
+# Guards ----------------------------------------------------------------------
+
+test_that("qlm_backfill rejects what it cannot backfill", {
+  expect_error(qlm_backfill(data.frame(a = 1)), "must be a")
+
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = c(NA, NA)))
+  expect_error(qlm_backfill(run, attempts = 0), "single positive integer")
+  expect_error(qlm_backfill(run, attempts = c(1, 2)), "single positive integer")
+  expect_error(qlm_backfill(run, model = c("a", "b")), "single string")
+  expect_error(qlm_backfill(run, codebook = codebook(run)), "codebook cannot be changed")
+  expect_error(qlm_backfill(run, batch = TRUE), "cannot be set")
+
+  human <- qlm_humancoded(data.frame(.id = c("a", "b"), score = c(1L, 2L)), name = "coder")
+  expect_error(qlm_backfill(human), "human-coded")
+})
+
+
+# Filling ---------------------------------------------------------------------
+
+test_that("qlm_backfill re-codes only the failed units and merges them in place", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(
+    id = c("a", "b", "c", "d"),
+    score = c(2L, NA, 4L, NA),
+    note = c("fine", NA, NA, NA),
+    input_tokens = c(10, 10, 10, 0), output_tokens = c(5, 5, 5, 0),
+    cached_input_tokens = c(0, 0, 0, 0), cost = c(0.01, 0.01, 0.01, 0)
+  )
+  results$.error <- error_col(NULL, "Invalid JSON", NULL, "HTTP 500 Internal Server Error.")
+  run <- make_run(
+    results,
+    chat_args = list(params = list(temperature = 0)),
+    execution_args = list(include_tokens = TRUE, include_cost = TRUE, on_error = "continue")
+  )
+  expect_equal(qlm_failures(run)$.id, c("b", "d"))
+
+  calls <- new.env()
+  pass <- data.frame(
+    id = c("b", "d"), score = c(3L, 5L), note = c("late", NA),
+    input_tokens = c(11, 12), output_tokens = c(6, 7),
+    cached_input_tokens = c(0, 0), cost = c(0.02, 0.03)
+  )
+  f <- backfill_with(list(pass), calls)
+
+  expect_message(filled <- f(run), "Recovered 2 units; 0 still failed")
+
+  # Only the failed units were sent, named by .id, with the run's own settings
+  expect_equal(calls$n, 1)
+  sent <- calls$args[[1]]
+  expect_equal(names(sent$x), c("b", "d"))
+  expect_equal(unname(sent$x), c("text b", "text d"))
+  expect_equal(sent$model, "openai/gpt-4o-mini")
+  expect_false(sent$batch)
+  expect_equal(sent$params, list(temperature = 0))
+  expect_equal(sent$on_error, "continue")
+  expect_true(sent$include_tokens)
+  expect_equal(sent$structured, "structured")
+  expect_equal(sent$name, "run1_backfill_1")
+
+  # Same rows, same order; the good ones untouched, the failed ones filled
+  expect_s3_class(filled, "qlm_coded")
+  expect_equal(filled$.id, c("a", "b", "c", "d"))
+  expect_equal(filled$score, c(2L, 3L, 4L, 5L))
+  expect_equal(filled$note, c("fine", "late", NA, NA))
+  expect_equal(nrow(qlm_failures(filled)), 0)
+  expect_true(all(vapply(filled$.error, is.null, logical(1))))
+
+  # Usage is summed across attempts, since the failed ones were billed too
+  expect_equal(filled$input_tokens, c(10, 21, 10, 12))
+  expect_equal(filled$output_tokens, c(5, 11, 5, 7))
+  expect_equal(filled$cost, c(0.01, 0.03, 0.01, 0.03))
+
+  # Identity and provenance
+  expect_identical(attr(filled, "codebook"), attr(run, "codebook"))
+  expect_identical(inputs(filled), inputs(run))
+  expect_equal(qlm_meta(filled, "name"), "run1")
+  expect_equal(qlm_meta(filled, "n_units", type = "object"), 4)
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_length(passes, 1)
+  expect_equal(passes[[1]]$attempted, c("b", "d"))
+  expect_equal(passes[[1]]$recovered, c("b", "d"))
+  expect_s3_class(passes[[1]]$timestamp, "POSIXct")
+})
+
+test_that("qlm_backfill never overwrites a coding with a failed retry", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b"), score = c(1L, NA), note = c(NA, NA))
+  results$.error <- error_col(NULL, "Invalid JSON")
+  run <- make_run(results)
+
+  # The retry fails again, with a different reason
+  pass <- data.frame(id = "b", score = NA_integer_, note = NA_character_)
+  pass$.error <- error_col("HTTP 429 Too Many Requests.")
+  f <- backfill_with(list(pass, pass))
+
+  expect_message(filled <- f(run), "No progress")
+  expect_equal(filled$score, c(1L, NA))
+  # The latest reason is recorded
+  expect_equal(qlm_failures(filled)$reason, "HTTP 429 Too Many Requests.")
+  # ... and the pass is on record as having recovered nothing
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_length(passes, 1)
+  expect_equal(passes[[1]]$attempted, "b")
+  expect_equal(passes[[1]]$recovered, character())
+})
+
+test_that("qlm_backfill makes a second pass for what the first did not recover", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b", "c"), score = c(NA, NA, 3L), note = NA_character_)
+  results$.error <- error_col("Invalid JSON", "Invalid JSON", NULL)
+  run <- make_run(results, backend = "json_mode")
+
+  calls <- new.env()
+  first <- data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_)
+  first$.error <- error_col(NULL, "Invalid JSON")
+  second <- data.frame(id = "b", score = 2L, note = NA_character_)
+  f <- backfill_with(list(first, second), calls)
+
+  filled <- suppressMessages(f(run, attempts = 3))
+
+  expect_equal(calls$n, 2)
+  expect_equal(names(calls$args[[1]]$x), c("a", "b"))
+  expect_equal(names(calls$args[[2]]$x), "b")
+  # A run that took the JSON path is backfilled on it
+  expect_equal(calls$args[[1]]$structured, "json")
+  expect_equal(filled$score, c(1L, 2L, 3L))
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_length(passes, 2)
+  expect_equal(passes[[1]]$recovered, "a")
+  expect_equal(passes[[2]]$recovered, "b")
+})
+
+test_that("qlm_backfill stops after a pass that recovers nothing", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b"), score = c(NA, NA), note = NA_character_)
+  run <- make_run(results)
+
+  calls <- new.env()
+  nothing <- data.frame(id = c("a", "b"), score = c(NA_integer_, NA_integer_), note = NA_character_)
+  f <- backfill_with(list(nothing, nothing, nothing), calls)
+
+  expect_message(filled <- f(run, attempts = 3), "No progress")
+  expect_equal(calls$n, 1)
+  expect_equal(nrow(qlm_failures(filled)), 2)
+})
+
+test_that("qlm_backfill does nothing when nothing failed", {
+  skip_if_not_installed("mockery")
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, 2L), note = NA_character_))
+  calls <- new.env()
+  f <- backfill_with(list(), calls)
+
+  expect_message(out <- f(run), "Nothing to backfill")
+  expect_null(calls$n)
+  expect_identical(out, run)
+  expect_null(qlm_meta(out, type = "object")$backfill)
+})
+
+
+# What is left alone ----------------------------------------------------------
+
+test_that("qlm_backfill skips length rejections, and truncations unless params change", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b", "c", "d"), score = c(NA, NA, NA, NA), note = NA_character_)
+  results$.error <- error_col(
+    "HTTP 400 Bad Request. This model's maximum context length is 128000 tokens.",
+    "The response was cut off at the max_tokens limit after 4,096 output tokens; raise the limit with params(max_tokens = ) to let the model finish.",
+    "Invalid JSON",
+    NULL
+  )
+  run <- make_run(results)
+
+  calls <- new.env()
+  pass <- data.frame(id = c("b", "c", "d"), score = c(1L, 2L, 3L), note = NA_character_)
+  f <- backfill_with(list(pass), calls)
+
+  expect_message(filled <- f(run), "Leaving 2 units alone")
+  expect_equal(names(calls$args[[1]]$x), c("c", "d"))
+  expect_equal(filled$score, c(NA, NA, 2L, 3L))
+
+  # A new params is how the output limit is raised, so a cut-off unit is
+  # retried then; the length rejection still is not
+  calls <- new.env()
+  f <- backfill_with(list(pass), calls)
+  filled <- suppressMessages(f(run, params = ellmer::params(max_tokens = 32000)))
+  expect_equal(names(calls$args[[1]]$x), c("b", "c", "d"))
+  expect_equal(calls$args[[1]]$params$max_tokens, 32000)
+  expect_equal(filled$score, c(NA, 1L, 2L, 3L))
+  # ... and the overrides are on record
+  expect_equal(qlm_meta(filled, "backfill", type = "object")[[1]]$overrides$params$max_tokens, 32000)
+})
+
+test_that("qlm_backfill with another model retries everything, and records the model", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b", "c"), score = c(NA, NA, 3L), note = NA_character_)
+  results$.error <- error_col(
+    "HTTP 400 Bad Request. This model's maximum context length is 128000 tokens.",
+    "The response was cut off at the max_tokens limit after 4,096 output tokens.",
+    NULL
+  )
+  run <- make_run(results, backend = "structured")
+
+  calls <- new.env()
+  pass <- data.frame(id = c("a", "b"), score = c(1L, 2L), note = NA_character_)
+  f <- backfill_with(list(pass), calls)
+
+  expect_message(filled <- f(run, model = "deepseek/deepseek-chat"), "deepseek/deepseek-chat")
+
+  sent <- calls$args[[1]]
+  expect_equal(names(sent$x), c("a", "b"))
+  expect_equal(sent$model, "deepseek/deepseek-chat")
+  # The parent's coding path is not imposed on a different provider
+  expect_null(sent$structured)
+  expect_equal(filled$score, c(1L, 2L, 3L))
+
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_equal(passes[[1]]$model, "deepseek/deepseek-chat")
+  expect_equal(passes[[1]]$recovered, c("a", "b"))
+  # A pass with the run's own model records no model
+  same <- backfill_with(list(data.frame(id = "a", score = 1L, note = NA_character_)))
+  again <- suppressMessages(same(make_run(data.frame(id = "a", score = NA, note = NA_character_))))
+  expect_null(qlm_meta(again, "backfill", type = "object")[[1]]$model)
+
+  out <- capture.output(print(filled))
+  expect_true(any(grepl("^# Backfill: 1 pass, recovered 2 of 2 \\(2 with deepseek/deepseek-chat\\)", out)))
+})
+
+test_that("qlm_backfill re-derives the skip list from what a pass recorded", {
+  skip_if_not_installed("mockery")
+  # Three units failed with no recorded reason (abandoned requests). The
+  # first pass recovers "b", learns that "a" is too long, and fails "c"
+  # transiently; the second pass must resend "c" only.
+  results <- data.frame(id = c("a", "b", "c"), score = c(NA, NA, NA), note = NA_character_)
+  run <- make_run(results)
+
+  calls <- new.env()
+  first <- data.frame(id = c("a", "b", "c"), score = c(NA_integer_, 2L, NA_integer_), note = NA_character_)
+  first$.error <- error_col("Request too large: maximum context length exceeded", NULL, "Invalid JSON")
+  second <- data.frame(id = "c", score = 3L, note = NA_character_)
+  f <- backfill_with(list(first, second), calls)
+
+  filled <- suppressMessages(f(run, attempts = 3))
+  expect_equal(calls$n, 2)
+  expect_equal(names(calls$args[[1]]$x), c("a", "b", "c"))
+  expect_equal(names(calls$args[[2]]$x), "c")
+  expect_equal(filled$score, c(NA, 2L, 3L))
+  expect_match(qlm_failures(filled)$reason, "context length")
+})
+
+test_that("is_terminal_failure classifies reasons", {
+  expect_equal(
+    is_terminal_failure(c(NA, "maximum context length exceeded", "cut off at the max_tokens limit", "Invalid JSON")),
+    c(FALSE, TRUE, TRUE, FALSE)
+  )
+  # Nothing is terminal under a different model
+  expect_equal(
+    is_terminal_failure(c(NA, "maximum context length exceeded", "cut off at the max_tokens limit"),
+                        model_changed = TRUE),
+    c(FALSE, FALSE, FALSE)
+  )
+  expect_equal(
+    is_terminal_failure(c("maximum context length exceeded", "cut off at the max_tokens limit"),
+                        overrides = list(params = ellmer::params(max_tokens = 1))),
+    c(TRUE, FALSE)
+  )
+  # ellmer's own wording for the same condition
+  expect_true(is_output_truncation("Response was truncated because it hit the `max_tokens` limit."))
+  expect_false(is_output_truncation(NA_character_))
+})
+
+
+# Failures of the backfill itself ---------------------------------------------
+
+test_that("qlm_backfill errors when the first pass fails outright, warns later", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b"), score = c(NA, NA), note = NA_character_)
+  run <- make_run(results)
+
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(...) stop("Every request was rejected by the provider."))
+  expect_error(suppressMessages(f(run)), "before recovering anything")
+
+  # Pass one recovers "a", pass two blows up: keep "a"
+  calls <- new.env()
+  first <- data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_)
+  fake <- fake_qlm_code(list(first), calls)
+  g <- qlm_backfill
+  mockery::stub(g, "qlm_code", function(...) {
+    if ((calls$n %||% 0L) >= 1L) stop("HTTP 503 Service Unavailable.")
+    fake(...)
+  })
+  expect_warning(filled <- suppressMessages(g(run)), "keeping what earlier passes recovered")
+  expect_equal(filled$score, c(1L, NA))
+  expect_length(qlm_meta(filled, "backfill", type = "object"), 1)
+})
+
+
+# Merging ---------------------------------------------------------------------
+
+test_that("merge_backfill_rows handles arrays, nested objects and factors", {
+  schema <- ellmer::type_object(
+    tags = ellmer::type_array(ellmer::type_string("A tag.")),
+    meta = ellmer::type_object(a = ellmer::type_string("A."), b = ellmer::type_integer("B.")),
+    score = ellmer::type_integer("Score.")
+  )
+  convert <- function(rows) {
+    out <- ellmer:::convert_from_type(rows, ellmer::type_array(schema))
+    out
+  }
+  original <- convert(list(
+    list(tags = list("x"), meta = list(a = "p", b = 1L), score = 1L),
+    NULL,
+    NULL
+  ))
+  original$id <- c("a", "b", "c")
+  original$.error <- error_col(NULL, "Invalid JSON", "Invalid JSON")
+  run <- make_run(original, schema = schema)
+  expect_equal(qlm_failures(run)$.id, c("b", "c"))
+
+  retry <- convert(list(
+    list(tags = list("y", "z"), meta = list(a = "q", b = 2L), score = 2L),
+    NULL
+  ))
+  retry$id <- c("b", "c")
+  retry$.error <- error_col(NULL, "still not JSON")
+  new <- make_run(retry, schema = schema)
+
+  merged <- merge_backfill_rows(run, new)
+
+  expect_s3_class(merged, "qlm_coded")
+  expect_equal(merged$.id, c("a", "b", "c"))
+  expect_equal(merged$tags[[1]], "x")
+  expect_equal(merged$tags[[2]], c("y", "z"))
+  expect_equal(merged$meta$a, c("p", "q", NA))
+  expect_equal(merged$meta$b, c(1L, 2L, NA))
+  expect_equal(merged$score, c(1L, 2L, NA))
+  expect_null(merged$.error[[2]])
+  expect_equal(conditionMessage(merged$.error[[3]]), "still not JSON")
+  expect_identical(attr(merged, "meta"), attr(run, "meta"))
+})
+
+test_that("merge_backfill_rows reconciles column types and adds .error where needed", {
+  # An original whose failed column is all NA can carry a bare logical NA
+  original <- data.frame(id = c("a", "b"), score = c(NA, NA), note = NA)
+  run <- make_run(original)
+  retry <- data.frame(id = "b", score = 2L, note = "ok")
+  new <- make_run(retry)
+
+  merged <- merge_backfill_rows(run, new)
+  expect_equal(merged$score, c(NA, 2L))
+  expect_equal(merged$note, c(NA, "ok"))
+  expect_false(".error" %in% names(merged))
+
+  # .error appears, before any usage columns, when a retry records one
+  original$input_tokens <- c(1, 1)
+  run <- make_run(original)
+  retry <- data.frame(id = "b", score = NA_integer_, note = NA_character_, input_tokens = 2)
+  retry$.error <- error_col("HTTP 500")
+  merged <- merge_backfill_rows(run, make_run(retry))
+  expect_equal(names(merged), c(".id", "score", "note", ".error", "input_tokens"))
+  expect_equal(merged$input_tokens, c(1, 3))
+  expect_equal(conditionMessage(merged$.error[[2]]), "HTTP 500")
+})
+
+test_that("merge_backfill_rows refuses units that are not in the run", {
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_))
+  stray <- make_run(data.frame(id = "z", score = 1L, note = NA_character_))
+  expect_error(merge_backfill_rows(run, stray), "not in the original run")
+})
+
+
+# Reporting -------------------------------------------------------------------
+
+test_that("print reports a backfill", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b", "c"), score = c(1L, NA, NA), note = NA_character_)
+  run <- make_run(results)
+  pass <- data.frame(id = c("b", "c"), score = c(2L, NA_integer_), note = NA_character_)
+  f <- backfill_with(list(pass, pass))
+  filled <- suppressMessages(f(run))
+
+  out <- capture.output(print(filled))
+  expect_true(any(grepl("^# Units:    3 \\(2 scored, 1 failed\\)", out)))
+  expect_true(any(grepl("^# Backfill: 2 passes, recovered 1 of 2", out)))
+})
+
+
+# Replaying on a replication --------------------------------------------------
+
+test_that("replay_backfill repeats the parent's passes, in order, until nothing is left", {
+  skip_if_not_installed("mockery")
+  parent <- make_run(data.frame(id = c("a", "b"), score = c(1L, 2L), note = NA_character_))
+  meta_attr <- attr(parent, "meta")
+  meta_attr$object$backfill <- list(
+    list(model = NULL, overrides = list(), attempted = "a", recovered = "a"),
+    list(model = "deepseek/deepseek-chat", overrides = list(params = list(max_tokens = 100)),
+         attempted = "b", recovered = "b")
+  )
+  attr(parent, "meta") <- meta_attr
+
+  # A replication with two failures, and a stand-in backfill that fixes one
+  # unit per call and records how it was called
+  calls <- list()
+  fake_backfill <- function(x, ..., model = NULL, attempts = 2L) {
+    calls[[length(calls) + 1L]] <<- list(model = model, attempts = attempts, dots = list(...))
+    i <- which(is.na(x$score))[1]
+    x$score[i] <- 9L
+    x
+  }
+  f <- replay_backfill
+  mockery::stub(f, "qlm_backfill", fake_backfill)
+  replication <- make_run(data.frame(id = c("a", "b"), score = c(NA, NA), note = NA_character_))
+
+  expect_message(out <- f(replication, parent), "Replaying the 2 backfill passes")
+  expect_length(calls, 2)
+  expect_null(calls[[1]]$model)
+  expect_equal(calls[[1]]$attempts, 1L)
+  expect_equal(calls[[2]]$model, "deepseek/deepseek-chat")
+  expect_equal(calls[[2]]$dots$params$max_tokens, 100)
+  expect_equal(out$score, c(9L, 9L))
+
+  # Stops as soon as the replication is complete
+  calls <- list()
+  one_gap <- make_run(data.frame(id = c("a", "b"), score = c(NA, 2L), note = NA_character_))
+  suppressMessages(f(one_gap, parent))
+  expect_length(calls, 1)
+
+  # FALSE does nothing; TRUE runs a default backfill even with no passes on record
+  calls <- list()
+  expect_identical(f(replication, parent, backfill = FALSE), replication)
+  expect_length(calls, 0)
+  plain <- make_run(data.frame(id = "a", score = 1L, note = NA_character_))
+  expect_identical(f(replication, plain), replication)
+  f(replication, plain, backfill = TRUE)
+  expect_length(calls, 1)
+  expect_equal(calls[[1]]$attempts, 2L)
+
+  expect_error(f(replication, parent, backfill = "yes"), "must be")
+})

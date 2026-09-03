@@ -64,6 +64,16 @@ learning.**
 - Returns a `qlm_coded` object containing the coded results and metadata
   for reproducibility.
 
+#### `qlm_backfill()`
+
+- Completes a run: `qlm_failures()` lists the units a run failed on and
+  why, and `qlm_backfill()` re-codes just those units and merges them
+  back, so a few transient failures do not mean re-running the corpus.
+- Uses the run’s own model and settings by default; a different model
+  can be given for units the original consistently refuses or cannot
+  fit, and the result then records which units came from which model.
+- `qlm_code(backfill = TRUE)` does this in the same call.
+
 #### `qlm_segment()` (optional)
 
 - Segments texts into thematic or conceptual units using an LLM.
@@ -81,6 +91,8 @@ learning.**
   codebooks, or parameters).
 - Tracks provenance chain for comparing results across different
   configurations.
+- Replays any backfill the original run had, so a replication is
+  complete on the same terms.
 - Enables systematic assessment of coding reliability and sensitivity to
   model choices.
 

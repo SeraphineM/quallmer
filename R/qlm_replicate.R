@@ -11,7 +11,11 @@
 #' not the `structured` mode it requested: a run that asked for `"auto"` and
 #' fell back to JSON mode replicates as `"json"`, so that an intermittently
 #' conforming endpoint cannot quietly skip the local validation the original
-#' relied on. Pass `structured` explicitly to override.
+#' relied on. Pass `structured` explicitly to override. When the provider
+#' changes, the path is chosen afresh for the new provider. By the same rule,
+#' a parent that was completed with [qlm_backfill()] has its passes replayed
+#' on the replication, so the two are complete on the same terms; see
+#' `backfill`.
 #'
 #' @param x A `qlm_coded` object.
 #' @param ... Optional overrides passed to [qlm_code()], such as `params`,
@@ -35,6 +39,11 @@
 #'   (default), uses the batch setting from `x`. Set to `TRUE` to use batch
 #'   processing or `FALSE` to use parallel processing, regardless of the
 #'   original setting.
+#' @param backfill Whether to complete the replication with [qlm_backfill()].
+#'   `NULL` (default) replays the passes recorded on `x`, if any, with the same
+#'   models and overrides in the same order; `TRUE` runs a default backfill
+#'   with the replication's own model whether or not `x` had one; `FALSE`
+#'   leaves the replication as it came back.
 #' @param name Optional name for this run. If `NULL`, defaults to the model
 #'   name (if changed) or `"replication_N"` where N is the replication count.
 #' @param notes Optional character string with descriptive notes about this
@@ -44,7 +53,8 @@
 #' @return A `qlm_coded` object with `run$parent` set to the parent's run name.
 #'
 #' @seealso [qlm_code()] for initial coding, [qlm_compare()] for comparing
-#'   replicated results.
+#'   replicated results, [qlm_backfill()] to re-code only the units a run
+#'   failed on.
 #'
 #' @examples
 #' \donttest{
@@ -61,9 +71,10 @@
 #'
 #' @importFrom utils modifyList
 #' @export
-qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL, notes = NULL) {
-  # Input validation, including that .id is a key and the run metadata and
-  # codebook are present; also upgrades an old metadata layout
+qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
+                          backfill = NULL, name = NULL, notes = NULL) {
+  # Input validation, including that .id is a key and the run metadata is
+  # present; also upgrades an old metadata layout
   x <- check_qlm_coded(x)
 
   # Extract original components
@@ -71,15 +82,6 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   meta_attr <- attr(x, "meta")
   original_codebook <- attr(x, "codebook")
   original_model <- meta_attr$object$chat_args$name
-  # Ensure it's always a list (empty if NULL)
-  original_execution_args <- meta_attr$object$execution_args %||% list()
-  # Everything the original passed to ellmer::chat() -- params, api_args,
-  # base_url, credentials -- must be restored for the same provider, or a
-  # replication runs with different model settings than the run it claims to
-  # replicate. Two exclusions: `name` is the model and is passed separately,
-  # and registered `tools` are not safe to recreate automatically.
-  original_chat_args <- meta_attr$object$chat_args %||% list()
-  original_chat_args[c("name", "tools")] <- NULL
   # Extract batch flag (default to FALSE for backward compatibility)
   original_batch <- meta_attr$object$batch %||% FALSE
   parent_name <- meta_attr$user$name
@@ -92,8 +94,79 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
 
   # Apply overrides (NULL means use original)
   use_codebook <- codebook %||% original_codebook
+
+  # Everything the original run passed to ellmer, merged with the overrides,
+  # on the path the original run took. Shared with qlm_backfill().
+  restored <- restore_run_args(x, overrides = list(...), model = model)
+  use_model <- restored$model
+  call_args <- restored$call_args
+
+  # Determine run name
+  if (is.null(name)) {
+    if (!is.null(model) && model != original_model) {
+      # Use new model name as run name
+      name <- sub(".*/", "", model)  # extract model part after provider/
+    } else {
+      # Generate replication name
+      name <- paste0("replication_",
+                     sum(grepl("^replication_", c(parent_name))) + 1)
+    }
+  }
+
+  # Call qlm_code with merged arguments, including batch flag
+  result <- do.call(qlm_code, c(
+    list(
+      x = original_data,
+      codebook = use_codebook,
+      model = use_model,
+      batch = use_batch,
+      name = name,
+      notes = notes
+    ),
+    call_args
+  ))
+
+  # Override the metadata to reflect this is a replication
+  result_meta <- attr(result, "meta")
+  result_meta$object$call <- current_call
+  result_meta$object$parent <- parent_name
+  attr(result, "meta") <- result_meta
+
+  replay_backfill(result, parent = x, backfill = backfill)
+}
+
+
+#' Restore the arguments a run was coded with
+#'
+#' Everything the original run passed to [ellmer::chat()] -- `params`,
+#' `api_args`, `base_url`, `credentials` -- and to the execution function,
+#' merged with any overrides, plus the `structured` mode and `max_retries`
+#' derived from the path the run actually took. Used by [qlm_replicate()] and
+#' [qlm_backfill()], so that both re-run a coding with the settings it was
+#' made with.
+#'
+#' @param x A `qlm_coded` object, already upgraded.
+#' @param overrides Named list of overrides, as from `...`.
+#' @param model Replacement model, or `NULL` to keep the original.
+#'
+#' @return A list with `model` (the model to use) and `call_args` (arguments
+#'   for [qlm_code()] beyond `x`, `codebook`, `model`, `batch`, `name` and
+#'   `notes`).
+#' @keywords internal
+#' @noRd
+restore_run_args <- function(x, overrides = list(), model = NULL) {
+  meta_attr <- attr(x, "meta")
+  original_model <- meta_attr$object$chat_args$name
+  # Ensure it's always a list (empty if NULL)
+  original_execution_args <- meta_attr$object$execution_args %||% list()
+  # Everything the original passed to ellmer::chat() -- params, api_args,
+  # base_url, credentials -- must be restored for the same provider, or a
+  # replication runs with different model settings than the run it claims to
+  # replicate. Two exclusions: `name` is the model and is passed separately,
+  # and registered `tools` are not safe to recreate automatically.
+  original_chat_args <- meta_attr$object$chat_args %||% list()
+  original_chat_args[c("name", "tools")] <- NULL
   use_model <- model %||% original_model
-  overrides <- list(...)
 
   # Credentials and endpoint settings belong to an endpoint, not to a model in
   # the abstract. Carrying them across endpoints can send a credential to the
@@ -145,18 +218,6 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     ]
   }
 
-  # Determine run name
-  if (is.null(name)) {
-    if (!is.null(model) && model != original_model) {
-      # Use new model name as run name
-      name <- sub(".*/", "", model)  # extract model part after provider/
-    } else {
-      # Generate replication name
-      name <- paste0("replication_",
-                     sum(grepl("^replication_", c(parent_name))) + 1)
-    }
-  }
-
   # Merge overrides over everything the original run used. chat_args and
   # execution_args are disjoint by construction -- qlm_code() splits `...`
   # between them by name -- so they can be merged here and re-split there,
@@ -177,7 +238,15 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
   #
   # Deriving from `backend` also covers objects coded before `structured`
   # existed, which record a backend but no mode.
-  original_backend <- meta_attr$object$backend
+  #
+  # The path does not carry across providers: the one a provider took says
+  # nothing about what another accepts (DeepSeek rejects the schema-
+  # constrained request outright), so with a new provider the mode is left
+  # for qlm_code() to choose as it would for a fresh run. max_retries still
+  # travels, since JSON mode is reachable for any provider and the setting
+  # is inert on the structured path.
+  provider_changed <- !identical(original_endpoint$provider, use_endpoint$provider)
+  original_backend <- if (provider_changed) NULL else meta_attr$object$backend
   original_mode <- if (identical(original_backend, "json_mode")) {
     "json"
   } else if (identical(original_backend, "structured")) {
@@ -198,24 +267,5 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     }
   }
 
-  # Call qlm_code with merged arguments, including batch flag
-  result <- do.call(qlm_code, c(
-    list(
-      x = original_data,
-      codebook = use_codebook,
-      model = use_model,
-      batch = use_batch,
-      name = name,
-      notes = notes
-    ),
-    call_args
-  ))
-
-  # Override the metadata to reflect this is a replication
-  result_meta <- attr(result, "meta")
-  result_meta$object$call <- current_call
-  result_meta$object$parent <- parent_name
-  attr(result, "meta") <- result_meta
-
-  result
+  list(model = use_model, call_args = call_args)
 }

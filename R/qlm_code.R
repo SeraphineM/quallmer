@@ -33,6 +33,10 @@
 #'   separate from ellmer's transport-level retries for rate limits and server
 #'   errors, which apply to every provider and are set with
 #'   `options(ellmer_max_tries = )`.
+#' @param backfill Logical. If `TRUE`, the units the run failed on are
+#'   re-coded by [qlm_backfill()] before the object is returned, with the same
+#'   model and settings, and the passes recorded in its metadata. Default is
+#'   `FALSE`. See [qlm_backfill()] for what is retried and what is left alone.
 #' @param batch Logical. If `TRUE`, uses [ellmer::batch_chat_structured()]
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
@@ -148,8 +152,10 @@
 #' from which ellmer could extract no structured data, which it reports only
 #' by warning, is likewise given an `.error`. On either path, [qlm_failures()]
 #' lists the units that produced no usable coding, with the reason for each,
-#' and `print()` reports how many there were. Batch processing and image
-#' codebooks
+#' and `print()` reports how many there were. Most such failures are
+#' transient, and [qlm_backfill()] re-codes just those units and merges them
+#' back; `backfill = TRUE` does that before returning. Batch processing and
+#' image codebooks
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
 #' `backend`.
@@ -221,7 +227,8 @@
 qlm_code <- function(x, codebook, model, ...,
                      batch = FALSE,
                      structured = c("auto", "structured", "json"),
-                     max_retries = 2L, name = NULL, notes = NULL) {
+                     max_retries = 2L, backfill = FALSE,
+                     name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
   explicit_retries <- !missing(max_retries)
@@ -231,6 +238,10 @@ qlm_code <- function(x, codebook, model, ...,
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
     codebook <- as_qlm_codebook(codebook)
+  }
+
+  if (!is.logical(backfill) || length(backfill) != 1L || is.na(backfill)) {
+    cli::cli_abort("{.arg backfill} must be {.code TRUE} or {.code FALSE}.")
   }
 
   if (!inherits(codebook, "qlm_codebook")) {
@@ -421,8 +432,7 @@ qlm_code <- function(x, codebook, model, ...,
   # Add model to chat_args for easy access
   chat_args$name <- model
 
-  # Create and return qlm_coded object
-  new_qlm_coded(
+  coded <- new_qlm_coded(
     results = results,
     codebook = codebook,
     data = x,
@@ -435,6 +445,12 @@ qlm_code <- function(x, codebook, model, ...,
     call = match.call(),
     parent = NULL
   )
+
+  # Complete the run in the same call, with the same model and settings
+  if (isTRUE(backfill)) {
+    coded <- qlm_backfill(coded)
+  }
+  coded
 }
 
 #' Default structured-output mode for a model
@@ -1148,6 +1164,26 @@ print.qlm_coded <- function(x, ...) {
     ""
   }
   cat("# Units:    ", units, breakdown, "\n", sep = "")
+
+  # A backfilled object is no longer the product of one call; say so (#136)
+  passes <- meta_attr$object$backfill
+  if (length(passes)) {
+    n_pass <- length(passes)
+    recovered <- lengths(lapply(passes, `[[`, "recovered"))
+    n_attempted <- length(unique(unlist(lapply(passes, `[[`, "attempted"))))
+    # Units coded by a model other than the run's make this a composite;
+    # say so here, not only in the metadata
+    other <- vapply(passes, function(p) p$model %||% NA_character_, character(1))
+    by_other <- tapply(recovered[!is.na(other)], other[!is.na(other)], sum)
+    by_other <- by_other[by_other > 0]
+    detail <- if (length(by_other)) {
+      paste0(" (", paste0(by_other, " with ", names(by_other), collapse = ", "), ")")
+    } else {
+      ""
+    }
+    cat("# Backfill: ", n_pass, if (n_pass == 1L) " pass" else " passes",
+        ", recovered ", sum(recovered), " of ", n_attempted, detail, "\n", sep = "")
+  }
 
   if (!is.null(meta_attr$object$parent)) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
