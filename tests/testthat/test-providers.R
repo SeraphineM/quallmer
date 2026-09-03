@@ -141,3 +141,99 @@ test_that("qlm_code() still reports a malformed model before looking at the prov
     "must be a single string"
   )
 })
+
+
+# Model-name diagnosis (#133) --------------------------------------------------
+
+clear_model_list_cache <- function() {
+  rm(list = ls(model_list_cache), envir = model_list_cache)
+}
+
+test_that("models_lister() finds ellmer's listing function, or nothing", {
+  expect_identical(models_lister("openai"), ellmer::models_openai)
+  expect_identical(models_lister("deepseek"), ellmer::models_deepseek)
+  # Bring-your-own-endpoint providers publish no list
+  expect_null(models_lister("openai_compatible"))
+  expect_null(models_lister("not_a_provider"))
+})
+
+test_that("provider_models() asks once per provider and endpoint, negatives included", {
+  clear_model_list_cache()
+  on.exit(clear_model_list_cache())
+  calls <- new.env()
+  lister <- function(base_url = "https://api.example", api_key = NULL, credentials = NULL) {
+    calls$n <- (calls$n %||% 0L) + 1L
+    calls$base_url <- base_url
+    if (grepl("down", base_url)) stop("HTTP 503 Service Unavailable.")
+    data.frame(id = c("m-large", "m-small"), created_at = Sys.Date())
+  }
+  f <- provider_models
+  mockery::stub(f, "models_lister", function(provider) if (provider == "acme") lister else NULL)
+
+  expect_equal(f("acme"), c("m-large", "m-small"))
+  expect_equal(f("acme"), c("m-large", "m-small"))
+  expect_equal(calls$n, 1)
+
+  # Only the arguments the lister takes travel, and a custom endpoint is a
+  # different cache entry
+  expect_equal(
+    f("acme", chat_args = list(base_url = "https://eu.example", params = list(), api_args = list())),
+    c("m-large", "m-small")
+  )
+  expect_equal(calls$n, 2)
+  expect_equal(calls$base_url, "https://eu.example")
+
+  # A failed lookup is NULL, and is not re-tried on the next report
+  expect_null(f("acme", chat_args = list(base_url = "https://down.example")))
+  expect_null(f("acme", chat_args = list(base_url = "https://down.example")))
+  expect_equal(calls$n, 3)
+
+  # No lister, no lookup
+  expect_null(f("openai_compatible"))
+})
+
+test_that("closest_model_names() suggests near misses and nothing for the rest", {
+  models <- c("gpt-4o-mini", "gpt-4o", "gpt-4.1", "o3-mini", "text-embedding-3-small")
+  expect_equal(closest_model_names("gpt-4o-mimi", models)[1], "gpt-4o-mini")
+  expect_equal(closest_model_names("GPT-4O", models)[1], "gpt-4o")
+  expect_length(closest_model_names("gpt-4o-mimi", models, n = 1L), 1)
+  expect_length(closest_model_names("llama-3.3-70b-versatile", models), 0)
+})
+
+test_that("model_name_hint() speaks only when the provider has no such model", {
+  clear_model_list_cache()
+  on.exit(clear_model_list_cache())
+  f <- model_name_hint
+  mockery::stub(f, "provider_models", function(provider, chat_args) {
+    if (provider == "acme") c("m-large", "m-small") else NULL
+  })
+
+  hint <- f("acme/m-larg")
+  expect_named(hint, c("i", "i"))
+  expect_match(hint[[1]], "\"m-larg\" is not a model that \"acme\" lists")
+  expect_match(hint[[1]], "ellmer::models_acme\\(\\)")
+  expect_match(hint[[2]], "Did you mean \"m-large\"")
+
+  # A name unlike anything on the list gets the list pointer but no guess
+  hint <- f("acme/completely-different")
+  expect_length(hint, 1)
+
+  # Listed: the cause is something else, so nothing is added
+  expect_length(f("acme/m-large"), 0)
+  # No list to consult: nothing is claimed either way
+  expect_length(f("openai_compatible/m-large"), 0)
+  # A bare provider means its default model, which exists
+  expect_length(f("acme"), 0)
+  expect_length(f(NA_character_), 0)
+})
+
+test_that("a diagnosis never reaches the network in tests", {
+  # The lookups above are all stubbed; the real lister must fail closed when
+  # it cannot run, returning nothing rather than raising
+  clear_model_list_cache()
+  on.exit(clear_model_list_cache())
+  withr::local_envvar(OPENAI_API_KEY = NA)
+  f <- provider_models
+  mockery::stub(f, "models_lister", function(provider) function(...) stop("no key"))
+  expect_null(f("openai"))
+})

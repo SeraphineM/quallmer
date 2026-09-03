@@ -206,10 +206,16 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   # Nothing was coded and the provider rejected every request outright: the run
   # is misconfigured, so say so rather than handing back a tibble of NAs.
   if (all(failed) && all(fatal)) {
+    # A wrong model name is the usual cause and the worst reported, so ask the
+    # provider whether the name exists before telling the user to check it.
+    hint <- model_name_hint(model, chat_args)
+    if (!length(hint)) {
+      hint <- c("i" = "Check the model name, your credentials, and any {.arg base_url}.")
+    }
     cli::cli_abort(c(
       "Every request to model {.val {model}} was rejected by the provider.",
       set_bullets(unique(unlist(problems))),
-      "i" = "Check the model name, your credentials, and any {.arg base_url}."
+      hint
     ), call = error_call)
   }
 
@@ -726,11 +732,13 @@ is_fatal_status <- function(status) {
 #' interpolated. Doubling them makes cli emit them literally.
 #'
 #' @param x A character vector of messages.
+#' @param n Keep at most this many, noting how many were dropped.
+#' @param bullet The cli bullet to name them with, `"x"` by default.
 #'
-#' @return A character vector named `"x"`, truncated to the first three.
+#' @return A character vector named `bullet`, truncated to the first `n`.
 #' @keywords internal
 #' @noRd
-set_bullets <- function(x, n = 3L) {
+set_bullets <- function(x, n = 3L, bullet = "x") {
   x <- x[!is.na(x) & nzchar(x)]
   if (!length(x)) {
     return(character())
@@ -739,7 +747,7 @@ set_bullets <- function(x, n = 3L) {
     x <- c(x[seq_len(n)], paste0("... and ", length(x) - n, " other reason(s)"))
   }
   x <- gsub("}", "}}", gsub("{", "{{", x, fixed = TRUE), fixed = TRUE)
-  stats::setNames(x, rep("x", length(x)))
+  stats::setNames(x, rep(bullet, length(x)))
 }
 
 

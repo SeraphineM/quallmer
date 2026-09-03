@@ -154,6 +154,18 @@
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
 #' `backend`.
 #'
+#' @section Rejected runs:
+#' When the provider rejects every request with a status that will not change
+#' on retry (400, 401, 403, 404 or 422), `qlm_code()` stops rather than
+#' returning a table of `NA`s. The most common cause is a model name the
+#' provider does not have, and providers rarely say so; many answer with a
+#' bare "HTTP 400 Bad Request". So before reporting, `qlm_code()` asks the
+#' provider for its model list, through ellmer's `models_<provider>()`, and
+#' says when the name is not on it, with the nearest names it does have. The
+#' lookup runs only after a run has failed, once per session and provider,
+#' and only where ellmer has a listing function; where it cannot run, or the
+#' name is on the list, the provider's own error is reported unchanged.
+#'
 #' @section Truncated responses:
 #'
 #' A response that runs into the provider's output limit (`max_tokens`) is cut
@@ -350,6 +362,18 @@ qlm_code <- function(x, codebook, model, ...,
         "i" = "Coding {.val {model}} in JSON mode with local validation.",
         "i" = attempt$error,
         "i" = "Use {.code structured = \"structured\"} to rely on the provider instead."
+      ))
+    } else if (isTRUE(attempt$rejected) &&
+               length(hint <- model_name_hint(model, chat_args))) {
+      # The provider refused every request, and confirms it has no such
+      # model. Falling back to JSON mode would only send the same name again,
+      # so stop here. A refusal the provider does not explain that way may
+      # be its answer to the schema-constrained request itself, which JSON
+      # mode is the cure for, so that case falls through as before.
+      cli::cli_abort(c(
+        "Every request to model {.val {model}} was rejected by the provider.",
+        set_bullets(attempt$error),
+        hint
       ))
     } else if (identical(structured, "structured")) {
       cli::cli_abort(c(
@@ -548,9 +572,15 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     }
   }
 
+  # `rejected` records whether the provider refused the run with a status
+  # that will not change on retry, so qlm_code() can ask about the model
+  # name when it reports; the message alone rarely says.
   attempt <- tryCatch(
     list(ok = TRUE, value = run(chat)),
-    error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+    error = function(e) list(
+      ok = FALSE, error = strip_ansi(conditionMessage(e)),
+      rejected = is_fatal_status(api_error_status(e))
+    )
   )
 
   # Alibaba Model Studio refuses `response_format` unless the word "json"
@@ -570,13 +600,30 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     )
     attempt <- tryCatch(
       list(ok = TRUE, value = run(build_chat(retry_prompt))),
-      error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+      error = function(e) list(
+        ok = FALSE, error = strip_ansi(conditionMessage(e)),
+        rejected = is_fatal_status(api_error_status(e))
+      )
     )
   }
 
   if (isTRUE(attempt$ok)) {
     attempt$value <- mark_truncated_rows(
       attempt$value, codebook$schema, cap, keep_tokens = keep_tokens
+    )
+  }
+
+  # Every request refused with a status that will not change on retry is
+  # misconfiguration, most often a model name the provider does not have.
+  # Returned as a failed attempt, with the reasons, so that qlm_code() can ask
+  # the provider about the name rather than hand back a table of NAs.
+  if (isTRUE(attempt$ok) && all_rejected(attempt$value)) {
+    attempt <- list(
+      ok = FALSE,
+      rejected = TRUE,
+      error = unique(failure_reasons(
+        recorded_errors(attempt$value), errored_rows(attempt$value)
+      ))
     )
   }
 
@@ -1164,3 +1211,29 @@ print.qlm_coded <- function(x, ...) {
   NextMethod()
 }
 
+
+
+#' Did the provider reject every row of a structured result?
+#'
+#' On the structured path a rejected request arrives as a row whose `.error`
+#' is the HTTP condition, with every field `NA`. A run rejected in its
+#' entirety is misconfiguration, not a schema problem, and should be reported
+#' as such.
+#'
+#' @param results What the structured call returned.
+#'
+#' @return `TRUE` when every row carries an error with a status that will not
+#'   change on retry.
+#' @keywords internal
+#' @noRd
+all_rejected <- function(results) {
+  errors <- recorded_errors(results)
+  if (!length(errors)) {
+    return(FALSE)
+  }
+  all(vapply(
+    errors,
+    function(e) !is.null(e) && is_fatal_status(api_error_status(e)),
+    logical(1)
+  ))
+}

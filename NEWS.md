@@ -2,6 +2,13 @@
 
 ## Bug fixes
 
+* `qlm_code()` now says when a model name is not one its provider lists,
+  with the nearest names it does have, instead of reporting only the
+  provider's HTTP error. The provider's model list is fetched through
+  ellmer's `models_<provider>()`, only after a run has been rejected in its
+  entirety and once per session; where no listing exists the provider's own
+  error is reported unchanged (#133).
+
 * The `.id` column of a `qlm_coded` object must now be a key: unique and
   never missing. Every later operation merges on `.id`, and `qlm_compare()`
   and `qlm_validate()` silently formed a Cartesian product of repeated

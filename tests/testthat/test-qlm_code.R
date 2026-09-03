@@ -727,6 +727,63 @@ test_that("structured = 'auto' still falls back when the endpoint answered in pr
 })
 
 
+test_that("a structured run the provider rejects outright names the model (#133)", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # ellmer's parallel path hands back every rejected request as a row whose
+  # .error is the HTTP condition, all fields NA
+  http_400 <- function() {
+    structure(
+      list(message = "HTTP 400 Bad Request.", status = 400L, call = NULL),
+      class = c("httr2_http_400", "httr2_http", "httr2_error", "rlang_error", "error", "condition")
+    )
+  }
+  rejected <- tibble::tibble(
+    score = c(NA_real_, NA_real_),
+    .error = list(http_400(), http_400())
+  )
+  expect_true(all_rejected(rejected))
+  expect_false(all_rejected(tibble::tibble(score = NA_real_, .error = list(simpleError("cut off")))))
+  expect_false(all_rejected(tibble::tibble(score = c(NA_real_, 1), .error = list(http_400(), NULL))))
+  expect_false(all_rejected(tibble::tibble(score = NA_real_)))
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = rejected))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+  mockery::stub(f, "model_name_hint", function(model, chat_args) {
+    c("i" = "\"gpt-4o-mimi\" is not a model that \"openai\" lists.")
+  })
+
+  # The provider confirms the name is wrong: stop, rather than send it again
+  # in JSON mode
+  expect_error(
+    f(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mimi"),
+    "is not a model that"
+  )
+  expect_null(calls$json)
+
+  # Without that confirmation, a rejection may be the provider refusing the
+  # schema-constrained request itself, so the fallback runs as before
+  g <- qlm_code
+  mockery::stub(g, "try_structured_call", structured_stub(results = rejected))
+  mockery::stub(g, "code_handler_json", json_stub(calls))
+  mockery::stub(g, "model_name_hint", function(model, chat_args) character())
+  expect_warning(
+    g(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mimi"),
+    "falling back to JSON mode"
+  )
+  expect_true(calls$json)
+
+  # And under structured = "structured" the rejection is the reported failure
+  expect_error(
+    g(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mimi",
+      structured = "structured"),
+    "HTTP 400 Bad Request"
+  )
+})
+
+
 test_that("a wholly failed structured run is reported, not re-coded in JSON mode", {
   skip_if_not_installed("mockery")
   calls <- new.env()
