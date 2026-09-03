@@ -29,10 +29,17 @@ url_arg_names <- c("base_url", "endpoint")
 #'
 #' Only literals are redacted from the call. An argument given as a variable
 #' or an expression, `api_key = key` or `api_key = Sys.getenv("KEY")`, names
-#' where the value came from rather than containing it, and stays. A
-#' `credentials` function is left whole for the same reason: it is recorded as
-#' written, which is safe when it reads an environment variable, and that is
-#' the recommended form.
+#' where the value came from rather than containing it, and stays.
+#'
+#' A `credentials` callback is a literal of its own kind: ellmer calls it for
+#' the secret, so `function() "sk-..."` holds the value as surely as
+#' `api_key = "sk-..."` does, and a closure serialised to the `.rds` carries
+#' its enclosing environment with whatever that captured. The one form that
+#' is kept is a zero-argument function whose body is a single
+#' `Sys.getenv("NAME")`, which names a variable rather than holding a value;
+#' it is rebuilt in the base environment so that nothing captured travels
+#' with it. Any other callback becomes `"<redacted>"`, in `chat_args` and in
+#' the call.
 #'
 #' @param meta A `meta` attribute as built by `new_qlm_coded()` and its
 #'   counterparts for comparisons and validations.
@@ -69,6 +76,9 @@ redact_chat_args <- function(chat_args) {
   if (!is.null(chat_args[["api_headers"]])) {
     chat_args[["api_headers"]] <- redact_headers(chat_args[["api_headers"]])
   }
+  if (!is.null(chat_args[["credentials"]])) {
+    chat_args[["credentials"]] <- redact_credentials(chat_args[["credentials"]])
+  }
   for (arg in intersect(names(chat_args), url_arg_names)) {
     if (is.character(chat_args[[arg]])) {
       chat_args[[arg]] <- redact_url(chat_args[[arg]])
@@ -104,6 +114,8 @@ redact_call <- function(call) {
       call[[i]] <- REDACTED
     } else if (identical(nm, "api_headers")) {
       call[[i]] <- redact_header_expr(value)
+    } else if (identical(nm, "credentials")) {
+      call[[i]] <- redact_credentials_expr(value)
     } else if (nm %in% url_arg_names && is.character(value)) {
       call[[i]] <- redact_url(value)
     }
@@ -159,6 +171,82 @@ redact_header_expr <- function(expr) {
   }
 
   expr
+}
+
+
+#' Redact a `credentials` callback held in `chat_args`
+#'
+#' A recognised safe callback is rebuilt from its body alone, in the base
+#' environment, so that the function serialised into the `.rds` carries no
+#' captured environment. Anything else, a function with another body or
+#' with arguments (a default can hold a secret), or a value that is not a
+#' function at all, becomes `"<redacted>"`.
+#'
+#' @param f The recorded `credentials` value.
+#'
+#' @return A rebuilt function, or `"<redacted>"`.
+#' @keywords internal
+#' @noRd
+redact_credentials <- function(f) {
+  if (!is.function(f) || is.primitive(f) || !is.null(formals(f)) ||
+      !is_safe_credentials_body(body(f))) {
+    return(REDACTED)
+  }
+  as.function(list(body(f)), envir = baseenv())
+}
+
+
+#' Redact a `credentials` argument in a recorded call
+#'
+#' A `function` literal is kept only in the recognised safe form, and then
+#' rebuilt from its parts so that no source reference, which can carry text
+#' beyond the code, travels with it. A variable or any other expression names
+#' a source and stays as written.
+#'
+#' @param expr The `credentials` argument of a recorded call.
+#'
+#' @return `expr`, a rebuilt function expression, or `"<redacted>"`.
+#' @keywords internal
+#' @noRd
+redact_credentials_expr <- function(expr) {
+  if (!is.call(expr) || !identical(expr[[1]], as.name("function"))) {
+    return(expr)
+  }
+  if (!is.null(expr[[2]]) || !is_safe_credentials_body(expr[[3]])) {
+    return(REDACTED)
+  }
+  as.call(list(as.name("function"), NULL, expr[[3]], NULL))
+}
+
+
+#' Is this function body a bare `Sys.getenv("NAME")`?
+#'
+#' Exactly one call, optionally wrapped in braces, to `Sys.getenv` or
+#' `base::Sys.getenv`, with a single string argument. A second argument is
+#' refused because `Sys.getenv("NAME", unset = "sk-...")` would hold the
+#' secret as its fallback.
+#'
+#' @param body A function body or expression.
+#'
+#' @return `TRUE` for the safe form only.
+#' @keywords internal
+#' @noRd
+is_safe_credentials_body <- function(body) {
+  if (is.call(body) && identical(body[[1]], as.name("{"))) {
+    if (length(body) != 2L) {
+      return(FALSE)
+    }
+    body <- body[[2]]
+  }
+  if (!is.call(body) || length(body) != 2L) {
+    return(FALSE)
+  }
+
+  fn <- body[[1]]
+  is_getenv <- identical(fn, quote(Sys.getenv)) || identical(fn, quote(base::Sys.getenv))
+  arg_name <- names(body)[2] %||% ""
+  is_getenv && is.character(body[[2]]) && length(body[[2]]) == 1L &&
+    arg_name %in% c("", "x")
 }
 
 

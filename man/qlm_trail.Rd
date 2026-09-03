@@ -63,8 +63,10 @@ credential of its own before it can be replicated.
 Only literal values are redacted from a call. A credential read where it
 is needed, through an environment variable ellmer reads by default or a
 \code{credentials = function() Sys.getenv("MY_KEY")} argument, never enters the
-record and is the recommended form. A \code{credentials} function is recorded
-as written, so it should not contain the key itself.
+record and is the recommended form. That is also the only \code{credentials}
+callback the trail keeps, rebuilt without its environment; a callback of
+any other shape is replaced by \code{"<redacted>"}, since it may hold or
+capture the secret it returns.
 }
 }
 \examples{

@@ -8,10 +8,11 @@
   previously appeared verbatim in the report's Call section and in the saved
   `.rds`. Their values are now replaced by `"<redacted>"` in each run's
   recorded call and chat arguments, in the returned trail and in both files,
-  and a message says which runs were affected. Reading the key where it is
-  needed, through an environment variable or
-  `credentials = function() Sys.getenv(...)`, keeps it out of the record
-  entirely and is the recommended form (#154).
+  and a message says which runs were affected. A `credentials` callback is
+  kept only as `function() Sys.getenv("NAME")`, rebuilt without its
+  environment; any other callback is redacted too. Reading the key where it
+  is needed, through an environment variable or that callback form, keeps
+  it out of the record entirely and is the recommended form (#154).
 
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as

@@ -53,9 +53,30 @@ test_that("redact_chat_args() handles headers given as a list and Azure's endpoi
   expect_equal(out$endpoint, "https://mine.openai.azure.com")
 })
 
-test_that("redact_chat_args() leaves a credentials function and unnamed input alone", {
-  f <- function() Sys.getenv("KEY")
-  expect_identical(redact_chat_args(list(credentials = f))$credentials, f)
+test_that("redact_chat_args() keeps only a Sys.getenv() credentials callback, rebuilt bare", {
+  f <- local({ captured <- "sk-hidden"; function() Sys.getenv("KEY") })
+  out <- redact_chat_args(list(credentials = f))$credentials
+  expect_true(is.function(out))
+  expect_identical(body(out), quote(Sys.getenv("KEY")))
+  expect_null(formals(out))
+  expect_identical(environment(out), baseenv())
+  expect_equal(out(), Sys.getenv("KEY"))
+
+  # Braces around the one call are fine; base:: is fine
+  expect_true(is.function(redact_chat_args(list(credentials = function() { Sys.getenv("K") }))$credentials))
+  expect_true(is.function(redact_chat_args(list(credentials = function() base::Sys.getenv("K")))$credentials))
+
+  # Anything that can hold the secret is replaced
+  expect_equal(redact_chat_args(list(credentials = function() "sk-secret"))$credentials, "<redacted>")
+  expect_equal(redact_chat_args(list(credentials = local({ k <- "sk"; function() k })))$credentials, "<redacted>")
+  expect_equal(redact_chat_args(list(credentials = function(key = "sk") key))$credentials, "<redacted>")
+  expect_equal(redact_chat_args(list(credentials = function() Sys.getenv("K", "sk-fallback")))$credentials, "<redacted>")
+  expect_equal(redact_chat_args(list(credentials = function() { x <- 1; Sys.getenv("K") }))$credentials, "<redacted>")
+  expect_equal(redact_chat_args(list(credentials = "sk-secret"))$credentials, "<redacted>")
+  expect_equal(redact_chat_args(list(credentials = sum))$credentials, "<redacted>")
+})
+
+test_that("redact_chat_args() leaves unnamed input alone", {
   expect_identical(redact_chat_args(list()), list())
   expect_identical(redact_chat_args(NULL), NULL)
   expect_identical(redact_chat_args(list(1, 2)), list(1, 2))
@@ -85,9 +106,39 @@ test_that("redact_call() keeps an argument that names its source rather than hol
     api_key = Sys.getenv("OPENAI_API_KEY"),
     base_url = my_url,
     api_headers = my_headers,
-    credentials = function() Sys.getenv("KEY")
+    credentials = my_creds
   ))
   expect_identical(redact_call(call), call)
+})
+
+test_that("redact_call() keeps only a Sys.getenv() credentials callback literal", {
+  safe <- quote(qlm_code(x, cb, credentials = function() Sys.getenv("KEY")))
+  expect_identical(redact_call(safe), safe)
+  expect_equal(deparse(redact_call(safe)), 'qlm_code(x, cb, credentials = function() Sys.getenv("KEY"))')
+
+  expect_identical(
+    redact_call(quote(qlm_code(x, cb, credentials = function() "sk-secret"))),
+    quote(qlm_code(x, cb, credentials = "<redacted>"))
+  )
+  expect_identical(
+    redact_call(quote(qlm_code(x, cb, credentials = function(k = "sk") k))),
+    quote(qlm_code(x, cb, credentials = "<redacted>"))
+  )
+  expect_identical(
+    redact_call(quote(qlm_code(x, cb, credentials = function() paste0("sk-", "abc")))),
+    quote(qlm_code(x, cb, credentials = "<redacted>"))
+  )
+})
+
+test_that("a kept callback literal carries no source reference (#154)", {
+  # keep.source = TRUE attaches the source text as the fourth element; a
+  # comment on that line would travel with it
+  old <- options(keep.source = TRUE); withr::defer(options(old))
+  expr <- parse(text = 'qlm_code(x, cb, credentials = function() Sys.getenv("KEY") # sk-in-a-comment\n)',
+                keep.source = TRUE)[[1]]
+  out <- redact_call(expr)
+  expect_null(out$credentials[[4]])
+  expect_false(any(grepl("sk-in-a-comment", deparse(out), fixed = TRUE)))
 })
 
 test_that("redact_call() is a no-op on calls without named arguments and on non-calls", {

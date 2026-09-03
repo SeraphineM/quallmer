@@ -888,7 +888,8 @@ credential_fixture <- function(run = "run1") {
       x, cb, model = "openai_compatible/m",
       base_url = "https://user:s3cret@host/v1?api_key=qs3cret&api-version=2024",
       api_key = "sk-lit3ral",
-      api_headers = c(Authorization = "Bearer hdr3cret", `anthropic-beta` = "tools-2024")
+      api_headers = c(Authorization = "Bearer hdr3cret", `anthropic-beta` = "tools-2024"),
+      credentials = function() "cb3cret"
     )),
     metadata = list(timestamp = as.POSIXct("2024-01-01 12:00:00"), n_units = 2),
     chat_args = list(
@@ -896,14 +897,14 @@ credential_fixture <- function(run = "run1") {
       base_url = "https://user:s3cret@host/v1?api_key=qs3cret&api-version=2024",
       api_key = "sk-lit3ral",
       api_headers = c(Authorization = "Bearer hdr3cret", `anthropic-beta` = "tools-2024"),
-      credentials = function() Sys.getenv("MY_KEY")
+      credentials = local({ captured <- "env3cret"; function() "cb3cret" })
     ),
     codebook = list(name = "sentiment", instructions = "Code sentiment")
   )
   coded
 }
 
-secrets <- c("s3cret", "qs3cret", "sk-lit3ral", "hdr3cret")
+secrets <- c("s3cret", "qs3cret", "sk-lit3ral", "hdr3cret", "cb3cret", "env3cret")
 
 expect_no_secret <- function(text) {
   for (secret in secrets) {
@@ -937,8 +938,26 @@ test_that("qlm_trail() writes no credential into the report or the .rds (#154)",
   expect_identical(meta$chat_args[c("base_url", "api_key", "api_headers")],
                    run$chat_args[c("base_url", "api_key", "api_headers")])
   expect_identical(meta$call, run$call)
-  # The credentials function is the safe form and is left whole
+  # A callback that returns a literal is gone, and so is its environment:
+  # the whole file holds neither the literal nor what the closure captured
+  expect_equal(run$chat_args$credentials, "<redacted>")
+  expect_true(any(grepl('credentials = "<redacted>"', report, fixed = TRUE)))
+  rds_file <- paste0(path, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  for (secret in secrets) {
+    expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+  }
+})
+
+test_that("a Sys.getenv() credentials callback survives the trail (#154)", {
+  coded <- credential_fixture()
+  attr(coded, "run")$chat_args$credentials <- function() Sys.getenv("MY_KEY")
+  attr(coded, "run")$call <- quote(qlm_code(x, cb, credentials = function() Sys.getenv("MY_KEY")))
+  trail <- suppressMessages(qlm_trail(coded))
+  run <- trail$runs[[1]]
   expect_true(is.function(run$chat_args$credentials))
+  expect_identical(body(run$chat_args$credentials), quote(Sys.getenv("MY_KEY")))
+  expect_identical(run$call, quote(qlm_code(x, cb, credentials = function() Sys.getenv("MY_KEY"))))
 })
 
 test_that("the returned trail is redacted like the files (#154)", {

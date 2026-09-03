@@ -53,8 +53,10 @@
 #' Only literal values are redacted from a call. A credential read where it
 #' is needed, through an environment variable ellmer reads by default or a
 #' `credentials = function() Sys.getenv("MY_KEY")` argument, never enters the
-#' record and is the recommended form. A `credentials` function is recorded
-#' as written, so it should not contain the key itself.
+#' record and is the recommended form. That is also the only `credentials`
+#' callback the trail keeps, rebuilt without its environment; a callback of
+#' any other shape is replaced by `"<redacted>"`, since it may hold or
+#' capture the secret it returns.
 #' }
 #'
 #' @references
