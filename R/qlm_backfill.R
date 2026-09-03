@@ -97,10 +97,9 @@
 #'
 #' @export
 qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
-  if (!inherits(x, "qlm_coded")) {
-    cli::cli_abort("{.arg x} must be a {.cls qlm_coded} object.")
-  }
-  x <- upgrade_meta(x)
+  # Integrity first: the class, the run metadata, and .id being a key, since
+  # the merge below is by .id; also upgrades an old metadata layout
+  x <- check_qlm_coded(x)
   meta_attr <- attr(x, "meta")
 
   if (identical(meta_attr$object$source, "human")) {
@@ -117,8 +116,6 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
   if (!is.null(model) && (!is.character(model) || length(model) != 1L || is.na(model))) {
     cli::cli_abort("{.arg model} must be a single string, or {.code NULL} for the run's own model.")
   }
-  check_unique_ids(x$.id, what = "{.arg x}")
-
   overrides <- list(...)
   if ("codebook" %in% names(overrides) || "x" %in% names(overrides)) {
     cli::cli_abort(c(
@@ -515,8 +512,8 @@ backfill_summary <- function(passes) {
 #' @keywords internal
 #' @noRd
 merge_backfill_rows <- function(x, new) {
-  check_unique_ids(x$.id, what = "{.arg x}")
-  check_unique_ids(new$.id, what = "the backfill pass")
+  check_ids(x$.id, what = "{.field .id} of {.arg x}")
+  check_ids(new$.id, what = "{.field .id} of the backfill pass")
   pos <- match(as.character(new$.id), as.character(x$.id))
   if (anyNA(pos)) {
     cli::cli_abort(
