@@ -32,7 +32,15 @@ variable in the schema. Names should match schema property names. Values
 should be one of \code{"nominal"}, \code{"ordinal"}, \code{"interval"}, or \code{"ratio"}.
 If \code{NULL} (default), levels are auto-detected from schema types using the
 following mapping: \code{type_boolean} and \code{type_enum} = nominal, \code{type_string}
-= nominal, \code{type_integer} = ordinal, \code{type_number} = interval.}
+= nominal, \code{type_integer} = ordinal, \code{type_number} = interval.
+
+Names may refer to properties at any depth of the schema, including those
+inside a nested \code{\link[ellmer:type_object]{type_object()}} or the items of a \code{\link[ellmer:type_array]{type_array()}}. A level
+declared for a nested variable describes that variable once the coded
+output has been unnested to one row per item, which is the form
+\code{\link[=qlm_compare]{qlm_compare()}} and \code{\link[=qlm_validate]{qlm_validate()}} consume. Because \code{levels} is a flat
+list, a name that occurs at more than one place in the schema cannot be
+declared and is an error; rename the properties to make them distinct.}
 }
 \value{
 A codebook object (a list with class \code{c("qlm_codebook", "task")})

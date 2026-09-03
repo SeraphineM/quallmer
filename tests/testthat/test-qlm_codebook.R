@@ -164,3 +164,128 @@ test_that("predefined codebooks are qlm_codebook objects", {
   # Predefined codebook should be qlm_codebook object
   expect_true(inherits(data_codebook_sentiment, "qlm_codebook"))
 })
+
+test_that("qlm_codebook levels accept variables nested inside a type_array", {
+  # The case from #131: one document yields many rated items, so the schema
+  # is an array of per-item objects and the variables that carry levels sit
+  # one array deep.
+  schema <- type_object(
+    assessments = type_array(
+      description = "One entry per item.",
+      items = type_object(
+        item_id = type_string("Identifier."),
+        importance = type_integer("0 = absent, 1 = mild, 2 = high."),
+        position = type_integer("1-7.")
+      )
+    )
+  )
+
+  cb <- qlm_codebook(
+    name = "nested_levels",
+    instructions = "Score each item.",
+    schema = schema,
+    levels = list(importance = "ordinal", position = "ordinal")
+  )
+
+  expect_equal(cb$levels, list(importance = "ordinal", position = "ordinal"))
+  expect_equal(qlm_levels(cb), list(importance = "ordinal", position = "ordinal"))
+
+  # The array itself and a mix of depths are both declarable
+  cb2 <- qlm_codebook(
+    name = "mixed",
+    instructions = "Score each item.",
+    schema = schema,
+    levels = list(assessments = "nominal", item_id = "nominal", importance = "ordinal")
+  )
+  expect_equal(names(cb2$levels), c("assessments", "item_id", "importance"))
+})
+
+test_that("qlm_codebook levels accept variables inside a nested type_object", {
+  schema <- type_object(
+    summary = type_string("Summary."),
+    scores = type_object(
+      tone = type_number("Tone from -1 to 1."),
+      confidence = type_integer("1-5.")
+    )
+  )
+
+  cb <- qlm_codebook(
+    name = "nested_object",
+    instructions = "Rate.",
+    schema = schema,
+    levels = list(summary = "nominal", tone = "interval", confidence = "ordinal")
+  )
+  expect_equal(cb$levels[["tone"]], "interval")
+})
+
+test_that("qlm_codebook levels resolve through arrays nested in arrays", {
+  schema <- type_object(
+    documents = type_array(
+      items = type_object(
+        sentences = type_array(
+          items = type_object(polarity = type_integer("-1, 0, 1."))
+        )
+      )
+    )
+  )
+
+  cb <- qlm_codebook(
+    name = "deep",
+    instructions = "Rate.",
+    schema = schema,
+    levels = list(polarity = "ordinal")
+  )
+  expect_equal(cb$levels[["polarity"]], "ordinal")
+})
+
+test_that("qlm_codebook levels still reject names absent at every depth", {
+  schema <- type_object(
+    assessments = type_array(
+      items = type_object(importance = type_integer("0-2."))
+    )
+  )
+
+  expect_error(
+    qlm_codebook(
+      name = "x", instructions = "x", schema = schema,
+      levels = list(importance = "ordinal", salience = "ordinal")
+    ),
+    "not found in schema.*salience"
+  )
+
+  # The listing of available names now includes nested ones
+  expect_error(
+    qlm_codebook(
+      name = "x", instructions = "x", schema = schema,
+      levels = list(salience = "ordinal")
+    ),
+    "importance"
+  )
+})
+
+test_that("qlm_codebook levels refuse a name that occurs at more than one depth", {
+  schema <- type_object(
+    score = type_number("Overall score."),
+    items = type_array(
+      items = type_object(
+        score = type_integer("Per-item score."),
+        label = type_string("Label.")
+      )
+    )
+  )
+
+  expect_error(
+    qlm_codebook(
+      name = "x", instructions = "x", schema = schema,
+      levels = list(score = "interval")
+    ),
+    "more than once in the schema"
+  )
+
+  # Declaring only the unambiguous names is fine
+  cb <- qlm_codebook(
+    name = "x", instructions = "x", schema = schema,
+    levels = list(label = "nominal")
+  )
+  expect_equal(cb$levels, list(label = "nominal"))
+})

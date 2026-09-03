@@ -2,6 +2,17 @@
 
 ## Bug fixes
 
+* `qlm_codebook(levels = )` accepts variables nested inside a `type_array()`
+  or a nested `type_object()`. The check matched names against top-level
+  schema properties only, so a codebook whose schema returns one array entry
+  per rated item could not declare measurement levels for the very variables
+  `qlm_compare()` and `qlm_validate()` need them for, and the only workaround
+  was to drop `levels` from the codebook and re-attach them by hand after
+  unnesting. Property names are now collected at every depth. A name that
+  occurs at more than one place in the schema is an error rather than being
+  resolved silently to the first match, since a flat `levels` list cannot say
+  which one it means (#131).
+
 * `qlm_trail()` reports which endpoint each run actually used, and points at
   the right ellmer help page for setting it up. The report derived a provider
   by splitting the model string and mapped it through a four-name `if/else`
