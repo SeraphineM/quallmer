@@ -12,7 +12,7 @@ This tutorial provides a quick overview of the quallmer workflow for LLM-assiste
 ## The workflow at a glance
 
 1. **Define** your codebook with `qlm_codebook()`
-2. **Code** your data with `qlm_code()`
+2. **Code** your data with `qlm_code()`, and complete a run that came back with failures using `qlm_backfill()`
 3. **Replicate** with different settings using `qlm_replicate()`
 4. **Compare** results with `qlm_compare()`
 5. **Document** everything with `qlm_trail()`
@@ -65,6 +65,29 @@ coded <- qlm_code(
 
 coded
 ```
+
+### When a run comes back incomplete
+
+A run over a real corpus rarely comes back complete. Requests time out or hit a rate limit, a provider refuses a text on one pass and codes it on the next, an endpoint accepts the schema and then returns something that does not fit it. The units that failed sit in the object as rows of `NA`, and `qlm_failures()` lists them with the reason:
+
+```{r}
+qlm_failures(coded)
+```
+
+quallmer deals with failures at three points, and it helps to keep them apart.
+
+**Retries happen during the run, one request at a time.** Two kinds are at work before a row is written. ellmer resends a request that a rate limit or a server error turned away, a few times with a pause between; this is transport-level, applies to every provider, and `options(ellmer_max_tries = )` sets the count. On the JSON path, `qlm_code()` also re-requests a response that arrived intact but does not fit the codebook's schema, up to `max_retries` more times. A unit still failed after these is what `qlm_failures()` shows.
+
+**Backfilling happens after the run, on the object it produced.** `qlm_backfill()` looks up the units that failed, re-codes just those with the run's own model and settings, and merges what comes back; everything that succeeded the first time is left exactly as it was. Because it works on the finished object, you can run it later, look at the failures first, or give it a different `model` for units the original consistently refuses or cannot fit in its context window. Each pass is recorded in the object's metadata, and `print()` and the audit trail say what was backfilled and by which model, so a result coded by two instruments is disclosed as one.
+
+```{r}
+filled <- qlm_backfill(coded)
+qlm_failures(filled)
+```
+
+The two are for different failures. Retries catch what a moment's wait fixes, in the middle of the run. Backfilling recovers what is left when the run is over, which for a corpus of any size is usually something. Two kinds of failure a backfill leaves alone, because re-sending the same request cannot change the outcome: a text the provider rejected as longer than the model's context window, and a response cut off at `max_tokens`. Those are retried only with a different `model`, or for a truncated response a higher `params(max_tokens = )`. Content refusals are retried, since the same text is refused on one pass and coded on the next.
+
+Two settings shape how much there is to backfill. By default a run stops sending new requests after the first failure and returns what it has, which is ellmer's `on_error = "return"`; pass `on_error = "continue"` to have it attempt every unit and leave the failures for a backfill. And `qlm_code(backfill_attempts = 2)` runs the passes in the same call, if you would rather not make them a separate step. Either way, a replication made with `qlm_replicate()` replays the passes recorded on its parent, so both are complete on the same terms.
 
 ## Step 3: Replicate with a different model
 
