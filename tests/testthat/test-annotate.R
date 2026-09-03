@@ -110,6 +110,33 @@ test_that("annotate requires model_name argument", {
   )
 })
 
+test_that("annotate() hands model_name to qlm_code() as model (#141)", {
+  skip_if_not_installed("ellmer")
+  withr::local_options(lifecycle_verbosity = "quiet")
+
+  # qlm_code()'s formal is `model`; `model_name` is longer, so it never
+  # partially matches and fell through `...` to the provider call. Record what
+  # qlm_code() receives rather than spending a request.
+  seen <- NULL
+  local_mocked_bindings(qlm_code = function(x, codebook, model, ...) {
+    seen <<- list(model = model, dots = list(...))
+    tibble::tibble(.id = seq_along(x), score = 1)
+  })
+
+  tsk <- task(
+    name = "Test",
+    system_prompt = "Test prompt",
+    type_def = ellmer::type_object(score = ellmer::type_number("A score"))
+  )
+
+  out <- annotate(c("Hello", "World"), tsk, model_name = "openai/gpt-4o-mini")
+
+  expect_identical(seen$model, "openai/gpt-4o-mini")
+  expect_false("model_name" %in% names(seen$dots))
+  expect_s3_class(out, "data.frame")
+  expect_equal(nrow(out), 2L)
+})
+
 test_that("annotate routes arguments correctly", {
   skip_if_not_installed("ellmer")
 
