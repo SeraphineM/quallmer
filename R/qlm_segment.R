@@ -22,6 +22,11 @@
 #'   [ellmer::parallel_chat_structured()] are routed there; all other arguments
 #'   (including provider-specific arguments like `base_url`, `credentials`, or
 #'   `api_args` for OpenAI-compatible endpoints) are passed to [ellmer::chat()].
+#' @param prices Optional. Rates for costing the run when ellmer cannot: a
+#'   named numeric vector or list with `input` and `output`, and optionally
+#'   `cached_input`, in US dollars per million tokens. As for [qlm_code()];
+#'   see the section on cost there. Supplying them implies `include_tokens =
+#'   TRUE` and `include_cost = TRUE`. Default is `NULL`.
 #' @param notes Optional character string with descriptive notes about this
 #'   segmentation run. Default is `NULL`.
 #'
@@ -32,9 +37,34 @@
 #'     \item{`docid`}{Name of the source document.}
 #'     \item{`segid`}{Integer segment index within the source document.}
 #'     \item{...}{Any fields defined in the codebook schema.}
+#'     \item{`input_tokens`, `output_tokens`, `cached_input_tokens`,
+#'       `cost`}{With `include_tokens = TRUE` or `include_cost = TRUE`: the
+#'       usage of the call made for the source document, repeated on each of
+#'       its segments. See the section on cost.}
 #'     \item{...}{Original docvars inherited from the input (if `x` is a
 #'       corpus).}
 #'   }
+#'   The corpus metadata (see [quanteda::meta()]) carries `name`,
+#'   `continuum_lengths`, and, when usage was requested, `usage`, a data frame
+#'   with one row per source document, plus `cost_note` and `prices` where
+#'   they apply.
+#'
+#' @section Cost:
+#'
+#' Each source document is one request, so token counts and cost belong to
+#' the document, not to a segment. With `include_tokens = TRUE` or
+#' `include_cost = TRUE` they are recorded twice: in the corpus metadata as
+#' `usage`, one row per input document including documents that yielded no
+#' segments, and on each segment as docvars for convenience. Sum the metadata
+#' table for the run's total; summing the docvars counts a document once per
+#' segment, and a document that produced no segments has no docvars at all.
+#'
+#' ellmer prices from a table fixed at its release and returns `NA` for a
+#' model it does not list; `qlm_segment()` says so once before the run, as
+#' [qlm_code()] does, and `prices` costs the run from the token counts at
+#' rates you supply. The four usage names are reserved when usage is
+#' requested: a codebook field or an inherited docvar of the same name is an
+#' error rather than silently overwritten.
 #'
 #' @seealso [qlm_code()] for document-level coding, [qlm_codebook()] for
 #'   creating codebooks, [quanteda::corpus_segment()] for pattern-based
@@ -86,7 +116,8 @@
 #' }
 #'
 #' @export
-qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
+qlm_segment <- function(x, codebook, model, ..., prices = NULL, name = NULL,
+                        notes = NULL) {
   rlang::check_installed(
     "quanteda",
     reason = "to return a segmented corpus from {.fn qlm_segment}"
@@ -160,7 +191,17 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
       user_props
     )
   )
-  internal_schema <- ellmer::type_array(items = items_schema)
+  # Wrapped in an object rather than sent as a bare array. ellmer attaches
+  # token counts and cost only to a converted result that is a data frame,
+  # and converts a bare array to a plain list of tibbles, so the usage of an
+  # array-typed request is lost inside ellmer before it reaches here (#119).
+  # An object with one array property converts to one row per document with
+  # a list-column of segments, and the usage columns beside it. ellmer wraps
+  # arrays this way itself for providers that require an object at the top
+  # level, so the request shape is not new to models.
+  internal_schema <- ellmer::type_object(
+    segments = ellmer::type_array(items = items_schema)
+  )
 
   # Build system prompt from role and instructions
   system_prompt <- if (!is.null(codebook$role)) {
@@ -179,17 +220,74 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
   # to pass through to ellmer::chat() which forwards them to the provider
   chat_args      <- dots[!dot_names %in% pcs_arg_names]
 
+  # Supplied rates cost the run from its token counts, so both must be asked
+  # of ellmer; the caller asked for a cost by supplying them (#135).
+  prices <- check_prices(prices)
+  if (!is.null(prices)) {
+    execution_args$include_tokens <- TRUE
+    execution_args$include_cost <- TRUE
+  }
+
+  # The result is read as one row per document; a bare list has none.
+  if (identical(execution_args$convert, FALSE)) {
+    cli::cli_abort(c(
+      "{.code convert = FALSE} is not supported by {.fn qlm_segment}.",
+      "i" = "For the unconverted list, call {.fn ellmer::parallel_chat_structured} directly."
+    ))
+  }
+
+  # Usage is recorded as docvars beside the codebook fields and any inherited
+  # docvars, so its names are reserved when it is asked for: a clash would
+  # silently overwrite one or the other.
+  usage_cols <- c(
+    if (isTRUE(execution_args$include_tokens)) {
+      c("input_tokens", "output_tokens", "cached_input_tokens")
+    },
+    if (isTRUE(execution_args$include_cost)) "cost"
+  )
+  taken <- intersect(usage_cols, c(names(user_props), names(parent_dvars)))
+  if (length(taken)) {
+    cli::cli_abort(c(
+      "{.val {taken}} {?is/are} reserved for the run's usage when it is requested.",
+      "x" = paste0("The codebook schema or the input's docvars already ",
+                   "{cli::qty(length(taken))}{?use/use} {?this name/these names}."),
+      "i" = "Rename {cli::qty(length(taken))}{?it/them}, or do not request tokens and cost."
+    ))
+  }
+
   # Build chat object
   chat <- do.call(ellmer::chat, c(
     list(name = model, system_prompt = system_prompt),
     chat_args
   ))
 
-  # Execute: returns a list of tibbles (one per document) for array types
-  results_list <- do.call(ellmer::parallel_chat_structured, c(
+  # Whether the cost will come back NA, and why, from the chat the run will
+  # use and before anything is sent (#135). Not said when rates were
+  # supplied, since it will not be NA; the reason is still kept.
+  unpriced <- cost_diagnosis(chat, model, execution_args, say = is.null(prices))
+
+  # Execute: one row per document, the segments in a list-column, usage
+  # beside them when requested
+  results <- do.call(ellmer::parallel_chat_structured, c(
     list(chat = chat, prompts = as.list(doc_texts), type = internal_schema),
     execution_args
   ))
+  results_list <- results$segments
+
+  # Usage per source document, every document included: one that produced
+  # no segments may still have been answered and charged for. Settled
+  # against any supplied rates before it is spread over the segments.
+  usage <- NULL
+  if (length(usage_cols)) {
+    usage <- data.frame(docid = doc_names, stringsAsFactors = FALSE)
+    for (col in usage_cols) {
+      usage[[col]] <- if (is.null(results[[col]])) NA_real_ else as.numeric(results[[col]])
+    }
+  }
+  settled <- reconcile_prices(usage %||% data.frame(), prices, unpriced)
+  if (!is.null(usage)) {
+    usage <- settled$results
+  }
 
   # Collect per-segment data across all documents
   all_texts    <- character(0)
@@ -226,6 +324,11 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
       dv[[field]] <- segs[[field]]
     }
 
+    # The document's usage, on each of its segments
+    for (col in usage_cols) {
+      dv[[col]] <- rep(usage[[col]][i], n_segs)
+    }
+
     # Inherit parent docvars when input is a corpus
     if (!is.null(parent_dvars) && ncol(parent_dvars) > 0L) {
       for (col in names(parent_dvars)) {
@@ -251,6 +354,15 @@ qlm_segment <- function(x, codebook, model, ..., name = NULL, notes = NULL) {
     doc_names
   )
   quanteda::meta(out, "continuum_lengths") <- continuum_lengths
+  if (!is.null(usage)) {
+    quanteda::meta(out, "usage") <- usage
+  }
+  if (!is.null(settled$cost_note)) {
+    quanteda::meta(out, "cost_note") <- settled$cost_note
+  }
+  if (!is.null(settled$prices)) {
+    quanteda::meta(out, "prices") <- settled$prices
+  }
 
   out
 }

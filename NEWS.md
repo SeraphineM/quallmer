@@ -2,6 +2,18 @@
 
 ## Bug fixes
 
+* `qlm_segment()` now records token counts and cost when asked, and takes
+  `prices` as `qlm_code()` does. It forwarded `include_tokens` and
+  `include_cost` to ellmer, but ellmer attaches usage only to a converted
+  result that is a data frame, and converts the array a segmentation asks
+  for to a plain list, so the counts were lost before quallmer saw them. The
+  array is now requested inside an object, which converts to one row per
+  source document with the usage beside it. Usage belongs to the document,
+  not the segment: it is kept in the corpus metadata as `usage`, one row per
+  input document including those that yielded no segments, and repeated on
+  each segment as docvars; sum the metadata table for the run's total. The
+  four usage names are reserved when usage is requested (#119).
+
 * `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
   a credential-named `api_headers` entry, or a `base_url` carrying userinfo
   or a credential-named query parameter, given to `qlm_code()` as a literal,

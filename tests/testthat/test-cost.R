@@ -79,3 +79,41 @@ test_that("prices_note() states the rates without scientific notation", {
     "from supplied rates: $2 input, $8 output, $2 cached input, per million tokens"
   )
 })
+
+
+# reconcile_prices() ----------------------------------------------------------
+
+test_that("reconcile_prices() tells the three outcomes apart", {
+  prices <- c(input = 1, output = 10, cached_input = 0.1)
+  unpriced <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+  tokens <- data.frame(input_tokens = c(1e6, 2e6), output_tokens = c(0, 0),
+                       cached_input_tokens = c(0, 0))
+
+  # No rates: the note says why the cost is NA, nothing else changes
+  out <- reconcile_prices(cbind(tokens, cost = NA_real_), NULL, unpriced)
+  expect_true(all(is.na(out$results$cost)))
+  expect_null(out$prices)
+  expect_equal(out$cost_note, "NA (ellmer has no prices for DeepSeek models)")
+  expect_null(reconcile_prices(cbind(tokens, cost = 1), NULL, NULL)$cost_note)
+
+  # ellmer priced every row: rates not used
+  expect_message(out <- reconcile_prices(cbind(tokens, cost = c(1, 2)), prices, NULL),
+                 "is not used")
+  expect_equal(out$results$cost, c(1, 2))
+  expect_null(out$prices)
+  expect_null(out$cost_note)
+
+  # Rows NA but no counts: rates could not be applied, the reason stands
+  none <- data.frame(input_tokens = NA_real_, output_tokens = NA_real_,
+                     cached_input_tokens = NA_real_, cost = NA_real_)
+  expect_message(out <- reconcile_prices(none, prices, unpriced), "could not be applied")
+  expect_true(is.na(out$results$cost))
+  expect_null(out$prices)
+  expect_equal(out$cost_note, "NA (ellmer has no prices for DeepSeek models)")
+
+  # Rows costed: rates kept and named
+  expect_no_message(out <- reconcile_prices(cbind(tokens, cost = NA_real_), prices, unpriced))
+  expect_equal(out$results$cost, c(1, 2))
+  expect_equal(out$prices, prices)
+  expect_match(out$cost_note, "^from supplied rates")
+})
