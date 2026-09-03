@@ -50,6 +50,7 @@ quallmer objects store metadata in three categories:
 \item \code{\link[=qlm_meta<-]{qlm_meta<-()}}: Set user metadata fields (only \code{name} and \code{notes})
 \item \code{\link[=codebook]{codebook()}}: Extract codebook from coded objects
 \item \code{\link[=inputs]{inputs()}}: Extract original input data
+\item \code{\link[=qlm_failures]{qlm_failures()}}: List the units a coding run failed on, with reasons
 }
 }
 
