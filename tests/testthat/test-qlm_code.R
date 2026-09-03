@@ -1461,7 +1461,7 @@ test_that("qlm_code says once, before the run, why cost will be NA (#135)", {
                credentials = offline, include_cost = TRUE, structured = "structured"),
     "no prices for DeepSeek models"
   )
-  expect_equal(qlm_meta(coded)$cost_note, "ellmer has no prices for DeepSeek models")
+  expect_equal(qlm_meta(coded)$cost_note, "NA (ellmer has no prices for DeepSeek models)")
   expect_output(print(coded), "# Cost:     NA (ellmer has no prices for DeepSeek models)",
                 fixed = TRUE)
 })
@@ -1475,7 +1475,7 @@ test_that("qlm_code's cost message says whether token counts are recorded (#135)
   expect_message(
     coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
                credentials = offline, include_cost = TRUE, structured = "structured"),
-    "Set `include_tokens = TRUE` to record"
+    "Supply the provider's published rates as `prices`"
   )
   expect_false("input_tokens" %in% names(coded))
 
@@ -1488,7 +1488,7 @@ test_that("qlm_code's cost message says whether token counts are recorded (#135)
     coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
                credentials = offline, include_cost = TRUE, include_tokens = TRUE,
                structured = "structured"),
-    "Token counts are recorded"
+    "Token counts are recorded; supply"
   )
   expect_true("input_tokens" %in% names(coded))
 })
@@ -1511,4 +1511,100 @@ test_that("qlm_code is silent about cost when it was not asked for, or is priced
                                credentials = offline, include_cost = TRUE,
                                structured = "structured"))
   expect_null(qlm_meta(coded)$cost_note)
+})
+
+
+# cost from supplied rates (#135) ----------------------------------------------
+
+# coding_run() from above, with the execution arguments the structured call
+# received recorded in `seen`.
+priced_run <- function(results, seen) {
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
+    seen$execution_args <- list(...)
+    results
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  f
+}
+
+test_that("qlm_code costs an unpriced run from supplied rates (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(1e6, 2e6),
+                        output_tokens = c(1e5, 1e5), cached_input_tokens = c(0, 5e5),
+                        cost = c(NA_real_, NA_real_))
+  seen <- new.env()
+
+  f <- priced_run(results, seen)
+  # No "cost will be NA" message: it will not be
+  expect_no_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10, cached_input = 0.1))
+  )
+
+  # Costed by ellmer's sum, per million tokens
+  expect_equal(coded$cost, c(2, (2e6 + 5e5 * 0.1 + 1e6) / 1e6))
+  # Supplying rates asked ellmer for tokens and cost
+  expect_true(isTRUE(seen$execution_args$include_tokens))
+  expect_true(isTRUE(seen$execution_args$include_cost))
+  # The rates travel with the object, and print says where the cost came from
+  expect_equal(qlm_meta(coded)$prices, c(input = 1, output = 10, cached_input = 0.1))
+  expect_equal(qlm_meta(coded)$cost_note,
+               "from supplied rates: $1 input, $10 output, $0.1 cached input, per million tokens")
+  expect_output(print(coded), "# Cost:     from supplied rates: $1 input", fixed = TRUE)
+})
+
+test_that("qlm_code leaves ellmer's own prices in charge (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(1e6, 2e6),
+                        output_tokens = c(1e5, 1e5), cached_input_tokens = c(0, 0),
+                        cost = c(0.3, 0.6))
+
+  f <- priced_run(results, new.env())
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "openai/gpt-4.1-mini",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10)),
+    "prices.*is not used"
+  )
+  expect_equal(coded$cost, c(0.3, 0.6))
+  expect_null(qlm_meta(coded)$prices)
+  expect_null(qlm_meta(coded)$cost_note)
+})
+
+test_that("qlm_code says when supplied rates could not be applied (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  # Unpriced, and no counts came back to cost it from
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(NA_real_, NA_real_),
+                        output_tokens = c(NA_real_, NA_real_),
+                        cached_input_tokens = c(NA_real_, NA_real_),
+                        cost = c(NA_real_, NA_real_))
+
+  f <- priced_run(results, new.env())
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10)),
+    "could not be applied"
+  )
+  expect_true(all(is.na(coded$cost)))
+  # The rates are not recorded, and the note says why the cost is NA
+  expect_null(qlm_meta(coded)$prices)
+  expect_equal(qlm_meta(coded)$cost_note, "NA (ellmer has no prices for DeepSeek models)")
+})
+
+test_that("qlm_code rejects malformed prices before any request (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- priced_run(data.frame(score = 1), new.env())
+  expect_error(
+    f("a", codebook, model = "openai/gpt-4.1-mini", credentials = offline,
+      prices = c(input = 1), structured = "structured"),
+    "Missing: output"
+  )
 })

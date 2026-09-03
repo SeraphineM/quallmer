@@ -198,6 +198,38 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     }
   }
 
+  # Rates supplied to cost the original run belong to a pricing context:
+  # the model, the endpoint it was reached through (provider and base_url,
+  # the identity used above), whether it ran as a batch, and the service
+  # tier, each of which providers price differently. A replication that keeps
+  # all four is costed the same way again; one that changes any of them is
+  # not costed on the old rates, and says so. A tier left unset is ellmer's
+  # default, "auto", and a change to any explicit tier counts. An explicit
+  # `prices` in `...` is left alone (#135).
+  original_prices <- meta_attr$user$prices
+  if (!"prices" %in% names(call_args) && !is.null(original_prices)) {
+    original_tier <- meta_attr$object$chat_args$service_tier %||% "auto"
+    use_tier <- call_args$service_tier %||% "auto"
+    changed <- c(
+      if (!identical(use_model, original_model)) "model",
+      if (!identical(use_endpoint, original_endpoint)) "endpoint",
+      if (!identical(use_batch, original_batch)) "batch setting",
+      if (!identical(use_tier, original_tier)) "service tier"
+    )
+    if (length(changed) == 0L) {
+      call_args$prices <- original_prices
+    } else {
+      cli::cli_inform(c(
+        "i" = paste0(
+          "Not carrying over `prices`: the ", paste(changed, collapse = ", "),
+          if (length(changed) == 1L) " differs" else " differ",
+          " from the run that supplied them. Supply this run's rates in `...` ",
+          "to cost the replication."
+        )
+      ))
+    }
+  }
+
   # Call qlm_code with merged arguments, including batch flag
   result <- do.call(qlm_code, c(
     list(

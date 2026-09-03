@@ -151,6 +151,8 @@ qlm_trail <- function(..., path = NULL) {
       run$batch <- meta_attr$object$batch
       run$chat_args <- meta_attr$object$chat_args
       run$execution_args <- meta_attr$object$execution_args
+      run$prices <- meta_attr$user$prices
+      run$cost_note <- meta_attr$user$cost_note
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
     } else if (inherits(obj, "qlm_comparison")) {
@@ -518,6 +520,12 @@ generate_trail_report <- function(trail, file) {
       ))
     }
 
+    # Where the cost column came from, when ellmer could not fill it: a
+    # figure resting on entered rates must say so in the artefact (#135)
+    if (!is.null(run$cost_note)) {
+      lines <- c(lines, paste("**Cost:**", run$cost_note))
+    }
+
     # Codebook reference
     if (!is.null(run$codebook$name)) {
       lines <- c(lines, paste("**Codebook:**", run$codebook$name))
@@ -795,6 +803,13 @@ generate_trail_report <- function(trail, file) {
 
       if (!is.null(run$batch) && run$batch) {
         code_call <- paste0(code_call, ",\n  batch = TRUE")
+      }
+
+      if (!is.null(run$prices)) {
+        code_call <- paste0(
+          code_call, ",\n  prices = c(",
+          paste(Map(format_param, names(run$prices), run$prices), collapse = ", "), ")"
+        )
       }
 
       code_call <- paste0(code_call, ",\n  name = \"", run$name, "\"")

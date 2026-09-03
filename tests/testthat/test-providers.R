@@ -396,12 +396,14 @@ test_that("unpriced_message() says whether the token counts are being recorded (
   model <- list(kind = "model", provider = "OpenAI", model = "gpt-99")
 
   # include_cost alone records no counts, and the message must not claim it does
-  expect_match(unpriced_message(provider)[[2]], "Set `include_tokens = TRUE` to record")
-  expect_match(unpriced_message(model)[[2]], "Set `include_tokens = TRUE` to record")
+  # Supplying `prices` records the counts itself, so that is the advice
+  expect_match(unpriced_message(provider)[[2]],
+               "^Supply the provider's published rates as `prices`")
+  expect_match(unpriced_message(model)[[2]], "Supply the provider's published rates as `prices`")
   expect_match(unpriced_message(provider, tokens_recorded = TRUE)[[2]],
-               "^Token counts are recorded")
+               "^Token counts are recorded; supply")
   expect_match(unpriced_message(model, tokens_recorded = TRUE)[[2]],
-               "Token counts are recorded")
+               "Token counts are recorded; supply")
 })
 
 test_that("unpriced_message() and unpriced_note() cover every kind (#135)", {
