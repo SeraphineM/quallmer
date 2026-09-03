@@ -2,6 +2,27 @@
 
 ## Bug fixes
 
+* `qlm_code()` no longer returns a response cut off at the provider's
+  `max_tokens` limit as a successful empty result. Such a response is billed
+  in full, and arrived as a row of `NA` scalars and zero-length arrays with no
+  `.error`, indistinguishable from a unit to which nothing applied, so a
+  document that overran the limit read as "nothing here", and the documents
+  that do so are systematically the longest and richest ones. On the JSON
+  path the finish reason that ellmer 0.4.2 attaches to each turn is now read:
+  the unit is recorded in `.error` with the token count, listed by
+  `qlm_failures()`, and not retried, since the same limit reproduces the cut
+  and the retry is billed again. On the structured path ellmer's parallel
+  call discards the turns, so the finish reason is out of reach; there, when
+  `params(max_tokens = )` is set, a row that used the whole budget and
+  returned nothing is recorded in `.error` as cut off. Without a declared
+  limit the cap is not known and such a row stays silent, which needs an
+  ellmer change to close. Rows whose request failed, or whose response was
+  cut off, are also no longer read as evidence that an endpoint ignored the
+  schema, so a run whose every unit failed that way is reported as failed
+  rather than re-coded in JSON mode; a response ellmer could extract nothing
+  from still counts, so `"auto"` still falls back for an endpoint that
+  answers in prose (#153).
+
 * `qlm_codebook(levels = )` accepts variables nested inside a `type_array()`
   or a nested `type_object()`. The check matched names against top-level
   schema properties only, so a codebook whose schema returns one array entry

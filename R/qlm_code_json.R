@@ -130,6 +130,22 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
       if (!isTRUE(checked$ok) && !is.na(turns$error[[j]])) {
         checked$error <- paste0("API request failed: ", turns$error[[j]])
       }
+      # A response the provider itself reports as incomplete -- cut off at
+      # max_tokens, withheld by a content filter -- is a failure whatever the
+      # text looks like. Cut-off JSON usually fails to parse, and then the
+      # provider's reason is the one to record rather than "Invalid JSON"; an
+      # object that happened to close just before the limit parses cleanly,
+      # and the provider's word still wins, as it does in ellmer's own
+      # check_finish_reason(). `turns$finish` is NA for a request that failed
+      # outright, so this can never override a transport error.
+      truncated <- FALSE
+      reason <- incomplete_response_reason(
+        turns$finish[[j]], turns$usage[j, "output_tokens"]
+      )
+      if (!is.null(reason)) {
+        checked <- list(ok = FALSE, error = reason)
+        truncated <- is_truncation(turns$finish[[j]])
+      }
       if (isTRUE(checked$ok)) {
         parsed[[i]] <- checked$value
         # NB: `problems[[i]] <- NULL` would DELETE the element and shift every
@@ -153,7 +169,14 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
         # generation and billed at zero tokens, so a wasted attempt is free,
         # whereas dropping the unit discards a coding a retry would have got.
         # Only a context-length rejection is provably unrecoverable.
-        if (!length_rejection && !fatal[[i]]) {
+        #
+        # A response cut off at the output limit is not retried either. The
+        # same limit reproduces the cut, the retry is billed in full, and a
+        # repair prompt cannot supply what the limit withheld: it can only
+        # press the model into a shorter answer, which changes the coding
+        # rather than repairing it. The fix is the caller's, in
+        # params(max_tokens = ), so say so and move on.
+        if (!length_rejection && !truncated && !fatal[[i]]) {
           next_pending <- c(next_pending, i)
         }
       }
@@ -236,14 +259,19 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 #' so it is captured here. Without it every failure reads as a bare "empty
 #' response", which is useless when triaging a large run.
 #'
+#' The turn also carries ellmer's normalised finish reason (`"success"`,
+#' `"max_tokens"`, `"content_filter"`, ...), which is what distinguishes a
+#' response the model completed from one the provider cut off. It is `NA` for
+#' a request that failed outright and for providers that do not report one.
+#'
 #' @param chat An [ellmer::Chat] object.
 #' @param prompts List of prompts.
 #' @param pc_args List of arguments for [ellmer::parallel_chat()].
 #'
 #' @return A list with `text` (character), `usage` (numeric matrix of input,
-#'   output, and cached input tokens and cost), `error` (character), and
-#'   `status` (integer HTTP status, `NA` when the failure was not an HTTP
-#'   error).
+#'   output, and cached input tokens and cost), `error` (character), `status`
+#'   (integer HTTP status, `NA` when the failure was not an HTTP error), and
+#'   `finish` (character finish reason, `NA` when there is none).
 #' @keywords internal
 #' @noRd
 json_chat_turns <- function(chat, prompts, pc_args) {
@@ -256,6 +284,7 @@ json_chat_turns <- function(chat, prompts, pc_args) {
   text <- rep(NA_character_, n)
   error <- rep(NA_character_, n)
   status <- rep(NA_integer_, n)
+  finish <- rep(NA_character_, n)
   usage <- matrix(
     0,
     nrow = n, ncol = 4,
@@ -276,6 +305,7 @@ json_chat_turns <- function(chat, prompts, pc_args) {
       next
     }
     text[[i]] <- turn@text
+    finish[[i]] <- turn_finish_reason(turn)
     tokens <- turn@tokens
     if (length(tokens) >= 3L) {
       usage[i, 1:3] <- as.numeric(tokens[1:3])
@@ -283,7 +313,31 @@ json_chat_turns <- function(chat, prompts, pc_args) {
     usage[i, 4] <- as.numeric(turn@cost)
   }
 
-  list(text = text, usage = usage, error = error, status = status)
+  list(text = text, usage = usage, error = error, status = status,
+       finish = finish)
+}
+
+
+#' The finish reason recorded on a turn
+#'
+#' ellmer (>= 0.4.2) normalises the provider's stop reason onto an
+#' [ellmer::AssistantTurn] as `finish_reason`: `"success"`, `"tool_use"`,
+#' `"max_tokens"`, `"context_window"`, `"content_filter"`, or, wrapped in
+#' `I()`, a value it did not recognise. Turns from an older ellmer have no such
+#' property, and a provider that reports nothing leaves it `NA`; both read as
+#' "unknown" here rather than as a failure.
+#'
+#' @param turn An [ellmer::Turn].
+#'
+#' @return A single string, or `NA_character_`.
+#' @keywords internal
+#' @noRd
+turn_finish_reason <- function(turn) {
+  reason <- tryCatch(turn@finish_reason, error = function(e) NULL)
+  if (!is.character(reason) || length(reason) != 1L || is.na(reason)) {
+    return(NA_character_)
+  }
+  as.character(unclass(reason))
 }
 
 
@@ -747,6 +801,65 @@ is_length_rejection <- function(msg) {
 }
 
 
+#' Why an intact response is nonetheless unusable
+#'
+#' A response can arrive with HTTP 200 and still not be the model's answer:
+#' the provider cut it off at the output limit, or withheld it. The finish
+#' reason says which, and is the right thing to record, because the parse
+#' error it produces ("premature EOF") describes the symptom and points at the
+#' wrong remedy. Wording follows ellmer's own `check_finish_reason()`, which
+#' raises the same conditions for a sequential `chat_structured()` call.
+#'
+#' @param finish A finish reason, as returned by `json_chat_turns()`.
+#' @param output_tokens Output tokens spent on the response, for the message.
+#'
+#' @return A single string, or `NULL` when the finish reason does not explain
+#'   a failure (the response completed, or no reason was reported).
+#' @keywords internal
+#' @noRd
+incomplete_response_reason <- function(finish, output_tokens = NA_real_) {
+  if (!length(finish) || is.na(finish) ||
+      finish %in% c("success", "tool_use", "stop_sequence")) {
+    return(NULL)
+  }
+  spent <- if (length(output_tokens) == 1L && is.finite(output_tokens) &&
+               output_tokens > 0) {
+    paste0(" after ", format(output_tokens, big.mark = ","), " output tokens")
+  } else {
+    ""
+  }
+  switch(finish,
+    max_tokens = paste0(
+      "The response was cut off at the max_tokens limit", spent,
+      "; raise the limit with params(max_tokens = ) to let the model finish."
+    ),
+    context_window = paste0(
+      "The response was cut off because the input and output together ",
+      "exceeded the model's context window."
+    ),
+    content_filter = "The response was withheld by the provider's content filter.",
+    paste0(
+      "The response may be incomplete: the provider reported finish reason \"",
+      finish, "\"."
+    )
+  )
+}
+
+
+#' Was the response cut short by a limit that a retry cannot lift?
+#'
+#' @param finish A finish reason, as returned by `json_chat_turns()`.
+#'
+#' @return `TRUE` for a response cut off at `max_tokens` or at the context
+#'   window.
+#' @keywords internal
+#' @noRd
+is_truncation <- function(finish) {
+  length(finish) == 1L && !is.na(finish) &&
+    finish %in% c("max_tokens", "context_window")
+}
+
+
 #' Remove ANSI escape sequences
 #'
 #' cli formats API errors with ANSI colour codes, which would otherwise travel
@@ -854,14 +967,30 @@ all_required_missing <- function(results, schema) {
   if (!length(fields)) {
     return(FALSE)
   }
-  all(vapply(fields, function(f) all(is.na(results[[f]])), logical(1)))
+  # A row with a recorded error is evidence only if the endpoint answered. A
+  # rejected request, or a response cut off at max_tokens, says nothing about
+  # whether the endpoint honours the schema, so those rows are set aside. A
+  # response ellmer could extract nothing from -- prose where JSON was asked
+  # for -- is exactly what an endpoint that ignored the schema produces, so
+  # those rows are judged alongside the intact ones. If nothing is left to
+  # judge, there is nothing to conclude.
+  judged <- vapply(
+    recorded_errors(results),
+    function(e) is.null(e) || is_extraction_error(e),
+    logical(1)
+  )
+  if (!any(judged)) {
+    return(FALSE)
+  }
+  all(vapply(fields, function(f) all(is.na(results[[f]][judged])), logical(1)))
 }
 
 
 #' How many rows are missing at least one required field?
 #'
 #' Partial failure, which is worth reporting but is not grounds for discarding
-#' the whole attempt and re-coding in JSON mode.
+#' the whole attempt and re-coding in JSON mode. Rows carrying an `.error` are
+#' not counted: they are reported as failed already, with their reason.
 #'
 #' @param results The result of [ellmer::parallel_chat_structured()].
 #' @param schema An [ellmer::type_object()].
@@ -877,7 +1006,8 @@ n_incomplete <- function(results, schema) {
   if (!length(fields)) {
     return(0L)
   }
-  sum(Reduce(`|`, lapply(fields, function(f) is.na(results[[f]]))))
+  missing <- Reduce(`|`, lapply(fields, function(f) is.na(results[[f]])))
+  sum(missing & !errored_rows(results))
 }
 
 

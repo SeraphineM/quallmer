@@ -158,7 +158,11 @@ conform. The reliable choice for an endpoint known not to enforce.}
 \item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} if it
 errors, or if it returns a result in which every required field is \code{NA}
 in every row, which is what an endpoint that ignored the schema
-produces.}
+produces. Rows whose request failed, or whose response was cut off
+at \code{max_tokens}, are left out of that judgement, since neither says
+anything about the schema; a row from which ellmer could extract no
+structured data counts, since that is what an endpoint that ignored
+the schema produces.}
 }
 
 \code{"auto"} catches wholesale non-enforcement, not the intermittent kind: a
@@ -185,6 +189,38 @@ codebooks
 are not supported there, so \code{"auto"} will not fall back under
 \code{batch = TRUE}. The path actually taken is recorded in the run metadata as
 \code{backend}.
+}
+
+\section{Truncated responses}{
+
+
+A response that runs into the provider's output limit (\code{max_tokens}) is cut
+off mid-JSON, and the request is billed in full. The affected units are
+systematically the longest and richest ones, and for a codebook where an
+empty answer is a legitimate outcome, a cut-off answer that reads as empty
+is the worst kind of silent failure. What arrives depends on the path.
+
+On the JSON path the finish reason travels with the response, so a unit cut
+off this way is recorded in \code{.error} with the token count, is listed by
+\code{\link[=qlm_failures]{qlm_failures()}}, and is not retried: a repair prompt cannot supply what the
+limit withheld, and would only press the model into a shorter answer.
+
+On the structured path, \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} returns the
+converted table and discards the turns, and the finish reason with them. A
+truncated response therefore arrives as a row of \code{NA} scalars and
+zero-length arrays. Where the cut leaves unparsable JSON behind, ellmer
+warns that it could extract no data, and that warning becomes an \code{.error}
+naming a parse error rather than the cut. Where it leaves nothing behind,
+as on Anthropic's forced-tool path, there is no warning, and nothing in the
+table distinguishes the row from a unit to which nothing applied. What the
+table can carry is the output token count, so when \code{params(max_tokens = )}
+is set, a row that used the whole budget and has nothing in it is recorded
+in \code{.error} as cut off, with that as the reason in either case. Without a
+declared limit the cap is not known here (ellmer supplies a provider
+default, 4096 for Anthropic, inside its request builder), and the silent
+case stays silent. So set \code{max_tokens} explicitly, high enough for the
+longest answer the codebook can produce: the limit is then both less likely
+to be hit and detectable when it is.
 
 When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 which submits jobs to the provider's batch API. This is typically more

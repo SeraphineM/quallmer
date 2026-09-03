@@ -201,6 +201,9 @@ test_that("attach_extraction_errors records only rows without an .error, before 
   expect_equal(names(out), c("score", ".error", "input_tokens", "cost"))
   expect_null(out$.error[[1]])
   expect_equal(conditionMessage(out$.error[[2]]), "m2")
+  # Tagged, so the schema-enforcement check can tell it from a request failure
+  expect_s3_class(out$.error[[2]], "quallmer_extraction_error")
+  expect_s3_class(out$.error[[2]], "simpleError")
   expect_equal(conditionMessage(out$.error[[3]]), "m3")
 
   # An .error ellmer already recorded takes precedence

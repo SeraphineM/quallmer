@@ -120,7 +120,11 @@
 #'   \item{`"auto"`}{Attempt the structured call; fall back to `"json"` if it
 #'     errors, or if it returns a result in which every required field is `NA`
 #'     in every row, which is what an endpoint that ignored the schema
-#'     produces.}
+#'     produces. Rows whose request failed, or whose response was cut off
+#'     at `max_tokens`, are left out of that judgement, since neither says
+#'     anything about the schema; a row from which ellmer could extract no
+#'     structured data counts, since that is what an endpoint that ignored
+#'     the schema produces.}
 #' }
 #'
 #' `"auto"` catches wholesale non-enforcement, not the intermittent kind: a
@@ -147,6 +151,36 @@
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
 #' `backend`.
+#'
+#' @section Truncated responses:
+#'
+#' A response that runs into the provider's output limit (`max_tokens`) is cut
+#' off mid-JSON, and the request is billed in full. The affected units are
+#' systematically the longest and richest ones, and for a codebook where an
+#' empty answer is a legitimate outcome, a cut-off answer that reads as empty
+#' is the worst kind of silent failure. What arrives depends on the path.
+#'
+#' On the JSON path the finish reason travels with the response, so a unit cut
+#' off this way is recorded in `.error` with the token count, is listed by
+#' [qlm_failures()], and is not retried: a repair prompt cannot supply what the
+#' limit withheld, and would only press the model into a shorter answer.
+#'
+#' On the structured path, [ellmer::parallel_chat_structured()] returns the
+#' converted table and discards the turns, and the finish reason with them. A
+#' truncated response therefore arrives as a row of `NA` scalars and
+#' zero-length arrays. Where the cut leaves unparsable JSON behind, ellmer
+#' warns that it could extract no data, and that warning becomes an `.error`
+#' naming a parse error rather than the cut. Where it leaves nothing behind,
+#' as on Anthropic's forced-tool path, there is no warning, and nothing in the
+#' table distinguishes the row from a unit to which nothing applied. What the
+#' table can carry is the output token count, so when `params(max_tokens = )`
+#' is set, a row that used the whole budget and has nothing in it is recorded
+#' in `.error` as cut off, with that as the reason in either case. Without a
+#' declared limit the cap is not known here (ellmer supplies a provider
+#' default, 4096 for Anthropic, inside its request builder), and the silent
+#' case stays silent. So set `max_tokens` explicitly, high enough for the
+#' longest answer the codebook can produce: the limit is then both less likely
+#' to be hit and detectable when it is.
 #'
 #' When `batch = TRUE`, the function uses [ellmer::batch_chat_structured()]
 #' which submits jobs to the provider's batch API. This is typically more
@@ -483,6 +517,16 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
 
   warn_unenforced_schema(chat, model)
 
+  # Whether a response ran into a declared output limit is knowable only from
+  # the token counts, which ellmer attaches on request; the finish reason
+  # itself does not survive parallel_chat_structured(). See
+  # mark_truncated_rows() for what is inferred from them, and why.
+  cap <- declared_max_tokens(chat_args)
+  keep_tokens <- isTRUE(execution_args$include_tokens)
+  if (!is.null(cap)) {
+    execution_args$include_tokens <- TRUE
+  }
+
   run <- function(chat) {
     if (batch) {
       with_extraction_errors(do.call(ellmer::batch_chat_structured, c(
@@ -520,6 +564,12 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     attempt <- tryCatch(
       list(ok = TRUE, value = run(build_chat(retry_prompt))),
       error = function(e) list(ok = FALSE, error = strip_ansi(conditionMessage(e)))
+    )
+  }
+
+  if (isTRUE(attempt$ok)) {
+    attempt$value <- mark_truncated_rows(
+      attempt$value, codebook$schema, cap, keep_tokens = keep_tokens
     )
   }
 
@@ -636,7 +686,7 @@ attach_extraction_errors <- function(results, failures) {
   for (k in seq_len(nrow(failures))) {
     i <- failures$index[k]
     if (is.null(errors[[i]])) {
-      errors[[i]] <- simpleError(failures$message[k])
+      errors[[i]] <- extraction_error(failures$message[k])
     }
   }
   results$.error <- errors
@@ -650,6 +700,192 @@ attach_extraction_errors <- function(results, failures) {
     results <- results[, c(others, ".error", usage)]
   }
   results
+}
+
+
+#' The output limit the caller declared, if any
+#'
+#' Read from `params(max_tokens = )` and nowhere else. ellmer fills in a
+#' provider default when none is set (4096 for Anthropic, at the time of
+#' writing), but that default lives in its request builder and is not visible
+#' from here, so an undeclared limit is treated as unknown rather than guessed
+#' at. `api_args` is not consulted either: quallmer forwards it unchanged and
+#' does not inspect it.
+#'
+#' @param chat_args List of arguments destined for [ellmer::chat()].
+#'
+#' @return A positive number, or `NULL`.
+#' @keywords internal
+#' @noRd
+declared_max_tokens <- function(chat_args) {
+  params <- chat_args$params
+  if (!is.list(params)) {
+    return(NULL)
+  }
+  cap <- params$max_tokens
+  if (is.numeric(cap) && length(cap) == 1L && is.finite(cap) && cap > 0) {
+    as.numeric(cap)
+  } else {
+    NULL
+  }
+}
+
+
+#' Flag structured rows that used the whole output budget and returned nothing
+#'
+#' [ellmer::parallel_chat_structured()] returns the converted table and
+#' discards the turns, and with them the finish reason. A response the provider
+#' cut off at `max_tokens` therefore arrives as an ordinary row with nothing in
+#' it -- `NA` scalars, zero-length arrays -- at full cost. When the cut leaves
+#' unparsable JSON, ellmer warns and `with_extraction_errors()` records the
+#' parse error; when it leaves nothing, as on Anthropic's forced-tool path,
+#' there is no `.error` at all and the row is indistinguishable from a unit to
+#' which nothing applied. ellmer's sequential `chat_structured()` raises an
+#' error for the very same response.
+#'
+#' What the table does carry, when asked, is the output token count. A row
+#' that spent every token of a declared limit *and* has nothing in it was, to
+#' a near certainty, cut off: a complete answer that happened to end exactly at
+#' the limit would carry data, and an empty answer does not need the whole
+#' budget. Both conditions are required, so "empty is not missing" still
+#' holds: an empty row below the limit is left alone, since a required array
+#' may validly be `[]`.
+#'
+#' Only a limit the caller declared is known here (see `declared_max_tokens()`).
+#' The finish reason is the right signal and is read directly on the JSON
+#' path; using it here too needs ellmer to return it from the parallel call.
+#'
+#' @param results The result of [ellmer::parallel_chat_structured()], with
+#'   token columns when `cap` is not `NULL`.
+#' @param schema The codebook schema.
+#' @param cap The declared output limit, or `NULL` when none is known.
+#' @param keep_tokens Whether the caller asked for the token columns. If not,
+#'   they were requested only for this check and are removed again.
+#'
+#' @return `results`, with `.error` set for the flagged rows.
+#' @keywords internal
+#' @noRd
+mark_truncated_rows <- function(results, schema, cap, keep_tokens = TRUE) {
+  if (is.null(cap) || !is.data.frame(results) || !nrow(results) ||
+      !"output_tokens" %in% names(results)) {
+    return(results)
+  }
+  spent <- results$output_tokens
+  # A request that failed outright spent no output tokens, so it can never
+  # land here and keeps ellmer's reason. A row that did spend the whole limit
+  # may already carry an extraction error from with_extraction_errors()
+  # ("premature EOF"): that is the symptom, and the cut is the cause, so the
+  # reason recorded here replaces it.
+  hit <- !is.na(spent) & spent >= cap & blank_rows(results, schema)
+
+  if (!keep_tokens) {
+    token_columns <- c("input_tokens", "output_tokens", "cached_input_tokens")
+    results[intersect(token_columns, names(results))] <- NULL
+  }
+  if (!any(hit)) {
+    return(results)
+  }
+
+  errors <- recorded_errors(results)
+  for (i in which(hit)) {
+    errors[i] <- list(simpleError(paste0(
+      "The response used the whole max_tokens limit of ",
+      format(cap, big.mark = ","), " and returned nothing, so it was most ",
+      "likely cut off; raise the limit with params(max_tokens = )."
+    )))
+  }
+  results$.error <- errors
+
+  # ellmer's column order: coded values, then .error, then usage
+  trailing <- intersect(
+    c("input_tokens", "output_tokens", "cached_input_tokens", "cost"),
+    names(results)
+  )
+  results <- results[c(setdiff(names(results), c(".error", trailing)), ".error", trailing)]
+
+  n <- sum(hit)
+  cli::cli_warn(c(
+    "{n} response{?s} from the structured call used the whole {.code max_tokens} limit of {cap} and returned nothing.",
+    "i" = "{cli::qty(n)}{?It was/They were} most likely cut off; raise the limit with {.code params(max_tokens = )}.",
+    "i" = "{.fn qlm_failures} lists the affected units."
+  ))
+  results
+}
+
+
+#' Which rows of a converted result carry no coded value at all?
+#'
+#' Reads the columns the schema defines, ignoring `.error` and the usage
+#' columns. A scalar is blank when `NA`; an array, which converts to a
+#' list-column, when its cell is empty; a nested object, which converts to a
+#' data-frame column, when every one of its columns is blank.
+#'
+#' @param results A data frame as returned by ellmer's converter.
+#' @param schema The codebook schema.
+#'
+#' @return A logical vector, one element per row.
+#' @keywords internal
+#' @noRd
+blank_rows <- function(results, schema) {
+  meta <- c(".error", "input_tokens", "output_tokens", "cached_input_tokens", "cost")
+  cols <- if (inherits(schema, "ellmer::TypeObject")) {
+    intersect(names(schema@properties), names(results))
+  } else {
+    setdiff(names(results), meta)
+  }
+  if (!length(cols)) {
+    return(rep(FALSE, nrow(results)))
+  }
+  Reduce(`&`, lapply(results[cols], blank_column))
+}
+
+blank_column <- function(v) {
+  if (is.data.frame(v)) {
+    if (!ncol(v)) {
+      return(rep(TRUE, nrow(v)))
+    }
+    return(Reduce(`&`, lapply(v, blank_column)))
+  }
+  if (is.list(v)) {
+    return(vapply(v, blank_cell, logical(1)))
+  }
+  is.na(v)
+}
+
+blank_cell <- function(x) {
+  if (is.null(x)) {
+    return(TRUE)
+  }
+  if (is.data.frame(x)) {
+    return(nrow(x) == 0L)
+  }
+  length(x) == 0L
+}
+
+
+#' An error recorded for a response ellmer could extract nothing from
+#'
+#' Carries a class of its own so that the schema-enforcement check in
+#' `all_required_missing()` can tell it from a request failure or a cut-off
+#' response. The distinction matters: here the endpoint did answer, and the
+#' answer was not the schema, which is precisely the evidence that check
+#' looks for; a request that never got an answer, or an answer the provider
+#' cut short, is not.
+#'
+#' @param message The message ellmer gave for the row.
+#'
+#' @return A condition inheriting from `simpleError`.
+#' @keywords internal
+#' @noRd
+extraction_error <- function(message) {
+  structure(
+    simpleError(message),
+    class = c("quallmer_extraction_error", "simpleError", "error", "condition")
+  )
+}
+
+is_extraction_error <- function(e) {
+  inherits(e, "quallmer_extraction_error")
 }
 
 

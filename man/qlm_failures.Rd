@@ -31,7 +31,10 @@ A unit counts as failed when either of two things holds:
 \item it carries an \code{.error}. ellmer records one when the request failed.
 \code{\link[=qlm_code]{qlm_code()}} records one when a response came back but ellmer could
 extract no structured data from it, which ellmer reports only by
-warning, and on the JSON path when a response never validated; or
+warning; when a response used the whole declared \code{max_tokens} limit and
+returned nothing; and on the JSON path when a response never validated
+or was cut off at that limit (see the \emph{Truncated responses} section of
+\code{\link[=qlm_code]{qlm_code()}}); or
 \item every required scalar property of the codebook schema is \code{NA} for it.
 A structured call can succeed at the HTTP level and still return nothing
 usable, when the endpoint accepted the JSON schema and ignored it, so an
