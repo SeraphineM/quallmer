@@ -73,8 +73,9 @@ The coding path is reproduced from the path the original run actually took,
 not the \code{structured} mode it requested: a run that asked for \code{"auto"} and
 fell back to JSON mode replicates as \code{"json"}, so that an intermittently
 conforming endpoint cannot quietly skip the local validation the original
-relied on. Pass \code{structured} explicitly to override. When the provider
-changes, the path is chosen afresh for the new provider. By the same rule,
+relied on. Pass \code{structured} explicitly to override. When the endpoint
+changes, provider or \code{base_url}, the path is chosen afresh for it. By the
+same rule,
 a parent that was completed with \code{\link[=qlm_backfill]{qlm_backfill()}} has its passes replayed
 on the replication, so the two are complete on the same terms; see
 \code{backfill}.

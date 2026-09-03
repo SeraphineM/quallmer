@@ -417,6 +417,9 @@ test_that("code_handler_json rejects a response reported as cut off even when it
   expect_equal(calls$n, 1)
   expect_true(is.na(result$score))
   expect_match(json_test_messages(result)[[1]], "cut off at the max_tokens limit")
+  # Classed, so a backfill can tell a cut-off from a validation error that
+  # merely mentions max_tokens
+  expect_s3_class(result$.error[[1]], "quallmer_truncation_error")
 })
 
 test_that("code_handler_json retries a content-filtered response and names the filter", {

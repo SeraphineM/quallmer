@@ -11,8 +11,9 @@
 #' not the `structured` mode it requested: a run that asked for `"auto"` and
 #' fell back to JSON mode replicates as `"json"`, so that an intermittently
 #' conforming endpoint cannot quietly skip the local validation the original
-#' relied on. Pass `structured` explicitly to override. When the provider
-#' changes, the path is chosen afresh for the new provider. By the same rule,
+#' relied on. Pass `structured` explicitly to override. When the endpoint
+#' changes, provider or `base_url`, the path is chosen afresh for it. By the
+#' same rule,
 #' a parent that was completed with [qlm_backfill()] has its passes replayed
 #' on the replication, so the two are complete on the same terms; see
 #' `backfill`.
@@ -77,6 +78,9 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
   # Input validation, including that .id is a key and the run metadata is
   # present; also upgrades an old metadata layout
   x <- check_qlm_coded(x)
+  # Checked before the replication is coded, not after: a bad value must not
+  # cost a paid call.
+  check_backfill_arg(backfill)
 
   # Extract original components
   original_data <- attr(x, "data")
@@ -240,14 +244,16 @@ restore_run_args <- function(x, overrides = list(), model = NULL) {
   # Deriving from `backend` also covers objects coded before `structured`
   # existed, which record a backend but no mode.
   #
-  # The path does not carry across providers: the one a provider took says
+  # The path does not carry across endpoints: the one an endpoint took says
   # nothing about what another accepts (DeepSeek rejects the schema-
-  # constrained request outright), so with a new provider the mode is left
-  # for qlm_code() to choose as it would for a fresh run. max_retries still
-  # travels, since JSON mode is reachable for any provider and the setting
-  # is inert on the structured path.
-  provider_changed <- !identical(original_endpoint$provider, use_endpoint$provider)
-  original_backend <- if (provider_changed) NULL else meta_attr$object$backend
+  # constrained request outright; two OpenAI-compatible services behind the
+  # same prefix enforce a schema quite differently), so with a new endpoint
+  # the mode is left for qlm_code() to choose as it would for a fresh run.
+  # The endpoint identity is the one computed above, prefix plus base_url.
+  # max_retries still travels, since JSON mode is reachable anywhere and the
+  # setting is inert on the structured path.
+  endpoint_changed <- !identical(original_endpoint, use_endpoint)
+  original_backend <- if (endpoint_changed) NULL else meta_attr$object$backend
   original_mode <- if (identical(original_backend, "json_mode")) {
     "json"
   } else if (identical(original_backend, "structured")) {

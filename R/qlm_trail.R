@@ -121,6 +121,9 @@ qlm_trail <- function(..., path = NULL) {
       run$execution_args <- meta_attr$object$execution_args
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
+      # Passes that completed the run, and any other model they used: the
+      # audit trail is where a composite most needs to be disclosed (#136)
+      run$backfill <- meta_attr$object$backfill
     } else if (inherits(obj, "qlm_comparison")) {
       run$comparison <- obj
       run$metadata$n_raters <- meta_attr$object$n_raters
@@ -244,6 +247,9 @@ print.qlm_trail <- function(x, ...) {
     if (!is.null(run$chat_args$name)) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
     }
+    if (!is.null(backfill_summary(run$backfill))) {
+      cat("Backfill:", backfill_summary(run$backfill), "\n")
+    }
     if (!is.null(run$metadata$notes)) {
       cat("Notes:   ", run$metadata$notes, "\n", sep = "")
     }
@@ -305,6 +311,9 @@ print.qlm_trail <- function(x, ...) {
 
       cat(i, ". ", run$name, parent_str, "\n", sep = "")
       cat("   ", ts, " | ", model, "\n", sep = "")
+      if (!is.null(backfill_summary(run$backfill))) {
+        cat("   Backfill: ", backfill_summary(run$backfill), "\n", sep = "")
+      }
 
       if (!is.null(run$codebook$name)) {
         cat("   Codebook: ", run$codebook$name, "\n", sep = "")
@@ -467,6 +476,9 @@ generate_trail_report <- function(trail, file) {
     # Model and parameters
     if (!is.null(run$chat_args$name)) {
       lines <- c(lines, paste("**Model:**", run$chat_args$name))
+    }
+    if (!is.null(backfill_summary(run$backfill))) {
+      lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
     }
 
     params <- run_params(run)

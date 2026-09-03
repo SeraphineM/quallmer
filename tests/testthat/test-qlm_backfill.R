@@ -245,8 +245,8 @@ test_that("qlm_backfill skips length rejections, and truncations unless params c
   expect_equal(names(calls$args[[1]]$x), c("c", "d"))
   expect_equal(filled$score, c(NA, NA, 2L, 3L))
 
-  # A new params is how the output limit is raised, so a cut-off unit is
-  # retried then; the length rejection still is not
+  # A higher params(max_tokens = ) is how the output limit is raised, so a
+  # cut-off unit is retried then; the length rejection still is not
   calls <- new.env()
   f <- backfill_with(list(pass), calls)
   filled <- suppressMessages(f(run, params = ellmer::params(max_tokens = 32000)))
@@ -255,6 +255,31 @@ test_that("qlm_backfill skips length rejections, and truncations unless params c
   expect_equal(filled$score, c(NA, 1L, 2L, 3L))
   # ... and the overrides are on record
   expect_equal(qlm_meta(filled, "backfill", type = "object")[[1]]$overrides$params$max_tokens, 32000)
+
+  # Other params leave the limit where it was, and so leave the unit alone;
+  # so does a limit no higher than the run's own
+  capped <- make_run(results, chat_args = list(params = list(max_tokens = 4096)))
+  for (params in list(ellmer::params(temperature = 0), ellmer::params(max_tokens = 4096),
+                      ellmer::params(max_tokens = 100))) {
+    calls <- new.env()
+    f <- backfill_with(list(pass), calls)
+    suppressMessages(f(capped, params = params))
+    expect_equal(names(calls$args[[1]]$x), c("c", "d"))
+  }
+  calls <- new.env()
+  f <- backfill_with(list(pass), calls)
+  suppressMessages(f(capped, params = ellmer::params(max_tokens = 8192)))
+  expect_equal(names(calls$args[[1]]$x), c("b", "c", "d"))
+})
+
+test_that("raises_output_limit compares the override with the run's own limit", {
+  expect_false(raises_output_limit(list(), list()))
+  expect_false(raises_output_limit(list(params = list(temperature = 0)), list(params = list(max_tokens = 60))))
+  expect_false(raises_output_limit(list(params = list(max_tokens = 60)), list(params = list(max_tokens = 60))))
+  expect_false(raises_output_limit(list(params = list(max_tokens = 30)), list(params = list(max_tokens = 60))))
+  expect_true(raises_output_limit(list(params = list(max_tokens = 61)), list(params = list(max_tokens = 60))))
+  # No declared limit: the provider default applied, so any explicit one counts
+  expect_true(raises_output_limit(list(params = list(max_tokens = 10)), list()))
 })
 
 test_that("qlm_backfill with another model retries everything, and records the model", {
@@ -314,24 +339,30 @@ test_that("qlm_backfill re-derives the skip list from what a pass recorded", {
   expect_match(qlm_failures(filled)$reason, "context length")
 })
 
-test_that("is_terminal_failure classifies reasons", {
-  expect_equal(
-    is_terminal_failure(c(NA, "maximum context length exceeded", "cut off at the max_tokens limit", "Invalid JSON")),
-    c(FALSE, TRUE, TRUE, FALSE)
+test_that("is_terminal_failure classifies recorded errors", {
+  errors <- list(
+    NULL,
+    simpleError("HTTP 400 Bad Request. This model's maximum context length is 128000 tokens."),
+    truncation_error("The response was cut off at the max_tokens limit after 60 output tokens."),
+    simpleError("Invalid JSON"),
+    # A validation error that happens to name a schema property: not a cut-off
+    simpleError("$ has unexpected property: max_tokens.")
   )
+  expect_equal(is_terminal_failure(errors), c(FALSE, TRUE, TRUE, FALSE, FALSE))
+  # A raised limit frees the cut-off unit, not the over-long one
+  expect_equal(is_terminal_failure(errors, limit_raised = TRUE), c(FALSE, TRUE, FALSE, FALSE, FALSE))
   # Nothing is terminal under a different model
-  expect_equal(
-    is_terminal_failure(c(NA, "maximum context length exceeded", "cut off at the max_tokens limit"),
-                        model_changed = TRUE),
-    c(FALSE, FALSE, FALSE)
-  )
-  expect_equal(
-    is_terminal_failure(c("maximum context length exceeded", "cut off at the max_tokens limit"),
-                        overrides = list(params = ellmer::params(max_tokens = 1))),
-    c(TRUE, FALSE)
-  )
-  # ellmer's own wording for the same condition
+  expect_equal(is_terminal_failure(errors, model_changed = TRUE), rep(FALSE, 5))
+})
+
+test_that("is_output_truncation goes by class, with the known phrasings for older objects", {
+  expect_true(is_output_truncation(truncation_error("anything")))
+  expect_true(is_output_truncation(simpleError("The response was cut off at the max_tokens limit after 60 output tokens; raise it.")))
+  expect_true(is_output_truncation(simpleError("The response used the whole max_tokens limit of 4,096 and returned nothing.")))
   expect_true(is_output_truncation("Response was truncated because it hit the `max_tokens` limit."))
+  expect_false(is_output_truncation(simpleError("$ has unexpected property: max_tokens.")))
+  expect_false(is_output_truncation(simpleError("Invalid JSON")))
+  expect_false(is_output_truncation(NULL))
   expect_false(is_output_truncation(NA_character_))
 })
 
@@ -359,6 +390,60 @@ test_that("qlm_backfill errors when the first pass fails outright, warns later",
   expect_warning(filled <- suppressMessages(g(run)), "keeping what earlier passes recovered")
   expect_equal(filled$score, c(1L, NA))
   expect_length(qlm_meta(filled, "backfill", type = "object"), 1)
+})
+
+
+# Identifying units -----------------------------------------------------------
+
+test_that("qlm_backfill finds the inputs of a reordered or subset object by .id", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b", "c"), score = c(1L, NA, NA), note = NA_character_)
+  run <- make_run(results)
+
+  # Rows reversed, then the first dropped: positions no longer index inputs()
+  shuffled <- run[c(3, 2, 1), ]
+  shuffled <- shuffled[-1, ]
+  expect_equal(shuffled$.id, c("b", "a"))
+
+  calls <- new.env()
+  pass <- data.frame(id = "b", score = 2L, note = NA_character_)
+  f <- backfill_with(list(pass), calls)
+  filled <- suppressMessages(f(shuffled))
+
+  sent <- calls$args[[1]]$x
+  expect_equal(names(sent), "b")
+  expect_equal(unname(sent), "text b")
+  expect_equal(filled$.id, c("b", "a"))
+  expect_equal(filled$score, c(2L, 1L))
+})
+
+test_that("inputs_by_id maps names, or positions for unnamed input, and refuses the rest", {
+  named <- make_run(data.frame(id = c("a", "b"), score = c(1L, 2L), note = NA_character_))
+  expect_equal(inputs_by_id(named, "b"), c(b = "text b"))
+  expect_error(inputs_by_id(named, c("b", "zz")), "Cannot find the input for 1 unit")
+
+  # Unnamed input: qlm_code() numbers the units, so .id is the position
+  codebook <- qlm_codebook("Test", "Test prompt", backfill_schema)
+  unnamed <- new_qlm_coded(
+    results = data.frame(id = 1:3, score = c(1L, NA, 3L), note = NA_character_),
+    codebook = codebook, data = c("first", "second", "third"), input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 3),
+    name = "run1", call = quote(qlm_code(...)), parent = NULL
+  )
+  expect_equal(inputs_by_id(unnamed, c("3", "2")), c("3" = "third", "2" = "second"))
+  expect_error(inputs_by_id(unnamed, "4"), "Cannot find the input")
+  expect_error(inputs_by_id(unnamed, "b"), "Cannot find the input")
+})
+
+test_that("qlm_backfill and the merge refuse duplicated .id values", {
+  run <- make_run(data.frame(id = c("a", "b"), score = c(NA, NA), note = NA_character_))
+  # The constructor no longer lets this happen; forge it after the fact
+  forged <- run
+  forged$.id <- c("dup", "dup")
+  expect_error(qlm_backfill(forged), "must be unique")
+  retry <- make_run(data.frame(id = "dup", score = 1L, note = NA_character_))
+  expect_error(merge_backfill_rows(forged, retry), "must be unique")
 })
 
 
@@ -503,4 +588,30 @@ test_that("replay_backfill repeats the parent's passes, in order, until nothing 
   expect_equal(calls[[1]]$attempts, 2L)
 
   expect_error(f(replication, parent, backfill = "yes"), "must be")
+})
+
+
+test_that("qlm_trail discloses a backfill, and the other model, in print and report", {
+  skip_if_not_installed("mockery")
+  results <- data.frame(id = c("a", "b", "c"), score = c(1L, NA, NA), note = NA_character_)
+  run <- make_run(results)
+  pass <- data.frame(id = c("b", "c"), score = c(2L, 3L), note = NA_character_)
+  f <- backfill_with(list(pass))
+  filled <- suppressMessages(f(run, model = "deepseek/deepseek-chat"))
+
+  trail <- qlm_trail(filled)
+  out <- capture.output(print(trail))
+  expect_true(any(grepl("^Backfill: 1 pass, recovered 2 of 2 \\(2 with deepseek/deepseek-chat\\)", out)))
+
+  # The same line in the multi-run listing and in the report
+  parent <- make_run(data.frame(id = "a", score = 1L, note = NA_character_), name = "run0")
+  meta_attr <- attr(filled, "meta"); meta_attr$object$parent <- "run0"; attr(filled, "meta") <- meta_attr
+  out <- capture.output(print(qlm_trail(parent, filled)))
+  expect_true(any(grepl("Backfill: 1 pass, recovered 2 of 2", out)))
+
+  # qlm_trail() adds the extensions itself
+  stem <- tempfile()
+  qlm_trail(parent, filled, path = stem)
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("\\*\\*Backfill:\\*\\* 1 pass, recovered 2 of 2", report)))
 })

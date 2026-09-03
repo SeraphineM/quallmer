@@ -41,8 +41,8 @@ By default the passes use the run's own model, codebook and settings, so
 the result is what the run should have produced. A different \code{model} can
 be given, for units the original model consistently refuses or cannot fit
 in its context window; the object then records which units were coded by
-which model, and \code{print()} says so, since a result coded by two instruments
-has to be disclosed as one.
+which model, and \code{print()} and \code{\link[=qlm_trail]{qlm_trail()}} say so, since a result coded
+by two instruments has to be disclosed as one.
 
 Which units are re-coded is decided afresh on every pass, from the object as
 it then stands, by the same test \code{\link[=qlm_failures]{qlm_failures()}} uses: a unit that carries
@@ -53,7 +53,9 @@ the outcome:
 \item a text the provider rejected as longer than the model's context window,
 unless \code{model} changes;
 \item a response cut off at the \code{max_tokens} limit, unless \code{model} changes or
-the backfill overrides \code{params}, which is how the limit is raised.
+the backfill raises the limit, by passing a \code{params(max_tokens = )}
+higher than the run's own. Other \code{params} leave the limit where it was,
+and so leave those units alone.
 }
 
 Content refusals are deliberately retried. They look deterministic and are
@@ -62,7 +64,7 @@ more than one provider.
 
 Each pass is an ordinary \code{\link[=qlm_code]{qlm_code()}} call over the failed units, on the
 path the original run took (a run that fell back to JSON mode is backfilled
-in JSON mode; with a different provider the path is chosen afresh), and
+in JSON mode; with a different endpoint the path is chosen afresh), and
 always as a parallel call: a run coded through the batch API is backfilled
 through the parallel API, with the same model and settings, and any
 batch-only arguments (\code{path}, \code{wait}, \code{ignore_hash}) set aside. A pass that
@@ -70,16 +72,19 @@ fails outright on the first attempt is an error, since nothing has been
 gained yet and the cause is most likely configuration; on a later pass it
 is a warning, and what earlier passes recovered is kept.
 
-The merge is by \code{.id}. Rows keep their order; a unit is replaced only when
-the retry produced a usable coding, so a retry that failed again never
-overwrites anything, though its \code{.error} is recorded as the latest reason.
-Token and cost columns, when present, are summed across all attempts, since
-a failed request may still have been billed. The passes are recorded in the
-object metadata as \code{backfill}, one entry per pass with its timestamp, the
-model if it differed from the run's, the overrides, and the \code{.id}s attempted
-and recovered, so the result can say which of its rows came from which pass
-and which model. \code{\link[=qlm_replicate]{qlm_replicate()}} replays these passes on a replication, so
-that a replication of a completed run is completed on the same terms.
+Units are identified by \code{.id} throughout: the failed units' inputs are
+looked up by \code{.id}, so an object whose rows have been reordered or subset
+is backfilled correctly, and the merge is by \code{.id}. Rows keep their order;
+a unit is replaced only when the retry produced a usable coding, so a retry
+that failed again never overwrites anything, though its \code{.error} is
+recorded as the latest reason. Token and cost columns, when present, are
+summed across all attempts, since a failed request may still have been
+billed. The passes are recorded in the object metadata as \code{backfill}, one
+entry per pass with its timestamp, the model if it differed from the run's,
+the overrides, and the \code{.id}s attempted and recovered, so the result can say
+which of its rows came from which pass and which model. \code{\link[=qlm_replicate]{qlm_replicate()}}
+replays these passes on a replication, so that a replication of a completed
+run is completed on the same terms.
 }
 \examples{
 \dontrun{

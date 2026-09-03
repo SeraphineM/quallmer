@@ -816,7 +816,7 @@ mark_truncated_rows <- function(results, schema, cap, keep_tokens = TRUE) {
 
   errors <- recorded_errors(results)
   for (i in which(hit)) {
-    errors[i] <- list(simpleError(paste0(
+    errors[i] <- list(truncation_error(paste0(
       "The response used the whole max_tokens limit of ",
       format(cap, big.mark = ","), " and returned nothing, so it was most ",
       "likely cut off; raise the limit with params(max_tokens = )."
@@ -1170,24 +1170,11 @@ print.qlm_coded <- function(x, ...) {
   }
   cat("# Units:    ", units, breakdown, "\n", sep = "")
 
-  # A backfilled object is no longer the product of one call; say so (#136)
-  passes <- meta_attr$object$backfill
-  if (length(passes)) {
-    n_pass <- length(passes)
-    recovered <- lengths(lapply(passes, `[[`, "recovered"))
-    n_attempted <- length(unique(unlist(lapply(passes, `[[`, "attempted"))))
-    # Units coded by a model other than the run's make this a composite;
-    # say so here, not only in the metadata
-    other <- vapply(passes, function(p) p$model %||% NA_character_, character(1))
-    by_other <- tapply(recovered[!is.na(other)], other[!is.na(other)], sum)
-    by_other <- by_other[by_other > 0]
-    detail <- if (length(by_other)) {
-      paste0(" (", paste0(by_other, " with ", names(by_other), collapse = ", "), ")")
-    } else {
-      ""
-    }
-    cat("# Backfill: ", n_pass, if (n_pass == 1L) " pass" else " passes",
-        ", recovered ", sum(recovered), " of ", n_attempted, detail, "\n", sep = "")
+  # A backfilled object is no longer the product of one call, and one
+  # completed by another model is a composite; say so here (#136)
+  backfill <- backfill_summary(meta_attr$object$backfill)
+  if (!is.null(backfill)) {
+    cat("# Backfill: ", backfill, "\n", sep = "")
   }
 
   if (!is.null(meta_attr$object$parent)) {

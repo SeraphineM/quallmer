@@ -897,4 +897,36 @@ test_that("qlm_replicate leaves the coding path to a new provider", {
   f(coded, model = "openai/gpt-4o-mini")
   expect_null(seen$args$structured)
   expect_equal(seen$args$max_retries, 3L)
+
+  # The same prefix at another base_url is another endpoint too: Qwen through
+  # DashScope and Kimi through Moonshot enforce a schema quite differently
+  compatible <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "openai_compatible/qwen3.5",
+                     base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
+    execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2, backend = "structured"),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+  f(compatible)
+  expect_equal(seen$args$structured, "structured")
+  f(compatible, model = "openai_compatible/kimi-k3", base_url = "https://api.moonshot.ai/v1")
+  expect_null(seen$args$structured)
+})
+
+test_that("qlm_replicate validates backfill before coding anything", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "test/model"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) stop("a paid call was made"))
+  expect_error(f(coded, backfill = "yes"), "must be `TRUE`, `FALSE` or `NULL`")
 })

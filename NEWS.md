@@ -20,15 +20,17 @@
   `backfill_attempts` to complete a run in the same call, and `qlm_replicate()`
   gains `backfill`, which by default replays the passes recorded on the
   parent so that a replication of a completed run is complete on the same
-  terms (#136).
+  terms. `qlm_trail()` reports the passes and any other model they used, so
+  a composite is disclosed in the audit trail as well as when printed (#136).
 
 * `qlm_replicate()` no longer carries the coding path across a change of
-  provider. It reproduced the path the parent took, `structured` or `json`,
-  which is right for the same provider and wrong for another: a JSON-mode
-  DeepSeek run replicated on OpenAI would skip provider-side enforcement, and
-  a structured OpenAI run replicated on DeepSeek would fail outright. With a
-  new provider the path is now chosen as for a fresh run; `max_retries`
-  still carries, as before.
+  endpoint, provider or `base_url`. It reproduced the path the parent took,
+  `structured` or `json`, which is right for the same endpoint and wrong for
+  another: a JSON-mode DeepSeek run replicated on OpenAI would skip
+  provider-side enforcement, a structured OpenAI run replicated on DeepSeek
+  would fail outright, and two OpenAI-compatible services behind the same
+  prefix enforce a schema quite differently. With a new endpoint the path is
+  now chosen as for a fresh run; `max_retries` still carries, as before.
 
 ## Bug fixes
 

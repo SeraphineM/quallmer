@@ -12,8 +12,8 @@
 #' the result is what the run should have produced. A different `model` can
 #' be given, for units the original model consistently refuses or cannot fit
 #' in its context window; the object then records which units were coded by
-#' which model, and `print()` says so, since a result coded by two instruments
-#' has to be disclosed as one.
+#' which model, and `print()` and [qlm_trail()] say so, since a result coded
+#' by two instruments has to be disclosed as one.
 #'
 #' @param x qlm_coded; a coded object produced by [qlm_code()] or [qlm_replicate()].
 #' @param ... optional overrides passed to [qlm_code()] for the backfill
@@ -37,7 +37,9 @@
 #' * a text the provider rejected as longer than the model's context window,
 #'   unless `model` changes;
 #' * a response cut off at the `max_tokens` limit, unless `model` changes or
-#'   the backfill overrides `params`, which is how the limit is raised.
+#'   the backfill raises the limit, by passing a `params(max_tokens = )`
+#'   higher than the run's own. Other `params` leave the limit where it was,
+#'   and so leave those units alone.
 #'
 #' Content refusals are deliberately retried. They look deterministic and are
 #' not: the same document is refused on one pass and coded on the next, at
@@ -45,7 +47,7 @@
 #'
 #' Each pass is an ordinary [qlm_code()] call over the failed units, on the
 #' path the original run took (a run that fell back to JSON mode is backfilled
-#' in JSON mode; with a different provider the path is chosen afresh), and
+#' in JSON mode; with a different endpoint the path is chosen afresh), and
 #' always as a parallel call: a run coded through the batch API is backfilled
 #' through the parallel API, with the same model and settings, and any
 #' batch-only arguments (`path`, `wait`, `ignore_hash`) set aside. A pass that
@@ -53,16 +55,19 @@
 #' gained yet and the cause is most likely configuration; on a later pass it
 #' is a warning, and what earlier passes recovered is kept.
 #'
-#' The merge is by `.id`. Rows keep their order; a unit is replaced only when
-#' the retry produced a usable coding, so a retry that failed again never
-#' overwrites anything, though its `.error` is recorded as the latest reason.
-#' Token and cost columns, when present, are summed across all attempts, since
-#' a failed request may still have been billed. The passes are recorded in the
-#' object metadata as `backfill`, one entry per pass with its timestamp, the
-#' model if it differed from the run's, the overrides, and the `.id`s attempted
-#' and recovered, so the result can say which of its rows came from which pass
-#' and which model. [qlm_replicate()] replays these passes on a replication, so
-#' that a replication of a completed run is completed on the same terms.
+#' Units are identified by `.id` throughout: the failed units' inputs are
+#' looked up by `.id`, so an object whose rows have been reordered or subset
+#' is backfilled correctly, and the merge is by `.id`. Rows keep their order;
+#' a unit is replaced only when the retry produced a usable coding, so a retry
+#' that failed again never overwrites anything, though its `.error` is
+#' recorded as the latest reason. Token and cost columns, when present, are
+#' summed across all attempts, since a failed request may still have been
+#' billed. The passes are recorded in the object metadata as `backfill`, one
+#' entry per pass with its timestamp, the model if it differed from the run's,
+#' the overrides, and the `.id`s attempted and recovered, so the result can say
+#' which of its rows came from which pass and which model. [qlm_replicate()]
+#' replays these passes on a replication, so that a replication of a completed
+#' run is completed on the same terms.
 #'
 #' @return `x`, with the recovered units filled in and `backfill` added to
 #'   its object metadata. The run name, parent, codebook and inputs are
@@ -112,6 +117,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
   if (!is.null(model) && (!is.character(model) || length(model) != 1L || is.na(model))) {
     cli::cli_abort("{.arg model} must be a single string, or {.code NULL} for the run's own model.")
   }
+  check_unique_ids(x$.id, what = "{.arg x}")
 
   overrides <- list(...)
   if ("codebook" %in% names(overrides) || "x" %in% names(overrides)) {
@@ -131,6 +137,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
   run_model <- meta_attr$object$chat_args$name
   restored <- restore_run_args(x, overrides = overrides, model = model)
   model_changed <- !identical(restored$model, run_model)
+  limit_raised <- raises_output_limit(overrides, meta_attr$object$chat_args)
   call_args <- restored$call_args
   # A backfill is a small parallel call whatever the original run was; the
   # batch API's cache arguments would point at the original run's file.
@@ -140,7 +147,6 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
   )
   call_args[intersect(batch_only, names(call_args))] <- NULL
 
-  data <- inputs(x)
   ids <- as.character(x$.id)
   run_name <- meta_attr$user$name
   passes <- list()
@@ -156,13 +162,14 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
 
     # Re-derived each pass from the object as it now stands: the previous
     # pass may have recorded a length rejection that was not visible before.
-    reasons <- failure_reasons(recorded_errors(x), failed)
-    terminal <- failed & is_terminal_failure(reasons, overrides, model_changed)
+    terminal <- failed & is_terminal_failure(
+      recorded_errors(x), limit_raised = limit_raised, model_changed = model_changed
+    )
     retry <- which(failed & !terminal)
 
     if (attempt == 1L && any(terminal)) {
       cli::cli_inform(c(
-        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model}, or new {.arg params} for the limit, would retry them."
+        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model}, or a higher {.code params(max_tokens = )}, would retry them."
       ))
     }
     if (!length(retry)) {
@@ -174,8 +181,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
       "i" = "Backfill pass {attempt} of {attempts}: re-coding {length(retry)} unit{?s} with {.val {restored$model}}."
     ))
 
-    subset <- data[retry]
-    names(subset) <- ids[retry]
+    subset <- inputs_by_id(x, ids[retry])
     result <- tryCatch(
       do.call(qlm_code, c(
         list(
@@ -234,6 +240,42 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
 }
 
 
+#' The inputs of given units, looked up by `.id`
+#'
+#' `inputs()` returns the run's original input vector in its original order,
+#' which is not the row order of an object that has been reordered or subset.
+#' `.id` is the key: for a named input it is the name, and for an unnamed one
+#' it is the position, which [qlm_code()] assigned as the sequence. Anything
+#' that cannot be mapped that way is an error rather than a guess, because a
+#' wrong mapping would silently code one text under another's identifier.
+#'
+#' @param x A `qlm_coded` object.
+#' @param ids Character vector of `.id` values.
+#'
+#' @return The matching elements of `inputs(x)`, named by `ids`.
+#' @keywords internal
+#' @noRd
+inputs_by_id <- function(x, ids) {
+  data <- inputs(x)
+  pos <- if (!is.null(names(data))) {
+    match(ids, names(data))
+  } else {
+    suppressWarnings(as.integer(ids))
+  }
+  bad <- is.na(pos) | pos < 1L | pos > length(data) |
+    (is.null(names(data)) & as.character(pos) != ids)
+  if (any(bad)) {
+    cli::cli_abort(c(
+      "Cannot find the input for {sum(bad)} unit{?s} of {.arg x} by {.field .id}: {.val {ids[bad]}}.",
+      "i" = "The {.field .id} of each row must be the name, or for unnamed input the position, of its input in {.fn inputs}."
+    ))
+  }
+  out <- data[pos]
+  names(out) <- ids
+  out
+}
+
+
 #' Complete a replication the way its parent was completed
 #'
 #' A replication is meant to be comparable with its parent, so a parent that
@@ -251,10 +293,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
 #' @keywords internal
 #' @noRd
 replay_backfill <- function(result, parent, backfill = NULL) {
-  if (!is.null(backfill) &&
-      (!is.logical(backfill) || length(backfill) != 1L || is.na(backfill))) {
-    cli::cli_abort("{.arg backfill} must be {.code TRUE}, {.code FALSE} or {.code NULL}.")
-  }
+  check_backfill_arg(backfill)
   if (isFALSE(backfill)) {
     return(result)
   }
@@ -282,52 +321,177 @@ replay_backfill <- function(result, parent, backfill = NULL) {
 }
 
 
+#' Check the `backfill` argument of qlm_replicate()
+#'
+#' Called at the top of [qlm_replicate()], before the replication is coded,
+#' so that a bad value is caught before a paid call rather than after it.
+#'
+#' @param backfill The argument.
+#' @param call The call to report the error against.
+#'
+#' @return Invisibly `NULL`.
+#' @keywords internal
+#' @noRd
+check_backfill_arg <- function(backfill, call = rlang::caller_env()) {
+  if (!is.null(backfill) &&
+      (!is.logical(backfill) || length(backfill) != 1L || is.na(backfill))) {
+    cli::cli_abort("{.arg backfill} must be {.code TRUE}, {.code FALSE} or {.code NULL}.",
+                   call = call)
+  }
+  invisible(NULL)
+}
+
+
+#' Does the backfill raise the run's output limit?
+#'
+#' Only a `params(max_tokens = )` above the run's own counts. Other `params`
+#' leave the limit as it was, through the merge in `restore_run_args()`, and
+#' so cannot change the outcome for a response cut off at that limit. When
+#' the run declared no limit, the provider's default applied, which is not
+#' known here; an explicit limit then counts as raising it.
+#'
+#' @param overrides The backfill's `...` overrides.
+#' @param chat_args The run's recorded arguments to [ellmer::chat()].
+#'
+#' @return `TRUE` or `FALSE`.
+#' @keywords internal
+#' @noRd
+raises_output_limit <- function(overrides, chat_args) {
+  new <- declared_max_tokens(overrides)
+  if (is.null(new)) {
+    return(FALSE)
+  }
+  old <- declared_max_tokens(chat_args)
+  is.null(old) || new > old
+}
+
+
 #' Is a failure one that re-sending the same request cannot fix?
 #'
 #' A text longer than the context window is rejected identically every time,
 #' by the same model. A response cut off at the output limit is reproduced by
-#' the same limit, so it is retried only when the backfill supplies new
-#' `params`, which is where the limit is set. A different model changes both,
-#' so under a model change neither is terminal. Content refusals are never
-#' terminal: they are not deterministic, and a retry recovers them often
-#' enough to be worth it.
+#' the same limit, so it is retried only when the backfill raises that limit.
+#' A different model changes both, so under a model change neither is
+#' terminal. Content refusals are never terminal: they are not deterministic,
+#' and a retry recovers them often enough to be worth it. A unit with no
+#' recorded error, failed by returning `NA` for every required property, is
+#' never terminal either.
 #'
-#' @param reasons Character vector of failure reasons, `NA` for units that
-#'   did not fail.
-#' @param overrides The backfill's `...` overrides.
+#' @param errors The list from `recorded_errors()`.
+#' @param limit_raised Whether the backfill raises the output limit.
 #' @param model_changed Whether the backfill uses a different model.
 #'
-#' @return A logical vector.
+#' @return A logical vector, one element per unit.
 #' @keywords internal
 #' @noRd
-is_terminal_failure <- function(reasons, overrides = list(), model_changed = FALSE) {
+is_terminal_failure <- function(errors, limit_raised = FALSE, model_changed = FALSE) {
   if (model_changed) {
-    return(rep(FALSE, length(reasons)))
+    return(rep(FALSE, length(errors)))
   }
-  vapply(reasons, function(reason) {
-    if (is.na(reason)) {
+  vapply(errors, function(e) {
+    if (is.null(e)) {
       return(FALSE)
     }
-    if (is_length_rejection(reason)) {
-      return(TRUE)
+    if (is_output_truncation(e)) {
+      return(!limit_raised)
     }
-    is_output_truncation(reason) && !"params" %in% names(overrides)
+    is_length_rejection(condition_text(e))
   }, logical(1), USE.NAMES = FALSE)
+}
+
+
+#' An error recorded for a response cut off at the output limit
+#'
+#' Carries a class of its own so that a backfill can recognise it without
+#' reading the message, which a validation error could also contain (a
+#' schema property named `max_tokens`, say).
+#'
+#' @param message The reason.
+#'
+#' @return A condition inheriting from `simpleError`.
+#' @keywords internal
+#' @noRd
+truncation_error <- function(message) {
+  structure(
+    simpleError(message),
+    class = c("quallmer_truncation_error", "simpleError", "error", "condition")
+  )
 }
 
 
 #' Was the failure a response cut off at the output limit?
 #'
-#' Matches the reasons quallmer records on either path, and the one ellmer's
-#' `check_finish_reason()` gives, all of which name `max_tokens`.
+#' By class where quallmer recorded it. Objects coded before the class existed
+#' carry plain conditions, so the exact phrasings quallmer and ellmer use for
+#' the same event are recognised as well; nothing else is, since any other
+#' message that happens to mention `max_tokens` (a validation error naming a
+#' schema property) is a failure a backfill should retry.
 #'
-#' @param msg A failure reason.
+#' @param e A condition, or a message.
 #'
 #' @return `TRUE` for a response cut off at `max_tokens`.
 #' @keywords internal
 #' @noRd
-is_output_truncation <- function(msg) {
-  length(msg) == 1L && !is.na(msg) && grepl("max_tokens", msg, fixed = TRUE)
+is_output_truncation <- function(e) {
+  if (inherits(e, "quallmer_truncation_error")) {
+    return(TRUE)
+  }
+  msg <- condition_text(e)
+  if (length(msg) != 1L || is.na(msg)) {
+    return(FALSE)
+  }
+  grepl(
+    paste0(
+      "^The response was cut off at the max_tokens limit|",
+      "^The response used the whole max_tokens limit|",
+      "^Response was truncated because it hit the `?max_tokens`? limit"
+    ),
+    msg
+  )
+}
+
+condition_text <- function(e) {
+  if (inherits(e, "condition")) {
+    strip_ansi(conditionMessage(e))
+  } else if (is.character(e)) {
+    e
+  } else {
+    NA_character_
+  }
+}
+
+
+#' Describe a backfill for a header line
+#'
+#' Shared by `print.qlm_coded()` and [qlm_trail()], so that both disclose the
+#' same thing the same way: how many passes, how many of the units attempted
+#' were recovered, and how many of those a model other than the run's own
+#' supplied, which makes the object a composite.
+#'
+#' @param passes The `backfill` entry of the object metadata.
+#'
+#' @return A single string, or `NULL` when there were no passes.
+#' @keywords internal
+#' @noRd
+backfill_summary <- function(passes) {
+  if (!length(passes)) {
+    return(NULL)
+  }
+  n_pass <- length(passes)
+  recovered <- lengths(lapply(passes, `[[`, "recovered"))
+  n_attempted <- length(unique(unlist(lapply(passes, `[[`, "attempted"))))
+  other <- vapply(passes, function(p) p$model %||% NA_character_, character(1))
+  by_other <- tapply(recovered[!is.na(other)], other[!is.na(other)], sum)
+  by_other <- by_other[by_other > 0]
+  detail <- if (length(by_other)) {
+    paste0(" (", paste0(by_other, " with ", names(by_other), collapse = ", "), ")")
+  } else {
+    ""
+  }
+  paste0(
+    n_pass, if (n_pass == 1L) " pass" else " passes",
+    ", recovered ", sum(recovered), " of ", n_attempted, detail
+  )
 }
 
 
@@ -351,6 +515,8 @@ is_output_truncation <- function(msg) {
 #' @keywords internal
 #' @noRd
 merge_backfill_rows <- function(x, new) {
+  check_unique_ids(x$.id, what = "{.arg x}")
+  check_unique_ids(new$.id, what = "the backfill pass")
   pos <- match(as.character(new$.id), as.character(x$.id))
   if (anyNA(pos)) {
     cli::cli_abort(

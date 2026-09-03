@@ -96,6 +96,9 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   # failures because they indicate the run was misconfigured, not that the
   # model declined to answer one particular unit.
   fatal <- rep(FALSE, length(x))
+  # Units whose last failure was a response cut off at the output limit, so
+  # the recorded error can carry the class a backfill recognises it by.
+  cut <- rep(FALSE, length(x))
   pending <- seq_along(x)
 
   # Token and cost accumulators, summed ACROSS retry attempts: a repair attempt
@@ -146,6 +149,7 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
         checked <- list(ok = FALSE, error = reason)
         truncated <- is_truncation(turns$finish[[j]])
       }
+      cut[[i]] <- truncated
       if (isTRUE(checked$ok)) {
         parsed[[i]] <- checked$value
         # NB: `problems[[i]] <- NULL` would DELETE the element and shift every
@@ -215,10 +219,12 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 
   if (any(failed)) {
     results$.error <- lapply(seq_along(x), function(i) {
-      if (failed[[i]]) {
-        simpleError(problems[[i]] %||% "failed for an unrecorded reason")
-      } else {
+      if (!failed[[i]]) {
         NULL
+      } else if (cut[[i]]) {
+        truncation_error(problems[[i]])
+      } else {
+        simpleError(problems[[i]] %||% "failed for an unrecorded reason")
       }
     })
     cli::cli_warn(c(

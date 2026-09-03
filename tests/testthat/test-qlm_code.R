@@ -1328,6 +1328,10 @@ test_that("new_qlm_coded rejects a table whose .id repeats", {
       name = "run", call = quote(qlm_code(...)), parent = NULL
     ),
     "must be unique"
+  )
+})
+
+
 # Completing a run in the same call -------------------------------------------
 
 test_that("qlm_code(backfill_attempts = ) hands the result to qlm_backfill", {
