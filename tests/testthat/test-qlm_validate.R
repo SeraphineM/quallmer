@@ -793,3 +793,67 @@ test_that("qlm_validate refuses objects whose .id is not a key, whatever their c
     "must be unique"
   )
 })
+
+
+# ---- ordinal and interval values read as numbers (#150) ----------------------
+
+test_that("qlm_validate ranks ordinal ratings by their values, not their sorted strings (#150)", {
+  truth <- data.frame(.id = 1:12, g = c(1:10, 2, 9))
+  est <- data.frame(.id = 1:12, g = c(1:10, 3, 10))
+  gold <- as_qlm_coded(truth, id = .id, name = "gold")
+  pred <- as_qlm_coded(est, id = .id, name = "pred")
+
+  v <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal"))
+  expect_equal(v$value[v$measure == "rho"], cor(truth$g, est$g, method = "spearman"))
+  expect_equal(v$value[v$measure == "tau"], cor(truth$g, est$g, method = "kendall"))
+  expect_equal(v$value[v$measure == "mae"], mean(abs(truth$g - est$g)))
+
+  # The same ratings held as text give the same answer
+  pred_text <- as_qlm_coded(data.frame(.id = 1:12, g = as.character(est$g)),
+                            id = .id, name = "pred")
+  v_text <- as.data.frame(qlm_validate(pred_text, gold = gold, by = "g", level = "ordinal"))
+  expect_equal(v_text$value, v$value)
+
+  # And the interval measures are unchanged by the storage type
+  i <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "interval"))
+  i_text <- as.data.frame(qlm_validate(pred_text, gold = gold, by = "g", level = "interval"))
+  expect_equal(i$value[i$measure == "r"], cor(truth$g, est$g))
+  expect_equal(i_text$value, i$value)
+})
+
+
+test_that("qlm_validate bootstrap CIs on ordinal data bracket the value-based estimate (#150)", {
+  truth <- data.frame(.id = 1:12, g = c(1:10, 2, 9))
+  est <- data.frame(.id = 1:12, g = c(1:10, 3, 10))
+  gold <- as_qlm_coded(truth, id = .id, name = "gold")
+  pred <- as_qlm_coded(est, id = .id, name = "pred")
+
+  set.seed(150)
+  v <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal",
+                                  ci = "bootstrap", bootstrap_n = 50))
+  mae <- v[v$measure == "mae", ]
+  expect_equal(mae$value, mean(abs(truth$g - est$g)))
+  expect_lte(mae$ci_lower, mae$value)
+  expect_gte(mae$ci_upper, mae$value)
+  expect_lt(mae$ci_upper, 0.75)  # the string-sorted ranks gave 0.75
+})
+
+
+test_that("qlm_validate refuses a rating that is not a number at interval level (#150)", {
+  gold <- as_qlm_coded(data.frame(.id = 1:3, g = c(1, 2, 3)), id = .id, name = "gold")
+  pred <- as_qlm_coded(data.frame(.id = 1:3, g = c("1", "2", "unclear")), id = .id, name = "pred")
+
+  err <- expect_error(qlm_validate(pred, gold = gold, by = "g", level = "interval"),
+                      "must be numbers")
+  expect_match(conditionMessage(err), "unclear")
+  expect_match(conditionMessage(err), "pred")
+})
+
+
+test_that("qlm_validate ordinal text categories are still ranked by their sorted labels (#150)", {
+  gold <- as_qlm_coded(data.frame(.id = 1:4, g = c("a", "b", "c", "a")), id = .id, name = "gold")
+  pred <- as_qlm_coded(data.frame(.id = 1:4, g = c("a", "b", "c", "b")), id = .id, name = "pred")
+
+  v <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal"))
+  expect_equal(v$value[v$measure == "mae"], 0.25)
+})

@@ -120,6 +120,13 @@ continuous measurements). Metrics: ICC (intraclass correlation), Pearson's r
 error).
 }
 
+At ordinal and interval level the predictions and the gold standard are
+read as numbers, whatever type they are stored as, so a column of digits
+held as text is compared on its values and not on the alphabetical order of
+its strings. A value that does not read as a number is an error at interval
+level. Ordinal categories may instead all be text, in which case they are
+ranked by their sorted labels.
+
 For multiclass problems with nominal data, the \code{average} parameter controls
 how per-class metrics are aggregated:
 \itemize{
