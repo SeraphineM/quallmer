@@ -110,7 +110,8 @@ check_model_provider <- function(model, call = rlang::caller_env()) {
 #' Nothing is added either when the name is on the list, since the cause is
 #' then something else, or when the provider's listing is known not to cover
 #' every identifier it will invoke, since absence from it then proves
-#' nothing; see `listing_is_complete()`.
+#' nothing; see `listing_is_complete()`. Nor when the name begins a listed
+#' one, since that is the shape of an alias; see `may_be_alias()`.
 #'
 #' @param model The model specification, as passed to [qlm_code()].
 #' @param chat_args The run's arguments to [ellmer::chat()]; `base_url`,
@@ -133,7 +134,7 @@ model_name_hint <- function(model, chat_args = list()) {
     return(character())
   }
   models <- provider_models(provider, chat_args)
-  if (is.null(models) || id %in% models) {
+  if (is.null(models) || id %in% models || may_be_alias(id, models)) {
     return(character())
   }
 
@@ -146,6 +147,30 @@ model_name_hint <- function(model, chat_args = list()) {
     lines <- c(lines, cli::format_inline("Did you mean {.val {close}}?"))
   }
   set_bullets(lines, n = Inf, bullet = "i")
+}
+
+
+#' Could a name absent from the listing be an alias of a listed one?
+#'
+#' Providers accept convenience aliases their listings do not carry.
+#' Anthropic's listing gives the dated identifier, `claude-haiku-4-5-20251001`,
+#' while the API also takes `claude-haiku-4-5`, and once took `-latest`
+#' forms; every alias documented is the listed name with a suffix removed.
+#' So a name that begins a listed one is left alone rather than called
+#' wrong: the cost of silence is a lost hint for a truncated typo, the cost
+#' of a false claim is a valid model made unusable on the structured path,
+#' since the claim also stops the JSON-mode fallback. Applied to every
+#' provider, since the rule is about the shape of aliases, not one API.
+#'
+#' @param id The model name as typed, without the prefix.
+#' @param models The provider's listed names.
+#'
+#' @return `TRUE` when some listed name starts with `id`.
+#' @keywords internal
+#' @noRd
+may_be_alias <- function(id, models) {
+  stem <- sub("-latest$", "", id)
+  nzchar(stem) && any(startsWith(models, stem))
 }
 
 
@@ -248,6 +273,10 @@ models_lister <- function(provider) {
 #' Edit distance, case-insensitive, keeping only names within half the length
 #' of the one typed (and never fewer than two edits), so that a name unlike
 #' anything on the list gets no suggestion rather than a misleading one.
+#' Each listed name is also compared as its alias, without a trailing date,
+#' since that is the form people type: against a dated listing,
+#' `claude-haiku-4-6` is one edit from `claude-haiku-4-5`, not ten from
+#' `claude-haiku-4-5-20251001`. The listed name is what is suggested.
 #'
 #' @param id The model name as typed.
 #' @param models The provider's model names.
@@ -257,7 +286,11 @@ models_lister <- function(provider) {
 #' @keywords internal
 #' @noRd
 closest_model_names <- function(id, models, n = 3L) {
-  d <- utils::adist(tolower(id), tolower(models))[1, ]
+  stems <- sub("-[0-9]{8}$", "", models)
+  d <- pmin(
+    utils::adist(tolower(id), tolower(models))[1, ],
+    utils::adist(tolower(id), tolower(stems))[1, ]
+  )
   near <- d <= max(2, ceiling(nchar(id) / 2))
   candidates <- models[near][order(d[near])]
   utils::head(unique(candidates), n)
