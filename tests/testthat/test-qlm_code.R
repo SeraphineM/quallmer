@@ -1298,6 +1298,9 @@ test_that("selecting .id away returns a plain tibble, not a broken coded object"
   expect_false(is.null(attr(kept, "meta")))
   # and a vector comes back as a vector
   expect_equal(x[, "score", drop = TRUE], c(1, 0))
+  # Selecting the key twice is refused rather than kept as a classed object
+  expect_error(x[c(".id", ".id")], "exactly one")
+  expect_error(x[c(".id", "score", ".id")], "exactly one")
 })
 
 test_that("new_qlm_coded requires exactly one .id column", {

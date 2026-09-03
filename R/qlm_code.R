@@ -1073,12 +1073,21 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   if (!is.data.frame(out)) {
     return(out)
   }
-  if (!".id" %in% names(out)) {
+  n_id <- sum(names(out) == ".id")
+  if (n_id == 0L) {
     for (a in c("data", "codebook", "meta", "run", "input_type")) {
       attr(out, a) <- NULL
     }
     class(out) <- setdiff(class(out), c("qlm_coded", "qlm_humancoded"))
     return(out)
+  }
+  # Selecting .id twice would keep the class on a table with two key columns,
+  # of which `[[` reads only the first
+  if (n_id > 1L) {
+    cli::cli_abort(c(
+      "A {.cls qlm_coded} object must have exactly one {.field .id} column; the subset would have {n_id}.",
+      "i" = "{.field .id} identifies each unit and is the key every operation merges on."
+    ))
   }
   check_ids(out[[".id"]], what = "{.field .id} of the subset")
   out
