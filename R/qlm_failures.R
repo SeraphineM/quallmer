@@ -11,9 +11,10 @@
 #'
 #' A unit counts as failed when either of two things holds:
 #'
-#' * it carries an `.error`. ellmer records one when the request failed or
-#'   the response could not be converted to the schema, and quallmer's JSON
-#'   path records one when a response never validated; or
+#' * it carries an `.error`. ellmer records one when the request failed.
+#'   [qlm_code()] records one when a response came back but ellmer could
+#'   extract no structured data from it, which ellmer reports only by
+#'   warning, and on the JSON path when a response never validated; or
 #' * every required scalar property of the codebook schema is `NA` for it.
 #'   A structured call can succeed at the HTTP level and still return nothing
 #'   usable, when the endpoint accepted the JSON schema and ignored it, so an
@@ -24,7 +25,7 @@
 #' list-column cell, so neither `is.na()` nor a row count on such a column
 #' can tell failure from a unit to which nothing applied. For a codebook whose
 #' required properties are all arrays or nested objects, only `.error`
-#' identifies failed units, which is what ellmer sets when a request fails.
+#' identifies failed units.
 #'
 #' @param x A `qlm_coded` object.
 #'

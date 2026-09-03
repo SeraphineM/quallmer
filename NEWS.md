@@ -216,7 +216,12 @@
   because an endpoint can accept a JSON schema and ignore it, returning
   HTTP 200 and nothing usable. Arrays and nested objects are not consulted,
   since after conversion a missing array and a valid empty one are the same
-  cell (#132).
+  cell. For that to be enough, `qlm_code()` now also records an `.error` for
+  a response ellmer could extract no structured data from (a refusal in
+  prose, say): ellmer reports those only by warning and leaves the row with
+  no `.error`, which for an array-only schema is indistinguishable from a
+  valid empty answer. `print()` also distinguishes rows present from units
+  attempted after subsetting (#132).
 
 * `qlm_compare()` gains a `by_category = FALSE` argument that, when
   set to `TRUE`, reports per-category reliability rows for nominal

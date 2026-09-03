@@ -176,9 +176,12 @@ start rather than making a call it could not check, and says so. Use
 
 On the JSON path, units that never validate have \code{NA} coded values and a
 \code{.error} list-column recording the reason, and \code{max_retries} controls how
-many repair attempts each unit gets. On either path, \code{\link[=qlm_failures]{qlm_failures()}} lists
-the units that produced no usable coding, with the reason for each, and
-\code{print()} reports how many there were. Batch processing and image codebooks
+many repair attempts each unit gets. On the structured path, a response
+from which ellmer could extract no structured data, which it reports only
+by warning, is likewise given an \code{.error}. On either path, \code{\link[=qlm_failures]{qlm_failures()}}
+lists the units that produced no usable coding, with the reason for each,
+and \code{print()} reports how many there were. Batch processing and image
+codebooks
 are not supported there, so \code{"auto"} will not fall back under
 \code{batch = TRUE}. The path actually taken is recorded in the run metadata as
 \code{backend}.

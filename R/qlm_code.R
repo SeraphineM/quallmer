@@ -138,9 +138,12 @@
 #'
 #' On the JSON path, units that never validate have `NA` coded values and a
 #' `.error` list-column recording the reason, and `max_retries` controls how
-#' many repair attempts each unit gets. On either path, [qlm_failures()] lists
-#' the units that produced no usable coding, with the reason for each, and
-#' `print()` reports how many there were. Batch processing and image codebooks
+#' many repair attempts each unit gets. On the structured path, a response
+#' from which ellmer could extract no structured data, which it reports only
+#' by warning, is likewise given an `.error`. On either path, [qlm_failures()]
+#' lists the units that produced no usable coding, with the reason for each,
+#' and `print()` reports how many there were. Batch processing and image
+#' codebooks
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
 #' `backend`.
@@ -482,15 +485,15 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
 
   run <- function(chat) {
     if (batch) {
-      do.call(ellmer::batch_chat_structured, c(
+      with_extraction_errors(do.call(ellmer::batch_chat_structured, c(
         list(chat = chat, prompts = prompts, type = codebook$schema),
         execution_args
-      ))
+      )))
     } else {
-      do.call(ellmer::parallel_chat_structured, c(
+      with_extraction_errors(do.call(ellmer::parallel_chat_structured, c(
         list(chat = chat, prompts = prompts, type = codebook$schema),
         execution_args
-      ))
+      )))
     }
   }
 
@@ -534,6 +537,119 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   attempt
+}
+
+
+#' Run an ellmer structured call, keeping the extraction failures it reports
+#'
+#' ellmer's `multi_convert()` attaches `.error` only to turns whose request
+#' failed. A turn that came back but yielded no structured data -- a refusal
+#' in prose, say -- is reported in a warning listing the affected rows and
+#' then dropped: scalar fields become `NA` and an array becomes a zero-length
+#' cell, with no `.error`. For an array-only schema that is indistinguishable
+#' from a valid empty answer, so the failure would be invisible to
+#' [qlm_failures()] (#132). Capture the warning as it passes and record an
+#' `.error` for each listed row that has none. The warning still reaches the
+#' user; nothing is muffled.
+#'
+#' This depends on the format of ellmer's warning, one `* <row>: <message>`
+#' line per failure. `test-qlm_failures.R` pins that against ellmer's actual
+#' `multi_convert()`, so an upstream change fails the suite rather than
+#' silently restoring the blind spot.
+#'
+#' @param expr A call returning what [ellmer::parallel_chat_structured()] or
+#'   [ellmer::batch_chat_structured()] returns.
+#'
+#' @return The value of `expr`, with `.error` set for reported rows when it is
+#'   a data frame; unchanged otherwise.
+#' @keywords internal
+#' @noRd
+with_extraction_errors <- function(expr) {
+  failures <- NULL
+  value <- withCallingHandlers(
+    expr,
+    warning = function(w) {
+      found <- parse_extraction_warning(conditionMessage(w))
+      if (!is.null(found)) {
+        failures <<- rbind(failures, found)
+      }
+    }
+  )
+  attach_extraction_errors(value, failures)
+}
+
+
+#' Read the rows named in ellmer's extraction warning
+#'
+#' @param msg The warning's condition message.
+#'
+#' @return A data frame with `index` and `message`, or `NULL` when `msg` is
+#'   not that warning or names no rows.
+#' @keywords internal
+#' @noRd
+parse_extraction_warning <- function(msg) {
+  msg <- strip_ansi(msg)
+  if (!grepl("^Failed to extract data from", msg)) {
+    return(NULL)
+  }
+  lines <- strsplit(msg, "\n", fixed = TRUE)[[1]]
+  parts <- regmatches(lines, regexec("^\\s*[*]\\s*([0-9]+):\\s*(.*)$", lines))
+  hits <- Filter(function(m) length(m) == 3L, parts)
+  if (!length(hits)) {
+    return(NULL)
+  }
+  data.frame(
+    index = as.integer(vapply(hits, `[`, character(1), 2L)),
+    message = vapply(hits, `[`, character(1), 3L),
+    stringsAsFactors = FALSE
+  )
+}
+
+
+#' Record extraction failures in .error
+#'
+#' Only rows with no `.error` already are touched; a request failure ellmer
+#' recorded takes precedence. `.error` is placed where ellmer puts it, before
+#' any token and cost columns, so both origins yield the same column order.
+#'
+#' @param results What the structured call returned.
+#' @param failures The data frame from `parse_extraction_warning()`, or `NULL`.
+#'
+#' @return `results`, with `.error` set where needed.
+#' @keywords internal
+#' @noRd
+attach_extraction_errors <- function(results, failures) {
+  if (is.null(failures) || !is.data.frame(results)) {
+    return(results)
+  }
+  failures <- failures[failures$index >= 1L & failures$index <= nrow(results), ]
+  if (!nrow(failures)) {
+    return(results)
+  }
+
+  had_error <- ".error" %in% names(results)
+  errors <- if (had_error) {
+    as.list(results$.error)
+  } else {
+    vector("list", nrow(results))
+  }
+  for (k in seq_len(nrow(failures))) {
+    i <- failures$index[k]
+    if (is.null(errors[[i]])) {
+      errors[[i]] <- simpleError(failures$message[k])
+    }
+  }
+  results$.error <- errors
+
+  if (!had_error) {
+    usage <- intersect(
+      c("input_tokens", "output_tokens", "cached_input_tokens", "cost"),
+      names(results)
+    )
+    others <- setdiff(names(results), c(".error", usage))
+    results <- results[, c(others, ".error", usage)]
+  }
+  results
 }
 
 
@@ -715,14 +831,23 @@ print.qlm_coded <- function(x, ...) {
 
   # Units attempted, and how many came back with nothing usable, so that a
   # partly failed run cannot look complete (#132). Failed rows beyond the
-  # printed head of the tibble would otherwise go unseen.
+  # printed head of the tibble would otherwise go unseen. Row subsetting keeps
+  # the class and the original count, so when the rows present differ from
+  # the units attempted, say so, and count over the rows present.
+  n_units <- meta_attr$object$n_units
+  n_rows <- nrow(x)
   n_failed <- sum(failed_units(x))
-  if (n_failed > 0) {
-    cat("# Units:    ", meta_attr$object$n_units,
-        " (", nrow(x) - n_failed, " scored, ", n_failed, " failed)\n", sep = "")
+  units <- if (!is.null(n_units) && n_units != n_rows) {
+    paste0(n_units, " attempted, ", n_rows, " present")
   } else {
-    cat("# Units:    ", meta_attr$object$n_units, "\n", sep = "")
+    as.character(n_units %||% n_rows)
   }
+  breakdown <- if (n_failed > 0) {
+    paste0(" (", n_rows - n_failed, " scored, ", n_failed, " failed)")
+  } else {
+    ""
+  }
+  cat("# Units:    ", units, breakdown, "\n", sep = "")
 
   if (!is.null(meta_attr$object$parent)) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
