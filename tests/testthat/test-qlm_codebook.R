@@ -289,3 +289,63 @@ test_that("qlm_codebook levels refuse a name that occurs at more than one depth"
   )
   expect_equal(cb$levels, list(label = "nominal"))
 })
+
+test_that("qlm_codebook levels are checked when the schema root is a type_array", {
+  schema <- type_array(
+    items = type_object(score = type_integer("1-5."), label = type_string("Label."))
+  )
+
+  # Previously the check was skipped for any root that was not a type_object
+  expect_error(
+    qlm_codebook("x", "x", schema, levels = list(typo = "ordinal")),
+    "not found in schema.*typo"
+  )
+
+  cb <- qlm_codebook("x", "x", schema, levels = list(score = "ordinal"))
+  expect_equal(cb$levels, list(score = "ordinal"))
+
+  # A root with no named properties at all says so rather than listing nothing
+  expect_error(
+    qlm_codebook("x", "x", type_array(items = type_string()),
+                 levels = list(score = "ordinal")),
+    "declares no named properties"
+  )
+})
+
+test_that("nested levels reach qlm_compare through an unnested, re-wrapped table", {
+  # End to end for #131: the codebook declares levels for variables one array
+  # deep; the coded output is unnested to one row per document-item, given an
+  # identifier unique per item, and re-wrapped with the codebook. qlm_compare()
+  # must then pick up "ordinal" for `importance` without a `level` argument.
+  cb <- qlm_codebook(
+    name = "nested_levels",
+    instructions = "Score each item.",
+    schema = type_object(
+      assessments = type_array(
+        items = type_object(
+          item_id = type_string("Identifier."),
+          importance = type_integer("0-2.")
+        )
+      )
+    ),
+    levels = list(importance = "ordinal")
+  )
+
+  # Two documents; d1 has two items, d2 has one. The unit id is document-item.
+  unnested_a <- data.frame(
+    unit = c("d1.econ", "d1.env", "d2.econ"),
+    importance = c(2L, 1L, 0L)
+  )
+  unnested_b <- data.frame(
+    unit = c("d1.econ", "d1.env", "d2.econ"),
+    importance = c(2L, 0L, 0L)
+  )
+
+  coder_a <- as_qlm_coded(unnested_a, id = "unit", name = "A", codebook = cb)
+  coder_b <- as_qlm_coded(unnested_b, id = "unit", name = "B", codebook = cb)
+
+  res <- as.data.frame(qlm_compare(coder_a, coder_b, by = "importance"))
+
+  expect_true(all(res$level == "ordinal"))
+  expect_equal(res$value[res$measure == "percent_agreement"], 2 / 3)
+})

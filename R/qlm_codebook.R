@@ -25,11 +25,14 @@
 #'
 #'   Names may refer to properties at any depth of the schema, including those
 #'   inside a nested [type_object()] or the items of a [type_array()]. A level
-#'   declared for a nested variable describes that variable once the coded
-#'   output has been unnested to one row per item, which is the form
-#'   [qlm_compare()] and [qlm_validate()] consume. Because `levels` is a flat
-#'   list, a name that occurs at more than one place in the schema cannot be
-#'   declared and is an error; rename the properties to make them distinct.
+#'   declared for a nested variable describes that variable in a table
+#'   unnested to one row per item. [qlm_compare()] and [qlm_validate()] merge
+#'   on `.id`, so such a table needs an identifier that is unique per item
+#'   (a document-item key, not the document's `.id` alone) and must be
+#'   re-wrapped with [as_qlm_coded()], passing this codebook as `codebook`,
+#'   for the declared levels to be found. Because `levels` is a flat list, a
+#'   name that occurs at more than one place in the schema cannot be declared
+#'   and is an error; rename the properties to make them distinct.
 #'
 #' @return A codebook object (a list with class `c("qlm_codebook", "task")`)
 #'   containing the codebook definition. Use with [qlm_code()] to apply the
@@ -278,16 +281,23 @@ validate_levels <- function(levels, schema) {
   # If schema is provided, check that variable names match schema properties.
   # Properties are collected at every depth, so a variable inside a nested
   # type_object() or the items of a type_array() can be declared too (#131).
-  if (!is.null(schema) && inherits(schema, "ellmer::TypeObject")) {
+  # The root need not be a type_object(): a root type_array() is a documented
+  # schema shape, and its items' properties are resolved the same way.
+  if (!is.null(schema)) {
     all_props <- schema_prop_names(schema)
     schema_props <- unique(all_props)
     unknown <- !names(levels) %in% schema_props
 
     if (any(unknown)) {
       unknown_names <- names(levels)[unknown]
+      hint <- if (length(schema_props) == 0) {
+        "The schema declares no named properties."
+      } else {
+        "Schema properties are: {.val {schema_props}}"
+      }
       cli::cli_abort(c(
         "Variable{?s} not found in schema: {.var {unknown_names}}",
-        "i" = "Schema properties are: {.val {schema_props}}"
+        "i" = hint
       ))
     }
 

@@ -8,10 +8,12 @@
   per rated item could not declare measurement levels for the very variables
   `qlm_compare()` and `qlm_validate()` need them for, and the only workaround
   was to drop `levels` from the codebook and re-attach them by hand after
-  unnesting. Property names are now collected at every depth. A name that
-  occurs at more than one place in the schema is an error rather than being
-  resolved silently to the first match, since a flat `levels` list cannot say
-  which one it means (#131).
+  unnesting. Property names are now collected at every depth, and for a
+  schema whose root is a `type_array()` rather than a `type_object()`, which
+  previously skipped the check altogether. A name that occurs at more than
+  one place in the schema is an error rather than being resolved silently to
+  the first match, since a flat `levels` list cannot say which one it means
+  (#131).
 
 * `qlm_trail()` reports which endpoint each run actually used, and points at
   the right ellmer help page for setting it up. The report derived a provider

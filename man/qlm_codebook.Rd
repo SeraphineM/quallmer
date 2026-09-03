@@ -36,11 +36,14 @@ following mapping: \code{type_boolean} and \code{type_enum} = nominal, \code{typ
 
 Names may refer to properties at any depth of the schema, including those
 inside a nested \code{\link[ellmer:type_object]{type_object()}} or the items of a \code{\link[ellmer:type_array]{type_array()}}. A level
-declared for a nested variable describes that variable once the coded
-output has been unnested to one row per item, which is the form
-\code{\link[=qlm_compare]{qlm_compare()}} and \code{\link[=qlm_validate]{qlm_validate()}} consume. Because \code{levels} is a flat
-list, a name that occurs at more than one place in the schema cannot be
-declared and is an error; rename the properties to make them distinct.}
+declared for a nested variable describes that variable in a table
+unnested to one row per item. \code{\link[=qlm_compare]{qlm_compare()}} and \code{\link[=qlm_validate]{qlm_validate()}} merge
+on \code{.id}, so such a table needs an identifier that is unique per item
+(a document-item key, not the document's \code{.id} alone) and must be
+re-wrapped with \code{\link[=as_qlm_coded]{as_qlm_coded()}}, passing this codebook as \code{codebook},
+for the declared levels to be found. Because \code{levels} is a flat list, a
+name that occurs at more than one place in the schema cannot be declared
+and is an error; rename the properties to make them distinct.}
 }
 \value{
 A codebook object (a list with class \code{c("qlm_codebook", "task")})
