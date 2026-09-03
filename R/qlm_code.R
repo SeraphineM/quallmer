@@ -1048,6 +1048,32 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
 }
 
 
+#' Subset a qlm_coded object
+#'
+#' Tibble subsetting keeps the class and attributes, so a subset is still a
+#' `qlm_coded` object; what it must also still be is a table keyed by
+#' `.id`. Repeating rows, `x[c(1, 1), ]`, would produce an object with a
+#' repeated identifier that never passed through the constructor, and every
+#' merge downstream would then pair the wrong rows (#156). So the identifier
+#' is checked again here, where the duplicate would be made.
+#'
+#' @param x A qlm_coded object.
+#' @param i,j Row and column indices, as for a tibble.
+#' @param ... Passed on to the tibble method.
+#'
+#' @return A qlm_coded object, or whatever the tibble method returns when
+#'   the identifier column is not among the columns kept.
+#' @keywords internal
+#' @export
+`[.qlm_coded` <- function(x, i, j, ...) {
+  out <- NextMethod()
+  if (is.data.frame(out) && ".id" %in% names(out)) {
+    check_ids(out[[".id"]], what = "{.field .id} of the subset")
+  }
+  out
+}
+
+
 #' Print a qlm_coded object
 #'
 #' @param x A qlm_coded object.

@@ -780,12 +780,14 @@ test_that("qlm_validate refuses objects whose .id is not a key, whatever their c
     qlm_validate(missing, gold = gold, by = "score", level = "interval"),
     "must not be missing"
   )
-  duplicate <- a[c(1, 1), ]
+  duplicate <- a
+  duplicate$.id <- c("u0", "u0")
   expect_error(
     qlm_validate(duplicate, gold = gold, by = "score", level = "interval"),
     "must be unique"
   )
-  bad_gold <- gold[c(1, 1), ]
+  bad_gold <- gold
+  bad_gold$.id <- c("u0", "u0")
   expect_error(
     qlm_validate(a, gold = bad_gold, by = "score", level = "interval"),
     "must be unique"

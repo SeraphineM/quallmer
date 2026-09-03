@@ -9,9 +9,10 @@
   identifier was matched to every other missing one; an unnested table that
   keeps the document identifier rather than a document-item key is how the
   first arises in practice. Both are now errors, naming the offending
-  values: at construction, in `qlm_code()` before a request is spent, and
-  again in `qlm_compare()` and `qlm_validate()`, since row subsetting keeps
-  the class and objects from before the check exist. `as_qlm_coded()` also
+  values: at construction, in `qlm_code()` before a request is spent, when
+  rows are subset with `[`, and again in `qlm_compare()` and
+  `qlm_validate()`, for objects forged after construction or saved before
+  the check existed. `as_qlm_coded()` also
   refuses an `id` column alongside an existing `.id`, which left two
   columns of that name with the wrong one read (#156).
 
