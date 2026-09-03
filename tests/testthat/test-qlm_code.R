@@ -453,7 +453,7 @@ test_that("qlm_code delegates to the handler and records the backend", {
 
   handler_args <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries = 2L, model_hint = NULL) {
+                           max_retries = 2L, model_hint = NULL, ...) {
     handler_args <<- list(model = model, batch = batch, max_retries = max_retries,
                           chat_args = chat_args, execution_args = execution_args)
     results <- tibble::tibble(score = c(0.5, 0.8))
@@ -542,7 +542,7 @@ test_that("qlm_code passes its max_retries default to the handler", {
 
   seen <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries, model_hint = NULL) {
+                           max_retries, model_hint = NULL, ...) {
     seen <<- max_retries
     tibble::tibble(score = 0.5)
   }
@@ -590,7 +590,7 @@ structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
 
 json_stub <- function(calls = NULL) {
   function(x, codebook, model, chat_args, execution_args, batch, max_retries,
-           model_hint = NULL) {
+           model_hint = NULL, ...) {
     if (!is.null(calls)) {
       calls$json <- TRUE
       calls$max_retries <- max_retries
@@ -1432,4 +1432,83 @@ test_that("every entry point refuses an object a row operation has left with a r
   expect_error(qlm_validate(doubled, gold = x, by = "score", level = "interval"), "must be unique")
   expect_error(qlm_trail(doubled), "must be unique")
   expect_error(qlm_replicate(doubled), "must be unique")
+})
+
+
+# cost that cannot be priced (#135) --------------------------------------------
+
+# qlm_code() with the structured call stubbed to return `results`, and the
+# chat built for real, off the environment and sending nothing, so that the
+# diagnosis reads the provider the run would use. Callers pin
+# structured = "structured": DeepSeek defaults to the JSON path.
+coding_run <- function(results) {
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  f
+}
+offline <- function() list(Authorization = "Bearer x")
+
+test_that("qlm_code says once, before the run, why cost will be NA (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), cost = c(NA_real_, NA_real_))
+
+  f <- coding_run(results)
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, include_cost = TRUE, structured = "structured"),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(qlm_meta(coded)$cost_note, "ellmer has no prices for DeepSeek models")
+  expect_output(print(coded), "# Cost:     NA (ellmer has no prices for DeepSeek models)",
+                fixed = TRUE)
+})
+
+test_that("qlm_code's cost message says whether token counts are recorded (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+
+  # include_cost alone: no token columns come back, and the message says so
+  f <- coding_run(data.frame(score = c(0.5, 0.8), cost = c(NA_real_, NA_real_)))
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, include_cost = TRUE, structured = "structured"),
+    "Set `include_tokens = TRUE` to record"
+  )
+  expect_false("input_tokens" %in% names(coded))
+
+  # With include_tokens the counts are there, and the message says that instead
+  with_tokens <- data.frame(score = c(0.5, 0.8), input_tokens = c(10, 12),
+                            output_tokens = c(3, 4), cached_input_tokens = c(0, 0),
+                            cost = c(NA_real_, NA_real_))
+  f <- coding_run(with_tokens)
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, include_cost = TRUE, include_tokens = TRUE,
+               structured = "structured"),
+    "Token counts are recorded"
+  )
+  expect_true("input_tokens" %in% names(coded))
+})
+
+test_that("qlm_code is silent about cost when it was not asked for, or is priced (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8))
+
+  # Not asked for: the lookup is not even made
+  f <- coding_run(results)
+  expect_no_message(coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+                               credentials = offline, structured = "structured"))
+  expect_null(qlm_meta(coded)$cost_note)
+  expect_output(print(coded), "# Units:")
+  expect_no_match(paste(capture.output(print(coded)), collapse = "\n"), "# Cost:")
+
+  # Asked for and priced: nothing to say
+  expect_no_message(coded <- f(c("a", "b"), codebook, model = "openai/gpt-4.1-mini",
+                               credentials = offline, include_cost = TRUE,
+                               structured = "structured"))
+  expect_null(qlm_meta(coded)$cost_note)
 })

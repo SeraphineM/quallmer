@@ -101,6 +101,20 @@
 #' level does not work: those reach [ellmer::chat()], which has no such
 #' argument. Use `params`.
 #'
+#' @section Cost:
+#'
+#' `include_tokens = TRUE` and `include_cost = TRUE` are forwarded to ellmer,
+#' which adds per-unit token counts and a `cost` column in US dollars. ellmer
+#' prices from a table fixed at its release, matched exactly on provider and
+#' model, and returns `NA` on any miss. Some providers are absent from that
+#' table altogether, DeepSeek among them, so no model of theirs is ever priced;
+#' a model newer than the installed ellmer is missed on a provider it otherwise
+#' prices, which upgrading fixes; and local endpoints such as ollama have no
+#' per-token charge. In each case `qlm_code()` says so once before the run,
+#' and the reason is kept with the object and shown when it is printed. With
+#' `include_tokens = TRUE` the token counts are recorded, from which such a
+#' run can be costed at the provider's published rates.
+#'
 #' @section Schema enforcement:
 #'
 #' Some providers accept a JSON Schema without enforcing it, so a response can
@@ -336,6 +350,12 @@ qlm_code <- function(x, codebook, model, ...,
   # Metadata contributed by the coding path
   backend_meta <- list()
   results <- NULL
+
+  # Whether the cost will come back NA, and why, is read by each path from
+  # the chat it builds, before it sends anything (#135). Kept here so the
+  # reason outlives the console: it travels with the object.
+  unpriced <- NULL
+  attempt <- NULL
   fallback_reason <- NULL
   model_hint <- NULL
 
@@ -346,6 +366,8 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
       allow_skip = identical(structured, "auto") && !batch
     )
+
+    unpriced <- attempt$unpriced
 
     if (isTRUE(attempt$ok)) {
       results <- attempt$value
@@ -414,10 +436,15 @@ qlm_code <- function(x, codebook, model, ...,
       execution_args = execution_args,
       batch = batch,
       max_retries = max_retries,
-      model_hint = model_hint
+      model_hint = model_hint,
+      cost_message = is.null(attempt)
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL
+    if (is.null(unpriced)) {
+      unpriced <- backend_meta$unpriced
+    }
+    backend_meta$unpriced <- NULL
   }
 
   backend_meta$structured <- structured
@@ -446,6 +473,9 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Fields contributed by a provider-specific handler (backend, max_retries, ...)
   metadata <- c(metadata, backend_meta)
+  if (!is.null(unpriced)) {
+    metadata$cost_note <- unpriced_note(unpriced)
+  }
 
   # Add model to chat_args for easy access
   chat_args$name <- model
@@ -505,7 +535,7 @@ default_structured_mode <- function(model) {
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
-                                allow_skip = FALSE) {
+                                allow_skip = FALSE, cost_message = TRUE) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -522,6 +552,9 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
   }
   chat <- build_chat(system_prompt)
+
+  # From the chat the run will use, before anything is sent (#135)
+  unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
 
   # Whether a failed structured call would even be visible depends on the
   # codebook. Failure is detected from required scalar fields coming back all
@@ -542,6 +575,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   if (undetectable) {
     return(list(
       ok = FALSE,
+      unpriced = unpriced,
       undetectable = TRUE,
       error = paste0(
         "this endpoint's schema enforcement cannot be verified, and the ",
@@ -645,6 +679,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     )
   }
 
+  attempt$unpriced <- unpriced
   attempt
 }
 
@@ -1203,6 +1238,11 @@ print.qlm_coded <- function(x, ...) {
 
   if (!is.null(meta_attr$object$parent)) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
+  }
+
+  # Why the cost column is NA, when it was asked for and could not be filled
+  if (!is.null(meta_attr$user$cost_note)) {
+    cat("# Cost:     NA (", meta_attr$user$cost_note, ")\n", sep = "")
   }
 
   # Show notes if present

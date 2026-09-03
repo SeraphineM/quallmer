@@ -14,6 +14,18 @@
   is needed, through an environment variable or that callback form, keeps
   it out of the record entirely and is the recommended form (#154).
 
+* `qlm_code()` now says why `cost` will be `NA` when `include_cost = TRUE`
+  cannot be honoured, once and before the run, and keeps the reason with the
+  object so `print()` shows it. ellmer prices from a table fixed at its
+  release, matched exactly on provider and model, and answers `NA` on any
+  miss without saying which kind: DeepSeek and six other providers are absent
+  from the table altogether, so no model of theirs is ever priced; a model
+  newer than the installed ellmer is missed on a provider it otherwise
+  prices; and local endpoints have no per-token charge. Each is now named,
+  since the remedies differ, and the message says whether the token counts a
+  cost could be worked out from are being recorded, which needs
+  `include_tokens = TRUE` (#135).
+
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as
   text. The ratings were assembled into one matrix before their type was

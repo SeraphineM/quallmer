@@ -138,6 +138,22 @@ level does not work: those reach \code{\link[ellmer:chat]{ellmer::chat()}}, whic
 argument. Use \code{params}.
 }
 
+\section{Cost}{
+
+
+\code{include_tokens = TRUE} and \code{include_cost = TRUE} are forwarded to ellmer,
+which adds per-unit token counts and a \code{cost} column in US dollars. ellmer
+prices from a table fixed at its release, matched exactly on provider and
+model, and returns \code{NA} on any miss. Some providers are absent from that
+table altogether, DeepSeek among them, so no model of theirs is ever priced;
+a model newer than the installed ellmer is missed on a provider it otherwise
+prices, which upgrading fixes; and local endpoints such as ollama have no
+per-token charge. In each case \code{qlm_code()} says so once before the run,
+and the reason is kept with the object and shown when it is printed. With
+\code{include_tokens = TRUE} the token counts are recorded, from which such a
+run can be costed at the provider's published rates.
+}
+
 \section{Schema enforcement}{
 
 
