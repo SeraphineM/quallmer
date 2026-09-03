@@ -15,15 +15,15 @@
 #' which model, and `print()` says so, since a result coded by two instruments
 #' has to be disclosed as one.
 #'
-#' @param x A `qlm_coded` object produced by [qlm_code()] or [qlm_replicate()].
-#' @param ... Optional overrides passed to [qlm_code()] for the backfill
+#' @param x qlm_coded; a coded object produced by [qlm_code()] or [qlm_replicate()].
+#' @param ... optional overrides passed to [qlm_code()] for the backfill
 #'   passes, such as `params`, `max_active` or `on_error`. Any setting not
 #'   overridden is restored from the original run, as [qlm_replicate()] does,
 #'   with the same rule for credentials and endpoint settings when the
 #'   provider changes. The codebook cannot be changed.
-#' @param model Optional model for the passes, in the form used by
-#'   [qlm_code()]. `NULL` (default) uses the run's own model.
-#' @param attempts Maximum number of passes. Default is 2. A pass that
+#' @param model character or `NULL`; the model for the passes, in the form
+#'   used by [qlm_code()]. `NULL` (default) uses the run's own model.
+#' @param attempts integer; the maximum number of passes. Default is 2. A pass that
 #'   recovers nothing ends the backfill early, since the failures that remain
 #'   are then evidently not transient.
 #'
@@ -69,7 +69,7 @@
 #'   unchanged.
 #'
 #' @seealso [qlm_failures()] for the units a run failed on and why;
-#'   [qlm_code()], whose `backfill = TRUE` completes a run in the same call;
+#'   [qlm_code()], whose `backfill_attempts` completes a run in the same call;
 #'   [qlm_replicate()] to re-run a whole coding.
 #'
 #' @examples

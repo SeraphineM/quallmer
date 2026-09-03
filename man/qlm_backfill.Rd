@@ -7,18 +7,18 @@
 qlm_backfill(x, ..., model = NULL, attempts = 2L)
 }
 \arguments{
-\item{x}{A \code{qlm_coded} object produced by \code{\link[=qlm_code]{qlm_code()}} or \code{\link[=qlm_replicate]{qlm_replicate()}}.}
+\item{x}{qlm_coded; a coded object produced by \code{\link[=qlm_code]{qlm_code()}} or \code{\link[=qlm_replicate]{qlm_replicate()}}.}
 
-\item{...}{Optional overrides passed to \code{\link[=qlm_code]{qlm_code()}} for the backfill
+\item{...}{optional overrides passed to \code{\link[=qlm_code]{qlm_code()}} for the backfill
 passes, such as \code{params}, \code{max_active} or \code{on_error}. Any setting not
 overridden is restored from the original run, as \code{\link[=qlm_replicate]{qlm_replicate()}} does,
 with the same rule for credentials and endpoint settings when the
 provider changes. The codebook cannot be changed.}
 
-\item{model}{Optional model for the passes, in the form used by
-\code{\link[=qlm_code]{qlm_code()}}. \code{NULL} (default) uses the run's own model.}
+\item{model}{character or \code{NULL}; the model for the passes, in the form
+used by \code{\link[=qlm_code]{qlm_code()}}. \code{NULL} (default) uses the run's own model.}
 
-\item{attempts}{Maximum number of passes. Default is 2. A pass that
+\item{attempts}{integer; the maximum number of passes. Default is 2. A pass that
 recovers nothing ends the backfill early, since the failures that remain
 are then evidently not transient.}
 }
@@ -102,6 +102,6 @@ filled <- qlm_backfill(filled, model = "deepseek/deepseek-chat")
 }
 \seealso{
 \code{\link[=qlm_failures]{qlm_failures()}} for the units a run failed on and why;
-\code{\link[=qlm_code]{qlm_code()}}, whose \code{backfill = TRUE} completes a run in the same call;
+\code{\link[=qlm_code]{qlm_code()}}, whose \code{backfill_attempts} completes a run in the same call;
 \code{\link[=qlm_replicate]{qlm_replicate()}} to re-run a whole coding.
 }

@@ -12,22 +12,22 @@ qlm_code(
   batch = FALSE,
   structured = c("auto", "structured", "json"),
   max_retries = 2L,
-  backfill = FALSE,
+  backfill_attempts = 0L,
   name = NULL,
   notes = NULL
 )
 }
 \arguments{
-\item{x}{Input data: a character vector of texts (for text codebooks) or
+\item{x}{character; the input data, either texts (for text codebooks) or
 file paths to images (for image codebooks). Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the \code{.id} column, on which every later operation
 keys, so names must be unique.}
 
-\item{codebook}{A codebook object created with \code{\link[=qlm_codebook]{qlm_codebook()}}. Also accepts
+\item{codebook}{qlm_codebook; a codebook created with \code{\link[=qlm_codebook]{qlm_codebook()}}. Also accepts
 deprecated \code{\link[=task]{task()}} objects for backward compatibility.}
 
-\item{model}{Provider (and optionally model) name in the form
+\item{model}{character; the provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
 that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
@@ -40,19 +40,19 @@ Arguments recognized by \code{\link[ellmer:parallel_chat_structured]{ellmer::par
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
 \code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 
-\item{batch}{Logical. If \code{TRUE}, uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
+\item{batch}{logical; if \code{TRUE}, uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}}. Batch processing is more
 cost-effective for large jobs but may have longer turnaround times.
 Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
 
-\item{structured}{How the output schema is obtained. \code{"structured"} uses
+\item{structured}{character; how the output schema is obtained. \code{"structured"} uses
 \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} and trusts the provider to enforce
 the schema. \code{"json"} asks for JSON, puts the schema in the system prompt,
 and validates every response against the codebook locally. \code{"auto"} (the
 default) attempts the structured call and falls back to \code{"json"} if it
 fails. See Details for which to use.}
 
-\item{max_retries}{Number of additional attempts made for a response that
+\item{max_retries}{integer; the number of additional attempts made for a response that
 arrives intact but does not conform to the codebook schema. Applies on the
 JSON path only, so setting it alongside \code{structured = "structured"} is an
 error. Default is 2, giving at most three attempts per unit. This is
@@ -60,14 +60,16 @@ separate from ellmer's transport-level retries for rate limits and server
 errors, which apply to every provider and are set with
 \code{options(ellmer_max_tries = )}.}
 
-\item{backfill}{Logical. If \code{TRUE}, the units the run failed on are
-re-coded by \code{\link[=qlm_backfill]{qlm_backfill()}} before the object is returned, with the same
-model and settings, and the passes recorded in its metadata. Default is
-\code{FALSE}. See \code{\link[=qlm_backfill]{qlm_backfill()}} for what is retried and what is left alone.}
+\item{backfill_attempts}{integer; the number of backfill passes to attempt
+for failed responses before the object is returned. Each pass re-codes
+the units still failed with \code{\link[=qlm_backfill]{qlm_backfill()}}, using the same model and
+settings, and is recorded in the object's metadata; a pass that recovers
+nothing ends the backfill early. Default is 0, no backfilling. See
+\code{\link[=qlm_backfill]{qlm_backfill()}} for what is retried and what is left alone.}
 
-\item{name}{Character string identifying this coding run. Default is \code{NULL}.}
+\item{name}{character or \code{NULL}; a name identifying this coding run. Default is \code{NULL}.}
 
-\item{notes}{Optional character string with descriptive notes about this
+\item{notes}{character or \code{NULL}; descriptive notes about this
 coding run. Useful for documenting the purpose or rationale when viewing
 results in \code{\link[=qlm_trail]{qlm_trail()}}. Default is \code{NULL}.}
 }
@@ -194,7 +196,7 @@ by warning, is likewise given an \code{.error}. On either path, \code{\link[=qlm
 lists the units that produced no usable coding, with the reason for each,
 and \code{print()} reports how many there were. Most such failures are
 transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes just those units and merges them
-back; \code{backfill = TRUE} does that before returning. Batch processing and
+back; \code{backfill_attempts} does that before returning. Batch processing and
 image codebooks
 are not supported there, so \code{"auto"} will not fall back under
 \code{batch = TRUE}. The path actually taken is recorded in the run metadata as

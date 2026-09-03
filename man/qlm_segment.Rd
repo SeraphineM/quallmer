@@ -16,7 +16,7 @@ should be a \code{\link[ellmer:type_object]{type_object()}} whose fields become 
 corpus. Do not include a field named \code{text}; it is reserved for the
 verbatim segment text and is added automatically.}
 
-\item{model}{Provider (and optionally model) name in the form
+\item{model}{character; the provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
 that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
@@ -28,7 +28,7 @@ Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-202410
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
 \code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 
-\item{name}{Character string identifying this coding run. Default is \code{NULL}.}
+\item{name}{character or \code{NULL}; a name identifying this coding run. Default is \code{NULL}.}
 
 \item{notes}{Optional character string with descriptive notes about this
 segmentation run. Default is \code{NULL}.}

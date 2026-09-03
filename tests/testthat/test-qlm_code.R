@@ -1330,28 +1330,33 @@ test_that("new_qlm_coded rejects a table whose .id repeats", {
     "must be unique"
 # Completing a run in the same call -------------------------------------------
 
-test_that("qlm_code(backfill = TRUE) hands the result to qlm_backfill", {
+test_that("qlm_code(backfill_attempts = ) hands the result to qlm_backfill", {
   skip_if_not_installed("mockery")
   seen <- new.env()
 
   f <- qlm_code
   mockery::stub(f, "try_structured_call", structured_stub())
-  mockery::stub(f, "qlm_backfill", function(x, ...) {
+  mockery::stub(f, "qlm_backfill", function(x, ..., attempts) {
     seen$x <- x
+    seen$attempts <- attempts
     x
   })
 
   f("a", structured_test_codebook(), model = "openai/gpt-4o-mini")
   expect_null(seen$x)
 
-  result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", backfill = TRUE)
+  result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+              backfill_attempts = 3)
   expect_s3_class(seen$x, "qlm_coded")
+  expect_identical(seen$attempts, 3L)
   expect_equal(seen$x$score, result$score)
 
-  expect_error(
-    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", backfill = NA),
-    "must be"
-  )
+  for (bad in list(-1, 1.5, NA, c(1, 2), "2")) {
+    expect_error(
+      f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", backfill_attempts = bad),
+      "single non-negative integer"
+    )
+  }
 })
 
 

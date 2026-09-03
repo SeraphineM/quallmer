@@ -39,7 +39,8 @@
 #'   (default), uses the batch setting from `x`. Set to `TRUE` to use batch
 #'   processing or `FALSE` to use parallel processing, regardless of the
 #'   original setting.
-#' @param backfill Whether to complete the replication with [qlm_backfill()].
+#' @param backfill logical or `NULL`; whether to complete the replication with
+#'   [qlm_backfill()].
 #'   `NULL` (default) replays the passes recorded on `x`, if any, with the same
 #'   models and overrides in the same order; `TRUE` runs a default backfill
 #'   with the replication's own model whether or not `x` had one; `FALSE`

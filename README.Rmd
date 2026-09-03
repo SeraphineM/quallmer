@@ -50,7 +50,7 @@ Using `qlm_code()`, users can apply codebook-based qualitative coding powered by
 #### `qlm_backfill()`
 - Completes a run: `qlm_failures()` lists the units a run failed on and why, and `qlm_backfill()` re-codes just those units and merges them back, so a few transient failures do not mean re-running the corpus.
 - Uses the run's own model and settings by default; a different model can be given for units the original consistently refuses or cannot fit, and the result then records which units came from which model.
-- `qlm_code(backfill = TRUE)` does this in the same call.
+- `qlm_code(backfill_attempts = 2)` does this in the same call.
 
 #### `qlm_segment()` (optional)
 - Segments texts into thematic or conceptual units using an LLM.

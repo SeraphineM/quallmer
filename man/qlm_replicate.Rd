@@ -43,7 +43,8 @@ the codebook from \code{x}.}
 processing or \code{FALSE} to use parallel processing, regardless of the
 original setting.}
 
-\item{backfill}{Whether to complete the replication with \code{\link[=qlm_backfill]{qlm_backfill()}}.
+\item{backfill}{logical or \code{NULL}; whether to complete the replication with
+\code{\link[=qlm_backfill]{qlm_backfill()}}.
 \code{NULL} (default) replays the passes recorded on \code{x}, if any, with the same
 models and overrides in the same order; \code{TRUE} runs a default backfill
 with the replication's own model whether or not \code{x} had one; \code{FALSE}

@@ -8,36 +8,38 @@
 #' [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()]
 #' based on their names.
 #'
-#' @param x Input data: a character vector of texts (for text codebooks) or
+#' @param x character; the input data, either texts (for text codebooks) or
 #'   file paths to images (for image codebooks). Named vectors will use names
 #'   as identifiers in the output; unnamed vectors will use sequential integers.
 #'   The identifiers become the `.id` column, on which every later operation
 #'   keys, so names must be unique.
-#' @param codebook A codebook object created with [qlm_codebook()]. Also accepts
+#' @param codebook qlm_codebook; a codebook created with [qlm_codebook()]. Also accepts
 #'   deprecated [task()] objects for backward compatibility.
-#' @param model Provider (and optionally model) name in the form
+#' @param model character; the provider (and optionally model) name in the form
 #'   `"provider/model"` or `"provider"` (which will use the default model for
 #'   that provider). Passed to the `name` argument of [ellmer::chat()].
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
-#' @param structured How the output schema is obtained. `"structured"` uses
+#' @param structured character; how the output schema is obtained. `"structured"` uses
 #'   [ellmer::parallel_chat_structured()] and trusts the provider to enforce
 #'   the schema. `"json"` asks for JSON, puts the schema in the system prompt,
 #'   and validates every response against the codebook locally. `"auto"` (the
 #'   default) attempts the structured call and falls back to `"json"` if it
 #'   fails. See Details for which to use.
-#' @param max_retries Number of additional attempts made for a response that
+#' @param max_retries integer; the number of additional attempts made for a response that
 #'   arrives intact but does not conform to the codebook schema. Applies on the
 #'   JSON path only, so setting it alongside `structured = "structured"` is an
 #'   error. Default is 2, giving at most three attempts per unit. This is
 #'   separate from ellmer's transport-level retries for rate limits and server
 #'   errors, which apply to every provider and are set with
 #'   `options(ellmer_max_tries = )`.
-#' @param backfill Logical. If `TRUE`, the units the run failed on are
-#'   re-coded by [qlm_backfill()] before the object is returned, with the same
-#'   model and settings, and the passes recorded in its metadata. Default is
-#'   `FALSE`. See [qlm_backfill()] for what is retried and what is left alone.
-#' @param batch Logical. If `TRUE`, uses [ellmer::batch_chat_structured()]
+#' @param backfill_attempts integer; the number of backfill passes to attempt
+#'   for failed responses before the object is returned. Each pass re-codes
+#'   the units still failed with [qlm_backfill()], using the same model and
+#'   settings, and is recorded in the object's metadata; a pass that recovers
+#'   nothing ends the backfill early. Default is 0, no backfilling. See
+#'   [qlm_backfill()] for what is retried and what is left alone.
+#' @param batch logical; if `TRUE`, uses [ellmer::batch_chat_structured()]
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
 #'   Default is `FALSE`. See [ellmer::batch_chat_structured()] for details.
@@ -47,8 +49,8 @@
 #'   [ellmer::batch_chat_structured()] are routed there; all other arguments
 #'   (including provider-specific arguments like `base_url`, `credentials`, or
 #'   `api_args` for OpenAI-compatible endpoints) are passed to [ellmer::chat()].
-#' @param name Character string identifying this coding run. Default is `NULL`.
-#' @param notes Optional character string with descriptive notes about this
+#' @param name character or `NULL`; a name identifying this coding run. Default is `NULL`.
+#' @param notes character or `NULL`; descriptive notes about this
 #'   coding run. Useful for documenting the purpose or rationale when viewing
 #'   results in [qlm_trail()]. Default is `NULL`.
 #'
@@ -154,7 +156,7 @@
 #' lists the units that produced no usable coding, with the reason for each,
 #' and `print()` reports how many there were. Most such failures are
 #' transient, and [qlm_backfill()] re-codes just those units and merges them
-#' back; `backfill = TRUE` does that before returning. Batch processing and
+#' back; `backfill_attempts` does that before returning. Batch processing and
 #' image codebooks
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
@@ -227,7 +229,7 @@
 qlm_code <- function(x, codebook, model, ...,
                      batch = FALSE,
                      structured = c("auto", "structured", "json"),
-                     max_retries = 2L, backfill = FALSE,
+                     max_retries = 2L, backfill_attempts = 0L,
                      name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
@@ -240,9 +242,12 @@ qlm_code <- function(x, codebook, model, ...,
     codebook <- as_qlm_codebook(codebook)
   }
 
-  if (!is.logical(backfill) || length(backfill) != 1L || is.na(backfill)) {
-    cli::cli_abort("{.arg backfill} must be {.code TRUE} or {.code FALSE}.")
+  if (length(backfill_attempts) != 1L || !is.numeric(backfill_attempts) ||
+      is.na(backfill_attempts) || backfill_attempts < 0 ||
+      backfill_attempts != trunc(backfill_attempts)) {
+    cli::cli_abort("{.arg backfill_attempts} must be a single non-negative integer.")
   }
+  backfill_attempts <- as.integer(backfill_attempts)
 
   if (!inherits(codebook, "qlm_codebook")) {
     cli::cli_abort(c(
@@ -447,8 +452,8 @@ qlm_code <- function(x, codebook, model, ...,
   )
 
   # Complete the run in the same call, with the same model and settings
-  if (isTRUE(backfill)) {
-    coded <- qlm_backfill(coded)
+  if (backfill_attempts > 0L) {
+    coded <- qlm_backfill(coded, attempts = backfill_attempts)
   }
   coded
 }
