@@ -212,7 +212,13 @@ without assuming equal intervals.</p></li>
 continuous measurements). Metrics: ICC (intraclass correlation), Pearson's r
 (linear correlation), MAE (mean absolute error), and RMSE (root mean squared
 error).</p></li>
-</ul><p>For multiclass problems with nominal data, the <code>average</code> parameter controls
+</ul><p>At ordinal and interval level the predictions and the gold standard are
+read as numbers, whatever type they are stored as, so a column of digits
+held as text is compared on its values and not on the alphabetical order of
+its strings. A value that does not read as a number is an error at interval
+level. Ordinal categories may instead all be text, in which case they are
+ranked by their sorted labels.</p>
+<p>For multiclass problems with nominal data, the <code>average</code> parameter controls
 how per-class metrics are aggregated:</p><ul><li><p><strong>Macro averaging</strong> computes metrics for each class independently and takes
 the unweighted mean. This treats all classes equally regardless of size.</p></li>
 <li><p><strong>Micro averaging</strong> aggregates all true positives, false positives, and
