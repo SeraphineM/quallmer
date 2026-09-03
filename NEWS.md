@@ -204,6 +204,20 @@
 
 ## New features
 
+* New `qlm_failures()` lists the units a coding run failed on, with the
+  reason for each, and `print()` of a `qlm_coded` object now reports
+  `Units: 251 (211 scored, 40 failed)` rather than the number attempted, so a
+  partly failed run cannot look complete. The object already carried this in
+  its `.error` column, but nothing surfaced it, and the check people write
+  for themselves is wrong for array-valued properties: a failed request
+  leaves a zero-row tibble in the list-column, not `NA`, so `!is.na()`
+  reports every failed unit as coded. A unit counts as failed when it carries
+  an `.error` or when every required scalar property is `NA`, the latter
+  because an endpoint can accept a JSON schema and ignore it, returning
+  HTTP 200 and nothing usable. Arrays and nested objects are not consulted,
+  since after conversion a missing array and a valid empty one are the same
+  cell (#132).
+
 * `qlm_compare()` gains a `by_category = FALSE` argument that, when
   set to `TRUE`, reports per-category reliability rows for nominal
   data: Krippendorff's alpha (`alpha_per_value[k]`, each category

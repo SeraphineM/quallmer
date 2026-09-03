@@ -138,7 +138,9 @@
 #'
 #' On the JSON path, units that never validate have `NA` coded values and a
 #' `.error` list-column recording the reason, and `max_retries` controls how
-#' many repair attempts each unit gets. Batch processing and image codebooks
+#' many repair attempts each unit gets. On either path, [qlm_failures()] lists
+#' the units that produced no usable coding, with the reason for each, and
+#' `print()` reports how many there were. Batch processing and image codebooks
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
 #' `backend`.
@@ -711,7 +713,16 @@ print.qlm_coded <- function(x, ...) {
     cat("# Gold:     Yes\n")
   }
 
-  cat("# Units:    ", meta_attr$object$n_units, "\n", sep = "")
+  # Units attempted, and how many came back with nothing usable, so that a
+  # partly failed run cannot look complete (#132). Failed rows beyond the
+  # printed head of the tibble would otherwise go unseen.
+  n_failed <- sum(failed_units(x))
+  if (n_failed > 0) {
+    cat("# Units:    ", meta_attr$object$n_units,
+        " (", nrow(x) - n_failed, " scored, ", n_failed, " failed)\n", sep = "")
+  } else {
+    cat("# Units:    ", meta_attr$object$n_units, "\n", sep = "")
+  }
 
   if (!is.null(meta_attr$object$parent)) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")

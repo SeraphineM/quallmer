@@ -39,6 +39,7 @@
 #' - [qlm_meta<-()]: Set user metadata fields (only `name` and `notes`)
 #' - [codebook()]: Extract codebook from coded objects
 #' - [inputs()]: Extract original input data
+#' - [qlm_failures()]: List the units a coding run failed on, with reasons
 #'
 #' @examples
 #' \donttest{

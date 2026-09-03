@@ -91,6 +91,7 @@ reference:
       - "`qlm_meta<-`"
       - codebook
       - inputs
+      - qlm_failures
 
   - title: Validation and comparison
     desc: Assess reliability and validate against gold standards
