@@ -1433,3 +1433,58 @@ test_that("every entry point refuses an object a row operation has left with a r
   expect_error(qlm_trail(doubled), "must be unique")
   expect_error(qlm_replicate(doubled), "must be unique")
 })
+
+
+# cost that cannot be priced (#135) --------------------------------------------
+
+# qlm_code() with the structured call stubbed to return `results`, and the
+# pricing lookup stubbed to answer `reason`. Callers pin
+# structured = "structured": DeepSeek defaults to the JSON path, which the
+# stub does not cover.
+coding_run <- function(results, reason) {
+  tsc <- function(...) list(ok = TRUE, value = results)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "unpriced_reason", function(model, chat_args) reason)
+  f
+}
+
+test_that("qlm_code says once, before the run, why cost will be NA (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(10, 12),
+                        output_tokens = c(3, 4), cached_input_tokens = c(0, 0),
+                        cost = c(NA_real_, NA_real_))
+  reason <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+
+  f <- coding_run(results, reason)
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               include_cost = TRUE, structured = "structured"),
+    "no prices for DeepSeek models"
+  )
+  expect_equal(qlm_meta(coded)$cost_note, "ellmer has no prices for DeepSeek models")
+  expect_output(print(coded), "# Cost:     NA (ellmer has no prices for DeepSeek models)",
+                fixed = TRUE)
+})
+
+test_that("qlm_code is silent about cost when it was not asked for, or is priced (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  results <- data.frame(score = c(0.5, 0.8))
+  reason <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+
+  # Not asked for: the lookup is not even made
+  f <- coding_run(results, reason)
+  expect_no_message(coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+                               structured = "structured"))
+  expect_null(qlm_meta(coded)$cost_note)
+  expect_output(print(coded), "# Units:")
+  expect_no_match(paste(capture.output(print(coded)), collapse = "\n"), "# Cost:")
+
+  # Asked for and priced: nothing to say
+  f <- coding_run(results, NULL)
+  expect_no_message(coded <- f(c("a", "b"), codebook, model = "openai/gpt-4.1-mini",
+                               include_cost = TRUE, structured = "structured"))
+  expect_null(qlm_meta(coded)$cost_note)
+})

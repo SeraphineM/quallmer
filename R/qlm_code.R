@@ -101,6 +101,20 @@
 #' level does not work: those reach [ellmer::chat()], which has no such
 #' argument. Use `params`.
 #'
+#' @section Cost:
+#'
+#' `include_tokens = TRUE` and `include_cost = TRUE` are forwarded to ellmer,
+#' which adds per-unit token counts and a `cost` column in US dollars. ellmer
+#' prices from a table fixed at its release, matched exactly on provider and
+#' model, and returns `NA` on any miss. Some providers are absent from that
+#' table altogether, DeepSeek among them, so no model of theirs is ever priced;
+#' a model newer than the installed ellmer is missed on a provider it otherwise
+#' prices, which upgrading fixes; and local endpoints such as ollama have no
+#' per-token charge. In each case `qlm_code()` says so once before the run,
+#' and the reason is kept with the object and shown when it is printed. Token
+#' counts are recorded regardless, so a run can be costed from the provider's
+#' published rates.
+#'
 #' @section Schema enforcement:
 #'
 #' Some providers accept a JSON Schema without enforcing it, so a response can
@@ -336,6 +350,18 @@ qlm_code <- function(x, codebook, model, ...,
   # Metadata contributed by the coding path
   backend_meta <- list()
   results <- NULL
+
+  # A cost that will come back NA is knowable before any request, and the
+  # reason decides the remedy, so say it once here rather than per row (#135).
+  # The note travels with the object so that the answer outlives the console.
+  cost_note <- NULL
+  if (isTRUE(execution_args$include_cost)) {
+    unpriced <- unpriced_reason(model, chat_args)
+    if (!is.null(unpriced)) {
+      cli::cli_inform(unpriced_message(unpriced))
+      cost_note <- unpriced_note(unpriced)
+    }
+  }
   fallback_reason <- NULL
   model_hint <- NULL
 
@@ -446,6 +472,9 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Fields contributed by a provider-specific handler (backend, max_retries, ...)
   metadata <- c(metadata, backend_meta)
+  if (!is.null(cost_note)) {
+    metadata$cost_note <- cost_note
+  }
 
   # Add model to chat_args for easy access
   chat_args$name <- model
@@ -1203,6 +1232,11 @@ print.qlm_coded <- function(x, ...) {
 
   if (!is.null(meta_attr$object$parent)) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
+  }
+
+  # Why the cost column is NA, when it was asked for and could not be filled
+  if (!is.null(meta_attr$user$cost_note)) {
+    cat("# Cost:     NA (", meta_attr$user$cost_note, ")\n", sep = "")
   }
 
   # Show notes if present

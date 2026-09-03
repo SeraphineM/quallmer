@@ -309,3 +309,66 @@ test_that("a diagnosis never reaches the network in tests", {
   mockery::stub(f, "models_lister", function(provider) function(...) stop("no key"))
   expect_null(f("openai"))
 })
+
+
+# unpriced_reason() -----------------------------------------------------------
+
+# A credentials function keeps construction off the environment and sends
+# nothing: ellmer builds the provider without contacting it.
+no_creds <- list(credentials = function() list(Authorization = "Bearer x"))
+
+test_that("unpriced_reason() is NULL for a model ellmer prices (#135)", {
+  expect_null(unpriced_reason("openai/gpt-4.1-mini", no_creds))
+  expect_null(unpriced_reason("anthropic/claude-sonnet-4-5", no_creds))
+})
+
+test_that("unpriced_reason() tells a provider gap from a model gap (#135)", {
+  # DeepSeek is absent from ellmer's table as a whole
+  r <- unpriced_reason("deepseek/deepseek-chat", no_creds)
+  expect_equal(r$kind, "provider")
+  expect_equal(r$provider, "DeepSeek")
+  expect_equal(r$model, "deepseek-chat")
+
+  # OpenAI is priced, this model is not
+  r <- unpriced_reason("openai/gpt-99-not-yet-released", no_creds)
+  expect_equal(r$kind, "model")
+  expect_equal(r$provider, "OpenAI")
+  expect_equal(r$model, "gpt-99-not-yet-released")
+})
+
+test_that("unpriced_reason() names a local endpoint without building a chat (#135)", {
+  # ellmer's ollama constructor looks for a running server; none is here
+  r <- unpriced_reason("ollama/llama3")
+  expect_equal(r$kind, "local")
+  expect_equal(r$provider, "ollama")
+  expect_equal(r$model, "llama3")
+  expect_equal(unpriced_reason("vllm/x")$kind, "local")
+  expect_equal(unpriced_reason("lmstudio/x")$kind, "local")
+})
+
+test_that("unpriced_reason() stays silent where it cannot decide (#135)", {
+  # The chat cannot be built: openai_compatible needs a base_url. The run
+  # itself will say so; nothing to add.
+  expect_null(unpriced_reason("openai_compatible/qwen3", no_creds))
+
+  # ellmer without the price table or its predicate: no diagnosis
+  f <- unpriced_reason
+  mockery::stub(f, "get0", function(x, ...) NULL)
+  expect_null(f("deepseek/deepseek-chat", no_creds))
+})
+
+test_that("unpriced_message() and unpriced_note() cover every kind (#135)", {
+  provider <- list(kind = "provider", provider = "DeepSeek", model = "deepseek-chat")
+  model <- list(kind = "model", provider = "OpenAI", model = "gpt-99")
+  local <- list(kind = "local", provider = "ollama", model = "llama3")
+
+  expect_match(unpriced_message(provider)[["i"]], "no prices for DeepSeek models")
+  expect_match(unpriced_message(model)[["i"]], "no price for \"gpt-99\"")
+  expect_match(unpriced_message(model)[["i"]], "other OpenAI models")
+  expect_match(unpriced_message(local)[["i"]], "runs locally")
+  expect_length(unpriced_message(provider), 2)
+
+  expect_equal(unpriced_note(provider), "ellmer has no prices for DeepSeek models")
+  expect_match(unpriced_note(model), "^ellmer [0-9.]+ has no price for gpt-99$")
+  expect_equal(unpriced_note(local), "ollama runs locally; no per-token charge")
+})

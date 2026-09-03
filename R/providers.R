@@ -295,3 +295,111 @@ closest_model_names <- function(id, models, n = 3L) {
   candidates <- models[near][order(d[near])]
   utils::head(unique(candidates), n)
 }
+
+
+#' Why a run's cost will be `NA`, if it will be
+#'
+#' ellmer prices a turn by exact lookup of the provider's name and the model
+#' in a table frozen at its build, and answers `NA` on any miss. It does not
+#' say which kind of miss. A provider absent from the table altogether
+#' (DeepSeek and six others as of ellmer 0.4.2) will never price any model,
+#' and only rates supplied by the user can help. A model newer than the
+#' installed ellmer, on a provider it does price, is fixed by upgrading. The
+#' remedies differ, so both are told apart here, before a request is spent,
+#' rather than left to be inferred from a column of `NA` (#135).
+#'
+#' Local endpoints charge nothing per token, so their `NA` is expected rather
+#' than a gap, and is described as such without building a chat: ellmer's
+#' constructors for them look for a running server.
+#'
+#' The table and ellmer's own predicate are read from its namespace at run
+#' time, as the model listing is. Should a later ellmer drop either, no
+#' diagnosis is made and the `NA` stands unexplained, which is what it did
+#' before.
+#'
+#' @param model The model specification, as passed to [qlm_code()].
+#' @param chat_args Arguments for [ellmer::chat()], since the provider's
+#'   display name is known only once the provider is built.
+#'
+#' @return `NULL` when the model is priced. Otherwise a list with `kind`,
+#'   one of `"local"`, `"provider"` or `"model"`; `provider`, ellmer's name
+#'   for it; and `model`.
+#' @keywords internal
+#' @noRd
+unpriced_reason <- function(model, chat_args = list()) {
+  prefix <- model_provider(model)
+  if (prefix %in% c("ollama", "lmstudio", "vllm")) {
+    return(list(kind = "local", provider = prefix,
+                model = sub("^[^/]*/?", "", model)))
+  }
+
+  ns <- asNamespace("ellmer")
+  prices <- get0("prices", envir = ns, inherits = FALSE)
+  has_cost <- get0("has_cost", envir = ns, inherits = FALSE)
+  if (!is.data.frame(prices) || !is.function(has_cost)) {
+    return(NULL)
+  }
+
+  # Building the chat sends nothing. Where it cannot be built, the run itself
+  # will say why; there is nothing to add here.
+  chat <- tryCatch(
+    do.call(ellmer::chat, c(list(name = model), chat_args)),
+    error = function(e) NULL
+  )
+  if (is.null(chat)) {
+    return(NULL)
+  }
+  provider <- chat$get_provider()
+  if (isTRUE(has_cost(provider, provider@model))) {
+    return(NULL)
+  }
+
+  list(
+    kind = if (provider@name %in% prices$provider) "model" else "provider",
+    provider = provider@name,
+    model = provider@model
+  )
+}
+
+
+#' The message for an unpriced run, and the note kept on the object
+#'
+#' @param reason What `unpriced_reason()` returned.
+#'
+#' @return `unpriced_message()`: a character vector for [cli::cli_inform()].
+#'   `unpriced_note()`: one plain sentence, kept in the run's metadata and
+#'   shown by `print.qlm_coded()`.
+#' @keywords internal
+#' @noRd
+unpriced_message <- function(reason) {
+  v <- as.character(utils::packageVersion("ellmer"))
+  # Interpolated here, where `reason` is in scope, rather than by the caller
+  line <- function(...) cli::format_inline(paste0(...))
+  switch(reason$kind,
+    local = c(
+      "i" = line("{.field cost} will be {.code NA}: {reason$provider} runs locally, ",
+                 "and there is no per-token charge to record.")
+    ),
+    provider = c(
+      "i" = line("{.field cost} will be {.code NA}: ellmer {v} has no prices for ",
+                 "{reason$provider} models."),
+      " " = paste0("Token counts are still recorded, so the run can be costed ",
+                   "from the provider's published rates.")
+    ),
+    model = c(
+      "i" = line("{.field cost} will be {.code NA}: ellmer {v} has no price for ",
+                 "{.val {reason$model}}, though it prices other ",
+                 "{reason$provider} models."),
+      " " = "A newer ellmer may price it. Token counts are still recorded."
+    )
+  )
+}
+
+unpriced_note <- function(reason) {
+  switch(reason$kind,
+    local = paste0(reason$provider, " runs locally; no per-token charge"),
+    provider = paste0("ellmer has no prices for ", reason$provider, " models"),
+    model = paste0("ellmer ", utils::packageVersion("ellmer"),
+                   " has no price for ", reason$model)
+  )
+}
