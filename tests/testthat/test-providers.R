@@ -145,10 +145,6 @@ test_that("qlm_code() still reports a malformed model before looking at the prov
 
 # Model-name diagnosis (#133) --------------------------------------------------
 
-clear_model_list_cache <- function() {
-  rm(list = ls(model_list_cache), envir = model_list_cache)
-}
-
 test_that("models_lister() finds ellmer's listing function, or nothing", {
   expect_identical(models_lister("openai"), ellmer::models_openai)
   expect_identical(models_lister("deepseek"), ellmer::models_deepseek)
@@ -157,39 +153,72 @@ test_that("models_lister() finds ellmer's listing function, or nothing", {
   expect_null(models_lister("not_a_provider"))
 })
 
-test_that("provider_models() asks once per provider and endpoint, negatives included", {
-  clear_model_list_cache()
-  on.exit(clear_model_list_cache())
+test_that("provider_models() asks afresh each time, with the run's own credentials", {
   calls <- new.env()
   lister <- function(base_url = "https://api.example", api_key = NULL, credentials = NULL) {
     calls$n <- (calls$n %||% 0L) + 1L
     calls$base_url <- base_url
     if (grepl("down", base_url)) stop("HTTP 503 Service Unavailable.")
-    data.frame(id = c("m-large", "m-small"), created_at = Sys.Date())
+    data.frame(id = paste0("model-for-", api_key %||% "default"), created_at = Sys.Date())
   }
   f <- provider_models
   mockery::stub(f, "models_lister", function(provider) if (provider == "acme") lister else NULL)
 
-  expect_equal(f("acme"), c("m-large", "m-small"))
-  expect_equal(f("acme"), c("m-large", "m-small"))
-  expect_equal(calls$n, 1)
+  # The answer depends on who asks, so nothing is remembered between calls
+  expect_equal(f("acme", list(api_key = "account-A")), "model-for-account-A")
+  expect_equal(f("acme", list(api_key = "account-B")), "model-for-account-B")
+  expect_equal(calls$n, 2)
 
-  # Only the arguments the lister takes travel, and a custom endpoint is a
-  # different cache entry
+  # Only the arguments the lister takes travel
   expect_equal(
     f("acme", chat_args = list(base_url = "https://eu.example", params = list(), api_args = list())),
-    c("m-large", "m-small")
+    "model-for-default"
   )
-  expect_equal(calls$n, 2)
   expect_equal(calls$base_url, "https://eu.example")
 
-  # A failed lookup is NULL, and is not re-tried on the next report
+  # A failed lookup is NULL, and a later call after the cause is repaired asks again
   expect_null(f("acme", chat_args = list(base_url = "https://down.example")))
-  expect_null(f("acme", chat_args = list(base_url = "https://down.example")))
-  expect_equal(calls$n, 3)
+  expect_equal(f("acme"), "model-for-default")
 
   # No lister, no lookup
   expect_null(f("openai_compatible"))
+  expect_equal(calls$n, 5)
+})
+
+test_that("provider_models() passes project, location and profile where the lister takes them", {
+  seen <- NULL
+  f <- provider_models
+  mockery::stub(f, "models_lister", function(provider) {
+    switch(provider,
+      google_vertex = function(location = NULL, project_id = NULL, credentials = NULL) {
+        seen <<- list(location = location, project_id = project_id)
+        data.frame(id = "gemini-x")
+      },
+      aws_bedrock = function(profile = NULL, base_url = NULL) {
+        seen <<- list(profile = profile)
+        data.frame(id = "anthropic.claude-x")
+      }
+    )
+  })
+  f("google_vertex", list(location = "europe-west1", project_id = "p-1", api_key = "unused"))
+  expect_equal(seen, list(location = "europe-west1", project_id = "p-1"))
+  f("aws_bedrock", list(profile = "research"))
+  expect_equal(seen, list(profile = "research"))
+})
+
+test_that("listing_is_complete() trusts absence only where the listing is exhaustive", {
+  expect_true(listing_is_complete("openai", "gpt-4o-mimi"))
+  expect_true(listing_is_complete("anthropic", "claude-sonnet-4"))
+  expect_true(listing_is_complete("google_gemini", "gemini-2.5-pro"))
+  # Bedrock invokes inference profiles, ARNs and custom models its listing omits
+  expect_false(listing_is_complete("aws_bedrock", "us.anthropic.claude-3-5-sonnet-20241022-v2:0"))
+  expect_false(listing_is_complete("aws_bedrock", "anthropic.claude-3-5-sonnet-20241022-v2:0"))
+  # Tuned Gemini models live outside the listing
+  expect_false(listing_is_complete("google_gemini", "tunedModels/my-classifier"))
+  expect_false(listing_is_complete("google_vertex", "gemini-2.5-pro"))
+  expect_false(listing_is_complete("portkey", "gpt-4o"))
+  # A provider not yet checked gets no claim rather than a false one
+  expect_false(listing_is_complete("some_new_provider", "m"))
 })
 
 test_that("closest_model_names() suggests near misses and nothing for the rest", {
@@ -201,12 +230,11 @@ test_that("closest_model_names() suggests near misses and nothing for the rest",
 })
 
 test_that("model_name_hint() speaks only when the provider has no such model", {
-  clear_model_list_cache()
-  on.exit(clear_model_list_cache())
   f <- model_name_hint
   mockery::stub(f, "provider_models", function(provider, chat_args) {
     if (provider == "acme") c("m-large", "m-small") else NULL
   })
+  mockery::stub(f, "listing_is_complete", function(provider, id) provider == "acme")
 
   hint <- f("acme/m-larg")
   expect_named(hint, c("i", "i"))
@@ -227,11 +255,22 @@ test_that("model_name_hint() speaks only when the provider has no such model", {
   expect_length(f(NA_character_), 0)
 })
 
+test_that("model_name_hint() makes no claim where the listing is not exhaustive (Bedrock)", {
+  f <- model_name_hint
+  asked <- FALSE
+  mockery::stub(f, "provider_models", function(provider, chat_args) {
+    asked <<- TRUE
+    "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  })
+  # A valid cross-region inference profile, absent from ListFoundationModels:
+  # calling it wrong would also have stopped the JSON-mode fallback
+  expect_length(f("aws_bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0"), 0)
+  expect_false(asked)
+})
+
 test_that("a diagnosis never reaches the network in tests", {
   # The lookups above are all stubbed; the real lister must fail closed when
   # it cannot run, returning nothing rather than raising
-  clear_model_list_cache()
-  on.exit(clear_model_list_cache())
   withr::local_envvar(OPENAI_API_KEY = NA)
   f <- provider_models
   mockery::stub(f, "models_lister", function(provider) function(...) stop("no key"))

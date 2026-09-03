@@ -453,7 +453,7 @@ test_that("qlm_code delegates to the handler and records the backend", {
 
   handler_args <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries = 2L) {
+                           max_retries = 2L, model_hint = NULL) {
     handler_args <<- list(model = model, batch = batch, max_retries = max_retries,
                           chat_args = chat_args, execution_args = execution_args)
     results <- tibble::tibble(score = c(0.5, 0.8))
@@ -542,7 +542,7 @@ test_that("qlm_code passes its max_retries default to the handler", {
 
   seen <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries) {
+                           max_retries, model_hint = NULL) {
     seen <<- max_retries
     tibble::tibble(score = 0.5)
   }
@@ -589,10 +589,12 @@ structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
 }
 
 json_stub <- function(calls = NULL) {
-  function(x, codebook, model, chat_args, execution_args, batch, max_retries) {
+  function(x, codebook, model, chat_args, execution_args, batch, max_retries,
+           model_hint = NULL) {
     if (!is.null(calls)) {
       calls$json <- TRUE
       calls$max_retries <- max_retries
+      calls$model_hint <- model_hint
     }
     results <- tibble::tibble(score = rep(0.99, length(x)))
     attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
@@ -774,6 +776,8 @@ test_that("a structured run the provider rejects outright names the model (#133)
     "falling back to JSON mode"
   )
   expect_true(calls$json)
+  # The provider was asked once; the JSON path is told the answer, not sent to ask again
+  expect_identical(calls$model_hint, character())
 
   # And under structured = "structured" the rejection is the reported failure
   expect_error(

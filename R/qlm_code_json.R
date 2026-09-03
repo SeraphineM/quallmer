@@ -22,6 +22,9 @@
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
 #' @param max_retries Number of repair attempts for each empty, unparsable, or
 #'   schema-invalid response. Default is 2.
+#' @param model_hint What `model_name_hint()` answered when [qlm_code()]
+#'   already asked it for this run, so a wholly rejected run asks the provider
+#'   at most once; `NULL` when it has not been asked.
 #'
 #' @return A data frame with one row per unit, carrying `.error` for units that
 #'   never validated, plus token and cost columns when requested. Handler
@@ -29,7 +32,8 @@
 #' @keywords internal
 #' @noRd
 code_handler_json <- function(x, codebook, model, chat_args, execution_args,
-                              batch = FALSE, max_retries = 2L) {
+                              batch = FALSE, max_retries = 2L,
+                              model_hint = NULL) {
   # The handler is reached via do.call(), so report guard failures against
   # qlm_code() rather than against an anonymous function.
   error_call <- rlang::caller_env()
@@ -208,7 +212,7 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   if (all(failed) && all(fatal)) {
     # A wrong model name is the usual cause and the worst reported, so ask the
     # provider whether the name exists before telling the user to check it.
-    hint <- model_name_hint(model, chat_args)
+    hint <- if (is.null(model_hint)) model_name_hint(model, chat_args) else model_hint
     if (!length(hint)) {
       hint <- c("i" = "Check the model name, your credentials, and any {.arg base_url}.")
     }

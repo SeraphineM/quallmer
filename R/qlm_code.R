@@ -162,9 +162,11 @@
 #' bare "HTTP 400 Bad Request". So before reporting, `qlm_code()` asks the
 #' provider for its model list, through ellmer's `models_<provider>()`, and
 #' says when the name is not on it, with the nearest names it does have. The
-#' lookup runs only after a run has failed, once per session and provider,
-#' and only where ellmer has a listing function; where it cannot run, or the
-#' name is on the list, the provider's own error is reported unchanged.
+#' lookup runs only after a run has failed, once per failed run, and only for
+#' providers whose listing is known to cover every name they will invoke
+#' (Bedrock, for one, invokes inference profiles its listing omits). Where
+#' it cannot run, or the name is on the list, the provider's own error is
+#' reported unchanged.
 #'
 #' @section Truncated responses:
 #'
@@ -335,6 +337,7 @@ qlm_code <- function(x, codebook, model, ...,
   backend_meta <- list()
   results <- NULL
   fallback_reason <- NULL
+  model_hint <- NULL
 
   # ---- schema-constrained structured output -------------------------------
   if (structured %in% c("auto", "structured")) {
@@ -364,16 +367,17 @@ qlm_code <- function(x, codebook, model, ...,
         "i" = "Use {.code structured = \"structured\"} to rely on the provider instead."
       ))
     } else if (isTRUE(attempt$rejected) &&
-               length(hint <- model_name_hint(model, chat_args))) {
+               length(model_hint <- model_name_hint(model, chat_args))) {
       # The provider refused every request, and confirms it has no such
       # model. Falling back to JSON mode would only send the same name again,
       # so stop here. A refusal the provider does not explain that way may
       # be its answer to the schema-constrained request itself, which JSON
-      # mode is the cure for, so that case falls through as before.
+      # mode is the cure for, so that case falls through as before, carrying
+      # the (empty) answer so the JSON path does not ask again.
       cli::cli_abort(c(
         "Every request to model {.val {model}} was rejected by the provider.",
         set_bullets(attempt$error),
-        hint
+        model_hint
       ))
     } else if (identical(structured, "structured")) {
       cli::cli_abort(c(
@@ -409,7 +413,8 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args,
       execution_args = execution_args,
       batch = batch,
-      max_retries = max_retries
+      max_retries = max_retries,
+      model_hint = model_hint
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL

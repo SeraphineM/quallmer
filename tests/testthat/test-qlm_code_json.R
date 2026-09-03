@@ -818,6 +818,14 @@ test_that("code_handler_json names the model when the provider does not list it 
       chat_args = list(), execution_args = list()),
     "Check the model name"
   )
+
+  # An answer qlm_code() already has is used rather than asked for again
+  h <- json_test_handler(list(rejected), hint = hint)
+  expect_error(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list(), model_hint = character()),
+    "Check the model name"
+  )
 })
 
 test_that("code_handler_json does not retry a fatal failure in a mixed batch", {

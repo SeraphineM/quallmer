@@ -202,9 +202,11 @@ provider does not have, and providers rarely say so; many answer with a
 bare "HTTP 400 Bad Request". So before reporting, \code{qlm_code()} asks the
 provider for its model list, through ellmer's \verb{models_<provider>()}, and
 says when the name is not on it, with the nearest names it does have. The
-lookup runs only after a run has failed, once per session and provider,
-and only where ellmer has a listing function; where it cannot run, or the
-name is on the list, the provider's own error is reported unchanged.
+lookup runs only after a run has failed, once per failed run, and only for
+providers whose listing is known to cover every name they will invoke
+(Bedrock, for one, invokes inference profiles its listing omits). Where
+it cannot run, or the name is on the list, the provider's own error is
+reported unchanged.
 }
 
 \section{Truncated responses}{

@@ -108,7 +108,9 @@ check_model_provider <- function(model, call = rlang::caller_env()) {
 #' publishes no list, ellmer has no `models_*()` for it, no credentials, no
 #' network -- nothing is added and the provider's own error stands unchanged.
 #' Nothing is added either when the name is on the list, since the cause is
-#' then something else.
+#' then something else, or when the provider's listing is known not to cover
+#' every identifier it will invoke, since absence from it then proves
+#' nothing; see `listing_is_complete()`.
 #'
 #' @param model The model specification, as passed to [qlm_code()].
 #' @param chat_args The run's arguments to [ellmer::chat()]; `base_url`,
@@ -127,6 +129,9 @@ model_name_hint <- function(model, chat_args = list()) {
   }
   provider <- model_provider(model)
   id <- sub("^[^/]*/", "", model)
+  if (!listing_is_complete(provider, id)) {
+    return(character())
+  }
   models <- provider_models(provider, chat_args)
   if (is.null(models) || id %in% models) {
     return(character())
@@ -144,45 +149,77 @@ model_name_hint <- function(model, chat_args = list()) {
 }
 
 
-#' The model names a provider publishes, or `NULL`
+#' Does a provider's model listing cover every identifier it will invoke?
 #'
-#' Asks ellmer's `models_<provider>()`, a credentialed network call, so the
-#' answer is memoised for the session in a package-local environment, keyed
-#' by provider and `base_url`. Negative results are cached too: a run that
-#' fails on every unit must not re-probe the provider each time it reports.
-#' Populated on first use, never at load, so `library(quallmer)` touches no
-#' network and no credential.
+#' Absence from a listing proves a name wrong only where the listing is
+#' complete, and for some providers it is not. AWS Bedrock's
+#' `ListFoundationModels` returns foundation models only, while invocation
+#' also accepts cross-region inference profiles (`us.anthropic...`),
+#' provisioned, custom and imported models, and ARNs; Google Vertex likewise
+#' serves tuned endpoints its publisher list does not name; Portkey and Posit
+#' are gateways whose catalogue is not what they will route. Gemini lists
+#' its models but not the caller's tuned ones, which live under
+#' `tunedModels/`. For all of these a mistyped name gets no diagnosis rather
+#' than a false one, which would also stop the JSON-mode fallback that might
+#' have succeeded.
+#'
+#' An allowlist rather than a denylist, so that a provider ellmer adds later
+#' loses only the hint until it is checked, never gains a false claim.
 #'
 #' @param provider The provider prefix.
-#' @param chat_args The run's arguments to [ellmer::chat()].
+#' @param id The model name as typed, without the prefix.
+#'
+#' @return `TRUE` when a name absent from the listing can be called wrong.
+#' @keywords internal
+#' @noRd
+listing_is_complete <- function(provider, id) {
+  if (!provider %in% complete_listings) {
+    return(FALSE)
+  }
+  !(provider == "google_gemini" && startsWith(id, "tunedModels/"))
+}
+
+# Providers whose models_*() enumerates every identifier the endpoint will
+# invoke, checked 2026-09-03 against ellmer 0.4.2.
+complete_listings <- c(
+  "anthropic", "claude", "deepseek", "github", "google_gemini", "groq",
+  "lmstudio", "mistral", "ollama", "openai", "vllm"
+)
+
+
+#' The model names a provider publishes, or `NULL`
+#'
+#' Asks ellmer's `models_<provider>()`, a credentialed network call whose
+#' answer depends on the account asking: fine-tuned and gated models differ
+#' by key, by project and by region. So it is asked afresh each time and
+#' never cached across runs, where a stale or foreign answer could pin a
+#' wrong diagnosis to a repaired credential. It is asked at most once per
+#' failed run, which is the only time it is asked at all.
+#'
+#' @param provider The provider prefix.
+#' @param chat_args The run's arguments to [ellmer::chat()]; those the lister
+#'   takes (`base_url`, `api_key`, `credentials`, and for some providers
+#'   `profile`, `project_id` or `location`) are passed on.
 #'
 #' @return A character vector of model ids, or `NULL` when the provider has no
 #'   `models_*()` in ellmer or the lookup failed.
 #' @keywords internal
 #' @noRd
 provider_models <- function(provider, chat_args = list()) {
-  key <- paste(provider, chat_args$base_url %||% "", sep = "\n")
-  if (exists(key, envir = model_list_cache, inherits = FALSE)) {
-    return(get(key, envir = model_list_cache, inherits = FALSE))
-  }
   lister <- models_lister(provider)
-  models <- NULL
-  if (!is.null(lister)) {
-    args <- chat_args[intersect(names(chat_args), names(formals(lister)))]
-    models <- tryCatch(
-      {
-        listing <- suppressMessages(suppressWarnings(do.call(lister, args)))
-        ids <- listing$id
-        if (is.character(ids) && length(ids)) ids else NULL
-      },
-      error = function(e) NULL
-    )
+  if (is.null(lister)) {
+    return(NULL)
   }
-  assign(key, models, envir = model_list_cache)
-  models
+  args <- chat_args[intersect(names(chat_args), names(formals(lister)))]
+  tryCatch(
+    {
+      listing <- suppressMessages(suppressWarnings(do.call(lister, args)))
+      ids <- listing$id
+      if (is.character(ids) && length(ids)) ids else NULL
+    },
+    error = function(e) NULL
+  )
 }
-
-model_list_cache <- new.env(parent = emptyenv())
 
 
 #' ellmer's model-listing function for a provider, or `NULL`
