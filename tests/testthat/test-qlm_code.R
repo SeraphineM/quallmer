@@ -1269,6 +1269,35 @@ test_that("check_ids refuses missing identifiers before repeated ones", {
   expect_error(check_ids(c(NA, "a", "a")), "must not be missing")
   expect_error(check_ids(c("a", "b", "a")), "must be unique")
   expect_error(check_ids(c("a", "b", "a")), "\\ba\\b")
+
+  # Factors are checked by their labels, including the empty one
+  expect_silent(check_ids(factor(c("a", "b"))))
+  expect_error(check_ids(factor(c("", "u1"))), "must not be missing")
+  expect_error(check_ids(factor(c("a", "a"))), "must be unique")
+  # Only a plain vector can be a key
+  expect_error(check_ids(list("a", NULL)), "character, factor or numeric")
+  expect_error(check_ids(matrix(1:4, 2)), "character, factor or numeric")
+})
+
+test_that("an empty factor label is refused as an identifier end to end", {
+  a <- data.frame(.id = factor(c("", "u1")), score = c(0, 1))
+  expect_error(as_qlm_coded(a, name = "A"), "must not be missing")
+})
+
+test_that("selecting .id away returns a plain tibble, not a broken coded object", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  projected <- x["score"]
+  expect_false(inherits(projected, "qlm_coded"))
+  expect_false(inherits(projected, "qlm_humancoded"))
+  expect_s3_class(projected, "tbl_df")
+  expect_null(attr(projected, "meta"))
+  expect_equal(names(projected), "score")
+  # ... whereas keeping it keeps the object
+  kept <- x[c(".id", "score")]
+  expect_s3_class(kept, "qlm_coded")
+  expect_false(is.null(attr(kept, "meta")))
+  # and a vector comes back as a vector
+  expect_equal(x[, "score", drop = TRUE], c(1, 0))
 })
 
 test_that("new_qlm_coded requires exactly one .id column", {

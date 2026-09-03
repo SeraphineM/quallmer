@@ -1055,21 +1055,32 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
 #' `.id`. Repeating rows, `x[c(1, 1), ]`, would produce an object with a
 #' repeated identifier that never passed through the constructor, and every
 #' merge downstream would then pair the wrong rows (#156). So the identifier
-#' is checked again here, where the duplicate would be made.
+#' is checked again here, where the duplicate would be made. Selecting the
+#' identifier away, `x["score"]`, leaves nothing for the class to promise,
+#' so the result is returned as a plain tibble rather than as a coded object
+#' every consumer would have to reject.
 #'
 #' @param x A qlm_coded object.
 #' @param i,j Row and column indices, as for a tibble.
 #' @param ... Passed on to the tibble method.
 #'
-#' @return A qlm_coded object, or whatever the tibble method returns when
-#'   the identifier column is not among the columns kept.
+#' @return A qlm_coded object when `.id` is among the columns kept; a plain
+#'   tibble when it is not; a vector when the tibble method returns one.
 #' @keywords internal
 #' @export
 `[.qlm_coded` <- function(x, i, j, ...) {
   out <- NextMethod()
-  if (is.data.frame(out) && ".id" %in% names(out)) {
-    check_ids(out[[".id"]], what = "{.field .id} of the subset")
+  if (!is.data.frame(out)) {
+    return(out)
   }
+  if (!".id" %in% names(out)) {
+    for (a in c("data", "codebook", "meta", "run", "input_type")) {
+      attr(out, a) <- NULL
+    }
+    class(out) <- setdiff(class(out), c("qlm_coded", "qlm_humancoded"))
+    return(out)
+  }
+  check_ids(out[[".id"]], what = "{.field .id} of the subset")
   out
 }
 

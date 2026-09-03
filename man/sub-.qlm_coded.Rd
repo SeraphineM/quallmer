@@ -14,8 +14,8 @@
 \item{...}{Passed on to the tibble method.}
 }
 \value{
-A qlm_coded object, or whatever the tibble method returns when
-the identifier column is not among the columns kept.
+A qlm_coded object when \code{.id} is among the columns kept; a plain
+tibble when it is not; a vector when the tibble method returns one.
 }
 \description{
 Tibble subsetting keeps the class and attributes, so a subset is still a
@@ -23,6 +23,9 @@ Tibble subsetting keeps the class and attributes, so a subset is still a
 \code{.id}. Repeating rows, \code{x[c(1, 1), ]}, would produce an object with a
 repeated identifier that never passed through the constructor, and every
 merge downstream would then pair the wrong rows (#156). So the identifier
-is checked again here, where the duplicate would be made.
+is checked again here, where the duplicate would be made. Selecting the
+identifier away, \code{x["score"]}, leaves nothing for the class to promise,
+so the result is returned as a plain tibble rather than as a coded object
+every consumer would have to reject.
 }
 \keyword{internal}

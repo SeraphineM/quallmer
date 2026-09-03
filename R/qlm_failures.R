@@ -160,9 +160,19 @@ failure_reasons <- function(errors, failed) {
 #' @keywords internal
 #' @noRd
 check_ids <- function(ids, what = "{.field .id}", call = rlang::caller_env()) {
+  # A key is a plain vector of labels or numbers. A list-column (with NULL
+  # cells, say) or a matrix would pass the tests below in odd ways and then
+  # fail deep inside a merge, so it is refused here, by name.
+  if (!is.atomic(ids) || !is.null(dim(ids))) {
+    cli::cli_abort(c(
+      paste0(what, " must be a character, factor or numeric vector, not {.cls {class(ids)}}."),
+      "i" = "One identifier per unit, with nothing nested in it."
+    ), call = call)
+  }
   missing <- is.na(ids)
-  if (is.character(ids)) {
-    missing <- missing | !nzchar(ids)
+  # A factor is a common identifier column; its labels are checked like text
+  if (is.character(ids) || is.factor(ids)) {
+    missing <- missing | !nzchar(as.character(ids))
   }
   if (any(missing)) {
     cli::cli_abort(c(
