@@ -33,7 +33,11 @@
 annotate <- function(.data, task, model_name, ...) {
   lifecycle::deprecate_warn("0.2.0", "annotate()", "qlm_code()")
 
-  # Call qlm_code() and extract results as data.frame
   coded <- qlm_code(.data, codebook = task, model = model_name, ...)
-  as.data.frame(coded)
+
+  # qlm_code() keys its rows on `.id`; annotate() always returned that column
+  # as `id`, and callers on the deprecation path still read it by that name.
+  out <- as.data.frame(coded)
+  names(out)[names(out) == ".id"] <- "id"
+  out
 }

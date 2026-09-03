@@ -120,7 +120,7 @@ test_that("annotate() hands model_name to qlm_code() as model (#141)", {
   seen <- NULL
   local_mocked_bindings(qlm_code = function(x, codebook, model, ...) {
     seen <<- list(model = model, dots = list(...))
-    tibble::tibble(.id = seq_along(x), score = 1)
+    tibble::tibble(.id = names(x) %||% seq_along(x), score = 1)
   })
 
   tsk <- task(
@@ -135,6 +135,32 @@ test_that("annotate() hands model_name to qlm_code() as model (#141)", {
   expect_false("model_name" %in% names(seen$dots))
   expect_s3_class(out, "data.frame")
   expect_equal(nrow(out), 2L)
+})
+
+test_that("annotate() still returns its documented `id` column (#141)", {
+  skip_if_not_installed("ellmer")
+  withr::local_options(lifecycle_verbosity = "quiet")
+
+  # qlm_code() keys rows on `.id`. annotate() documented, and returned, `id`
+  # as the first column, from the input's names or sequential integers.
+  local_mocked_bindings(qlm_code = function(x, codebook, model, ...) {
+    tibble::tibble(.id = names(x) %||% seq_along(x), score = 1)
+  })
+
+  tsk <- task(
+    name = "Test",
+    system_prompt = "Test prompt",
+    type_def = ellmer::type_object(score = ellmer::type_number("A score"))
+  )
+
+  named <- annotate(c("doc-a" = "Hello", "doc-b" = "World"), tsk,
+                    model_name = "openai/gpt-4o-mini")
+  expect_identical(names(named), c("id", "score"))
+  expect_identical(named$id, c("doc-a", "doc-b"))
+  expect_false(".id" %in% names(named))
+
+  unnamed <- annotate(c("Hello", "World"), tsk, model_name = "openai/gpt-4o-mini")
+  expect_identical(unnamed$id, 1:2)
 })
 
 test_that("annotate routes arguments correctly", {
