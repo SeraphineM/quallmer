@@ -189,6 +189,15 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   # and registered `tools` are not safe to recreate automatically.
   original_chat_args <- meta_attr$object$chat_args %||% list()
   original_chat_args[c("name", "tools")] <- NULL
+  # An object read back from a trail carries "<redacted>" where a credential
+  # was; that is not a value to send. An override in `...` supersedes it
+  # silently, as it would any recorded value.
+  stripped <- drop_redacted_args(original_chat_args)
+  original_chat_args <- stripped$args
+  dropped <- setdiff(stripped$dropped, names(overrides))
+  if (length(dropped)) {
+    cli::cli_inform(c("i" = redacted_args_note(dropped)))
+  }
   use_model <- model %||% original_model
 
   # Credentials and endpoint settings belong to an endpoint, not to a model in

@@ -678,3 +678,124 @@ test_that("replay_backfill keeps the replication when a replayed pass fails", {
   # A failure before any recovery still aborts a direct call
   expect_error(suppressMessages(backfill(replication)), class = "quallmer_backfill_error")
 })
+
+
+# Usage and credentials across the merge and the trail ------------------------
+
+test_that("merge_backfill_rows keeps a usage total unknown when any attempt's is", {
+  usage <- function(id, score, input, output, cost) {
+    data.frame(id = id, score = score, note = NA_character_, input_tokens = input,
+               output_tokens = output, cached_input_tokens = 0L, cost = cost)
+  }
+  run <- make_run(usage(c("a", "b", "c", "d"), c(1L, NA, NA, NA),
+                        c(10L, 100L, NA, 30L), c(5L, 20L, NA, 8L), c(0.1, NA, NA, 0.3)))
+  pass <- make_run(usage(c("b", "c", "d"), c(2L, 3L, 4L),
+                         c(50L, 60L, 70L), c(9L, 9L, 9L), c(0.25, 0.25, NA)),
+                   name = "run1_backfill_1")
+  merged <- merge_backfill_rows(run, pass)
+  expect_equal(merged$score, c(1L, 2L, 3L, 4L))
+  # b: known tokens on both attempts add up; an unpriced first attempt keeps
+  #    the cost unknown even though the retry was priced
+  # c: a first attempt that reported nothing leaves everything unknown
+  # d: a priced first attempt and an unpriced retry is unknown too
+  expect_equal(merged$input_tokens, c(10L, 150L, NA, 100L))
+  expect_equal(merged$output_tokens, c(5L, 29L, NA, 17L))
+  expect_equal(merged$cost, c(0.1, NA, NA, NA))
+
+  # A pass that did not record usage leaves the rows it touched unknown, and
+  # the rest as they were
+  bare <- make_run(data.frame(id = "b", score = 2L, note = NA_character_), name = "run1_backfill_1")
+  merged <- merge_backfill_rows(run, bare)
+  expect_equal(merged$input_tokens, c(10L, NA, NA, 30L))
+  expect_equal(merged$cost, c(0.1, NA, NA, 0.3))
+
+  # A pass that recorded usage the run did not adds nothing: the earlier
+  # attempts' usage is unknown, so there is no truthful total
+  plain <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_))
+  merged <- merge_backfill_rows(plain, make_run(usage("b", 2L, 50L, 9L, 0.25), name = "run1_backfill_1"))
+  expect_equal(names(merged), c(".id", "score", "note"))
+  expect_equal(merged$score, c(1L, 2L))
+})
+
+test_that("qlm_backfill records usage as the run did", {
+  skip_if_not_installed("mockery")
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_))
+  expect_error(qlm_backfill(run, include_tokens = TRUE), "cannot be set in a backfill")
+  expect_error(qlm_backfill(run, include_cost = FALSE), "cannot be set in a backfill")
+  # Rates need token counts to work on, which this run did not record
+  expect_error(qlm_backfill(run, prices = c(input = 1, output = 2)), "recorded no usage")
+
+  # With usage recorded, rates are accepted and reach the pass
+  priced <- make_run(data.frame(
+    id = c("a", "b"), score = c(1L, NA), note = NA_character_,
+    input_tokens = 1L, output_tokens = 1L, cached_input_tokens = 0L, cost = NA_real_
+  ))
+  calls <- new.env()
+  f <- backfill_with(list(data.frame(id = "b", score = 2L, note = NA_character_)), calls)
+  suppressMessages(f(priced, prices = c(input = 1, output = 2)))
+  expect_equal(calls$args[[1]]$prices, c(input = 1, output = 2))
+})
+
+test_that("qlm_trail redacts the credentials a backfill pass was given (#154)", {
+  skip_if_not_installed("mockery")
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_))
+  f <- backfill_with(list(data.frame(id = "b", score = 2L, note = NA_character_)))
+  hidden <- "env3cret"
+  filled <- suppressMessages(f(
+    run,
+    api_key = "sk-b4ckfill",
+    base_url = "https://u:url3cret@proxy.example/v1",
+    api_headers = c(Authorization = "Bearer hdr3cret"),
+    credentials = local({ captured <- hidden; function() "cb3cret" })
+  ))
+  secrets <- c("sk-b4ckfill", "url3cret", "hdr3cret", "cb3cret", "env3cret")
+
+  # On the object itself the pass is recorded as given
+  expect_equal(qlm_meta(filled, "backfill", type = "object")[[1]]$overrides$api_key, "sk-b4ckfill")
+
+  stem <- tempfile()
+  trail <- suppressMessages(qlm_trail(filled, path = stem))
+  overrides <- attr(trail$runs[[1]]$coded, "meta")$object$backfill[[1]]$overrides
+  expect_equal(overrides$api_key, "<redacted>")
+  expect_equal(overrides$base_url, "https://proxy.example/v1")
+  expect_equal(overrides$api_headers, c(Authorization = "<redacted>"))
+  expect_equal(overrides$credentials, "<redacted>")
+
+  rds_file <- paste0(stem, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  report <- readLines(paste0(stem, ".qmd"))
+  for (secret in secrets) {
+    expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+    expect_false(any(grepl(secret, report, fixed = TRUE)), label = secret)
+  }
+})
+
+test_that("replay_backfill does not send a credential the trail redacted (#154)", {
+  skip_if_not_installed("mockery")
+  parent <- make_run(data.frame(id = c("a", "b"), score = c(1L, 2L), note = NA_character_))
+  meta_attr <- attr(parent, "meta")
+  meta_attr$object$backfill <- list(list(
+    model = NULL,
+    overrides = list(
+      api_key = "<redacted>",
+      api_headers = c(Authorization = "<redacted>", `anthropic-beta` = "b"),
+      base_url = "https://h/v1?api_key=<redacted>",
+      params = list(temperature = 0)
+    ),
+    attempted = c("a", "b"), recovered = c("a", "b")
+  ))
+  attr(parent, "meta") <- meta_attr
+
+  seen <- NULL
+  f <- replay_backfill
+  mockery::stub(f, "qlm_backfill", function(x, ...) { seen <<- list(...); x })
+  replication <- make_run(data.frame(id = c("a", "b"), score = c(NA, NA), note = NA_character_))
+
+  msgs <- capture_messages(f(replication, parent))
+  expect_true(any(grepl("Pass 1: `api_key`, `api_headers`, `base_url` carry values redacted", msgs)))
+  expect_false("api_key" %in% names(seen))
+  expect_equal(seen$api_headers, c(`anthropic-beta` = "b"))
+  expect_equal(seen$base_url, "https://h/v1")
+  expect_equal(seen$params, list(temperature = 0))
+  expect_equal(seen$attempts, 1L)
+})

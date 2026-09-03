@@ -16,7 +16,8 @@
   and the result then records which units came from which model and says so
   when printed, since a coding by two instruments has to be disclosed as
   one. Rows keep their order, a failed retry never overwrites anything, and
-  token and cost columns are summed across attempts. `qlm_code()` gains
+  token and cost columns are summed across attempts, a total staying `NA`
+  when any attempt's figure is unknown. `qlm_code()` gains
   `backfill_attempts` to complete a run in the same call, and `qlm_replicate()`
   gains `backfill`, which by default replays the passes recorded on the
   parent so that a replication of a completed run is complete on the same

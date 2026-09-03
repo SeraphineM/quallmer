@@ -22,6 +22,11 @@
 #'   with the same rule for credentials and endpoint settings when the
 #'   provider changes. The codebook, `batch`, `name` and `backfill_attempts`
 #'   cannot be set: `attempts` is the only bound on the number of passes.
+#'   Nor can `include_tokens` and `include_cost`: usage is recorded as the run
+#'   recorded it, so that the merged columns mean one thing. `prices` may be
+#'   given, to cost the passes where the run's own rates do not carry (a
+#'   batch-coded run's rates do not cover its parallel passes), and needs the
+#'   run to have recorded token counts and cost of its own to add to.
 #' @param model character or `NULL`; the model for the passes, in the form
 #'   used by [qlm_code()]. `NULL` (default) uses the run's own model.
 #' @param attempts integer; the maximum number of passes. Default is 2. A pass that
@@ -65,13 +70,17 @@
 #' that failed again never overwrites anything, though its `.error` is
 #' recorded as the latest reason. Token and cost columns, when present, are
 #' summed across all attempts, since a failed request may still have been
-#' billed. The passes are recorded in the object metadata as `backfill`, one
-#' entry per pass with its timestamp, the model if it differed from the run's,
-#' the overrides, the `.id`s attempted and recovered, and for a pass that
-#' failed outright its error, so the result can say
-#' which of its rows came from which pass and which model. [qlm_replicate()]
-#' replays these passes on a replication, so that a replication of a completed
-#' run is completed on the same terms.
+#' billed; a total is `NA` when any attempt's figure is, because `NA` means
+#' the provider did not report it, not that nothing was billed, so a retry's
+#' known figure cannot stand in for the whole. The passes are recorded in the
+#' object metadata as `backfill`, one entry per pass with its timestamp, the
+#' model if it differed from the run's, the overrides, the `.id`s attempted
+#' and recovered, and for a pass that failed outright its error, so the
+#' result can say which of its rows came from which pass and which model.
+#' [qlm_trail()] redacts any credential among a pass's overrides as it does
+#' the run's own, and a pass replayed from a trail does not send a redacted
+#' value. [qlm_replicate()] replays these passes on a replication, so that a
+#' replication of a completed run is completed on the same terms.
 #'
 #' @return `x`, with the recovered units filled in and `backfill` added to
 #'   its object metadata. The run name, parent, codebook and inputs are
@@ -148,6 +157,29 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
     cli::cli_abort(c(
       "{.arg name} cannot be set in a backfill.",
       "i" = "A backfill fills the gaps in a run under the run's own name."
+    ))
+  }
+  # Usage is recorded as the run recorded it, so that a merged column means
+  # one thing. A pass that recorded more than the run could not be merged
+  # truthfully, since the earlier attempts' usage is unknown; one that
+  # recorded less would leave the run's own figures looking complete.
+  usage_flags <- intersect(c("include_tokens", "include_cost"), names(overrides))
+  if (length(usage_flags)) {
+    cli::cli_abort(c(
+      "{.arg {usage_flags}} cannot be set in a backfill.",
+      "i" = "A backfill records token counts and cost as the run did."
+    ))
+  }
+  # Supplied rates cost a pass from its token counts, and a merged row is
+  # known only when the run's own figure is too, so without usage recorded
+  # on the run the rates would be spent for nothing.
+  usage_cols <- c("input_tokens", "output_tokens", "cached_input_tokens", "cost")
+  if ("prices" %in% names(overrides) && !all(usage_cols %in% names(x))) {
+    cli::cli_abort(c(
+      "{.arg prices} cannot cost a backfill of a run that recorded no usage.",
+      "i" = paste0("The run was coded without {.code include_tokens = TRUE} and ",
+                   "{.code include_cost = TRUE}, so its own attempts have no token ",
+                   "counts or cost for the passes' to be added to.")
     ))
   }
 
@@ -345,6 +377,12 @@ replay_backfill <- function(result, parent, backfill = NULL) {
       break
     }
     pass <- passes[[i]]
+    # A parent read back from a trail records "<redacted>" where a pass was
+    # given a credential; that is not a value to send.
+    stripped <- drop_redacted_args(pass$overrides)
+    if (length(stripped$dropped)) {
+      cli::cli_inform(c("i" = paste0("Pass ", i, ": ", redacted_args_note(stripped$dropped))))
+    }
     # Each pass runs as its own single-attempt backfill, whose "first attempt
     # failed" rule would otherwise abort here and discard the paid replication
     # and everything earlier passes recovered. So a pass that fails outright
@@ -354,7 +392,7 @@ replay_backfill <- function(result, parent, backfill = NULL) {
     replayed <- tryCatch(
       do.call(qlm_backfill, c(
         list(result, model = pass$model, attempts = 1L),
-        pass$overrides
+        stripped$args
       )),
       quallmer_backfill_error = function(e) e
     )
@@ -588,7 +626,12 @@ backfill_pass <- function(model, overrides, attempted, recovered, error = NULL) 
 #' where the retry produced a usable coding; where it failed again, the
 #' coded values are left alone and the retry's `.error` is recorded as the
 #' latest reason. Usage columns are summed over both attempts, because a
-#' failed request may still have been billed.
+#' failed request may still have been billed, and a total is `NA` when
+#' either attempt's figure is: `NA` means the provider did not report it,
+#' not that nothing was billed, so a retry's known figure cannot stand in
+#' for the whole. A usage column the pass did not record leaves the merged
+#' rows unknown for the same reason; one the run did not record cannot be
+#' added, since the earlier attempts' usage is unknown, and is left out.
 #'
 #' Columns are replaced with vctrs so that list-columns (arrays), data-frame
 #' columns (nested objects) and factors are handled alike; where the two
@@ -625,12 +668,8 @@ merge_backfill_rows <- function(x, new) {
     }
   }
 
-  for (col in intersect(usage_cols, intersect(names(x), names(new)))) {
-    old <- x[[col]][pos]
-    add <- new[[col]]
-    old[is.na(old)] <- 0
-    add[is.na(add)] <- 0
-    x[[col]][pos] <- old + add
+  for (col in intersect(usage_cols, names(x))) {
+    x[[col]][pos] <- if (col %in% names(new)) x[[col]][pos] + new[[col]] else NA
   }
 
   if (".error" %in% names(x) || ".error" %in% names(new)) {

@@ -41,10 +41,15 @@ url_arg_names <- c("base_url", "endpoint")
 #' with it. Any other callback becomes `"<redacted>"`, in `chat_args` and in
 #' the call.
 #'
+#' A backfilled run also records, per pass, the overrides that pass was
+#' given, which take the same credential arguments; each pass's `overrides`
+#' is redacted like `chat_args`.
+#'
 #' @param meta A `meta` attribute as built by `new_qlm_coded()` and its
 #'   counterparts for comparisons and validations.
 #'
-#' @return `meta` with `object$call` and `object$chat_args` redacted.
+#' @return `meta` with `object$call`, `object$chat_args` and the `overrides`
+#'   of every `object$backfill` pass redacted.
 #' @keywords internal
 #' @noRd
 redact_meta <- function(meta) {
@@ -54,7 +59,110 @@ redact_meta <- function(meta) {
   if (!is.null(meta$object[["chat_args"]])) {
     meta$object[["chat_args"]] <- redact_chat_args(meta$object[["chat_args"]])
   }
+  if (length(meta$object[["backfill"]])) {
+    meta$object[["backfill"]] <- lapply(meta$object[["backfill"]], function(pass) {
+      if (!is.null(pass[["overrides"]])) {
+        pass[["overrides"]] <- redact_chat_args(pass[["overrides"]])
+      }
+      pass
+    })
+  }
   meta
+}
+
+
+#' Drop the values a trail redacted before arguments are sent again
+#'
+#' An object read back from a trail carries `"<redacted>"` where a
+#' credential was. Sending that literal would fail at the provider with a
+#' message about a bad key, or worse, reach a proxy that accepts anything.
+#' So before recorded arguments are reused, by `restore_run_args()` for a
+#' replication or backfill and by `replay_backfill()` for a recorded pass,
+#' the redacted values are removed: `api_key` and `credentials` go
+#' altogether, so ellmer falls back to its own defaults; a redacted header
+#' entry goes, the others stay; a redacted query parameter leaves the URL.
+#'
+#' @param args A named list of arguments to [qlm_code()].
+#'
+#' @return A list: `args`, with the redacted values removed, and `dropped`,
+#'   the names of the arguments that carried one.
+#' @keywords internal
+#' @noRd
+drop_redacted_args <- function(args) {
+  dropped <- character()
+  if (!is.list(args) || is.null(names(args))) {
+    return(list(args = args, dropped = dropped))
+  }
+
+  for (nm in c("api_key", "credentials")) {
+    if (identical(args[[nm]], REDACTED)) {
+      args[[nm]] <- NULL
+      dropped <- c(dropped, nm)
+    }
+  }
+
+  headers <- args[["api_headers"]]
+  if (!is.null(headers)) {
+    hit <- vapply(headers, identical, logical(1), REDACTED)
+    if (any(hit)) {
+      headers <- headers[!hit]
+      args[["api_headers"]] <- if (length(headers)) headers else NULL
+      dropped <- c(dropped, "api_headers")
+    }
+  }
+
+  for (arg in intersect(names(args), url_arg_names)) {
+    url <- args[[arg]]
+    if (is.character(url) && length(url) == 1L && !is.na(url) &&
+        grepl(REDACTED, url, fixed = TRUE)) {
+      args[[arg]] <- drop_redacted_query(url)
+      dropped <- c(dropped, arg)
+    }
+  }
+
+  list(args = args, dropped = dropped)
+}
+
+
+#' Remove query parameters whose value was redacted
+#'
+#' @param url A single string.
+#'
+#' @return The URL without those parameters, and without a `?` when none
+#'   remain.
+#' @keywords internal
+#' @noRd
+drop_redacted_query <- function(url) {
+  query <- regexpr("\\?[^#]*", url)
+  if (query < 0L) {
+    return(url)
+  }
+  params <- substring(url, query + 1L, query + attr(query, "match.length") - 1L)
+  params <- strsplit(params, "&", fixed = TRUE)[[1]]
+  params <- params[!endsWith(params, paste0("=", REDACTED))]
+  regmatches(url, query) <- if (length(params)) paste0("?", paste(params, collapse = "&")) else ""
+  url
+}
+
+
+#' The message that says which redacted arguments are not being sent
+#'
+#' @param dropped Names from `drop_redacted_args()`, minus any the caller
+#'   overrode.
+#'
+#' @return A single string.
+#' @keywords internal
+#' @noRd
+redacted_args_note <- function(dropped) {
+  one <- length(dropped) == 1L
+  paste0(
+    paste0("`", dropped, "`", collapse = ", "),
+    if (one) " carries a value" else " carry values",
+    " redacted when this run was saved to a trail; ",
+    if (one) "it is" else "they are",
+    " not sent. Supply ", if (one) "it" else "them",
+    " in `...` if the endpoint needs ", if (one) "it." else "them."
+  )
 }
 
 

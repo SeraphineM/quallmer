@@ -14,7 +14,12 @@ passes, such as \code{params}, \code{max_active} or \code{on_error}. Any setting
 overridden is restored from the original run, as \code{\link[=qlm_replicate]{qlm_replicate()}} does,
 with the same rule for credentials and endpoint settings when the
 provider changes. The codebook, \code{batch}, \code{name} and \code{backfill_attempts}
-cannot be set: \code{attempts} is the only bound on the number of passes.}
+cannot be set: \code{attempts} is the only bound on the number of passes.
+Nor can \code{include_tokens} and \code{include_cost}: usage is recorded as the run
+recorded it, so that the merged columns mean one thing. \code{prices} may be
+given, to cost the passes where the run's own rates do not carry (a
+batch-coded run's rates do not cover its parallel passes), and needs the
+run to have recorded token counts and cost of its own to add to.}
 
 \item{model}{character or \code{NULL}; the model for the passes, in the form
 used by \code{\link[=qlm_code]{qlm_code()}}. \code{NULL} (default) uses the run's own model.}
@@ -82,13 +87,17 @@ a unit is replaced only when the retry produced a usable coding, so a retry
 that failed again never overwrites anything, though its \code{.error} is
 recorded as the latest reason. Token and cost columns, when present, are
 summed across all attempts, since a failed request may still have been
-billed. The passes are recorded in the object metadata as \code{backfill}, one
-entry per pass with its timestamp, the model if it differed from the run's,
-the overrides, the \code{.id}s attempted and recovered, and for a pass that
-failed outright its error, so the result can say
-which of its rows came from which pass and which model. \code{\link[=qlm_replicate]{qlm_replicate()}}
-replays these passes on a replication, so that a replication of a completed
-run is completed on the same terms.
+billed; a total is \code{NA} when any attempt's figure is, because \code{NA} means
+the provider did not report it, not that nothing was billed, so a retry's
+known figure cannot stand in for the whole. The passes are recorded in the
+object metadata as \code{backfill}, one entry per pass with its timestamp, the
+model if it differed from the run's, the overrides, the \code{.id}s attempted
+and recovered, and for a pass that failed outright its error, so the
+result can say which of its rows came from which pass and which model.
+\code{\link[=qlm_trail]{qlm_trail()}} redacts any credential among a pass's overrides as it does
+the run's own, and a pass replayed from a trail does not send a redacted
+value. \code{\link[=qlm_replicate]{qlm_replicate()}} replays these passes on a replication, so that a
+replication of a completed run is completed on the same terms.
 }
 \examples{
 \dontrun{

@@ -1067,3 +1067,38 @@ test_that("qlm_replicate carries supplied prices to the same model, not to anoth
   f(coded, model = "deepseek/deepseek-reasoner", prices = c(input = 2, output = 20))
   expect_equal(seen$prices, c(input = 2, output = 20))
 })
+
+
+test_that("qlm_replicate does not send a credential the trail redacted (#154)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai/gpt-4o-mini",
+      api_key = "<redacted>",
+      api_headers = c(Authorization = "<redacted>", `anthropic-beta` = "b"),
+      params = list(temperature = 0)
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) { seen <<- list(...); coded })
+  mockery::stub(f, "replay_backfill", function(result, ...) result)
+
+  msgs <- capture_messages(f(coded, name = "run2"))
+  expect_true(any(grepl("`api_key`, `api_headers` carry values redacted", msgs)))
+  expect_false("api_key" %in% names(seen))
+  expect_equal(seen$api_headers, c(`anthropic-beta` = "b"))
+  expect_equal(seen$params, list(temperature = 0))
+
+  # An explicit value in `...` supersedes the redacted one and is not
+  # reported as dropped
+  msgs <- capture_messages(f(coded, api_key = "sk-new", name = "run3"))
+  expect_true(any(grepl("`api_headers` carries a value redacted", msgs)))
+  expect_equal(seen$api_key, "sk-new")
+})

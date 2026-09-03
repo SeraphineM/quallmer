@@ -192,3 +192,65 @@ test_that("is_credential_name() catches the names credentials travel under", {
     "anthropic-beta", "api-version", "accept", "content-type", "OpenAI-Organization", "model"
   ))))
 })
+
+# ---- backfill passes and reuse of a redacted record --------------------------
+
+test_that("redact_meta() redacts the overrides of every backfill pass", {
+  meta <- list(object = list(
+    call = quote(qlm_code(x, cb)), chat_args = list(name = "m"),
+    backfill = list(
+      list(model = NULL, overrides = list(api_key = "sk-p1", params = list(temperature = 0)),
+           attempted = "a", recovered = "a"),
+      list(model = "other/m",
+           overrides = list(base_url = "https://u:p@h/v1", api_headers = c(Authorization = "Bearer t"),
+                            credentials = function() "sk"),
+           attempted = "b", recovered = character(0), error = "HTTP 503")
+    )
+  ))
+  out <- redact_meta(meta)
+  expect_equal(out$object$backfill[[1]]$overrides, list(api_key = "<redacted>", params = list(temperature = 0)))
+  second <- out$object$backfill[[2]]
+  expect_equal(second$overrides$base_url, "https://h/v1")
+  expect_equal(second$overrides$api_headers, c(Authorization = "<redacted>"))
+  expect_equal(second$overrides$credentials, "<redacted>")
+  expect_equal(second$attempted, "b")
+  expect_equal(second$error, "HTTP 503")
+  # A pass without overrides, and a run without passes, are left alone
+  expect_identical(redact_meta(list(object = list(backfill = list(list(attempted = "a"))))),
+                   list(object = list(backfill = list(list(attempted = "a")))))
+  expect_identical(redact_meta(list(object = list(chat_args = list(name = "m")))),
+                   list(object = list(chat_args = list(name = "m"))))
+})
+
+test_that("drop_redacted_args() removes what a trail redacted and nothing else", {
+  args <- list(
+    api_key = "<redacted>", credentials = "<redacted>", params = list(temperature = 0),
+    api_headers = c(Authorization = "<redacted>", `anthropic-beta` = "b"),
+    base_url = "https://h/v1?api_key=<redacted>&api-version=2024"
+  )
+  out <- drop_redacted_args(args)
+  expect_equal(out$args, list(
+    params = list(temperature = 0), api_headers = c(`anthropic-beta` = "b"),
+    base_url = "https://h/v1?api-version=2024"
+  ))
+  expect_equal(out$dropped, c("api_key", "credentials", "api_headers", "base_url"))
+
+  # Real values are untouched
+  clean <- list(api_key = "sk-real", api_headers = c(Authorization = "Bearer x"), base_url = "https://h/v1")
+  expect_identical(drop_redacted_args(clean), list(args = clean, dropped = character()))
+  expect_identical(drop_redacted_args(list()), list(args = list(), dropped = character()))
+  expect_identical(drop_redacted_args(NULL), list(args = NULL, dropped = character()))
+
+  # A header set that was all credentials goes entirely; a query that was
+  # only the key goes with its `?`
+  out <- drop_redacted_args(list(
+    api_headers = list(Authorization = "<redacted>"), base_url = "https://h/v1?token=<redacted>"
+  ))
+  expect_equal(out$args, list(base_url = "https://h/v1"))
+  expect_equal(out$dropped, c("api_headers", "base_url"))
+})
+
+test_that("redacted_args_note() reads correctly for one and for several", {
+  expect_match(redacted_args_note("api_key"), "^`api_key` carries a value redacted .* it is not sent\\. Supply it in `\\.\\.\\.` if the endpoint needs it\\.$")
+  expect_match(redacted_args_note(c("api_key", "base_url")), "^`api_key`, `base_url` carry values .* they are not sent\\. Supply them .* needs them\\.$")
+})
