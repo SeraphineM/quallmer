@@ -12,6 +12,13 @@ name: pkgdown.yaml
 
 permissions: read-all
 
+# One non-PR run at a time, build and deploy together. Serialising only the
+# deploy job is not enough: builds would overlap, and a slow build for an
+# older commit could deploy after a fast one for a newer commit and leave
+# gh-pages stale. PR runs get a group of their own and never queue.
+concurrency:
+  group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+
 jobs:
   # Build and deploy are separate jobs so that the write token exists only in
   # the deploy job, which runs no code from the commit under test. The build
@@ -63,9 +70,6 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Deploys to gh-pages must not overlap; builds may
-    concurrency:
-      group: pkgdown-deploy
     permissions:
       contents: write
     steps:
