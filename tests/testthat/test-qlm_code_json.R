@@ -24,10 +24,13 @@ json_test_usage <- function(n) {
 
 # A code_handler_json() with ellmer::chat() and json_chat_turns() stubbed out.
 # `attempts` is a list of list(text =, error =, status =, finish =), one per
-# expected round trip; `error`, `status` and `finish` default to NA.
-json_test_handler <- function(attempts, calls = NULL) {
+# expected round trip; `error`, `status` and `finish` default to NA. The
+# model-name lookup a wholly rejected run makes is stubbed out too, since it
+# would otherwise ask the provider; `hint` is what it answers.
+json_test_handler <- function(attempts, calls = NULL, hint = character()) {
   h <- code_handler_json
   mockery::stub(h, "ellmer::chat", function(...) structure(list(), class = "fake_chat"))
+  mockery::stub(h, "model_name_hint", function(...) hint)
   i <- 0L
   mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
     i <<- i + 1L
@@ -785,6 +788,44 @@ test_that("code_handler_json aborts when the provider rejects every request", {
 
   # No point re-sending a request the provider rejected outright
   expect_equal(calls$n, 1)
+})
+
+test_that("code_handler_json names the model when the provider does not list it (#133)", {
+  rejected <- list(
+    text = c(NA_character_, NA_character_),
+    error = rep("HTTP 400 Bad Request.", 2),
+    status = c(400L, 400L)
+  )
+  hint <- c("i" = "\"gpt-4o-mimi\" is not a model that \"openai\" lists.",
+            "i" = "Did you mean \"gpt-4o-mini\"?")
+  h <- json_test_handler(list(rejected), hint = hint)
+
+  err <- tryCatch(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list()),
+    error = function(e) e
+  )
+  msg <- strip_ansi(conditionMessage(err))
+  expect_match(msg, "Every request to model \"openai/gpt-4o-mimi\" was rejected")
+  expect_match(msg, "Did you mean \"gpt-4o-mini\"")
+  # The provider has answered the question, so the generic advice is dropped
+  expect_no_match(msg, "Check the model name")
+
+  # With nothing to add, the provider's error and the generic advice stand
+  h <- json_test_handler(list(rejected))
+  expect_error(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list()),
+    "Check the model name"
+  )
+
+  # An answer qlm_code() already has is used rather than asked for again
+  h <- json_test_handler(list(rejected), hint = hint)
+  expect_error(
+    h(x = c("a", "b"), codebook = json_test_codebook(), model = "openai/gpt-4o-mimi",
+      chat_args = list(), execution_args = list(), model_hint = character()),
+    "Check the model name"
+  )
 })
 
 test_that("code_handler_json does not retry a fatal failure in a mixed batch", {

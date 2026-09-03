@@ -193,6 +193,22 @@ are not supported there, so \code{"auto"} will not fall back under
 \code{backend}.
 }
 
+\section{Rejected runs}{
+
+When the provider rejects every request with a status that will not change
+on retry (400, 401, 403, 404 or 422), \code{qlm_code()} stops rather than
+returning a table of \code{NA}s. The most common cause is a model name the
+provider does not have, and providers rarely say so; many answer with a
+bare "HTTP 400 Bad Request". So before reporting, \code{qlm_code()} asks the
+provider for its model list, through ellmer's \verb{models_<provider>()}, and
+says when the name is not on it, with the nearest names it does have. The
+lookup runs only after a run has failed, once per failed run, and only for
+providers whose listing is known to cover every name they will invoke
+(Bedrock, for one, invokes inference profiles its listing omits). Where
+it cannot run, or the name is on the list, the provider's own error is
+reported unchanged.
+}
+
 \section{Truncated responses}{
 
 
