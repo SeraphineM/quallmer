@@ -198,6 +198,23 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, n
     }
   }
 
+  # Rates supplied to cost the original run belong to its model: the same
+  # model is costed the same way again, a different one is not costed on the
+  # old model's rates. An explicit `prices` in `...` is left alone (#135).
+  original_prices <- meta_attr$user$prices
+  if (!"prices" %in% names(call_args) && !is.null(original_prices)) {
+    if (identical(use_model, original_model)) {
+      call_args$prices <- original_prices
+    } else {
+      cli::cli_inform(c(
+        "i" = paste0(
+          "Not carrying over `prices`: the rates were for \"", original_model,
+          "\". Supply this model's rates in `...` to cost the replication."
+        )
+      ))
+    }
+  }
+
   # Call qlm_code with merged arguments, including batch flag
   result <- do.call(qlm_code, c(
     list(

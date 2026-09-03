@@ -984,3 +984,65 @@ test_that("redaction names every affected run once (#154)", {
     "\"one\" and \"two\""
   )
 })
+
+
+# cost provenance (#135) -------------------------------------------------------
+
+test_that("qlm_trail() report states where a cost came from and reproduces the rates (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8), cost = c(2, 3)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"),
+    execution_args = list(include_tokens = TRUE, include_cost = TRUE),
+    batch = FALSE,
+    metadata = list(
+      n_units = 2,
+      prices = c(input = 1, output = 10, cached_input = 0.1),
+      cost_note = "from supplied rates: $1 input, $10 output, $0.1 cached input, per million tokens"
+    ),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+
+  path <- file.path(tempdir(), "test_trail_prices")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  expect_true(any(grepl("^\\*\\*Cost:\\*\\* from supplied rates: \\$1 input", content)))
+
+  # The replication call carries the rates, so the script costs the run the same way
+  args <- qlm_code_call(content)
+  expect_equal(eval(args$prices), c(input = 1, output = 10, cached_input = 0.1))
+})
+
+test_that("qlm_trail() report says why a cost is NA (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8), cost = c(NA_real_, NA_real_)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"),
+    execution_args = list(include_cost = TRUE),
+    batch = FALSE,
+    metadata = list(n_units = 2, cost_note = "NA (ellmer has no prices for DeepSeek models)"),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+
+  path <- file.path(tempdir(), "test_trail_cost_na")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  expect_true(any(grepl(
+    "^\\*\\*Cost:\\*\\* NA \\(ellmer has no prices for DeepSeek models\\)$", content
+  )))
+  expect_null(qlm_code_call(content)$prices)
+})

@@ -835,3 +835,46 @@ test_that("qlm_replicate keeps an explicitly supplied credential across an endpo
     seen$credentials()$Authorization, "Bearer dashscope-key"
   )
 })
+
+
+# supplied prices (#135) -------------------------------------------------------
+
+priced_coded <- function() {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  new_qlm_coded(
+    results = data.frame(id = 1:2, score = c(0.5, 0.8)),
+    codebook = codebook,
+    data = c("a", "b"),
+    input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"),
+    execution_args = list(include_tokens = TRUE, include_cost = TRUE),
+    batch = FALSE,
+    metadata = list(n_units = 2, prices = c(input = 1, output = 10, cached_input = 0.1)),
+    name = "run1",
+    call = quote(qlm_code())
+  )
+}
+
+test_that("qlm_replicate carries supplied prices to the same model, not to another (#135)", {
+  coded <- priced_coded()
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    coded
+  })
+
+  # Same model: the rates come back
+  f(coded, name = "again")
+  expect_equal(seen$prices, c(input = 1, output = 10, cached_input = 0.1))
+
+  # Different model: dropped, with a note
+  expect_message(f(coded, model = "deepseek/deepseek-reasoner", name = "other"),
+                 "Not carrying over `prices`")
+  expect_null(seen$prices)
+
+  # An explicit override is left alone
+  f(coded, model = "deepseek/deepseek-reasoner", prices = c(input = 2, output = 20))
+  expect_equal(seen$prices, c(input = 2, output = 20))
+})

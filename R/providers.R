@@ -408,10 +408,11 @@ unpriced_message <- function(reason, tokens_recorded = FALSE) {
   # Interpolated here, where `reason` is in scope, rather than by the caller
   line <- function(...) cli::format_inline(paste0(...))
   tokens <- if (tokens_recorded) {
-    "Token counts are recorded, so the run can be costed from the provider's published rates."
+    line("Token counts are recorded; supply the provider's published rates as ",
+         "{.arg prices} to cost the run from them.")
   } else {
-    line("Set {.code include_tokens = TRUE} to record the token counts, ",
-         "from which the run can be costed at the provider's published rates.")
+    line("Supply the provider's published rates as {.arg prices} to cost the run ",
+         "from its token counts.")
   }
   switch(reason$kind,
     local = c(

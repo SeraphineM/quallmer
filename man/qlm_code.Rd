@@ -12,6 +12,7 @@ qlm_code(
   batch = FALSE,
   structured = c("auto", "structured", "json"),
   max_retries = 2L,
+  prices = NULL,
   name = NULL,
   notes = NULL
 )
@@ -58,6 +59,14 @@ error. Default is 2, giving at most three attempts per unit. This is
 separate from ellmer's transport-level retries for rate limits and server
 errors, which apply to every provider and are set with
 \code{options(ellmer_max_tries = )}.}
+
+\item{prices}{Optional. Rates for costing the run when ellmer cannot: a
+named numeric vector or list with \code{input} and \code{output}, and optionally
+\code{cached_input}, in US dollars per million tokens, for example
+\code{c(input = 0.435, output = 0.87, cached_input = 0.0036)}. Where ellmer
+prices the model itself its figure stands and these are not used. A
+\code{cached_input} rate that is not given is taken as the \code{input} rate. See
+the section on cost. Default is \code{NULL}.}
 
 \item{name}{Character string identifying this coding run. Default is \code{NULL}.}
 
@@ -152,6 +161,17 @@ per-token charge. In each case \code{qlm_code()} says so once before the run,
 and the reason is kept with the object and shown when it is printed. With
 \code{include_tokens = TRUE} the token counts are recorded, from which such a
 run can be costed at the provider's published rates.
+
+\code{prices} does that costing, at rates you supply from the provider's
+published price list. Supplying them implies \code{include_tokens = TRUE} and
+\code{include_cost = TRUE}. Only rows ellmer left \code{NA} are filled, by the same
+sum ellmer applies to its own table: uncached input tokens at the \code{input}
+rate, cache hits at the \code{cached_input} rate, output at the \code{output} rate,
+each per million. Where ellmer priced every row itself the rates are not
+used, and you are told so. The rates are kept in the run's metadata, shown
+by \code{print()} and in the trail report, and reused by \code{\link[=qlm_replicate]{qlm_replicate()}} for
+the same model, so a cost that rests on entered figures is always labelled
+as such. quallmer bundles no prices of its own.
 }
 
 \section{Schema enforcement}{

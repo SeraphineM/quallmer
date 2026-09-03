@@ -26,6 +26,15 @@
   cost could be worked out from are being recorded, which needs
   `include_tokens = TRUE` (#135).
 
+* `qlm_code()` gains `prices`, rates in US dollars per million tokens that
+  cost a run ellmer cannot price, from the token counts it records. Only the
+  rows ellmer leaves `NA` are filled, by the sum ellmer applies to its own
+  table; where ellmer prices the model its figure stands. The rates are kept
+  in the run's metadata, shown by `print()` and the trail report, and reused
+  by `qlm_replicate()` for the same model, so a cost resting on entered
+  figures is always labelled as such. quallmer bundles no prices of its own
+  (#135).
+
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as
   text. The ratings were assembled into one matrix before their type was

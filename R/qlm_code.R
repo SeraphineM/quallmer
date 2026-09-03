@@ -33,6 +33,13 @@
 #'   separate from ellmer's transport-level retries for rate limits and server
 #'   errors, which apply to every provider and are set with
 #'   `options(ellmer_max_tries = )`.
+#' @param prices Optional. Rates for costing the run when ellmer cannot: a
+#'   named numeric vector or list with `input` and `output`, and optionally
+#'   `cached_input`, in US dollars per million tokens, for example
+#'   `c(input = 0.435, output = 0.87, cached_input = 0.0036)`. Where ellmer
+#'   prices the model itself its figure stands and these are not used. A
+#'   `cached_input` rate that is not given is taken as the `input` rate. See
+#'   the section on cost. Default is `NULL`.
 #' @param batch Logical. If `TRUE`, uses [ellmer::batch_chat_structured()]
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
@@ -114,6 +121,17 @@
 #' and the reason is kept with the object and shown when it is printed. With
 #' `include_tokens = TRUE` the token counts are recorded, from which such a
 #' run can be costed at the provider's published rates.
+#'
+#' `prices` does that costing, at rates you supply from the provider's
+#' published price list. Supplying them implies `include_tokens = TRUE` and
+#' `include_cost = TRUE`. Only rows ellmer left `NA` are filled, by the same
+#' sum ellmer applies to its own table: uncached input tokens at the `input`
+#' rate, cache hits at the `cached_input` rate, output at the `output` rate,
+#' each per million. Where ellmer priced every row itself the rates are not
+#' used, and you are told so. The rates are kept in the run's metadata, shown
+#' by `print()` and in the trail report, and reused by [qlm_replicate()] for
+#' the same model, so a cost that rests on entered figures is always labelled
+#' as such. quallmer bundles no prices of its own.
 #'
 #' @section Schema enforcement:
 #'
@@ -249,7 +267,7 @@
 qlm_code <- function(x, codebook, model, ...,
                      batch = FALSE,
                      structured = c("auto", "structured", "json"),
-                     max_retries = 2L, name = NULL, notes = NULL) {
+                     max_retries = 2L, prices = NULL, name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
   explicit_retries <- !missing(max_retries)
@@ -335,6 +353,14 @@ qlm_code <- function(x, codebook, model, ...,
   # to pass through to ellmer::chat() which forwards them to the provider
   chat_args <- dots[!dot_names %in% execution_arg_names]
 
+  # Supplied rates cost the run from its token counts, so both must be asked
+  # of ellmer; the caller asked for a cost by supplying them.
+  prices <- check_prices(prices)
+  if (!is.null(prices)) {
+    execution_args$include_tokens <- TRUE
+    execution_args$include_cost <- TRUE
+  }
+
   # ellmer returns a bare list under convert = FALSE, which has no rows to
   # merge an .id into and no columns for new_qlm_coded() to reorder. It has
   # never worked here; say so rather than failing later with "incorrect number
@@ -364,7 +390,8 @@ qlm_code <- function(x, codebook, model, ...,
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
-      allow_skip = identical(structured, "auto") && !batch
+      allow_skip = identical(structured, "auto") && !batch,
+      cost_message = is.null(prices)
     )
 
     unpriced <- attempt$unpriced
@@ -437,7 +464,7 @@ qlm_code <- function(x, codebook, model, ...,
       batch = batch,
       max_retries = max_retries,
       model_hint = model_hint,
-      cost_message = is.null(attempt)
+      cost_message = is.null(attempt) && is.null(prices)
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL
@@ -454,6 +481,25 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Add ID column from input names or sequence
   results$id <- names(x) %||% seq_along(x)
+
+  # Where the cost came from, when ellmer could not fill it (#135). Supplied
+  # rates cost the rows ellmer left NA from their token counts; decided from
+  # the table rather than from the diagnosis, which cannot always be made.
+  # Where ellmer priced every row itself, its figures are the published
+  # rates and the supplied ones have nothing to do.
+  cost_note <- if (!is.null(unpriced)) paste0("NA (", unpriced_note(unpriced), ")")
+  if (!is.null(prices)) {
+    priced <- price_from_tokens(results, prices)
+    if (identical(priced$cost, results$cost)) {
+      cli::cli_inform(c(
+        "i" = "ellmer priced this run itself; {.arg prices} is not used."
+      ))
+      prices <- NULL
+    } else {
+      results <- priced
+      cost_note <- prices_note(prices)
+    }
+  }
 
   # Build metadata list
   metadata <- list(
@@ -473,8 +519,11 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Fields contributed by a provider-specific handler (backend, max_retries, ...)
   metadata <- c(metadata, backend_meta)
-  if (!is.null(unpriced)) {
-    metadata$cost_note <- unpriced_note(unpriced)
+  if (!is.null(cost_note)) {
+    metadata$cost_note <- cost_note
+  }
+  if (!is.null(prices)) {
+    metadata$prices <- prices
   }
 
   # Add model to chat_args for easy access
@@ -1240,9 +1289,10 @@ print.qlm_coded <- function(x, ...) {
     cat("# Parent:   ", meta_attr$object$parent, "\n", sep = "")
   }
 
-  # Why the cost column is NA, when it was asked for and could not be filled
+  # Where the cost column came from, when ellmer could not fill it: why it
+  # is NA, or the supplied rates it was computed from
   if (!is.null(meta_attr$user$cost_note)) {
-    cat("# Cost:     NA (", meta_attr$user$cost_note, ")\n", sep = "")
+    cat("# Cost:     ", meta_attr$user$cost_note, "\n", sep = "")
   }
 
   # Show notes if present
