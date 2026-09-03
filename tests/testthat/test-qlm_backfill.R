@@ -631,3 +631,50 @@ test_that("qlm_trail discloses a backfill, and the other model, in print and rep
   report <- readLines(paste0(stem, ".qmd"))
   expect_true(any(grepl("\\*\\*Backfill:\\*\\* 1 pass, recovered 2 of 2", report)))
 })
+
+
+test_that("replay_backfill keeps the replication when a replayed pass fails", {
+  skip_if_not_installed("mockery")
+  parent <- make_run(data.frame(id = c("a", "b"), score = c(1L, 2L), note = NA_character_))
+  meta_attr <- attr(parent, "meta")
+  meta_attr$object$backfill <- list(
+    list(model = NULL, overrides = list(), attempted = c("a", "b"), recovered = "a"),
+    list(model = "deepseek/deepseek-chat", overrides = list(), attempted = "b", recovered = "b")
+  )
+  attr(parent, "meta") <- meta_attr
+
+  # The real qlm_backfill(), whose coding call succeeds once and then fails
+  calls <- new.env()
+  first <- data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_)
+  fake <- fake_qlm_code(list(first), calls)
+  backfill <- qlm_backfill
+  mockery::stub(backfill, "qlm_code", function(...) {
+    if ((calls$n %||% 0L) >= 1L) stop("HTTP 503 again.")
+    fake(...)
+  })
+  f <- replay_backfill
+  mockery::stub(f, "qlm_backfill", backfill)
+  replication <- make_run(data.frame(id = c("a", "b"), score = c(NA, NA), note = NA_character_))
+
+  # Each replayed pass is a first attempt to qlm_backfill(); its abort must
+  # not discard the paid replication and pass 1's recovery
+  expect_warning(
+    out <- suppressMessages(f(replication, parent)),
+    "Replayed backfill pass 2 failed; keeping the replication"
+  )
+  expect_equal(out$score, c(1L, NA))
+  expect_equal(calls$n, 1)
+
+  passes <- qlm_meta(out, "backfill", type = "object")
+  expect_length(passes, 2)
+  expect_equal(passes[[1]]$recovered, "a")
+  expect_null(passes[[1]]$error)
+  expect_equal(passes[[2]]$model, "deepseek/deepseek-chat")
+  expect_equal(passes[[2]]$attempted, "b")
+  expect_equal(passes[[2]]$recovered, character(0))
+  expect_match(passes[[2]]$error, "503 again")
+  expect_equal(backfill_summary(passes), "2 passes (1 failed), recovered 1 of 2")
+
+  # A failure before any recovery still aborts a direct call
+  expect_error(suppressMessages(backfill(replication)), class = "quallmer_backfill_error")
+})

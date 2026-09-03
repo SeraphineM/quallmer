@@ -216,11 +216,15 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
 
     if (inherits(result, "error")) {
       if (attempt == 1L) {
+        # Classed, and carrying what the pass attempted, so that
+        # replay_backfill() can record the pass without losing the
+        # replication it was completing.
         cli::cli_abort(c(
           "The backfill pass failed before recovering anything.",
           set_bullets(strip_ansi(conditionMessage(result))),
           "i" = "Nothing was changed."
-        ))
+        ), class = "quallmer_backfill_error",
+        attempted = ids[retry], cause = condition_text(result))
       }
       cli::cli_warn(c(
         "Backfill pass {attempt} failed; keeping what earlier passes recovered.",
@@ -308,7 +312,9 @@ inputs_by_id <- function(x, ids) {
 #' was backfilled has its passes replayed on the replication: the same
 #' sequence of models and overrides, each as one pass, recorded again on the
 #' new object. This is the same rule that reproduces the coding path the
-#' parent took rather than the mode it asked for.
+#' parent took rather than the mode it asked for. A pass the parent records
+#' as failed is replayed too: what is replayed is the sequence the parent was
+#' meant to be completed by, not the luck it had.
 #'
 #' @param result The freshly replicated `qlm_coded` object.
 #' @param parent The object it replicates.
@@ -334,14 +340,41 @@ replay_backfill <- function(result, parent, backfill = NULL) {
   cli::cli_inform(c(
     "i" = "Replaying the {length(passes)} backfill pass{?es} of {.val {attr(parent, 'meta')$user$name}}."
   ))
-  for (pass in passes) {
+  for (i in seq_along(passes)) {
     if (!any(failed_units(result))) {
       break
     }
-    result <- do.call(qlm_backfill, c(
-      list(result, model = pass$model, attempts = 1L),
-      pass$overrides
-    ))
+    pass <- passes[[i]]
+    # Each pass runs as its own single-attempt backfill, whose "first attempt
+    # failed" rule would otherwise abort here and discard the paid replication
+    # and everything earlier passes recovered. So a pass that fails outright
+    # is caught: a warning, an entry in the record with what it attempted and
+    # no recoveries, and no further passes. Other errors (a recorded override
+    # the replication cannot take) are configuration, and propagate.
+    replayed <- tryCatch(
+      do.call(qlm_backfill, c(
+        list(result, model = pass$model, attempts = 1L),
+        pass$overrides
+      )),
+      quallmer_backfill_error = function(e) e
+    )
+    if (inherits(replayed, "quallmer_backfill_error")) {
+      cli::cli_warn(c(
+        "Replayed backfill pass {i} failed; keeping the replication and what earlier passes recovered.",
+        set_bullets(replayed$cause)
+      ))
+      meta_attr <- attr(result, "meta")
+      meta_attr$object$backfill <- c(meta_attr$object$backfill, list(backfill_pass(
+        model = pass$model,
+        overrides = pass$overrides,
+        attempted = replayed$attempted,
+        recovered = character(0),
+        error = replayed$cause
+      )))
+      attr(result, "meta") <- meta_attr
+      break
+    }
+    result <- replayed
   }
   result
 }

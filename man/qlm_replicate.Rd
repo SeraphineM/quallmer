@@ -50,7 +50,10 @@ original setting.}
 \code{NULL} (default) replays the passes recorded on \code{x}, if any, with the same
 models and overrides in the same order; \code{TRUE} runs a default backfill
 with the replication's own model whether or not \code{x} had one; \code{FALSE}
-leaves the replication as it came back.}
+leaves the replication as it came back. A replayed pass that fails
+outright is a warning, not an error: the replication and what earlier
+passes recovered are kept, the failed pass is recorded with the units it
+attempted, and no further passes are replayed.}
 
 \item{name}{Optional name for this run. If \code{NULL}, defaults to the model
 name (if changed) or \code{"replication_N"} where N is the replication count.}
