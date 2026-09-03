@@ -799,3 +799,107 @@ test_that("replay_backfill does not send a credential the trail redacted (#154)"
   expect_equal(seen$params, list(temperature = 0))
   expect_equal(seen$attempts, 1L)
 })
+
+usage_rows <- function(id, score, cost, tokens = 10L) {
+  data.frame(id = id, score = score, note = NA_character_, input_tokens = tokens,
+             output_tokens = 5L, cached_input_tokens = 0L, cost = cost)
+}
+
+test_that("a pass that throws leaves the usage of the units it attempted unknown", {
+  skip_if_not_installed("mockery")
+  run <- make_run(usage_rows(c("a", "b", "c"), c(1L, NA, NA), 0.2))
+  calls <- new.env()
+  fake <- fake_qlm_code(list(usage_rows(c("b", "c"), c(2L, NA), 0.06)), calls)
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(...) {
+    if ((calls$n %||% 0L) >= 1L) stop("HTTP 503.")
+    fake(...)
+  })
+  expect_warning(out <- suppressMessages(f(run, attempts = 3L)), "pass 2 failed")
+
+  # a: untouched. b: recovered by pass 1, both attempts' usage added up.
+  # c: attempted again by the pass that threw, which may have been billed,
+  #    so no total is known
+  expect_equal(out$score, c(1L, 2L, NA))
+  expect_equal(out$cost, c(0.2, 0.26, NA))
+  expect_equal(out$input_tokens, c(10L, 20L, NA))
+  passes <- qlm_meta(out, "backfill", type = "object")
+  expect_equal(passes[[2]]$attempted, "c")
+  expect_match(passes[[2]]$error, "503")
+})
+
+test_that("replay_backfill leaves the usage of a failed replayed pass unknown", {
+  skip_if_not_installed("mockery")
+  parent <- make_run(usage_rows(c("a", "b"), c(1L, 2L), 0.1))
+  meta_attr <- attr(parent, "meta")
+  meta_attr$object$backfill <- list(
+    list(model = NULL, overrides = list(), attempted = c("a", "b"), recovered = "a"),
+    list(model = NULL, overrides = list(), attempted = "b", recovered = "b")
+  )
+  attr(parent, "meta") <- meta_attr
+
+  calls <- new.env()
+  fake <- fake_qlm_code(list(usage_rows(c("a", "b"), c(1L, NA), 0.05)), calls)
+  backfill <- qlm_backfill
+  mockery::stub(backfill, "qlm_code", function(...) {
+    if ((calls$n %||% 0L) >= 1L) stop("HTTP 503 again.")
+    fake(...)
+  })
+  f <- replay_backfill
+  mockery::stub(f, "qlm_backfill", backfill)
+  replication <- make_run(usage_rows(c("a", "b"), c(NA, NA), 0.1))
+
+  expect_warning(out <- suppressMessages(f(replication, parent)), "Replayed backfill pass 2 failed")
+  expect_equal(out$score, c(1L, NA))
+  expect_equal(out$cost, c(0.15, NA))
+  expect_equal(out$input_tokens, c(20L, NA))
+})
+
+test_that("a pass records the rates it was costed on, and print and the trail disclose them", {
+  skip_if_not_installed("mockery")
+  run_rates <- c(input = 1, output = 2, cached_input = 1)
+  run <- make_run(usage_rows(c("a", "b"), c(1L, NA), c(0.1, NA)))
+  meta_attr <- attr(run, "meta")
+  meta_attr$user$prices <- run_rates
+  meta_attr$user$cost_note <- prices_note(run_rates)
+  attr(run, "meta") <- meta_attr
+
+  # The pass is costed on other rates; the stub records what qlm_code() would
+  pass_rates <- c(input = 2, output = 4, cached_input = 2)
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(x, codebook, model, ..., name = NULL) {
+    out <- make_run(usage_rows("b", 2L, 0.04), name = name)
+    m <- attr(out, "meta")
+    m$user$prices <- pass_rates
+    m$user$cost_note <- prices_note(pass_rates)
+    attr(out, "meta") <- m
+    out
+  })
+  filled <- suppressMessages(f(run, prices = pass_rates))
+
+  pass <- qlm_meta(filled, "backfill", type = "object")[[1]]
+  expect_equal(pass$prices, pass_rates)
+  expect_equal(pass$cost_note, prices_note(pass_rates))
+
+  out <- capture.output(print(filled))
+  expect_true(any(grepl("^# Cost:     from supplied rates: \\$1 input, \\$2 output", out)))
+  expect_true(any(grepl("^# Cost \\(backfill pass 1\\): from supplied rates: \\$2 input, \\$4 output", out)))
+
+  stem <- tempfile()
+  qlm_trail(filled, path = stem)
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("^\\*\\*Cost:\\*\\* from supplied rates: \\$1 input", report)))
+  expect_true(any(grepl("^\\*\\*Cost \\(backfill pass 1\\):\\*\\* from supplied rates: \\$2 input", report)))
+})
+
+test_that("backfill_cost_notes names only the passes costed differently from the run", {
+  expect_length(backfill_cost_notes(list(list(cost_note = "x")), "x"), 0)
+  expect_length(backfill_cost_notes(list(list(), list(attempted = "a")), NULL), 0)
+  expect_equal(
+    backfill_cost_notes(list(list(cost_note = "x"), list(), list(cost_note = "y")), "x"),
+    c(`backfill pass 3` = "y")
+  )
+  # A run priced by ellmer has no note; a pass that was not is disclosed
+  expect_equal(backfill_cost_notes(list(list(cost_note = "NA (unpriced)")), NULL),
+               c(`backfill pass 1` = "NA (unpriced)"))
+})

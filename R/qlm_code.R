@@ -1310,6 +1310,12 @@ print.qlm_coded <- function(x, ...) {
   if (!is.null(meta_attr$user$cost_note)) {
     cat("# Cost:     ", meta_attr$user$cost_note, "\n", sep = "")
   }
+  # A pass costed differently from the run: part of the same column rests
+  # on it, so it is disclosed here too (#136)
+  pass_notes <- backfill_cost_notes(meta_attr$object$backfill, meta_attr$user$cost_note)
+  for (i in seq_along(pass_notes)) {
+    cat("# Cost (", names(pass_notes)[i], "): ", pass_notes[[i]], "\n", sep = "")
+  }
 
   # Show notes if present
   if (!is.null(meta_attr$user$notes)) {

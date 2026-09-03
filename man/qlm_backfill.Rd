@@ -78,7 +78,9 @@ fails outright on the first attempt is an error, since nothing has been
 gained yet and the cause is most likely configuration; on a later pass it
 is a warning, and what earlier passes recovered is kept. The failed pass is
 still recorded, with the units it attempted, no recoveries and the error,
-since the provider may have billed it.
+since the provider may have billed it, and for the same reason the token
+and cost columns of the units it attempted become \code{NA}: how much was
+billed is not known, so no total for them is.
 
 Units are identified by \code{.id} throughout: the failed units' inputs are
 looked up by \code{.id}, so an object whose rows have been reordered or subset
@@ -92,8 +94,12 @@ the provider did not report it, not that nothing was billed, so a retry's
 known figure cannot stand in for the whole. The passes are recorded in the
 object metadata as \code{backfill}, one entry per pass with its timestamp, the
 model if it differed from the run's, the overrides, the \code{.id}s attempted
-and recovered, and for a pass that failed outright its error, so the
-result can say which of its rows came from which pass and which model.
+and recovered, where its cost came from when that was not where the run's
+did, and for a pass that failed outright its error, so the result can say
+which of its rows came from which pass and which model. A pass costed on
+other rates than the run, or left \code{NA} where the run was priced, is
+disclosed by \code{print()} and \code{\link[=qlm_trail]{qlm_trail()}} beside the run's own cost note,
+since part of the cost column then rests on it.
 \code{\link[=qlm_trail]{qlm_trail()}} redacts any credential among a pass's overrides as it does
 the run's own, and a pass replayed from a trail does not send a redacted
 value. \code{\link[=qlm_replicate]{qlm_replicate()}} replays these passes on a replication, so that a

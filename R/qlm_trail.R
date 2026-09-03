@@ -537,6 +537,10 @@ generate_trail_report <- function(trail, file) {
     if (!is.null(run$cost_note)) {
       lines <- c(lines, paste("**Cost:**", run$cost_note))
     }
+    pass_notes <- backfill_cost_notes(run$backfill, run$cost_note)
+    for (i in seq_along(pass_notes)) {
+      lines <- c(lines, paste0("**Cost (", names(pass_notes)[i], "):** ", pass_notes[[i]]))
+    }
 
     # Codebook reference
     if (!is.null(run$codebook$name)) {
