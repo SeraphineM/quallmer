@@ -457,13 +457,13 @@ qlm_compare <- function(...,
       next
     }
 
-    # Rating matrix, typed by the level rather than by how each coder stored
-    # the values (#150)
-    ratings <- ratings_matrix(merged[, -1, drop = FALSE], var_level, var,
-                              coders = coder_labels, tolerance = tolerance)
-
-    # Remove rows with any NA values
-    complete_rows <- stats::complete.cases(ratings)
+    # Remove rows with any NA values before typing the columns. A unit a
+    # coder did not rate says nothing about how that coder stores ratings,
+    # and a column that is missing throughout would otherwise read as numbers
+    # and be refused against another coder's text categories, aborting the
+    # call over a variable with nothing to compare.
+    coder_columns <- merged[, -1, drop = FALSE]
+    complete_rows <- stats::complete.cases(coder_columns)
     if (!any(complete_rows)) {
       cli::cli_warn(c(
         "No complete cases found for variable {.var {var}}.",
@@ -472,7 +472,11 @@ qlm_compare <- function(...,
       next
     }
 
-    ratings <- ratings[complete_rows, , drop = FALSE]
+    # Rating matrix, typed by the level rather than by how each coder stored
+    # the values (#150)
+    ratings <- ratings_matrix(coder_columns[complete_rows, , drop = FALSE],
+                              var_level, var,
+                              coders = coder_labels, tolerance = tolerance)
     n_subjects <- nrow(ratings)
 
     # Store n_subjects for first variable (for metadata)

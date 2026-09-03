@@ -772,6 +772,32 @@ test_that("bootstrap CIs use the typed ratings too (#150)", {
 })
 
 
+test_that("a variable one coder never rated is skipped, not refused (#150)", {
+  # Typing the columns before dropping incomplete units read an all-missing
+  # column as numbers and refused it against the other coder's text categories,
+  # which aborted the whole call and lost the variables that could be compared.
+  x <- as_qlm_coded(data.frame(.id = 1:3, a = NA_character_, b = 1:3),
+                    id = .id, name = "x")
+  y <- as_qlm_coded(data.frame(.id = 1:3, a = c("low", "mid", "high"), b = 1:3),
+                    id = .id, name = "y")
+
+  expect_warning(
+    res <- as.data.frame(qlm_compare(x, y, by = c("a", "b"),
+                                     level = c(a = "ordinal", b = "interval"))),
+    "No complete cases"
+  )
+  expect_equal(unique(res$variable), "b")
+  expect_equal(res$value[res$measure == "percent_agreement"], 1)
+
+  # A value that is not a number in a unit both coders rated is still refused
+  z <- as_qlm_coded(data.frame(.id = 1:3, a = c(NA, "2", "high"), b = 1:3),
+                    id = .id, name = "z")
+  w <- as_qlm_coded(data.frame(.id = 1:3, a = c(1, 2, 3), b = 1:3),
+                    id = .id, name = "w")
+  expect_error(qlm_compare(w, z, by = "a", level = "interval"), "must be numbers")
+})
+
+
 test_that("ratings_matrix() types the columns by level (#150)", {
   cols <- data.frame(A = c(1, 2), B = c("1", "2"), stringsAsFactors = FALSE)
 
