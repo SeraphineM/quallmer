@@ -1246,3 +1246,129 @@ test_that("the JSON path forwards api_args too, adding only the response format"
   # JSON mode is the one thing this path must set
   expect_equal(seen$api_args$response_format, list(type = "json_object"))
 })
+
+
+# Unit identifiers must be unique ---------------------------------------------
+
+test_that("qlm_code rejects duplicated input names before spending a request", {
+  skip_if_not_installed("mockery")
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) stop("a request was made"))
+
+  expect_error(
+    f(c(a = "x", a = "y"), structured_test_codebook(), model = "openai/gpt-4o-mini"),
+    "must be unique"
+  )
+})
+
+test_that("check_ids refuses missing identifiers before repeated ones", {
+  expect_silent(check_ids(c("a", "b", "c")))
+  expect_silent(check_ids(1:3))
+  expect_error(check_ids(c("a", NA, "c")), "must not be missing")
+  expect_error(check_ids(c("a", "", "c")), "must not be missing")
+  expect_error(check_ids(c(NA, "a", "a")), "must not be missing")
+  expect_error(check_ids(c("a", "b", "a")), "must be unique")
+  expect_error(check_ids(c("a", "b", "a")), "\\ba\\b")
+
+  # Factors are checked by their labels, including the empty one
+  expect_silent(check_ids(factor(c("a", "b"))))
+  expect_error(check_ids(factor(c("", "u1"))), "must not be missing")
+  expect_error(check_ids(factor(c("a", "a"))), "must be unique")
+  # Only a plain vector can be a key
+  expect_error(check_ids(list("a", NULL)), "character, factor or numeric")
+  expect_error(check_ids(matrix(1:4, 2)), "character, factor or numeric")
+})
+
+test_that("an empty factor label is refused as an identifier end to end", {
+  a <- data.frame(.id = factor(c("", "u1")), score = c(0, 1))
+  expect_error(as_qlm_coded(a, name = "A"), "must not be missing")
+})
+
+test_that("selecting .id away returns a plain tibble, not a broken coded object", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  projected <- x["score"]
+  expect_false(inherits(projected, "qlm_coded"))
+  expect_false(inherits(projected, "qlm_humancoded"))
+  expect_s3_class(projected, "tbl_df")
+  expect_null(attr(projected, "meta"))
+  expect_equal(names(projected), "score")
+  # ... whereas keeping it keeps the object
+  kept <- x[c(".id", "score")]
+  expect_s3_class(kept, "qlm_coded")
+  expect_false(is.null(attr(kept, "meta")))
+  # and a vector comes back as a vector
+  expect_equal(x[, "score", drop = TRUE], c(1, 0))
+  # Selecting the key twice is refused rather than kept as a classed object
+  expect_error(x[c(".id", ".id")], "exactly one")
+  expect_error(x[c(".id", "score", ".id")], "exactly one")
+})
+
+test_that("new_qlm_coded requires exactly one .id column", {
+  codebook <- structured_test_codebook()
+  two <- data.frame(id = c("a", "b"), .id = c("x", "y"), score = c(1, 2))
+  expect_error(
+    new_qlm_coded(
+      results = two, codebook = codebook, data = c("a", "b"), input_type = "text",
+      chat_args = list(name = "test/model"), execution_args = list(),
+      metadata = list(timestamp = Sys.time(), n_units = 2),
+      name = "run", call = quote(qlm_code(...)), parent = NULL
+    ),
+    "exactly one"
+  )
+})
+
+test_that("new_qlm_coded rejects a table whose .id repeats", {
+  codebook <- structured_test_codebook()
+  expect_error(
+    new_qlm_coded(
+      results = data.frame(id = c("d1", "d1", "d2"), score = c(1, 2, 3)),
+      codebook = codebook, data = c("a", "b", "c"), input_type = "text",
+      chat_args = list(name = "test/model"), execution_args = list(),
+      metadata = list(timestamp = Sys.time(), n_units = 3),
+      name = "run", call = quote(qlm_code(...)), parent = NULL
+    ),
+    "must be unique"
+  )
+})
+
+
+test_that("check_qlm_coded verifies what every function relies on", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  expect_identical(check_qlm_coded(x), x)
+
+  expect_error(check_qlm_coded(data.frame(.id = "a")), "must be a")
+
+  no_meta <- x
+  attr(no_meta, "meta") <- NULL
+  expect_error(check_qlm_coded(no_meta), "no run metadata")
+
+  no_id <- x
+  names(no_id)[names(no_id) == ".id"] <- "id"
+  expect_error(check_qlm_coded(no_id), "exactly one")
+
+  forged <- x
+  forged$.id <- c("a", "a")
+  expect_error(check_qlm_coded(forged), "must be unique")
+  forged$.id <- c(NA, "b")
+  expect_error(check_qlm_coded(forged), "must not be missing")
+
+  # The message names the object the caller passed
+  expect_error(check_qlm_coded(forged, what = "{.arg gold}"), "gold")
+})
+
+test_that("every entry point refuses an object a row operation has left with a repeated key", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  # vctrs row slicing, which dplyr's verbs are built on, keeps the class and
+  # attributes and does not go through `[`; so does base rbind()
+  doubled <- vctrs::vec_slice(x, c(1, 1))
+  expect_s3_class(doubled, "qlm_coded")
+  expect_false(is.null(attr(doubled, "meta")))
+  expect_s3_class(rbind(x, x), "qlm_coded")
+  expect_error(qlm_failures(rbind(x, x)), "must be unique")
+
+  expect_error(qlm_failures(doubled), "must be unique")
+  expect_error(qlm_compare(doubled, x, by = "score", level = "interval"), "must be unique")
+  expect_error(qlm_validate(doubled, gold = x, by = "score", level = "interval"), "must be unique")
+  expect_error(qlm_trail(doubled), "must be unique")
+  expect_error(qlm_replicate(doubled), "must be unique")
+})

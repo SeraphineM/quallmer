@@ -267,6 +267,13 @@ qlm_compare <- function(...,
     }
   }
 
+  # The class is no guarantee of integrity: dplyr and base row operations
+  # keep it, so a repeated or missing .id can arrive in a classed object and
+  # would pair the wrong rows silently (#156). Check each object first.
+  for (i in seq_along(coded_list)) {
+    coded_list[[i]] <- check_qlm_coded(coded_list[[i]], what = sprintf("object %d", i))
+  }
+
   # Determine which variables to process
   if (is.null(by)) {
     # Extract all coded variables from first object

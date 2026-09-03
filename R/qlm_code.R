@@ -11,6 +11,8 @@
 #' @param x Input data: a character vector of texts (for text codebooks) or
 #'   file paths to images (for image codebooks). Named vectors will use names
 #'   as identifiers in the output; unnamed vectors will use sequential integers.
+#'   The identifiers become the `.id` column, on which every later operation
+#'   keys, so names must be unique.
 #' @param codebook A codebook object created with [qlm_codebook()]. Also accepts
 #'   deprecated [task()] objects for backward compatibility.
 #' @param model Provider (and optionally model) name in the form
@@ -244,6 +246,11 @@ qlm_code <- function(x, codebook, model, ...,
   }
   if (codebook$input_type == "image" && !is.character(x)) {
     cli::cli_abort("This codebook expects image file paths (a character vector).")
+  }
+  # Names become .id, the key every later operation relies on. Checked here,
+  # before any request is spent, rather than in the constructor afterwards.
+  if (!is.null(names(x))) {
+    check_ids(names(x), what = "{.code names(x)}")
   }
 
   # Get valid argument names from ellmer functions
@@ -962,6 +969,17 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   # Rename id column to .id
   names(results)[names(results) == "id"] <- ".id"
 
+  # Exactly one identifier column, holding a key. Every merge downstream --
+  # comparison, validation, backfill -- keys on .id and would silently pair
+  # the wrong rows (#156).
+  if (sum(names(results) == ".id") != 1L) {
+    cli::cli_abort(c(
+      "{.arg results} must have exactly one {.field .id} column; found {sum(names(results) == '.id')}.",
+      "i" = "An {.code id} column is renamed to {.field .id}, so the two must not both be present."
+    ))
+  }
+  check_ids(results$.id, what = "{.field .id}")
+
   # Reorder columns to put .id first
   results <- results[, c(".id", setdiff(names(results), ".id"))]
 
@@ -1027,6 +1045,52 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
       )
     )
   )
+}
+
+
+#' Subset a qlm_coded object
+#'
+#' Tibble subsetting keeps the class and attributes, so a subset is still a
+#' `qlm_coded` object; what it must also still be is a table keyed by
+#' `.id`. Repeating rows, `x[c(1, 1), ]`, would produce an object with a
+#' repeated identifier that never passed through the constructor, and every
+#' merge downstream would then pair the wrong rows (#156). So the identifier
+#' is checked again here, where the duplicate would be made. Selecting the
+#' identifier away, `x["score"]`, leaves nothing for the class to promise,
+#' so the result is returned as a plain tibble rather than as a coded object
+#' every consumer would have to reject.
+#'
+#' @param x A qlm_coded object.
+#' @param i,j Row and column indices, as for a tibble.
+#' @param ... Passed on to the tibble method.
+#'
+#' @return A qlm_coded object when `.id` is among the columns kept; a plain
+#'   tibble when it is not; a vector when the tibble method returns one.
+#' @keywords internal
+#' @export
+`[.qlm_coded` <- function(x, i, j, ...) {
+  out <- NextMethod()
+  if (!is.data.frame(out)) {
+    return(out)
+  }
+  n_id <- sum(names(out) == ".id")
+  if (n_id == 0L) {
+    for (a in c("data", "codebook", "meta", "run", "input_type")) {
+      attr(out, a) <- NULL
+    }
+    class(out) <- setdiff(class(out), c("qlm_coded", "qlm_humancoded"))
+    return(out)
+  }
+  # Selecting .id twice would keep the class on a table with two key columns,
+  # of which `[[` reads only the first
+  if (n_id > 1L) {
+    cli::cli_abort(c(
+      "A {.cls qlm_coded} object must have exactly one {.field .id} column; the subset would have {n_id}.",
+      "i" = "{.field .id} identifies each unit and is the key every operation merges on."
+    ))
+  }
+  check_ids(out[[".id"]], what = "{.field .id} of the subset")
+  out
 }
 
 

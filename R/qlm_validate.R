@@ -525,6 +525,14 @@ qlm_validate <- function(
     gold <- as_qlm_coded(gold, name = "auto_converted_gold")
   }
 
+  # The class is no guarantee of integrity: dplyr and base row operations
+  # keep it, so a repeated or missing .id can arrive in a classed object and
+  # would pair the wrong rows silently (#156). Check each object first.
+  for (i in seq_along(x_list)) {
+    x_list[[i]] <- check_qlm_coded(x_list[[i]], what = sprintf("object %d in {.arg x}", i))
+  }
+  gold <- check_qlm_coded(gold, what = "{.arg gold}")
+
   # Extract object names from metadata
   object_names <- vapply(x_list, function(obj) {
     name <- tryCatch(qlm_meta(obj, "name"), error = function(e) NULL)

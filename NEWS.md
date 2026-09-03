@@ -2,6 +2,23 @@
 
 ## Bug fixes
 
+* The `.id` column of a `qlm_coded` object must now be a key: unique and
+  never missing. Every later operation merges on `.id`, and `qlm_compare()`
+  and `qlm_validate()` silently formed a Cartesian product of repeated
+  rows, computing their statistics over the wrong pairs, while a missing
+  identifier was matched to every other missing one; an unnested table that
+  keeps the document identifier rather than a document-item key is how the
+  first arises in practice. Both are now errors, naming the offending
+  values: at construction, in `qlm_code()` before a request is spent, when
+  rows are subset with `[`, and by every function that takes a `qlm_coded`
+  object, which now checks its integrity first: class, run metadata, and
+  exactly one `.id` column that is a key. That last check is
+  what catches objects that dplyr or base row operations have altered
+  (`slice(x, c(1, 1))`, `rbind(x, x)`), which keep the class and
+  attributes, and objects saved before the check existed. `as_qlm_coded()` also
+  refuses an `id` column alongside an existing `.id`, which left two
+  columns of that name with the wrong one read (#156).
+
 * `qlm_code()` no longer returns a response cut off at the provider's
   `max_tokens` limit as a successful empty result. Such a response is billed
   in full, and arrived as a row of `NA` scalars and zero-length arrays with no

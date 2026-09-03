@@ -19,7 +19,9 @@ qlm_code(
 \arguments{
 \item{x}{Input data: a character vector of texts (for text codebooks) or
 file paths to images (for image codebooks). Named vectors will use names
-as identifiers in the output; unnamed vectors will use sequential integers.}
+as identifiers in the output; unnamed vectors will use sequential integers.
+The identifiers become the \code{.id} column, on which every later operation
+keys, so names must be unique.}
 
 \item{codebook}{A codebook object created with \code{\link[=qlm_codebook]{qlm_codebook()}}. Also accepts
 deprecated \code{\link[=task]{task()}} objects for backward compatibility.}

@@ -184,27 +184,29 @@ test_that("as_qlm_coded.corpus works with default id (names)", {
 })
 
 test_that("as_qlm_coded.corpus works with custom id from docvar", {
-  # Load sample corpus
-  data("data_corpus_manifsentsUK2010sample")
+  skip_if_not_installed("quanteda")
+  # The sample corpus has no unique user docvar, so give it one: .id must
+  # identify a unit, and a party repeats across sentences (#156)
+  corp <- data_corpus_manifsentsUK2010sample
+  quanteda::docvars(corp, "sentence_id") <- paste0("s", seq_len(quanteda::ndoc(corp)))
 
-  result <- as_qlm_coded(
-    data_corpus_manifsentsUK2010sample,
-    id = "party",
-    name = "crowd"
-  )
+  result <- as_qlm_coded(corp, id = "sentence_id", name = "crowd")
 
-  # Check .id uses the party column
-  docvars <- attr(data_corpus_manifsentsUK2010sample, "docvars")
-  expect_equal(result$.id, docvars$party)
+  # Check .id uses the chosen column
+  expect_equal(result$.id, paste0("s", seq_len(quanteda::ndoc(corp))))
 
-  # Check that party is NOT duplicated in other columns
+  # Check that the id column is NOT duplicated in other columns
   # (it should only appear as .id)
   other_cols <- setdiff(names(result), ".id")
-  expect_false("party" %in% other_cols)
+  expect_false("sentence_id" %in% other_cols)
 
   # Other docvars should still be present
+  expect_true("party" %in% names(result))
   expect_true("partyname" %in% names(result))
   expect_true("year" %in% names(result))
+
+  # A docvar that repeats is not a unit identifier
+  expect_error(as_qlm_coded(corp, id = "party", name = "crowd"), "must be unique")
 })
 
 test_that("as_qlm_coded.corpus handles is_gold parameter", {
@@ -322,26 +324,19 @@ test_that("as_qlm_coded.corpus errors when corpus has no names and id is NULL", 
 })
 
 test_that("as_qlm_coded.corpus supports NSE for id parameter", {
-  data("data_corpus_manifsentsUK2010sample")
+  skip_if_not_installed("quanteda")
+  corp <- data_corpus_manifsentsUK2010sample
+  quanteda::docvars(corp, "sentence_id") <- paste0("s", seq_len(quanteda::ndoc(corp)))
 
   # Test with bare name (NSE)
-  result_nse <- as_qlm_coded(
-    data_corpus_manifsentsUK2010sample,
-    id = party,
-    name = "crowd_nse"
-  )
+  result_nse <- as_qlm_coded(corp, id = sentence_id, name = "crowd_nse")
 
-  # Check that party docvar was used as .id
-  docvars <- attr(data_corpus_manifsentsUK2010sample, "docvars")
-  expect_equal(result_nse$.id, docvars$party)
-  expect_false("party" %in% names(result_nse))
+  # Check that the docvar was used as .id
+  expect_equal(result_nse$.id, paste0("s", seq_len(quanteda::ndoc(corp))))
+  expect_false("sentence_id" %in% names(result_nse))
 
   # Test with quoted string (should work the same)
-  result_quoted <- as_qlm_coded(
-    data_corpus_manifsentsUK2010sample,
-    id = "party",
-    name = "crowd_quoted"
-  )
+  result_quoted <- as_qlm_coded(corp, id = "sentence_id", name = "crowd_quoted")
 
   # Should produce identical results
   expect_equal(result_nse$.id, result_quoted$.id)
@@ -440,4 +435,28 @@ test_that("existing qlm_humancoded calls still work", {
 
   expect_true(inherits(result, "qlm_humancoded"))
   expect_true(inherits(result, "qlm_coded"))
+})
+
+
+test_that("as_qlm_coded rejects duplicated .id values", {
+  # The Cartesian-join case from #156: an unnested table keeping the document
+  # id rather than a document-item key
+  a <- data.frame(.id = c("d1", "d1", "d2"), importance = c(2L, 1L, 0L))
+  expect_error(as_qlm_coded(a, name = "A"), "must be unique")
+  expect_error(as_qlm_coded(a, name = "A"), "d1")
+})
+
+test_that("as_qlm_coded rejects a missing .id, and an id= beside an existing .id", {
+  # A missing identifier would be matched to every other missing one
+  expect_error(
+    as_qlm_coded(data.frame(.id = c(NA, "u1"), score = c(0, 1)), name = "A"),
+    "must not be missing"
+  )
+
+  # The chosen column would sit beside the old .id and lose to it
+  x <- data.frame(.id = c("old1", "old2"), chosen = c("new1", "new2"), score = 1:2)
+  expect_error(as_qlm_coded(x, id = chosen), "already has a")
+  expect_error(as_qlm_coded(x, id = "chosen"), "already has a")
+  # ... whereas naming the existing column is fine
+  expect_equal(as_qlm_coded(x, id = .id)$.id, c("old1", "old2"))
 })
