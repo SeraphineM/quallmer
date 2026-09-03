@@ -121,3 +121,51 @@ prices_note <- function(prices) {
     " cached input, per million tokens"
   )
 }
+
+
+#' Settle a run's cost against supplied rates
+#'
+#' Three outcomes, decided from the table rather than from the diagnosis,
+#' which cannot always be made. No row was `NA`: ellmer priced the run itself
+#' at the published rates, and the supplied ones have nothing to do. Rows were
+#' `NA` but none had the token counts to cost them from: the rates could not
+#' be applied and the cost stays `NA`. Some rows were costed. Only the last
+#' keeps the rates, so a recorded rate always means a cost that rests on it.
+#'
+#' @param results A table with ellmer's token and cost columns, one row per
+#'   unit the provider was asked about.
+#' @param prices What `check_prices()` returned, possibly `NULL`.
+#' @param unpriced What `cost_diagnosis()` returned, possibly `NULL`.
+#'
+#' @return A list: `results`, with `cost` filled where it could be; `prices`,
+#'   kept only where they were applied; `cost_note`, one line saying where the
+#'   cost came from, or `NULL` when ellmer priced it.
+#' @keywords internal
+#' @noRd
+reconcile_prices <- function(results, prices, unpriced) {
+  cost_note <- if (!is.null(unpriced)) paste0("NA (", unpriced_note(unpriced), ")")
+  if (is.null(prices)) {
+    return(list(results = results, prices = NULL, cost_note = cost_note))
+  }
+
+  before <- results$cost %||% rep(NA_real_, nrow(results))
+  results <- price_from_tokens(results, prices)
+  filled <- is.na(before) & !is.na(results$cost)
+
+  if (!anyNA(before)) {
+    cli::cli_inform(c(
+      "i" = "ellmer priced this run itself; {.arg prices} is not used."
+    ))
+    prices <- NULL
+  } else if (!any(filled)) {
+    cli::cli_inform(c(
+      "i" = paste0("{.arg prices} could not be applied: no token counts came back ",
+                   "for the unpriced units, so their {.field cost} stays {.code NA}.")
+    ))
+    prices <- NULL
+  } else {
+    cost_note <- prices_note(prices)
+  }
+
+  list(results = results, prices = prices, cost_note = cost_note)
+}

@@ -4,7 +4,7 @@
 \alias{qlm_segment}
 \title{Segment texts using an LLM}
 \usage{
-qlm_segment(x, codebook, model, ..., name = NULL, notes = NULL)
+qlm_segment(x, codebook, model, ..., prices = NULL, name = NULL, notes = NULL)
 }
 \arguments{
 \item{x}{A character vector of texts or a \code{\link[quanteda:corpus]{quanteda::corpus()}} object.
@@ -28,6 +28,11 @@ Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-202410
 (including provider-specific arguments like \code{base_url}, \code{credentials}, or
 \code{api_args} for OpenAI-compatible endpoints) are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.}
 
+\item{prices}{Optional. Rates for costing the run when ellmer cannot: a
+named numeric vector or list with \code{input} and \code{output}, and optionally
+\code{cached_input}, in US dollars per million tokens. As for \code{\link[=qlm_code]{qlm_code()}};
+see the section on cost there. Supplying them implies \code{include_tokens = TRUE} and \code{include_cost = TRUE}. Default is \code{NULL}.}
+
 \item{name}{character or \code{NULL}; a name identifying this coding run. Default is \code{NULL}.}
 
 \item{notes}{Optional character string with descriptive notes about this
@@ -41,9 +46,17 @@ Docvars include:
 \item{\code{docid}}{Name of the source document.}
 \item{\code{segid}}{Integer segment index within the source document.}
 \item{...}{Any fields defined in the codebook schema.}
+\item{\code{input_tokens}, \code{output_tokens}, \code{cached_input_tokens},
+\code{cost}}{With \code{include_tokens = TRUE} or \code{include_cost = TRUE}: the
+usage of the call made for the source document, repeated on each of
+its segments. See the section on cost.}
 \item{...}{Original docvars inherited from the input (if \code{x} is a
 corpus).}
 }
+The corpus metadata (see \code{\link[quanteda:meta]{quanteda::meta()}}) carries \code{name},
+\code{continuum_lengths}, and, when usage was requested, \code{usage}, a data frame
+with one row per source document, plus \code{cost_note} and \code{prices} where
+they apply.
 }
 \description{
 Applies a codebook to input texts to segment them into thematic or conceptual
@@ -56,6 +69,25 @@ for each segment. A \code{text} field (the verbatim segment text) is always adde
 automatically and must not appear in the schema. Measurement \code{levels} defined
 in the codebook are not applicable to segmentation and are silently ignored.
 }
+\section{Cost}{
+
+
+Each source document is one request, so token counts and cost belong to
+the document, not to a segment. With \code{include_tokens = TRUE} or
+\code{include_cost = TRUE} they are recorded twice: in the corpus metadata as
+\code{usage}, one row per input document including documents that yielded no
+segments, and on each segment as docvars for convenience. Sum the metadata
+table for the run's total; summing the docvars counts a document once per
+segment, and a document that produced no segments has no docvars at all.
+
+ellmer prices from a table fixed at its release and returns \code{NA} for a
+model it does not list; \code{qlm_segment()} says so once before the run, as
+\code{\link[=qlm_code]{qlm_code()}} does, and \code{prices} costs the run from the token counts at
+rates you supply. The four usage names are reserved when usage is
+requested: a codebook field or an inherited docvar of the same name is an
+error rather than silently overwritten.
+}
+
 \examples{
 \dontrun{
 # Aspect-based segmentation of a hotel review (character vector input

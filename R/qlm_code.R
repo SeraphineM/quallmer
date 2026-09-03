@@ -499,33 +499,11 @@ qlm_code <- function(x, codebook, model, ...,
   # Add ID column from input names or sequence
   results$id <- names(x) %||% seq_along(x)
 
-  # Where the cost came from, when ellmer could not fill it (#135). Supplied
-  # rates cost the rows ellmer left NA from their token counts, which is
-  # decided from the table rather than from the diagnosis, since that cannot
-  # always be made. Three outcomes: no row was NA, so ellmer priced the run
-  # itself at the published rates and the supplied ones have nothing to do;
-  # rows were NA but none had the counts to cost them, so the rates could not
-  # be applied; or some were costed. Only the last records the rates.
-  cost_note <- if (!is.null(unpriced)) paste0("NA (", unpriced_note(unpriced), ")")
-  if (!is.null(prices)) {
-    before <- results$cost %||% rep(NA_real_, nrow(results))
-    results <- price_from_tokens(results, prices)
-    filled <- is.na(before) & !is.na(results$cost)
-    if (!anyNA(before)) {
-      cli::cli_inform(c(
-        "i" = "ellmer priced this run itself; {.arg prices} is not used."
-      ))
-      prices <- NULL
-    } else if (!any(filled)) {
-      cli::cli_inform(c(
-        "i" = paste0("{.arg prices} could not be applied: no token counts came back ",
-                     "for the unpriced units, so their {.field cost} stays {.code NA}.")
-      ))
-      prices <- NULL
-    } else {
-      cost_note <- prices_note(prices)
-    }
-  }
+  # Where the cost came from, when ellmer could not fill it (#135)
+  settled <- reconcile_prices(results, prices, unpriced)
+  results <- settled$results
+  prices <- settled$prices
+  cost_note <- settled$cost_note
 
   # Build metadata list
   metadata <- list(
