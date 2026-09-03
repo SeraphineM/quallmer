@@ -85,7 +85,9 @@ metadata for reproducibility.</p>
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>Input data: a character vector of texts (for text codebooks) or
 file paths to images (for image codebooks). Named vectors will use names
-as identifiers in the output; unnamed vectors will use sequential integers.</p></dd>
+as identifiers in the output; unnamed vectors will use sequential integers.
+The identifiers become the <code>.id</code> column, on which every later operation
+keys, so names must be unique.</p></dd>
 
 
 <dt id="arg-codebook">codebook<a class="anchor" aria-label="anchor" href="#arg-codebook"></a></dt>

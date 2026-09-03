@@ -318,19 +318,15 @@ provenance tracking.</p></div>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Document names automatically become .id, all docvars included</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Use a docvar as identifier with NSE (unquoted)</span></span></span>
-<span class="r-in"><span><span class="va">crowd_party</span> <span class="op">&lt;-</span> <span class="fu">as_qlm_coded</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">data_corpus_manifsentsUK2010sample</span>,</span></span>
-<span class="r-in"><span>  id <span class="op">=</span> <span class="va">party</span>,</span></span>
-<span class="r-in"><span>  is_gold <span class="op">=</span> <span class="cn">TRUE</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Or use quoted string</span></span></span>
-<span class="r-in"><span><span class="va">crowd_party2</span> <span class="op">&lt;-</span> <span class="fu">as_qlm_coded</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">data_corpus_manifsentsUK2010sample</span>,</span></span>
-<span class="r-in"><span>  id <span class="op">=</span> <span class="st">"party"</span>,</span></span>
-<span class="r-in"><span>  is_gold <span class="op">=</span> <span class="cn">TRUE</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Use a docvar as identifier, with NSE (unquoted) or a quoted string. It</span></span></span>
+<span class="r-in"><span><span class="co"># must identify each unit uniquely: a party repeats across sentences, so</span></span></span>
+<span class="r-in"><span><span class="co"># give the corpus a sentence identifier first</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"quanteda"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">corp</span> <span class="op">&lt;-</span> <span class="va">data_corpus_manifsentsUK2010sample</span></span></span>
+<span class="r-in"><span>  <span class="fu">quanteda</span><span class="fu">::</span><span class="fu"><a href="https://quanteda.io/reference/docvars.html" class="external-link">docvars</a></span><span class="op">(</span><span class="va">corp</span>, <span class="st">"sentence_id"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu">quanteda</span><span class="fu">::</span><span class="fu"><a href="https://quanteda.io/reference/ndoc.html" class="external-link">ndoc</a></span><span class="op">(</span><span class="va">corp</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">crowd_sent</span> <span class="op">&lt;-</span> <span class="fu">as_qlm_coded</span><span class="op">(</span><span class="va">corp</span>, id <span class="op">=</span> <span class="va">sentence_id</span>, is_gold <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">crowd_sent2</span> <span class="op">&lt;-</span> <span class="fu">as_qlm_coded</span><span class="op">(</span><span class="va">corp</span>, id <span class="op">=</span> <span class="st">"sentence_id"</span>, is_gold <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With complete metadata</span></span></span>
 <span class="r-in"><span><span class="va">expert</span> <span class="op">&lt;-</span> <span class="fu">as_qlm_coded</span><span class="op">(</span></span></span>
