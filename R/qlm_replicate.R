@@ -23,8 +23,10 @@
 #'   `api_args`, or `max_active`. Any setting not overridden is restored from
 #'   the original run when the endpoint is unchanged, including the arguments
 #'   it passed to [ellmer::chat()]. An endpoint is identified by both the
-#'   provider prefix and `base_url`, since every provider ellmer has no
-#'   `chat_*()` for is reached as `openai_compatible/<model>` — so Qwen through
+#'   provider prefix and `base_url` (an explicit `base_url = NULL`, meaning
+#'   the provider's default host, counts as a change of endpoint), since
+#'   every provider ellmer has no `chat_*()` for is reached as
+#'   `openai_compatible/<model>` — so Qwen through
 #'   Alibaba Model Studio and Kimi through Moonshot share a prefix while being
 #'   different services with different credentials. When either changes, only
 #'   portable chat settings (`params` and `echo`) are carried over; supply
@@ -81,6 +83,12 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
   # Checked before the replication is coded, not after: a bad value must not
   # cost a paid call.
   check_backfill_arg(backfill)
+  if ("backfill_attempts" %in% names(list(...))) {
+    cli::cli_abort(c(
+      "{.arg backfill_attempts} cannot be set in a replication.",
+      "i" = "Use {.arg backfill} to say how the replication is completed."
+    ))
+  }
 
   # Extract original components
   original_data <- attr(x, "data")
@@ -183,16 +191,24 @@ restore_run_args <- function(x, overrides = list(), model = NULL) {
   # while being entirely different services with different credentials. What
   # distinguishes them is `base_url`, so that is part of the identity too.
   #
-  # A `base_url` supplied in `...` counts as a change: the caller is pointing
-  # this run at a different host, so the credential inherited for the old one
-  # must not travel with it.
+  # A `base_url` supplied in `...` counts as a change, whether it names
+  # another host or is `NULL` to fall back to the provider's default: either
+  # way the caller is pointing this run away from the host whose credential
+  # was recorded, and that credential must not travel with it. `%||%` cannot
+  # tell a named `NULL` from an absent argument, so presence is tested by
+  # name; `modifyList()` below then drops the recorded URL as intended.
   original_endpoint <- list(
     provider = sub("/.*$", "", original_model),
     base_url = original_chat_args$base_url %||% NA_character_
   )
+  use_base_url <- if ("base_url" %in% names(overrides)) {
+    overrides$base_url %||% NA_character_
+  } else {
+    original_chat_args$base_url %||% NA_character_
+  }
   use_endpoint <- list(
     provider = sub("/.*$", "", use_model),
-    base_url = overrides$base_url %||% original_chat_args$base_url %||% NA_character_
+    base_url = use_base_url
   )
 
   if (!identical(original_endpoint, use_endpoint)) {
@@ -205,8 +221,8 @@ restore_run_args <- function(x, overrides = list(), model = NULL) {
         paste0("provider from \"", original_endpoint$provider, "\" to \"",
                use_endpoint$provider, "\"")
       } else {
-        paste0("endpoint from \"", original_endpoint$base_url, "\" to \"",
-               use_endpoint$base_url, "\"")
+        paste0("endpoint from ", describe_endpoint(original_endpoint$base_url),
+               " to ", describe_endpoint(use_endpoint$base_url))
       }
       omitted_text <- paste0("`", omitted_args, "`", collapse = ", ")
       cli::cli_inform(c(
@@ -275,4 +291,21 @@ restore_run_args <- function(x, overrides = list(), model = NULL) {
   }
 
   list(model = use_model, call_args = call_args)
+}
+
+
+#' Name an endpoint for a message
+#'
+#' @param base_url The endpoint's `base_url`, or `NA` for the provider's
+#'   default host.
+#'
+#' @return A single string.
+#' @keywords internal
+#' @noRd
+describe_endpoint <- function(base_url) {
+  if (is.na(base_url)) {
+    "the provider's default endpoint"
+  } else {
+    paste0("\"", base_url, "\"")
+  }
 }

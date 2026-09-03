@@ -930,3 +930,60 @@ test_that("qlm_replicate validates backfill before coding anything", {
   mockery::stub(f, "qlm_code", function(...) stop("a paid call was made"))
   expect_error(f(coded, backfill = "yes"), "must be `TRUE`, `FALSE` or `NULL`")
 })
+
+
+test_that("qlm_replicate treats an explicit base_url = NULL as a change of endpoint", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  proxied <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai/gpt-4o-mini",
+      base_url = "https://proxy.example/v1",
+      credentials = function() list(Authorization = "Bearer proxy-secret"),
+      api_args = list(reasoning_effort = "max"),
+      params = list(temperature = 0)
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1, backend = "structured"),
+    name = "run1", call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    proxied
+  })
+
+  # Clearing base_url points the run at OpenAI's own host. The proxy's
+  # credential and request arguments must not go there, and the path the
+  # proxy took says nothing about what the default host accepts.
+  expect_message(
+    f(proxied, base_url = NULL, name = "run2"),
+    "to the provider's default endpoint; not carrying over"
+  )
+  expect_false("base_url" %in% names(seen))
+  expect_false("credentials" %in% names(seen))
+  expect_false("api_args" %in% names(seen))
+  expect_null(seen$structured)
+  expect_equal(seen$params, list(temperature = 0))
+})
+
+
+test_that("qlm_replicate leaves completion to backfill, not backfill_attempts", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+  expect_error(qlm_replicate(coded, backfill_attempts = 2), "Use `backfill`")
+})

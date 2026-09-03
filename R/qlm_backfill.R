@@ -20,7 +20,8 @@
 #'   passes, such as `params`, `max_active` or `on_error`. Any setting not
 #'   overridden is restored from the original run, as [qlm_replicate()] does,
 #'   with the same rule for credentials and endpoint settings when the
-#'   provider changes. The codebook cannot be changed.
+#'   provider changes. The codebook, `batch`, `name` and `backfill_attempts`
+#'   cannot be set: `attempts` is the only bound on the number of passes.
 #' @param model character or `NULL`; the model for the passes, in the form
 #'   used by [qlm_code()]. `NULL` (default) uses the run's own model.
 #' @param attempts integer; the maximum number of passes. Default is 2. A pass that
@@ -53,7 +54,9 @@
 #' batch-only arguments (`path`, `wait`, `ignore_hash`) set aside. A pass that
 #' fails outright on the first attempt is an error, since nothing has been
 #' gained yet and the cause is most likely configuration; on a later pass it
-#' is a warning, and what earlier passes recovered is kept.
+#' is a warning, and what earlier passes recovered is kept. The failed pass is
+#' still recorded, with the units it attempted, no recoveries and the error,
+#' since the provider may have billed it.
 #'
 #' Units are identified by `.id` throughout: the failed units' inputs are
 #' looked up by `.id`, so an object whose rows have been reordered or subset
@@ -64,7 +67,8 @@
 #' summed across all attempts, since a failed request may still have been
 #' billed. The passes are recorded in the object metadata as `backfill`, one
 #' entry per pass with its timestamp, the model if it differed from the run's,
-#' the overrides, and the `.id`s attempted and recovered, so the result can say
+#' the overrides, the `.id`s attempted and recovered, and for a pass that
+#' failed outright its error, so the result can say
 #' which of its rows came from which pass and which model. [qlm_replicate()]
 #' replays these passes on a replication, so that a replication of a completed
 #' run is completed on the same terms.
@@ -130,6 +134,22 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
       "i" = "Backfill passes are always parallel calls over the failed units."
     ))
   }
+  # `attempts` is the bound on paid calls. Letting `backfill_attempts` through
+  # to the passes would nest up to that many further passes inside each one,
+  # multiplying the calls and losing the nested passes' provenance in the
+  # merge. `name` is set per pass; the object keeps the run's own name.
+  if ("backfill_attempts" %in% names(overrides)) {
+    cli::cli_abort(c(
+      "{.arg backfill_attempts} cannot be set in a backfill.",
+      "i" = "Use {.arg attempts} for the number of passes."
+    ))
+  }
+  if ("name" %in% names(overrides)) {
+    cli::cli_abort(c(
+      "{.arg name} cannot be set in a backfill.",
+      "i" = "A backfill fills the gaps in a run under the run's own name."
+    ))
+  }
 
   run_model <- meta_attr$object$chat_args$name
   restored <- restore_run_args(x, overrides = overrides, model = model)
@@ -186,7 +206,8 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
           codebook = codebook(x),
           model = restored$model,
           batch = FALSE,
-          name = paste0(run_name %||% "run", "_backfill_", attempt)
+          name = paste0(run_name %||% "run", "_backfill_", attempt),
+          backfill_attempts = 0L
         ),
         call_args
       )),
@@ -205,13 +226,21 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
         "Backfill pass {attempt} failed; keeping what earlier passes recovered.",
         set_bullets(strip_ansi(conditionMessage(result)))
       ))
+      # Recorded even though nothing is merged: the pass was attempted, and
+      # the provider may have billed it, so the trail must show it.
+      passes[[length(passes) + 1L]] <- backfill_pass(
+        model = if (model_changed) restored$model else NULL,
+        overrides = overrides,
+        attempted = ids[retry],
+        recovered = character(0),
+        error = condition_text(result)
+      )
       break
     }
 
     x <- merge_backfill_rows(x, result)
     recovered <- ids[retry][!failed_units(result)]
-    passes[[length(passes) + 1L]] <- list(
-      timestamp = Sys.time(),
+    passes[[length(passes) + 1L]] <- backfill_pass(
       model = if (model_changed) restored$model else NULL,
       overrides = overrides,
       attempted = ids[retry],
@@ -475,6 +504,7 @@ backfill_summary <- function(passes) {
     return(NULL)
   }
   n_pass <- length(passes)
+  n_failed <- sum(!vapply(passes, function(p) is.null(p$error), logical(1)))
   recovered <- lengths(lapply(passes, `[[`, "recovered"))
   n_attempted <- length(unique(unlist(lapply(passes, `[[`, "attempted"))))
   other <- vapply(passes, function(p) p$model %||% NA_character_, character(1))
@@ -487,8 +517,35 @@ backfill_summary <- function(passes) {
   }
   paste0(
     n_pass, if (n_pass == 1L) " pass" else " passes",
+    if (n_failed) paste0(" (", n_failed, " failed)") else "",
     ", recovered ", sum(recovered), " of ", n_attempted, detail
   )
+}
+
+
+#' One entry of the `backfill` object metadata
+#'
+#' @param model The pass's model when it differed from the run's, else `NULL`.
+#' @param overrides The pass's `...` overrides.
+#' @param attempted,recovered Character vectors of `.id`s.
+#' @param error For a pass that failed outright, its message; else `NULL`,
+#'   and the element is absent.
+#'
+#' @return A list.
+#' @keywords internal
+#' @noRd
+backfill_pass <- function(model, overrides, attempted, recovered, error = NULL) {
+  pass <- list(
+    timestamp = Sys.time(),
+    model = model,
+    overrides = overrides,
+    attempted = attempted,
+    recovered = recovered
+  )
+  if (!is.null(error)) {
+    pass$error <- error
+  }
+  pass
 }
 
 

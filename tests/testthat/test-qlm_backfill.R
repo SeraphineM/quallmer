@@ -76,6 +76,9 @@ test_that("qlm_backfill rejects what it cannot backfill", {
   expect_error(qlm_backfill(run, model = c("a", "b")), "single string")
   expect_error(qlm_backfill(run, codebook = codebook(run)), "codebook cannot be changed")
   expect_error(qlm_backfill(run, batch = TRUE), "cannot be set")
+  # `attempts` must be the only bound on paid calls, and the run keeps its name
+  expect_error(qlm_backfill(run, backfill_attempts = 3), "Use `attempts`")
+  expect_error(qlm_backfill(run, name = "retry"), "cannot be set")
 
   human <- qlm_humancoded(data.frame(.id = c("a", "b"), score = c(1L, 2L)), name = "coder")
   expect_error(qlm_backfill(human), "human-coded")
@@ -118,6 +121,8 @@ test_that("qlm_backfill re-codes only the failed units and merges them in place"
   expect_equal(unname(sent$x), c("text b", "text d"))
   expect_equal(sent$model, "openai/gpt-4o-mini")
   expect_false(sent$batch)
+  # Each pass is a single coding call, never a nested backfill
+  expect_equal(sent$backfill_attempts, 0L)
   expect_equal(sent$params, list(temperature = 0))
   expect_equal(sent$on_error, "continue")
   expect_true(sent$include_tokens)
@@ -389,7 +394,18 @@ test_that("qlm_backfill errors when the first pass fails outright, warns later",
   })
   expect_warning(filled <- suppressMessages(g(run)), "keeping what earlier passes recovered")
   expect_equal(filled$score, c(1L, NA))
-  expect_length(qlm_meta(filled, "backfill", type = "object"), 1)
+
+  # The failed pass is on record too: it was attempted, and may have been
+  # billed, even though nothing from it was merged
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_length(passes, 2)
+  expect_equal(passes[[1]]$recovered, "a")
+  expect_null(passes[[1]]$error)
+  expect_equal(passes[[2]]$attempted, "b")
+  expect_equal(passes[[2]]$recovered, character(0))
+  expect_match(passes[[2]]$error, "503")
+  expect_equal(backfill_summary(passes), "2 passes (1 failed), recovered 1 of 2")
+  expect_true(any(grepl("^# Backfill: 2 passes \\(1 failed\\)", capture.output(print(filled)))))
 })
 
 

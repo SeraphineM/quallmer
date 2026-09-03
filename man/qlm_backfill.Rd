@@ -13,7 +13,8 @@ qlm_backfill(x, ..., model = NULL, attempts = 2L)
 passes, such as \code{params}, \code{max_active} or \code{on_error}. Any setting not
 overridden is restored from the original run, as \code{\link[=qlm_replicate]{qlm_replicate()}} does,
 with the same rule for credentials and endpoint settings when the
-provider changes. The codebook cannot be changed.}
+provider changes. The codebook, \code{batch}, \code{name} and \code{backfill_attempts}
+cannot be set: \code{attempts} is the only bound on the number of passes.}
 
 \item{model}{character or \code{NULL}; the model for the passes, in the form
 used by \code{\link[=qlm_code]{qlm_code()}}. \code{NULL} (default) uses the run's own model.}
@@ -70,7 +71,9 @@ through the parallel API, with the same model and settings, and any
 batch-only arguments (\code{path}, \code{wait}, \code{ignore_hash}) set aside. A pass that
 fails outright on the first attempt is an error, since nothing has been
 gained yet and the cause is most likely configuration; on a later pass it
-is a warning, and what earlier passes recovered is kept.
+is a warning, and what earlier passes recovered is kept. The failed pass is
+still recorded, with the units it attempted, no recoveries and the error,
+since the provider may have billed it.
 
 Units are identified by \code{.id} throughout: the failed units' inputs are
 looked up by \code{.id}, so an object whose rows have been reordered or subset
@@ -81,7 +84,8 @@ recorded as the latest reason. Token and cost columns, when present, are
 summed across all attempts, since a failed request may still have been
 billed. The passes are recorded in the object metadata as \code{backfill}, one
 entry per pass with its timestamp, the model if it differed from the run's,
-the overrides, and the \code{.id}s attempted and recovered, so the result can say
+the overrides, the \code{.id}s attempted and recovered, and for a pass that
+failed outright its error, so the result can say
 which of its rows came from which pass and which model. \code{\link[=qlm_replicate]{qlm_replicate()}}
 replays these passes on a replication, so that a replication of a completed
 run is completed on the same terms.

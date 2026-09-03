@@ -22,8 +22,10 @@ qlm_replicate(
 \code{api_args}, or \code{max_active}. Any setting not overridden is restored from
 the original run when the endpoint is unchanged, including the arguments
 it passed to \code{\link[ellmer:chat]{ellmer::chat()}}. An endpoint is identified by both the
-provider prefix and \code{base_url}, since every provider ellmer has no
-\verb{chat_*()} for is reached as \verb{openai_compatible/<model>} — so Qwen through
+provider prefix and \code{base_url} (an explicit \code{base_url = NULL}, meaning
+the provider's default host, counts as a change of endpoint), since
+every provider ellmer has no \verb{chat_*()} for is reached as
+\verb{openai_compatible/<model>} — so Qwen through
 Alibaba Model Studio and Kimi through Moonshot share a prefix while being
 different services with different credentials. When either changes, only
 portable chat settings (\code{params} and \code{echo}) are carried over; supply
