@@ -871,8 +871,26 @@ test_that("qlm_replicate carries supplied prices to the same model, not to anoth
 
   # Different model: dropped, with a note
   expect_message(f(coded, model = "deepseek/deepseek-reasoner", name = "other"),
-                 "Not carrying over `prices`")
+                 "Not carrying over `prices`: the model differs")
   expect_null(seen$prices)
+
+  # Same model string reached through another endpoint: a different price
+  # list, so dropped too
+  expect_message(
+    f(coded, base_url = "https://other.example/v1", credentials = function() list(),
+      name = "moved"),
+    "the endpoint differs"
+  )
+  expect_null(seen$prices)
+
+  # Same model and endpoint, run as a batch: providers price batches
+  # differently, so dropped
+  expect_message(f(coded, batch = TRUE, name = "batched"), "the batch setting differs")
+  expect_null(seen$prices)
+
+  # Several changes are all named
+  expect_message(f(coded, model = "deepseek/deepseek-reasoner", batch = TRUE, name = "both"),
+                 "the model, batch setting differ")
 
   # An explicit override is left alone
   f(coded, model = "deepseek/deepseek-reasoner", prices = c(input = 2, output = 20))

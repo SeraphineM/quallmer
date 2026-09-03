@@ -1576,6 +1576,28 @@ test_that("qlm_code leaves ellmer's own prices in charge (#135)", {
   expect_null(qlm_meta(coded)$cost_note)
 })
 
+test_that("qlm_code says when supplied rates could not be applied (#135)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  # Unpriced, and no counts came back to cost it from
+  results <- data.frame(score = c(0.5, 0.8), input_tokens = c(NA_real_, NA_real_),
+                        output_tokens = c(NA_real_, NA_real_),
+                        cached_input_tokens = c(NA_real_, NA_real_),
+                        cost = c(NA_real_, NA_real_))
+
+  f <- priced_run(results, new.env())
+  expect_message(
+    coded <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
+               credentials = offline, structured = "structured",
+               prices = c(input = 1, output = 10)),
+    "could not be applied"
+  )
+  expect_true(all(is.na(coded$cost)))
+  # The rates are not recorded, and the note says why the cost is NA
+  expect_null(qlm_meta(coded)$prices)
+  expect_equal(qlm_meta(coded)$cost_note, "NA (ellmer has no prices for DeepSeek models)")
+})
+
 test_that("qlm_code rejects malformed prices before any request (#135)", {
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Test prompt", type_obj)
