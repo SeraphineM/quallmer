@@ -2,6 +2,17 @@
 
 ## Bug fixes
 
+* `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
+  a credential-named `api_headers` entry, or a `base_url` carrying userinfo
+  or a credential-named query parameter, given to `qlm_code()` as a literal,
+  previously appeared verbatim in the report's Call section and in the saved
+  `.rds`. Their values are now replaced by `"<redacted>"` in each run's
+  recorded call and chat arguments, in the returned trail and in both files,
+  and a message says which runs were affected. Reading the key where it is
+  needed, through an environment variable or
+  `credentials = function() Sys.getenv(...)`, keeps it out of the record
+  entirely and is the recommended form (#154).
+
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as
   text. The ratings were assembled into one matrix before their type was

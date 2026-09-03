@@ -39,6 +39,24 @@
 #'   \item `{path}.qmd`: Quarto document with full audit trail documentation
 #' }
 #'
+#' \subsection{Credentials}{
+#' Both files are written to be shared, so neither carries the value of a
+#' credential a run was configured with. An `api_key`, the values of
+#' `api_headers` entries named like a credential, and any userinfo or
+#' credential-named query parameter in a `base_url` are replaced by
+#' `"<redacted>"` in each run's recorded call and chat arguments. The
+#' returned object is redacted in the same way, so the trail in memory and
+#' the two files agree. The trail records that a credential was supplied, not
+#' what it was; a `qlm_coded` object loaded from the `.rds` therefore needs a
+#' credential of its own before it can be replicated.
+#'
+#' Only literal values are redacted from a call. A credential read where it
+#' is needed, through an environment variable ellmer reads by default or a
+#' `credentials = function() Sys.getenv("MY_KEY")` argument, never enters the
+#' record and is the recommended form. A `credentials` function is recorded
+#' as written, so it should not contain the key itself.
+#' }
+#'
 #' @references
 #' Lincoln, Y. S., & Guba, E. G. (1985). *Naturalistic Inquiry*. Sage.
 #'
@@ -73,6 +91,7 @@ qlm_trail <- function(..., path = NULL) {
 
   # Extract runs from all objects
   runs <- list()
+  redacted <- integer()
   for (i in seq_along(objects)) {
     obj <- objects[[i]]
 
@@ -96,6 +115,16 @@ qlm_trail <- function(..., path = NULL) {
       ))
     }
 
+    # A trail is made to be shared. Credential values leave the record here,
+    # before anything is copied out of the metadata, so the returned object,
+    # the .rds and the report agree; see redact_meta().
+    redacted_meta <- redact_meta(meta_attr)
+    if (!identical(redacted_meta, meta_attr)) {
+      redacted <- c(redacted, i)
+      meta_attr <- redacted_meta
+      attr(obj, "meta") <- meta_attr
+    }
+
     # Build a "run" structure for compatibility with trail code
     run <- list(
       name = meta_attr$user$name,
@@ -109,9 +138,10 @@ qlm_trail <- function(..., path = NULL) {
       )
     )
 
-    # Preserve the full object as-is so downstream consumers can replicate
-    # without any lossy conversion. Type-specific mirrors (codebook, chat_args,
-    # etc.) are kept only as convenience pointers for print/report code.
+    # Preserve the full object, minus credential values, so downstream
+    # consumers can replicate without any lossy conversion. Type-specific
+    # mirrors (codebook, chat_args, etc.) are kept only as convenience
+    # pointers for print/report code.
     if (inherits(obj, "qlm_coded")) {
       obj <- check_qlm_coded(obj, what = sprintf("object %d", i))
       run$coded <- obj
@@ -189,6 +219,15 @@ qlm_trail <- function(..., path = NULL) {
     ),
     class = "qlm_trail"
   )
+
+  if (length(redacted) > 0) {
+    indices <- vapply(runs, function(r) r$object_index, integer(1))
+    redacted_runs <- names(runs)[indices %in% redacted]
+    cli::cli_alert_info(paste(
+      "Credential values recorded for {.val {redacted_runs}} are replaced by",
+      "{.val {REDACTED}} in the trail."
+    ))
+  }
 
   # Save if path is provided
 
@@ -1004,10 +1043,10 @@ endpoint_identity <- function(base_url) {
 #' as `?api_key=` as in userinfo, and a trail is written to be handed to
 #' someone else, so neither is printed here.
 #'
-#' This narrows one exposure; it does not make the report credential-free. The
-#' Call section prints `deparse(run$call)`, so a `base_url` written as a
-#' literal at the call site still appears there, and the `.rds` preserves
-#' `chat_args` whole by design. Redacting those is a separate problem.
+#' This is display only. The recorded call and `chat_args` are redacted when
+#' the trail is built, by `redact_meta()`, so the Call section and the `.rds`
+#' are covered there; this keeps the query out of a heading where it would
+#' only be noise.
 #'
 #' Known limitation: an endpoint distinguished only by a query parameter --
 #' Azure's `api-version=`, say -- prints the same label as its sibling, though

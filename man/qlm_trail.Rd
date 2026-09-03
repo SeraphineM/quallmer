@@ -48,6 +48,24 @@ When \code{path} is provided, the function creates:
 \item \verb{\{path\}.rds}: Complete trail object for R (reloadable with \code{readRDS()})
 \item \verb{\{path\}.qmd}: Quarto document with full audit trail documentation
 }
+
+\subsection{Credentials}{
+Both files are written to be shared, so neither carries the value of a
+credential a run was configured with. An \code{api_key}, the values of
+\code{api_headers} entries named like a credential, and any userinfo or
+credential-named query parameter in a \code{base_url} are replaced by
+\code{"<redacted>"} in each run's recorded call and chat arguments. The
+returned object is redacted in the same way, so the trail in memory and
+the two files agree. The trail records that a credential was supplied, not
+what it was; a \code{qlm_coded} object loaded from the \code{.rds} therefore needs a
+credential of its own before it can be replicated.
+
+Only literal values are redacted from a call. A credential read where it
+is needed, through an environment variable ellmer reads by default or a
+\code{credentials = function() Sys.getenv("MY_KEY")} argument, never enters the
+record and is the recommended form. A \code{credentials} function is recorded
+as written, so it should not contain the key itself.
+}
 }
 \examples{
 # Load example coded objects
