@@ -21,10 +21,10 @@
 #' \dontrun{
 #' # Deprecated usage
 #' texts <- c("I love this product!", "This is terrible.")
-#' annotate(texts, task_sentiment(), model_name = "openai")
+#' annotate(texts, data_codebook_sentiment, model_name = "openai/gpt-4o-mini")
 #'
 #' # New recommended usage
-#' coded <- qlm_code(texts, task_sentiment(), model = "openai")
+#' coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 #' coded  # Print as tibble
 #' }
 #'
@@ -33,7 +33,11 @@
 annotate <- function(.data, task, model_name, ...) {
   lifecycle::deprecate_warn("0.2.0", "annotate()", "qlm_code()")
 
-  # Call qlm_code() and extract results as data.frame
-  coded <- qlm_code(.data, codebook = task, model_name = model_name, ...)
-  as.data.frame(coded)
+  coded <- qlm_code(.data, codebook = task, model = model_name, ...)
+
+  # qlm_code() keys its rows on `.id`; annotate() always returned that column
+  # as `id`, and callers on the deprecation path still read it by that name.
+  out <- as.data.frame(coded)
+  names(out)[names(out) == ".id"] <- "id"
+  out
 }

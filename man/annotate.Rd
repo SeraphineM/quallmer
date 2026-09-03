@@ -34,10 +34,10 @@ returns a richer object that includes metadata and settings for reproducibility.
 \dontrun{
 # Deprecated usage
 texts <- c("I love this product!", "This is terrible.")
-annotate(texts, task_sentiment(), model_name = "openai")
+annotate(texts, data_codebook_sentiment, model_name = "openai/gpt-4o-mini")
 
 # New recommended usage
-coded <- qlm_code(texts, task_sentiment(), model = "openai")
+coded <- qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 coded  # Print as tibble
 }
 
