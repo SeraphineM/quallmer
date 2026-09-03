@@ -47,12 +47,7 @@
 #'
 #' @export
 qlm_failures <- function(x) {
-  if (!inherits(x, "qlm_coded")) {
-    cli::cli_abort(c(
-      "{.arg x} must be a {.cls qlm_coded} object.",
-      "i" = "Got {.cls {class(x)}}."
-    ))
-  }
+  x <- check_qlm_coded(x)
 
   failed <- failed_units(x)
   errors <- recorded_errors(x)
@@ -186,4 +181,47 @@ check_ids <- function(ids, what = "{.field .id}", call = rlang::caller_env()) {
     ), call = call)
   }
   invisible(NULL)
+}
+
+
+#' Abort unless an object is a well-formed qlm_coded object
+#'
+#' The single integrity check run by every function that takes a
+#' `qlm_coded` object, before it does anything with it. The class alone
+#' proves little: tibble and dplyr operations keep the class and attributes
+#' through row operations, so `dplyr::slice(x, c(1, 1))` or `rbind(x, x)` is
+#' a classed object with a repeated key, and an object can be forged by
+#' assignment or saved before a check existed. So the object is checked for
+#' what the functions rely on: its run metadata, exactly one `.id` column,
+#' and `.id` being a key (see `check_ids()`). A codebook is not required
+#' here: a trail, a failure listing or a comparison with explicit levels
+#' works without one, and the functions that need it say so themselves.
+#'
+#' @param x The object.
+#' @param what cli markup naming it, for the message.
+#' @param call The call to report the error against.
+#'
+#' @return `x`, with its metadata upgraded if it was in the old layout.
+#' @keywords internal
+#' @noRd
+check_qlm_coded <- function(x, what = "{.arg x}", call = rlang::caller_env()) {
+  if (!inherits(x, "qlm_coded")) {
+    cli::cli_abort(paste0(what, " must be a {.cls qlm_coded} object."), call = call)
+  }
+  x <- upgrade_meta(x)
+  if (is.null(attr(x, "meta")) || is.null(attr(x, "meta")$object)) {
+    cli::cli_abort(c(
+      paste0(what, " has no run metadata."),
+      "i" = "A {.cls qlm_coded} object carries its run in the {.field meta} attribute; this one has lost it."
+    ), call = call)
+  }
+  n_id <- sum(names(x) == ".id")
+  if (n_id != 1L) {
+    cli::cli_abort(c(
+      paste0(what, " must have exactly one {.field .id} column; found {n_id}."),
+      "i" = "{.field .id} identifies each unit and is the key every operation merges on."
+    ), call = call)
+  }
+  check_ids(x[[".id"]], what = paste0("{.field .id} of ", what), call = call)
+  x
 }

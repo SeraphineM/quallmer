@@ -113,6 +113,7 @@ qlm_trail <- function(..., path = NULL) {
     # without any lossy conversion. Type-specific mirrors (codebook, chat_args,
     # etc.) are kept only as convenience pointers for print/report code.
     if (inherits(obj, "qlm_coded")) {
+      obj <- check_qlm_coded(obj, what = sprintf("object %d", i))
       run$coded <- obj
       run$codebook <- attr(obj, "codebook")
       run$batch <- meta_attr$object$batch

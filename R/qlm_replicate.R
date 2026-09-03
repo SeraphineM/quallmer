@@ -62,13 +62,9 @@
 #' @importFrom utils modifyList
 #' @export
 qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL, name = NULL, notes = NULL) {
-  # Input validation
-  if (!inherits(x, "qlm_coded")) {
-    cli::cli_abort("{.arg x} must be a {.cls qlm_coded} object.")
-  }
-
-  # Auto-upgrade old structure if needed
-  x <- upgrade_meta(x)
+  # Input validation, including that .id is a key and the run metadata and
+  # codebook are present; also upgrades an old metadata layout
+  x <- check_qlm_coded(x)
 
   # Extract original components
   original_data <- attr(x, "data")

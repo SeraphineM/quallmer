@@ -10,9 +10,12 @@
   keeps the document identifier rather than a document-item key is how the
   first arises in practice. Both are now errors, naming the offending
   values: at construction, in `qlm_code()` before a request is spent, when
-  rows are subset with `[`, and again in `qlm_compare()` and
-  `qlm_validate()`, for objects forged after construction or saved before
-  the check existed. `as_qlm_coded()` also
+  rows are subset with `[`, and by every function that takes a `qlm_coded`
+  object, which now checks its integrity first: class, run metadata, and
+  exactly one `.id` column that is a key. That last check is
+  what catches objects that dplyr or base row operations have altered
+  (`slice(x, c(1, 1))`, `rbind(x, x)`), which keep the class and
+  attributes, and objects saved before the check existed. `as_qlm_coded()` also
   refuses an `id` column alongside an existing `.id`, which left two
   columns of that name with the wrong one read (#156).
 

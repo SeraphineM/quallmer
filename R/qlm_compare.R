@@ -267,11 +267,11 @@ qlm_compare <- function(...,
     }
   }
 
-  # A classed object is no guarantee of a key: row subsetting keeps the
-  # class, and objects from before the constructor checked exist. Merging on
-  # a repeated or missing .id pairs the wrong rows silently (#156).
+  # The class is no guarantee of integrity: dplyr and base row operations
+  # keep it, so a repeated or missing .id can arrive in a classed object and
+  # would pair the wrong rows silently (#156). Check each object first.
   for (i in seq_along(coded_list)) {
-    check_ids(coded_list[[i]][[".id"]], what = sprintf("{.field .id} of object %d", i))
+    coded_list[[i]] <- check_qlm_coded(coded_list[[i]], what = sprintf("object %d", i))
   }
 
   # Determine which variables to process

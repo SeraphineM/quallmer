@@ -1298,3 +1298,45 @@ test_that("new_qlm_coded rejects a table whose .id repeats", {
     "must be unique"
   )
 })
+
+
+test_that("check_qlm_coded verifies what every function relies on", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  expect_identical(check_qlm_coded(x), x)
+
+  expect_error(check_qlm_coded(data.frame(.id = "a")), "must be a")
+
+  no_meta <- x
+  attr(no_meta, "meta") <- NULL
+  expect_error(check_qlm_coded(no_meta), "no run metadata")
+
+  no_id <- x
+  names(no_id)[names(no_id) == ".id"] <- "id"
+  expect_error(check_qlm_coded(no_id), "exactly one")
+
+  forged <- x
+  forged$.id <- c("a", "a")
+  expect_error(check_qlm_coded(forged), "must be unique")
+  forged$.id <- c(NA, "b")
+  expect_error(check_qlm_coded(forged), "must not be missing")
+
+  # The message names the object the caller passed
+  expect_error(check_qlm_coded(forged, what = "{.arg gold}"), "gold")
+})
+
+test_that("every entry point refuses an object a row operation has left with a repeated key", {
+  x <- as_qlm_coded(data.frame(.id = c("a", "b"), score = c(1, 0)), name = "A")
+  # vctrs row slicing, which dplyr's verbs are built on, keeps the class and
+  # attributes and does not go through `[`; so does base rbind()
+  doubled <- vctrs::vec_slice(x, c(1, 1))
+  expect_s3_class(doubled, "qlm_coded")
+  expect_false(is.null(attr(doubled, "meta")))
+  expect_s3_class(rbind(x, x), "qlm_coded")
+  expect_error(qlm_failures(rbind(x, x)), "must be unique")
+
+  expect_error(qlm_failures(doubled), "must be unique")
+  expect_error(qlm_compare(doubled, x, by = "score", level = "interval"), "must be unique")
+  expect_error(qlm_validate(doubled, gold = x, by = "score", level = "interval"), "must be unique")
+  expect_error(qlm_trail(doubled), "must be unique")
+  expect_error(qlm_replicate(doubled), "must be unique")
+})
