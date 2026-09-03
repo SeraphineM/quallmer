@@ -111,7 +111,7 @@ directly manipulating internal attributes.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Create a coded object</span></span></span>
 <span class="r-in"><span><span class="va">texts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"I love this!"</span>, <span class="st">"Terrible."</span>, <span class="st">"It's okay."</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">coded</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span></span></span>
@@ -121,29 +121,19 @@ directly manipulating internal attributes.</p>
 <span class="r-in"><span>  name <span class="op">=</span> <span class="st">"run1"</span>,</span></span>
 <span class="r-in"><span>  notes <span class="op">=</span> <span class="st">"Initial coding run"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Structured output failed; falling back to JSON mode with local validation.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #BB0000;">✖</span> Can't find env var `OPENAI_API_KEY`.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in openai_key():</span> Can't find env var `OPENAI_API_KEY`.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Access metadata</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded</span>, <span class="st">"name"</span><span class="op">)</span>              <span class="co"># Get run name</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded</span>, type <span class="op">=</span> <span class="st">"user"</span><span class="op">)</span>       <span class="co"># Get all user metadata</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded</span>, type <span class="op">=</span> <span class="st">"system"</span><span class="op">)</span>     <span class="co"># Get system metadata</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Modify user metadata</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded</span>, <span class="st">"name"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"updated_run1"</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded</span>, <span class="st">"notes"</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"Revised notes"</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Extract components</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="codebook.html">codebook</a></span><span class="op">(</span><span class="va">coded</span><span class="op">)</span>                      <span class="co"># Get the codebook</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span><span class="fu"><a href="inputs.html">inputs</a></span><span class="op">(</span><span class="va">coded</span><span class="op">)</span>                        <span class="co"># Get original texts</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'coded' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Custom metadata from human coding</span></span></span>
 <span class="r-in"><span><span class="va">human_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
@@ -161,21 +151,8 @@ directly manipulating internal attributes.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Access custom metadata</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">human_coded</span>, <span class="st">"coder_name"</span><span class="op">)</span>  <span class="co"># "Dr. Smith"</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Dr. Smith"</span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">human_coded</span>, type <span class="op">=</span> <span class="st">"user"</span><span class="op">)</span> <span class="co"># All user fields</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $name</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "coder_A"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $notes</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $coder_name</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Dr. Smith"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $experience</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "5 years"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
