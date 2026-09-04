@@ -287,9 +287,9 @@ back and is diagnosed. Each such request is refused before anything is
 generated, so it is cheap, but on a large corpus there are many of them,
 paced by \code{rpm}. \code{on_error = "return"} stops the structured call after the
 first wave, at the cost described under that argument; on the JSON path,
-which has always sent every unit, \code{json_retries} sends the units a wave
-did not reach in later waves, so \code{"return"} stops after the first wave
-there only with \code{json_retries = 0}.
+whose default has always been \code{"continue"}, \code{json_retries} sends the
+units a wave did not reach in later waves, so \code{"return"} stops after the
+first wave there only with \code{json_retries = 0}.
 }
 
 \section{Truncated responses}{

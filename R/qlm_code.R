@@ -239,9 +239,9 @@
 #' generated, so it is cheap, but on a large corpus there are many of them,
 #' paced by `rpm`. `on_error = "return"` stops the structured call after the
 #' first wave, at the cost described under that argument; on the JSON path,
-#' which has always sent every unit, `json_retries` sends the units a wave
-#' did not reach in later waves, so `"return"` stops after the first wave
-#' there only with `json_retries = 0`.
+#' whose default has always been `"continue"`, `json_retries` sends the
+#' units a wave did not reach in later waves, so `"return"` stops after the
+#' first wave there only with `json_retries = 0`.
 #'
 #' @section Truncated responses:
 #'
