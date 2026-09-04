@@ -80,6 +80,7 @@ only while the endpoint itself is unchanged.</p>
 <span>  codebook <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  model <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  batch <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  backfill <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  notes <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -98,8 +99,10 @@ only while the endpoint itself is unchanged.</p>
 <code>api_args</code>, or <code>max_active</code>. Any setting not overridden is restored from
 the original run when the endpoint is unchanged, including the arguments
 it passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>. An endpoint is identified by both the
-provider prefix and <code>base_url</code>, since every provider ellmer has no
-<code>chat_*()</code> for is reached as <code>openai_compatible/&lt;model&gt;</code> — so Qwen through
+provider prefix and <code>base_url</code> (an explicit <code>base_url = NULL</code>, meaning
+the provider's default host, counts as a change of endpoint), since
+every provider ellmer has no <code>chat_*()</code> for is reached as
+<code>openai_compatible/&lt;model&gt;</code> — so Qwen through
 Alibaba Model Studio and Kimi through Moonshot share a prefix while being
 different services with different credentials. When either changes, only
 portable chat settings (<code>params</code> and <code>echo</code>) are carried over; supply
@@ -126,6 +129,18 @@ processing or <code>FALSE</code> to use parallel processing, regardless of the
 original setting.</p></dd>
 
 
+<dt id="arg-backfill">backfill<a class="anchor" aria-label="anchor" href="#arg-backfill"></a></dt>
+<dd><p>Logical, integer, or <code>NULL</code>; controls backfilling after the
+replication. <code>NULL</code> (default) replays the passes recorded on <code>x</code>, using
+the same models and overrides in the same order. <code>FALSE</code> or <code>0</code> performs
+no backfill. <code>TRUE</code> runs a fresh backfill with the replication's model
+and the default number of passes, currently two; a positive integer runs
+at most that many fresh passes. A fresh backfill does not reproduce a
+different model used by the parent's recorded passes. If a replayed pass
+fails outright, the replication and any earlier recoveries are retained,
+the failure is recorded, and no later passes are replayed.</p></dd>
+
+
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
 <dd><p>Optional name for this run. If <code>NULL</code>, defaults to the model
 name (if changed) or <code>"replication_N"</code> where N is the replication count.</p></dd>
@@ -147,12 +162,18 @@ differs from the original. Default is <code>NULL</code>.</p></dd>
 not the <code>structured</code> mode it requested: a run that asked for <code>"auto"</code> and
 fell back to JSON mode replicates as <code>"json"</code>, so that an intermittently
 conforming endpoint cannot quietly skip the local validation the original
-relied on. Pass <code>structured</code> explicitly to override.</p>
+relied on. Pass <code>structured</code> explicitly to override. When the endpoint
+changes, provider or <code>base_url</code>, the path is chosen afresh for it. By the
+same rule,
+a parent that was completed with <code><a href="qlm_backfill.html">qlm_backfill()</a></code> has its passes replayed
+on the replication, so the two are complete on the same terms; see
+<code>backfill</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="qlm_code.html">qlm_code()</a></code> for initial coding, <code><a href="qlm_compare.html">qlm_compare()</a></code> for comparing
-replicated results.</p></div>
+replicated results, <code><a href="qlm_backfill.html">qlm_backfill()</a></code> to re-code only the units a run
+failed on.</p></div>
     </div>
 
     <div class="section level2">

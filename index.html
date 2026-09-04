@@ -122,6 +122,17 @@
 </ul>
 </div>
 <div class="section level4">
+<h4 id="qlm_backfill">
+<code>qlm_backfill()</code><a class="anchor" aria-label="anchor" href="#qlm_backfill"></a>
+</h4>
+<ul>
+<li>Completes a run: <code><a href="reference/qlm_failures.html">qlm_failures()</a></code> lists the units a run failed on and why, and <code><a href="reference/qlm_backfill.html">qlm_backfill()</a></code> re-codes just those units and merges them back, so a few transient failures do not mean re-running the corpus.</li>
+<li>Uses the run’s own model and settings by default; a different model can be given for units the original consistently refuses or cannot fit, and the result then records which units came from which model.</li>
+<li>
+<code>qlm_code(backfill = 2)</code> does this in the same call.</li>
+</ul>
+</div>
+<div class="section level4">
 <h4 id="qlm_segment-optional">
 <code>qlm_segment()</code> (optional)<a class="anchor" aria-label="anchor" href="#qlm_segment-optional"></a>
 </h4>
@@ -142,6 +153,7 @@
 <ul>
 <li>Re-executes coding with optional overrides (different models, codebooks, or parameters).</li>
 <li>Tracks provenance chain for comparing results across different configurations.</li>
+<li>Replays any backfill the original run had, so a replication is complete on the same terms.</li>
 <li>Enables systematic assessment of coding reliability and sensitivity to model choices.</li>
 </ul>
 </div>

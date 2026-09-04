@@ -72,7 +72,8 @@ metadata for reproducibility.</p>
 <span>  <span class="va">...</span>,</span>
 <span>  batch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  structured <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"structured"</span>, <span class="st">"json"</span><span class="op">)</span>,</span>
-<span>  max_retries <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  json_retries <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  backfill <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  prices <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  notes <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -84,7 +85,7 @@ metadata for reproducibility.</p>
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>Input data: a character vector of texts (for text codebooks) or
+<dd><p>character; the input data, either texts (for text codebooks) or
 file paths to images (for image codebooks). Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the <code>.id</code> column, on which every later operation
@@ -92,12 +93,12 @@ keys, so names must be unique.</p></dd>
 
 
 <dt id="arg-codebook">codebook<a class="anchor" aria-label="anchor" href="#arg-codebook"></a></dt>
-<dd><p>A codebook object created with <code><a href="qlm_codebook.html">qlm_codebook()</a></code>. Also accepts
+<dd><p>qlm_codebook; a codebook created with <code><a href="qlm_codebook.html">qlm_codebook()</a></code>. Also accepts
 deprecated <code><a href="task.html">task()</a></code> objects for backward compatibility.</p></dd>
 
 
 <dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
-<dd><p>Provider (and optionally model) name in the form
+<dd><p>character; the provider (and optionally model) name in the form
 <code>"provider/model"</code> or <code>"provider"</code> (which will use the default model for
 that provider). Passed to the <code>name</code> argument of <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.
 Examples: <code>"openai/gpt-4o-mini"</code>, <code>"anthropic/claude-3-5-sonnet-20241022"</code>,
@@ -114,14 +115,14 @@ Arguments recognized by <code><a href="https://ellmer.tidyverse.org/reference/pa
 
 
 <dt id="arg-batch">batch<a class="anchor" aria-label="anchor" href="#arg-batch"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, uses <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
+<dd><p>logical; if <code>TRUE</code>, uses <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
 instead of <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code>. Batch processing is more
 cost-effective for large jobs but may have longer turnaround times.
 Default is <code>FALSE</code>. See <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code> for details.</p></dd>
 
 
 <dt id="arg-structured">structured<a class="anchor" aria-label="anchor" href="#arg-structured"></a></dt>
-<dd><p>How the output schema is obtained. <code>"structured"</code> uses
+<dd><p>character; how the output schema is obtained. <code>"structured"</code> uses
 <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code> and trusts the provider to enforce
 the schema. <code>"json"</code> asks for JSON, puts the schema in the system prompt,
 and validates every response against the codebook locally. <code>"auto"</code> (the
@@ -129,14 +130,28 @@ default) attempts the structured call and falls back to <code>"json"</code> if i
 fails. See Details for which to use.</p></dd>
 
 
-<dt id="arg-max-retries">max_retries<a class="anchor" aria-label="anchor" href="#arg-max-retries"></a></dt>
-<dd><p>Number of additional attempts made for a response that
-arrives intact but does not conform to the codebook schema. Applies on the
-JSON path only, so setting it alongside <code>structured = "structured"</code> is an
-error. Default is 2, giving at most three attempts per unit. This is
-separate from ellmer's transport-level retries for rate limits and server
-errors, which apply to every provider and are set with
-<code>options(ellmer_max_tries = )</code>.</p></dd>
+<dt id="arg-json-retries">json_retries<a class="anchor" aria-label="anchor" href="#arg-json-retries"></a></dt>
+<dd><p>Integer; the number of additional requests <span class="pkg">quallmer</span>
+may make for a unit on the JSON path after an unusable response. Default
+is 2, giving at most three JSON-path requests per unit. This is implemented
+by <span class="pkg">quallmer</span> and is not passed to <span class="pkg">ellmer</span>. Each request separately uses
+<span class="pkg">ellmer</span>'s transport retry policy, controlled by
+<code>options(ellmer_max_tries = )</code>. Applies on the JSON path only, so setting
+it alongside <code>structured = "structured"</code> is an error. What is still
+unusable after the run is left for <code>backfill</code>.</p></dd>
+
+
+<dt id="arg-backfill">backfill<a class="anchor" aria-label="anchor" href="#arg-backfill"></a></dt>
+<dd><p>Logical, integer or <code>NULL</code>; whether to complete the run
+before it is returned, by re-coding the units still failed with
+<code><a href="qlm_backfill.html">qlm_backfill()</a></code>, using the same model and settings. <code>FALSE</code> or <code>0</code>
+(default) leaves the run as it came back; <code>TRUE</code> makes the default
+number of passes, currently two; a positive integer makes at most that
+many; <code>NULL</code> means <code>FALSE</code> here, since a fresh run has no parent whose
+passes could be replayed, which is what <code>NULL</code> asks <code><a href="qlm_replicate.html">qlm_replicate()</a></code>
+for. Each pass is recorded in the object's metadata, and a pass that
+recovers nothing ends the backfill early. See <code><a href="qlm_backfill.html">qlm_backfill()</a></code> for what
+is retried and what is left alone.</p></dd>
 
 
 <dt id="arg-prices">prices<a class="anchor" aria-label="anchor" href="#arg-prices"></a></dt>
@@ -150,11 +165,11 @@ the section on cost. Default is <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
-<dd><p>Character string identifying this coding run. Default is <code>NULL</code>.</p></dd>
+<dd><p>character or <code>NULL</code>; a name identifying this coding run. Default is <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-notes">notes<a class="anchor" aria-label="anchor" href="#arg-notes"></a></dt>
-<dd><p>Optional character string with descriptive notes about this
+<dd><p>character or <code>NULL</code>; descriptive notes about this
 coding run. Useful for documenting the purpose or rationale when viewing
 results in <code><a href="qlm_trail.html">qlm_trail()</a></code>. Default is <code>NULL</code>.</p></dd>
 
@@ -300,13 +315,15 @@ objects, <code>"auto"</code> on an unverified endpoint validates locally from th
 start rather than making a call it could not check, and says so. Use
 <code>"structured"</code> to rely on the provider regardless.</p>
 <p>On the JSON path, units that never validate have <code>NA</code> coded values and a
-<code>.error</code> list-column recording the reason, and <code>max_retries</code> controls how
+<code>.error</code> list-column recording the reason, and <code>json_retries</code> controls how
 many repair attempts each unit gets. On the structured path, a response
 from which ellmer could extract no structured data, which it reports only
 by warning, is likewise given an <code>.error</code>. On either path, <code><a href="qlm_failures.html">qlm_failures()</a></code>
 lists the units that produced no usable coding, with the reason for each,
-and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> reports how many there were. Batch processing and image
-codebooks
+and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> reports how many there were. Most such failures are
+transient, and <code><a href="qlm_backfill.html">qlm_backfill()</a></code> re-codes just those units and merges them
+back; <code>backfill</code> does that before returning. Batch processing and
+image codebooks
 are not supported there, so <code>"auto"</code> will not fall back under
 <code>batch = TRUE</code>. The path actually taken is recorded in the run metadata as
 <code>backend</code>.</p>

@@ -86,7 +86,7 @@ verbatim segment text and is added automatically.</p></dd>
 
 
 <dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
-<dd><p>Provider (and optionally model) name in the form
+<dd><p>character; the provider (and optionally model) name in the form
 <code>"provider/model"</code> or <code>"provider"</code> (which will use the default model for
 that provider). Passed to the <code>name</code> argument of <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.
 Examples: <code>"openai/gpt-4o-mini"</code>, <code>"anthropic/claude-3-5-sonnet-20241022"</code>,
@@ -109,7 +109,7 @@ see the section on cost there. Supplying them implies <code>include_tokens = TRU
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>
-<dd><p>Character string identifying this coding run. Default is <code>NULL</code>.</p></dd>
+<dd><p>character or <code>NULL</code>; a name identifying this coding run. Default is <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-notes">notes<a class="anchor" aria-label="anchor" href="#arg-notes"></a></dt>
