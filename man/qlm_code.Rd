@@ -292,6 +292,30 @@ units a wave did not reach in later waves, so \code{"return"} stops after the
 first wave there only with \code{json_retries = 0}.
 }
 
+\section{Incomplete runs}{
+
+
+A run over a corpus of any size rarely comes back complete, and an
+incomplete run is not an error. Under the default \code{on_error = "continue"}
+every unit is attempted, and a unit that produced no usable coding is
+returned as a row of \code{NA} with the reason in its \code{.error} column;
+\code{on_error} says what a failure does to the rest of the run.
+\code{\link[=qlm_failures]{qlm_failures()}} lists the failed units with their reasons, and \code{print()}
+counts them. Trying again happens in layers. ellmer retries each request
+at the transport level, on every path. On the JSON path, \code{json_retries}
+sends a unit again during the run when its response was unusable. After
+the run, \code{backfill}, or \code{\link[=qlm_backfill]{qlm_backfill()}} on the returned object, re-codes
+what is still failed and merges it back, with the same model and
+settings. A backfill leaves alone the two failures that re-sending the
+same request cannot fix, a text rejected as longer than the context
+window and a response cut off at \code{max_tokens} (see below); those need a
+different \code{model} or a higher \code{params(max_tokens = )}. The section "When
+a run comes back incomplete" of the workflow guide
+(\url{https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.html})
+walks through this on a run that ships with the package, and its table
+matches each kind of failure to the mechanism that handles it.
+}
+
 \section{Truncated responses}{
 
 

@@ -427,6 +427,11 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## Documentation
 
+* `?qlm_code` gains an "Incomplete runs" section: what a failed unit looks
+  like in the object, the layers at which it can be tried again, what a
+  backfill leaves alone and why, with a pointer to the workflow guide's
+  section and its failure-to-mechanism table (#174).
+
 * The package now ships a coded run that came back incomplete and its
   backfilled counterpart, in `inst/extdata/example_objects.rds`, coded once
   with a live model and a deliberately short timeout and low `max_tokens`.
