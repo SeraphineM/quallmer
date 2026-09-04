@@ -34,13 +34,16 @@
 #'   `options(ellmer_max_tries = )`. Applies on the JSON path only, so setting
 #'   it alongside `structured = "structured"` is an error. What is still
 #'   unusable after the run is left for `backfill`.
-#' @param backfill whether to complete the run before it is returned, by
-#'   re-coding the units still failed with [qlm_backfill()], using the same
-#'   model and settings. `FALSE` or `0` (default) leaves the run as it came
-#'   back; `TRUE` makes the default number of passes, currently two; a
-#'   positive integer makes at most that many. Each pass is recorded in the
-#'   object's metadata, and a pass that recovers nothing ends the backfill
-#'   early. See [qlm_backfill()] for what is retried and what is left alone.
+#' @param backfill Logical, integer or `NULL`; whether to complete the run
+#'   before it is returned, by re-coding the units still failed with
+#'   [qlm_backfill()], using the same model and settings. `FALSE` or `0`
+#'   (default) leaves the run as it came back; `TRUE` makes the default
+#'   number of passes, currently two; a positive integer makes at most that
+#'   many; `NULL` means `FALSE` here, since a fresh run has no parent whose
+#'   passes could be replayed, which is what `NULL` asks [qlm_replicate()]
+#'   for. Each pass is recorded in the object's metadata, and a pass that
+#'   recovers nothing ends the backfill early. See [qlm_backfill()] for what
+#'   is retried and what is left alone.
 #' @param prices Optional. Rates for costing the run when ellmer cannot: a
 #'   named numeric vector or list with `input` and `output`, and optionally
 #'   `cached_input`, in US dollars per million tokens, for example

@@ -62,13 +62,16 @@ by \pkg{quallmer} and is not passed to \pkg{ellmer}. Each request separately use
 it alongside \code{structured = "structured"} is an error. What is still
 unusable after the run is left for \code{backfill}.}
 
-\item{backfill}{whether to complete the run before it is returned, by
-re-coding the units still failed with \code{\link[=qlm_backfill]{qlm_backfill()}}, using the same
-model and settings. \code{FALSE} or \code{0} (default) leaves the run as it came
-back; \code{TRUE} makes the default number of passes, currently two; a
-positive integer makes at most that many. Each pass is recorded in the
-object's metadata, and a pass that recovers nothing ends the backfill
-early. See \code{\link[=qlm_backfill]{qlm_backfill()}} for what is retried and what is left alone.}
+\item{backfill}{Logical, integer or \code{NULL}; whether to complete the run
+before it is returned, by re-coding the units still failed with
+\code{\link[=qlm_backfill]{qlm_backfill()}}, using the same model and settings. \code{FALSE} or \code{0}
+(default) leaves the run as it came back; \code{TRUE} makes the default
+number of passes, currently two; a positive integer makes at most that
+many; \code{NULL} means \code{FALSE} here, since a fresh run has no parent whose
+passes could be replayed, which is what \code{NULL} asks \code{\link[=qlm_replicate]{qlm_replicate()}}
+for. Each pass is recorded in the object's metadata, and a pass that
+recovers nothing ends the backfill early. See \code{\link[=qlm_backfill]{qlm_backfill()}} for what
+is retried and what is left alone.}
 
 \item{prices}{Optional. Rates for costing the run when ellmer cannot: a
 named numeric vector or list with \code{input} and \code{output}, and optionally

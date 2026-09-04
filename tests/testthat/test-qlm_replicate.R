@@ -931,6 +931,7 @@ test_that("qlm_replicate validates backfill before coding anything", {
   expect_error(f(coded, backfill = "yes"), "single non-negative integer")
   expect_error(f(coded, backfill = -1), "single non-negative integer")
   expect_error(f(coded, backfill = 1.5), "single non-negative integer")
+  expect_error(f(coded, backfill = Inf), "single non-negative integer")
 })
 
 

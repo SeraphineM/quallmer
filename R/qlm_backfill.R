@@ -128,7 +128,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
       "i" = "{.fn qlm_backfill} re-runs the model of a {.fn qlm_code} run on the units it failed on."
     ))
   }
-  if (length(passes) != 1L || !is.numeric(passes) || is.na(passes) ||
+  if (length(passes) != 1L || !is.numeric(passes) || !is.finite(passes) ||
       passes < 1 || passes != trunc(passes)) {
     cli::cli_abort("{.arg passes} must be a single positive integer.")
   }
@@ -464,7 +464,7 @@ backfill_passes <- function(backfill, null = 0L, call = rlang::caller_env()) {
   if (isFALSE(backfill)) {
     return(0L)
   }
-  if (length(backfill) != 1L || !is.numeric(backfill) || is.na(backfill) ||
+  if (length(backfill) != 1L || !is.numeric(backfill) || !is.finite(backfill) ||
       backfill < 0 || backfill != trunc(backfill)) {
     cli::cli_abort(paste0(
       "{.arg backfill} must be {.code TRUE}, {.code FALSE}, {.code NULL} ",

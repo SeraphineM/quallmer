@@ -73,6 +73,8 @@ test_that("qlm_backfill rejects what it cannot backfill", {
   run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = c(NA, NA)))
   expect_error(qlm_backfill(run, passes = 0), "single positive integer")
   expect_error(qlm_backfill(run, passes = c(1, 2)), "single positive integer")
+  expect_error(qlm_backfill(run, passes = Inf), "single positive integer")
+  expect_error(qlm_backfill(run, passes = NaN), "single positive integer")
   expect_error(qlm_backfill(run, model = c("a", "b")), "single string")
   expect_error(qlm_backfill(run, codebook = codebook(run)), "codebook cannot be changed")
   expect_error(qlm_backfill(run, batch = TRUE), "cannot be set")
@@ -611,6 +613,7 @@ test_that("replay_backfill repeats the parent's passes, in order, until nothing 
   expect_null(calls[[1]]$model)
 
   expect_error(f(replication, parent, backfill = "yes"), "single non-negative integer")
+  expect_error(f(replication, parent, backfill = Inf), "single non-negative integer")
 })
 
 

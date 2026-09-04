@@ -1425,7 +1425,7 @@ test_that("qlm_code(backfill = ) hands the result to qlm_backfill", {
   code(backfill = TRUE)
   expect_identical(seen$passes, 2L)
 
-  for (bad in list(-1, 1.5, NA, c(1, 2), "2", c(TRUE, TRUE))) {
+  for (bad in list(-1, 1.5, NA, c(1, 2), "2", c(TRUE, TRUE), Inf, -Inf, NaN)) {
     expect_error(code(backfill = bad), "single non-negative integer")
   }
 })

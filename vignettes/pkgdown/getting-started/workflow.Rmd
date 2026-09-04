@@ -76,7 +76,7 @@ qlm_failures(coded)
 
 quallmer deals with failures at three points, and it helps to keep them apart.
 
-**Retries happen during the run, one request at a time.** Two kinds are at work before a row is written. ellmer resends a request that a rate limit or a server error turned away, a few times with a pause between; this is transport-level, applies to every provider, and `options(ellmer_max_tries = )` sets the count. On the JSON path, `qlm_code()` also re-requests a response that arrived intact but does not fit the codebook's schema, up to `json_retries` more times. A unit still failed after these is what `qlm_failures()` shows.
+**Retries happen during the run, one request at a time, in two layers.** The inner layer is ellmer's: every request quallmer sends is retried at the transport level if a rate limit or a server error turns it away, a few times with a pause between, on every provider and every path; `options(ellmer_max_tries = )` sets the count. The outer layer is quallmer's, and exists on the JSON path only: when a request comes back unusable after ellmer's tries, whether empty, unparsable, refused, not conforming to the codebook's schema, or still failing on transport, `qlm_code()` sends the unit again, up to `json_retries` more times, and each of those requests gets ellmer's tries afresh. On the structured path there is no outer layer: a request is tried by ellmer and then stands, and the only second chance is that `structured = "auto"` falls back to the JSON path when the structured call fails as a whole. A unit still failed after all of this is what `qlm_failures()` shows.
 
 **Backfilling happens after the run, on the object it produced.** `qlm_backfill()` looks up the units that failed, re-codes just those with the run's own model and settings, and merges what comes back; everything that succeeded the first time is left exactly as it was. Because it works on the finished object, you can run it later, look at the failures first, or give it a different `model` for units the original consistently refuses or cannot fit in its context window. Each pass is recorded in the object's metadata, and `print()` and the audit trail say what was backfilled and by which model, so a result coded by two instruments is disclosed as one.
 
@@ -89,8 +89,8 @@ The two are for different failures. Retries catch what a moment's wait fixes, in
 
 | Failure | Stage and mechanism | Setting or action |
 |---|---|---|
-| Rate limit, timeout, or transient server error | ellmer retries the transport request | `options(ellmer_max_tries = n)` |
-| Empty, malformed, refused, or schema-invalid response on the JSON path | quallmer retries that unit during the run | `json_retries = n` |
+| Rate limit, timeout, or transient server error | ellmer retries the transport request, on every path and for every request quallmer sends | `options(ellmer_max_tries = n)` |
+| Unusable response on the JSON path after ellmer's tries: empty, malformed, refused, schema-invalid, or still failing on transport | quallmer sends the unit again during the run, each request with ellmer's tries afresh | `json_retries = n` |
 | Anything still failed after the run | quallmer makes another pass over the failed units | `backfill = n` in `qlm_code()`, or `qlm_backfill(..., passes = n)` |
 | Input exceeds the model's context window | Backfill with a larger-context model | `qlm_backfill(..., model = )` |
 | Output was cut off at `max_tokens` | Backfill with a higher output limit | `qlm_backfill(..., params = ellmer::params(max_tokens = ))` |
