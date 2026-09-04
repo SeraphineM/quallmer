@@ -35,18 +35,23 @@
 #'   it alongside `structured = "structured"` is an error. What is still
 #'   unusable after the run is left for `backfill`.
 #' @param on_error character; what a failed request does to the rest of a
-#'   parallel run, passed to [ellmer::parallel_chat_structured()] or, on the
+#'   parallel call, passed to [ellmer::parallel_chat_structured()] or, on the
 #'   JSON path, [ellmer::parallel_chat()]. `"continue"` (the default) attempts
 #'   every unit and records each failure in the `.error` column, for
 #'   [qlm_failures()] to list and [qlm_backfill()] to re-code. `"return"`
 #'   stops submitting new requests after the first failure, waits for those in
-#'   flight, and returns what it has; the units never sent come back as rows
-#'   of `NA` with no `.error`, which for a codebook whose required properties
-#'   are all arrays or nested objects cannot be told from a valid empty
-#'   answer, so keep `"continue"` on a run that is to be completed with
-#'   [qlm_backfill()]. `"stop"` raises the first failure as an error. Applies
-#'   to parallel runs only: the batch API has no equivalent, so it cannot be
-#'   set with `batch = TRUE`.
+#'   flight, and returns what the call has. On the structured path that call
+#'   is the run: the units never sent come back as rows of `NA` with no
+#'   `.error`, which for a codebook whose required properties are all arrays
+#'   or nested objects cannot be told from a valid empty answer, so keep
+#'   `"continue"` on a run that is to be completed with [qlm_backfill()]. On
+#'   the JSON path the call is one wave: a unit the wave did not reach counts
+#'   as unanswered, so `json_retries` sends it again in a later wave, each
+#'   stopped in turn at its first failure, and whatever is still unsent at the
+#'   end is recorded in `.error`; `json_retries = 0` stops after the first
+#'   wave. `"stop"` raises the first failure as an error. Applies to parallel
+#'   runs only: the batch API has no equivalent, so it cannot be set with
+#'   `batch = TRUE`.
 #' @param backfill Logical, integer or `NULL`; whether to complete the run
 #'   before it is returned, by re-coding the units still failed with
 #'   [qlm_backfill()], using the same model and settings. `FALSE` or `0`
@@ -232,9 +237,11 @@
 #' at the first refusal, so every unit is sent once before the run comes
 #' back and is diagnosed. Each such request is refused before anything is
 #' generated, so it is cheap, but on a large corpus there are many of them,
-#' paced by `rpm`. `on_error = "return"` stops after the first wave, at the
-#' cost described under that argument. The JSON path has always behaved this
-#' way.
+#' paced by `rpm`. `on_error = "return"` stops the structured call after the
+#' first wave, at the cost described under that argument; on the JSON path,
+#' which has always sent every unit, `json_retries` sends the units a wave
+#' did not reach in later waves, so `"return"` stops after the first wave
+#' there only with `json_retries = 0`.
 #'
 #' @section Truncated responses:
 #'
