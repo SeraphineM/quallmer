@@ -20,8 +20,8 @@
 #'   `on_error` are forwarded to [ellmer::parallel_chat()]; `include_tokens` and
 #'   `include_cost` are honoured here, as they are on the default path.
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
-#' @param max_retries Number of repair attempts for each empty, unparsable, or
-#'   schema-invalid response. Default is 2.
+#' @param json_retries Number of additional requests for each empty, unparsable,
+#'   refused or schema-invalid response. Default is 2.
 #' @param model_hint What `model_name_hint()` answered when [qlm_code()]
 #'   already asked it for this run, so a wholly rejected run asks the provider
 #'   at most once; `NULL` when it has not been asked.
@@ -34,7 +34,7 @@
 #' @keywords internal
 #' @noRd
 code_handler_json <- function(x, codebook, model, chat_args, execution_args,
-                              batch = FALSE, max_retries = 2L,
+                              batch = FALSE, json_retries = 2L,
                               model_hint = NULL, cost_message = TRUE) {
   # The handler is reached via do.call(), so report guard failures against
   # qlm_code() rather than against an anonymous function.
@@ -58,12 +58,12 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
       "i" = "This is what produces the one-row-per-unit result that {.fn qlm_code} returns."
     ), call = error_call)
   }
-  if (length(max_retries) != 1L || is.na(max_retries) || !is.numeric(max_retries) ||
-      max_retries < 0 || max_retries != trunc(max_retries)) {
-    cli::cli_abort("{.arg max_retries} must be a single non-negative integer.",
+  if (length(json_retries) != 1L || is.na(json_retries) || !is.numeric(json_retries) ||
+      json_retries < 0 || json_retries != trunc(json_retries)) {
+    cli::cli_abort("{.arg json_retries} must be a single non-negative integer.",
                    call = error_call)
   }
-  max_retries <- as.integer(max_retries)
+  json_retries <- as.integer(json_retries)
 
   # JSON mode belongs in the raw request body. User api_args are kept, but
   # response_format is deliberately overwritten so that validation always has
@@ -121,7 +121,7 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
                             "cached_input_tokens", "cost"))
   )
 
-  for (attempt in 0L:max_retries) {
+  for (attempt in 0L:json_retries) {
     if (!length(pending)) {
       break
     }
@@ -264,7 +264,7 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 
   attr(results, "qlm_backend_meta") <- list(
     backend = "json_mode",
-    max_retries = max_retries,
+    json_retries = json_retries,
     n_invalid = sum(failed),
     unpriced = unpriced
   )

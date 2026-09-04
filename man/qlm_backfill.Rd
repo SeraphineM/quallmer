@@ -4,7 +4,7 @@
 \alias{qlm_backfill}
 \title{Re-code the units a run failed on}
 \usage{
-qlm_backfill(x, ..., model = NULL, attempts = 2L)
+qlm_backfill(x, ..., model = NULL, passes = 2L)
 }
 \arguments{
 \item{x}{qlm_coded; a coded object produced by \code{\link[=qlm_code]{qlm_code()}} or \code{\link[=qlm_replicate]{qlm_replicate()}}.}
@@ -13,8 +13,8 @@ qlm_backfill(x, ..., model = NULL, attempts = 2L)
 passes, such as \code{params}, \code{max_active} or \code{on_error}. Any setting not
 overridden is restored from the original run, as \code{\link[=qlm_replicate]{qlm_replicate()}} does,
 with the same rule for credentials and endpoint settings when the
-provider changes. The codebook, \code{batch}, \code{name} and \code{backfill_attempts}
-cannot be set: \code{attempts} is the only bound on the number of passes.
+provider changes. The codebook, \code{batch}, \code{name} and \code{backfill} cannot be
+set: \code{passes} is the only bound on the number of passes.
 Nor can \code{include_tokens} and \code{include_cost}: usage is recorded as the run
 recorded it, so that the merged columns mean one thing. \code{prices} may be
 given, to cost the passes where the run's own rates do not carry (a
@@ -24,9 +24,9 @@ run to have recorded token counts and cost of its own to add to.}
 \item{model}{character or \code{NULL}; the model for the passes, in the form
 used by \code{\link[=qlm_code]{qlm_code()}}. \code{NULL} (default) uses the run's own model.}
 
-\item{attempts}{integer; the maximum number of passes. Default is 2. A pass that
-recovers nothing ends the backfill early, since the failures that remain
-are then evidently not transient.}
+\item{passes}{integer; the maximum number of passes. Default is 2. A pass
+that recovers nothing ends the backfill early, since the failures that
+remain are then evidently not transient.}
 }
 \value{
 \code{x}, with the recovered units filled in and \code{backfill} added to
@@ -127,6 +127,6 @@ filled <- qlm_backfill(filled, model = "deepseek/deepseek-chat")
 }
 \seealso{
 \code{\link[=qlm_failures]{qlm_failures()}} for the units a run failed on and why;
-\code{\link[=qlm_code]{qlm_code()}}, whose \code{backfill_attempts} completes a run in the same call;
+\code{\link[=qlm_code]{qlm_code()}}, whose \code{backfill} completes a run in the same call;
 \code{\link[=qlm_replicate]{qlm_replicate()}} to re-run a whole coding.
 }

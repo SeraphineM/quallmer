@@ -445,7 +445,7 @@ test_that("code_handler_json retries a content-filtered response and names the f
     result2 <- h2(
       x = "a", codebook = json_test_codebook(),
       model = "deepseek/deepseek-chat", chat_args = list(), execution_args = list(),
-      max_retries = 2
+      json_retries = 2
     ),
     "content filter"
   )
@@ -501,7 +501,7 @@ test_that("code_handler_json repairs an invalid response and sums usage across a
   expect_equal(result$cost, c(0.001, 0.002))
 })
 
-test_that("code_handler_json gives up after max_retries and records the reason", {
+test_that("code_handler_json gives up after json_retries and records the reason", {
   invalid <- list(text = "{\"score\":1,\"lab\":\"maybe\"}")
   h <- json_test_handler(list(invalid, invalid, invalid))
 
@@ -598,14 +598,14 @@ test_that("code_handler_json attributes each error to the right unit", {
   expect_true(is.na(messages[[4]]))
 })
 
-test_that("code_handler_json honours max_retries", {
+test_that("code_handler_json honours json_retries", {
   invalid <- list(text = "{\"score\":1,\"lab\":\"maybe\"}")
   calls <- new.env()
   h <- json_test_handler(list(invalid, invalid, invalid, invalid, invalid), calls = calls)
 
   suppressWarnings(h(
     x = "a", codebook = json_test_codebook(), model = "deepseek/deepseek-chat",
-    chat_args = list(), execution_args = list(), max_retries = 4
+    chat_args = list(), execution_args = list(), json_retries = 4
   ))
 
   expect_equal(calls$n, 5)
@@ -656,11 +656,11 @@ test_that("code_handler_json rejects unsupported requests", {
     "must have a schema created by"
   )
   expect_error(
-    code_handler_json("a", codebook, "deepseek", list(), list(), max_retries = -1),
+    code_handler_json("a", codebook, "deepseek", list(), list(), json_retries = -1),
     "single non-negative integer"
   )
   expect_error(
-    code_handler_json("a", codebook, "deepseek", list(), list(), max_retries = 1.5),
+    code_handler_json("a", codebook, "deepseek", list(), list(), json_retries = 1.5),
     "single non-negative integer"
   )
   expect_error(

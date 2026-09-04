@@ -72,7 +72,7 @@ learning.**
 - Uses the run’s own model and settings by default; a different model
   can be given for units the original consistently refuses or cannot
   fit, and the result then records which units came from which model.
-- `qlm_code(backfill_attempts = 2)` does this in the same call.
+- `qlm_code(backfill = 2)` does this in the same call.
 
 #### `qlm_segment()` (optional)
 

@@ -601,7 +601,7 @@ test_that("qlm_replicate does not carry tools across a replication", {
 })
 
 
-test_that("qlm_replicate carries max_retries only where it applies", {
+test_that("qlm_replicate carries json_retries only where it applies", {
   skip_if_not_installed("mockery")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
@@ -614,7 +614,7 @@ test_that("qlm_replicate carries max_retries only where it applies", {
       chat_args = list(name = model),
       execution_args = list(),
       batch = FALSE,
-      metadata = list(n_units = 1, backend = "json_mode", max_retries = 5L),
+      metadata = list(n_units = 1, backend = "json_mode", json_retries = 5L),
       name = "run1", call = quote(qlm_code())
     )
   }
@@ -629,13 +629,13 @@ test_that("qlm_replicate carries max_retries only where it applies", {
   f <- qlm_replicate
   mockery::stub(f, "qlm_code", capture)
   f(make("deepseek/deepseek-chat"), name = "run2")
-  expect_equal(seen$max_retries, 5L)
+  expect_equal(seen$json_retries, 5L)
 
   # JSON mode is now reachable for any provider, so the setting still applies
   # after a model change
   seen <- NULL
   f(make("deepseek/deepseek-chat"), model = "openai/gpt-4o-mini", name = "run3")
-  expect_equal(seen$max_retries, 5L)
+  expect_equal(seen$json_retries, 5L)
 })
 
 
@@ -667,9 +667,9 @@ test_that("qlm_replicate reproduces the path taken, not the mode requested", {
   # it validated locally. Replicating with "auto" would let an intermittently
   # conforming endpoint take the structured path instead and skip that
   # validation, making the two runs incomparable.
-  f(make(structured = "auto", backend = "json_mode", max_retries = 4L), name = "run2")
+  f(make(structured = "auto", backend = "json_mode", json_retries = 4L), name = "run2")
   expect_equal(seen$structured, "json")
-  expect_equal(seen$max_retries, 4L)
+  expect_equal(seen$json_retries, 4L)
 
   # Likewise the other way: a run that did take the structured path replicates
   # as "structured", so a failure surfaces rather than being papered over by a
@@ -677,8 +677,8 @@ test_that("qlm_replicate reproduces the path taken, not the mode requested", {
   seen <- NULL
   f(make(structured = "auto", backend = "structured"), name = "run3")
   expect_equal(seen$structured, "structured")
-  # max_retries has no meaning there, and supplying it is an error
-  expect_false("max_retries" %in% names(seen))
+  # json_retries has no meaning there, and supplying it is an error
+  expect_false("json_retries" %in% names(seen))
 
   # An explicit override still wins
   seen <- NULL
@@ -875,7 +875,7 @@ test_that("qlm_replicate leaves the coding path to a new provider", {
     codebook = codebook, data = c("t1", "t2"), input_type = "text",
     chat_args = list(name = "deepseek/deepseek-chat"), execution_args = list(),
     metadata = list(timestamp = Sys.time(), n_units = 2, backend = "json_mode",
-                    max_retries = 3L),
+                    json_retries = 3L),
     name = "original", call = quote(qlm_code(...)), parent = NULL
   )
 
@@ -890,13 +890,13 @@ test_that("qlm_replicate leaves the coding path to a new provider", {
   # Same provider: the JSON path and its retries travel
   f(coded)
   expect_equal(seen$args$structured, "json")
-  expect_equal(seen$args$max_retries, 3L)
+  expect_equal(seen$args$json_retries, 3L)
 
   # Another provider: the path does not, so qlm_code() chooses for it; the
   # retry budget still applies wherever JSON mode is taken
   f(coded, model = "openai/gpt-4o-mini")
   expect_null(seen$args$structured)
-  expect_equal(seen$args$max_retries, 3L)
+  expect_equal(seen$args$json_retries, 3L)
 
   # The same prefix at another base_url is another endpoint too: Qwen through
   # DashScope and Kimi through Moonshot enforce a schema quite differently
@@ -928,7 +928,9 @@ test_that("qlm_replicate validates backfill before coding anything", {
   )
   f <- qlm_replicate
   mockery::stub(f, "qlm_code", function(...) stop("a paid call was made"))
-  expect_error(f(coded, backfill = "yes"), "must be `TRUE`, `FALSE` or `NULL`")
+  expect_error(f(coded, backfill = "yes"), "single non-negative integer")
+  expect_error(f(coded, backfill = -1), "single non-negative integer")
+  expect_error(f(coded, backfill = 1.5), "single non-negative integer")
 })
 
 
@@ -975,7 +977,8 @@ test_that("qlm_replicate treats an explicit base_url = NULL as a change of endpo
 })
 
 
-test_that("qlm_replicate leaves completion to backfill, not backfill_attempts", {
+test_that("qlm_replicate hands an integer backfill on as given", {
+  skip_if_not_installed("mockery")
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Prompt", type_obj)
   coded <- new_qlm_coded(
@@ -985,7 +988,17 @@ test_that("qlm_replicate leaves completion to backfill, not backfill_attempts", 
     execution_args = list(), batch = FALSE,
     metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
   )
-  expect_error(qlm_replicate(coded, backfill_attempts = 2), "Use `backfill`")
+  seen <- new.env()
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", coded)
+  mockery::stub(f, "replay_backfill", function(result, parent, backfill = NULL) {
+    seen$backfill <- backfill
+    result
+  })
+  f(coded, backfill = 3)
+  expect_equal(seen$backfill, 3)
+  f(coded, backfill = 0)
+  expect_equal(seen$backfill, 0)
 })
 
 

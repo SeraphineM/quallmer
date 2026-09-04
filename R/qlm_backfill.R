@@ -20,8 +20,8 @@
 #'   passes, such as `params`, `max_active` or `on_error`. Any setting not
 #'   overridden is restored from the original run, as [qlm_replicate()] does,
 #'   with the same rule for credentials and endpoint settings when the
-#'   provider changes. The codebook, `batch`, `name` and `backfill_attempts`
-#'   cannot be set: `attempts` is the only bound on the number of passes.
+#'   provider changes. The codebook, `batch`, `name` and `backfill` cannot be
+#'   set: `passes` is the only bound on the number of passes.
 #'   Nor can `include_tokens` and `include_cost`: usage is recorded as the run
 #'   recorded it, so that the merged columns mean one thing. `prices` may be
 #'   given, to cost the passes where the run's own rates do not carry (a
@@ -29,9 +29,9 @@
 #'   run to have recorded token counts and cost of its own to add to.
 #' @param model character or `NULL`; the model for the passes, in the form
 #'   used by [qlm_code()]. `NULL` (default) uses the run's own model.
-#' @param attempts integer; the maximum number of passes. Default is 2. A pass that
-#'   recovers nothing ends the backfill early, since the failures that remain
-#'   are then evidently not transient.
+#' @param passes integer; the maximum number of passes. Default is 2. A pass
+#'   that recovers nothing ends the backfill early, since the failures that
+#'   remain are then evidently not transient.
 #'
 #' @details
 #' Which units are re-coded is decided afresh on every pass, from the object as
@@ -94,7 +94,7 @@
 #'   unchanged.
 #'
 #' @seealso [qlm_failures()] for the units a run failed on and why;
-#'   [qlm_code()], whose `backfill_attempts` completes a run in the same call;
+#'   [qlm_code()], whose `backfill` completes a run in the same call;
 #'   [qlm_replicate()] to re-run a whole coding.
 #'
 #' @examples
@@ -116,7 +116,7 @@
 #' }
 #'
 #' @export
-qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
+qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
   # Integrity first: the class, the run metadata, and .id being a key, since
   # the merge below is by .id; also upgrades an old metadata layout
   x <- check_qlm_coded(x)
@@ -128,11 +128,11 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
       "i" = "{.fn qlm_backfill} re-runs the model of a {.fn qlm_code} run on the units it failed on."
     ))
   }
-  if (length(attempts) != 1L || !is.numeric(attempts) || is.na(attempts) ||
-      attempts < 1 || attempts != trunc(attempts)) {
-    cli::cli_abort("{.arg attempts} must be a single positive integer.")
+  if (length(passes) != 1L || !is.numeric(passes) || is.na(passes) ||
+      passes < 1 || passes != trunc(passes)) {
+    cli::cli_abort("{.arg passes} must be a single positive integer.")
   }
-  attempts <- as.integer(attempts)
+  passes <- as.integer(passes)
   if (!is.null(model) && (!is.character(model) || length(model) != 1L || is.na(model))) {
     cli::cli_abort("{.arg model} must be a single string, or {.code NULL} for the run's own model.")
   }
@@ -150,14 +150,14 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
       "i" = "Backfill passes are always parallel calls over the failed units."
     ))
   }
-  # `attempts` is the bound on paid calls. Letting `backfill_attempts` through
-  # to the passes would nest up to that many further passes inside each one,
-  # multiplying the calls and losing the nested passes' provenance in the
-  # merge. `name` is set per pass; the object keeps the run's own name.
-  if ("backfill_attempts" %in% names(overrides)) {
+  # `passes` is the bound on paid calls. Letting qlm_code()'s `backfill`
+  # through to the passes would nest up to that many further passes inside
+  # each one, multiplying the calls and losing the nested passes' provenance
+  # in the merge. `name` is set per pass; the object keeps the run's own name.
+  if ("backfill" %in% names(overrides)) {
     cli::cli_abort(c(
-      "{.arg backfill_attempts} cannot be set in a backfill.",
-      "i" = "Use {.arg attempts} for the number of passes."
+      "{.arg backfill} cannot be set in a backfill.",
+      "i" = "Use {.arg passes} for the number of passes."
     ))
   }
   if ("name" %in% names(overrides)) {
@@ -205,9 +205,9 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
 
   ids <- as.character(x$.id)
   run_name <- meta_attr$user$name
-  passes <- list()
+  records <- list()
 
-  for (attempt in seq_len(attempts)) {
+  for (attempt in seq_len(passes)) {
     failed <- failed_units(x)
     if (!any(failed)) {
       if (attempt == 1L) {
@@ -234,7 +234,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
     }
 
     cli::cli_inform(c(
-      "i" = "Backfill pass {attempt} of {attempts}: re-coding {length(retry)} unit{?s} with {.val {restored$model}}."
+      "i" = "Backfill pass {attempt} of {passes}: re-coding {length(retry)} unit{?s} with {.val {restored$model}}."
     ))
 
     subset <- inputs_by_id(x, ids[retry])
@@ -246,7 +246,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
           model = restored$model,
           batch = FALSE,
           name = paste0(run_name %||% "run", "_backfill_", attempt),
-          backfill_attempts = 0L
+          backfill = FALSE
         ),
         call_args
       )),
@@ -273,7 +273,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
       # the provider may have billed it, so the trail must show it, and the
       # units it attempted can no longer claim a known usage total.
       x <- unknown_usage(x, ids[retry])
-      passes[[length(passes) + 1L]] <- backfill_pass(
+      records[[length(records) + 1L]] <- backfill_pass(
         model = if (model_changed) restored$model else NULL,
         overrides = overrides,
         attempted = ids[retry],
@@ -288,7 +288,7 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
     # What the pass was costed on is what qlm_code() settled, not what was
     # asked: rates it was given and did not need are not recorded on it.
     result_meta <- attr(result, "meta")
-    passes[[length(passes) + 1L]] <- backfill_pass(
+    records[[length(records) + 1L]] <- backfill_pass(
       model = if (model_changed) restored$model else NULL,
       overrides = overrides,
       attempted = ids[retry],
@@ -307,9 +307,9 @@ qlm_backfill <- function(x, ..., model = NULL, attempts = 2L) {
     }
   }
 
-  if (length(passes)) {
+  if (length(records)) {
     meta_attr <- attr(x, "meta")
-    meta_attr$object$backfill <- c(meta_attr$object$backfill, passes)
+    meta_attr$object$backfill <- c(meta_attr$object$backfill, records)
     attr(x, "meta") <- meta_attr
   }
   x
@@ -364,33 +364,34 @@ inputs_by_id <- function(x, ids) {
 #'
 #' @param result The freshly replicated `qlm_coded` object.
 #' @param parent The object it replicates.
-#' @param backfill `NULL` to replay the parent's passes if it had any, `TRUE`
-#'   to run a default [qlm_backfill()] regardless, `FALSE` to do neither.
+#' @param backfill `NULL` to replay the parent's passes if it had any; `TRUE`
+#'   or a positive integer to run a fresh [qlm_backfill()] of the default or
+#'   that many passes regardless; `FALSE` or `0` to do neither.
 #'
 #' @return `result`, possibly backfilled.
 #' @keywords internal
 #' @noRd
 replay_backfill <- function(result, parent, backfill = NULL) {
-  check_backfill_arg(backfill)
-  if (isFALSE(backfill)) {
-    return(result)
-  }
-  if (isTRUE(backfill)) {
-    return(qlm_backfill(result))
+  fresh <- backfill_passes(backfill, null = NULL)
+  if (!is.null(fresh)) {
+    if (fresh == 0L) {
+      return(result)
+    }
+    return(qlm_backfill(result, passes = fresh))
   }
 
-  passes <- attr(parent, "meta")$object$backfill
-  if (!length(passes)) {
+  recorded <- attr(parent, "meta")$object$backfill
+  if (!length(recorded)) {
     return(result)
   }
   cli::cli_inform(c(
-    "i" = "Replaying the {length(passes)} backfill pass{?es} of {.val {attr(parent, 'meta')$user$name}}."
+    "i" = "Replaying the {length(recorded)} backfill pass{?es} of {.val {attr(parent, 'meta')$user$name}}."
   ))
-  for (i in seq_along(passes)) {
+  for (i in seq_along(recorded)) {
     if (!any(failed_units(result))) {
       break
     }
-    pass <- passes[[i]]
+    pass <- recorded[[i]]
     # A parent read back from a trail records "<redacted>" where a pass was
     # given a credential; that is not a value to send.
     stripped <- drop_redacted_args(pass$overrides)
@@ -405,7 +406,7 @@ replay_backfill <- function(result, parent, backfill = NULL) {
     # the replication cannot take) are configuration, and propagate.
     replayed <- tryCatch(
       do.call(qlm_backfill, c(
-        list(result, model = pass$model, attempts = 1L),
+        list(result, model = pass$model, passes = 1L),
         stripped$args
       )),
       quallmer_backfill_error = function(e) e
@@ -433,24 +434,44 @@ replay_backfill <- function(result, parent, backfill = NULL) {
 }
 
 
-#' Check the `backfill` argument of qlm_replicate()
+#' Normalise a `backfill` argument to a number of passes
 #'
-#' Called at the top of [qlm_replicate()], before the replication is coded,
-#' so that a bad value is caught before a paid call rather than after it.
+#' `backfill` is shared by [qlm_code()] and [qlm_replicate()] and takes the
+#' same values in both: `FALSE` or `0` for no backfill, `TRUE` for
+#' [qlm_backfill()]'s own default number of passes, a positive integer for
+#' at most that many. `NULL` is contextual, so the caller says what it means:
+#' no backfill in a fresh run, which has no parent, and a replay of the
+#' parent's recorded passes in a replication. Called before any paid call,
+#' so that a bad value costs nothing.
 #'
-#' @param backfill The argument.
-#' @param call The call to report the error against.
+#' `TRUE` is recognised before the numeric test, so it means the default
+#' number of passes and not one pass by coercion.
 #'
-#' @return Invisibly `NULL`.
+#' @param backfill The argument as given.
+#' @param null What to return for `NULL`.
+#' @param call The call to report an error against.
+#'
+#' @return An integer number of passes, or `null`.
 #' @keywords internal
 #' @noRd
-check_backfill_arg <- function(backfill, call = rlang::caller_env()) {
-  if (!is.null(backfill) &&
-      (!is.logical(backfill) || length(backfill) != 1L || is.na(backfill))) {
-    cli::cli_abort("{.arg backfill} must be {.code TRUE}, {.code FALSE} or {.code NULL}.",
-                   call = call)
+backfill_passes <- function(backfill, null = 0L, call = rlang::caller_env()) {
+  if (is.null(backfill)) {
+    return(null)
   }
-  invisible(NULL)
+  if (isTRUE(backfill)) {
+    return(formals(qlm_backfill)$passes)
+  }
+  if (isFALSE(backfill)) {
+    return(0L)
+  }
+  if (length(backfill) != 1L || !is.numeric(backfill) || is.na(backfill) ||
+      backfill < 0 || backfill != trunc(backfill)) {
+    cli::cli_abort(paste0(
+      "{.arg backfill} must be {.code TRUE}, {.code FALSE}, {.code NULL} ",
+      "or a single non-negative integer."
+    ), call = call)
+  }
+  as.integer(backfill)
 }
 
 

@@ -11,8 +11,8 @@ qlm_code(
   ...,
   batch = FALSE,
   structured = c("auto", "structured", "json"),
-  max_retries = 2L,
-  backfill_attempts = 0L,
+  json_retries = 2L,
+  backfill = FALSE,
   prices = NULL,
   name = NULL,
   notes = NULL
@@ -53,20 +53,22 @@ and validates every response against the codebook locally. \code{"auto"} (the
 default) attempts the structured call and falls back to \code{"json"} if it
 fails. See Details for which to use.}
 
-\item{max_retries}{integer; the number of additional attempts made for a response that
-arrives intact but does not conform to the codebook schema. Applies on the
-JSON path only, so setting it alongside \code{structured = "structured"} is an
-error. Default is 2, giving at most three attempts per unit. This is
-separate from ellmer's transport-level retries for rate limits and server
-errors, which apply to every provider and are set with
-\code{options(ellmer_max_tries = )}.}
+\item{json_retries}{integer; the number of additional requests made for a
+unit whose response arrives empty, unparsable, refused, or not conforming
+to the codebook schema. Applies on the JSON path only, so setting it
+alongside \code{structured = "structured"} is an error. Default is 2, giving
+at most three requests per unit. This is separate from ellmer's
+transport-level retries for rate limits and server errors, which apply
+to every provider and are set with \code{options(ellmer_max_tries = )}, and
+from backfilling, which happens after the run; see \code{backfill}.}
 
-\item{backfill_attempts}{integer; the number of backfill passes to attempt
-for failed responses before the object is returned. Each pass re-codes
-the units still failed with \code{\link[=qlm_backfill]{qlm_backfill()}}, using the same model and
-settings, and is recorded in the object's metadata; a pass that recovers
-nothing ends the backfill early. Default is 0, no backfilling. See
-\code{\link[=qlm_backfill]{qlm_backfill()}} for what is retried and what is left alone.}
+\item{backfill}{whether to complete the run before it is returned, by
+re-coding the units still failed with \code{\link[=qlm_backfill]{qlm_backfill()}}, using the same
+model and settings. \code{FALSE} or \code{0} (default) leaves the run as it came
+back; \code{TRUE} makes the default number of passes, currently two; a
+positive integer makes at most that many. Each pass is recorded in the
+object's metadata, and a pass that recovers nothing ends the backfill
+early. See \code{\link[=qlm_backfill]{qlm_backfill()}} for what is retried and what is left alone.}
 
 \item{prices}{Optional. Rates for costing the run when ellmer cannot: a
 named numeric vector or list with \code{input} and \code{output}, and optionally
@@ -226,14 +228,14 @@ start rather than making a call it could not check, and says so. Use
 \code{"structured"} to rely on the provider regardless.
 
 On the JSON path, units that never validate have \code{NA} coded values and a
-\code{.error} list-column recording the reason, and \code{max_retries} controls how
+\code{.error} list-column recording the reason, and \code{json_retries} controls how
 many repair attempts each unit gets. On the structured path, a response
 from which ellmer could extract no structured data, which it reports only
 by warning, is likewise given an \code{.error}. On either path, \code{\link[=qlm_failures]{qlm_failures()}}
 lists the units that produced no usable coding, with the reason for each,
 and \code{print()} reports how many there were. Most such failures are
 transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes just those units and merges them
-back; \code{backfill_attempts} does that before returning. Batch processing and
+back; \code{backfill} does that before returning. Batch processing and
 image codebooks
 are not supported there, so \code{"auto"} will not fall back under
 \code{batch = TRUE}. The path actually taken is recorded in the run metadata as

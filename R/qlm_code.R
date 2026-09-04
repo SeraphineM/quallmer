@@ -26,19 +26,21 @@
 #'   and validates every response against the codebook locally. `"auto"` (the
 #'   default) attempts the structured call and falls back to `"json"` if it
 #'   fails. See Details for which to use.
-#' @param max_retries integer; the number of additional attempts made for a response that
-#'   arrives intact but does not conform to the codebook schema. Applies on the
-#'   JSON path only, so setting it alongside `structured = "structured"` is an
-#'   error. Default is 2, giving at most three attempts per unit. This is
-#'   separate from ellmer's transport-level retries for rate limits and server
-#'   errors, which apply to every provider and are set with
-#'   `options(ellmer_max_tries = )`.
-#' @param backfill_attempts integer; the number of backfill passes to attempt
-#'   for failed responses before the object is returned. Each pass re-codes
-#'   the units still failed with [qlm_backfill()], using the same model and
-#'   settings, and is recorded in the object's metadata; a pass that recovers
-#'   nothing ends the backfill early. Default is 0, no backfilling. See
-#'   [qlm_backfill()] for what is retried and what is left alone.
+#' @param json_retries integer; the number of additional requests made for a
+#'   unit whose response arrives empty, unparsable, refused, or not conforming
+#'   to the codebook schema. Applies on the JSON path only, so setting it
+#'   alongside `structured = "structured"` is an error. Default is 2, giving
+#'   at most three requests per unit. This is separate from ellmer's
+#'   transport-level retries for rate limits and server errors, which apply
+#'   to every provider and are set with `options(ellmer_max_tries = )`, and
+#'   from backfilling, which happens after the run; see `backfill`.
+#' @param backfill whether to complete the run before it is returned, by
+#'   re-coding the units still failed with [qlm_backfill()], using the same
+#'   model and settings. `FALSE` or `0` (default) leaves the run as it came
+#'   back; `TRUE` makes the default number of passes, currently two; a
+#'   positive integer makes at most that many. Each pass is recorded in the
+#'   object's metadata, and a pass that recovers nothing ends the backfill
+#'   early. See [qlm_backfill()] for what is retried and what is left alone.
 #' @param prices Optional. Rates for costing the run when ellmer cannot: a
 #'   named numeric vector or list with `input` and `output`, and optionally
 #'   `cached_input`, in US dollars per million tokens, for example
@@ -182,14 +184,14 @@
 #' `"structured"` to rely on the provider regardless.
 #'
 #' On the JSON path, units that never validate have `NA` coded values and a
-#' `.error` list-column recording the reason, and `max_retries` controls how
+#' `.error` list-column recording the reason, and `json_retries` controls how
 #' many repair attempts each unit gets. On the structured path, a response
 #' from which ellmer could extract no structured data, which it reports only
 #' by warning, is likewise given an `.error`. On either path, [qlm_failures()]
 #' lists the units that produced no usable coding, with the reason for each,
 #' and `print()` reports how many there were. Most such failures are
 #' transient, and [qlm_backfill()] re-codes just those units and merges them
-#' back; `backfill_attempts` does that before returning. Batch processing and
+#' back; `backfill` does that before returning. Batch processing and
 #' image codebooks
 #' are not supported there, so `"auto"` will not fall back under
 #' `batch = TRUE`. The path actually taken is recorded in the run metadata as
@@ -276,11 +278,11 @@
 qlm_code <- function(x, codebook, model, ...,
                      batch = FALSE,
                      structured = c("auto", "structured", "json"),
-                     max_retries = 2L, backfill_attempts = 0L, prices = NULL,
+                     json_retries = 2L, backfill = FALSE, prices = NULL,
                      name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
-  explicit_retries <- !missing(max_retries)
+  explicit_retries <- !missing(json_retries)
   explicit_structured <- !missing(structured)
   structured <- match.arg(structured)
 
@@ -289,12 +291,9 @@ qlm_code <- function(x, codebook, model, ...,
     codebook <- as_qlm_codebook(codebook)
   }
 
-  if (length(backfill_attempts) != 1L || !is.numeric(backfill_attempts) ||
-      is.na(backfill_attempts) || backfill_attempts < 0 ||
-      backfill_attempts != trunc(backfill_attempts)) {
-    cli::cli_abort("{.arg backfill_attempts} must be a single non-negative integer.")
-  }
-  backfill_attempts <- as.integer(backfill_attempts)
+  # Checked before any paid call; NULL means no backfill here, since a fresh
+  # run has no parent whose passes could be replayed
+  backfill <- backfill_passes(backfill)
 
   if (!inherits(codebook, "qlm_codebook")) {
     cli::cli_abort(c(
@@ -354,7 +353,7 @@ qlm_code <- function(x, codebook, model, ...,
   # so rather than accepting a value that will not be applied.
   if (explicit_retries && identical(structured, "structured")) {
     cli::cli_abort(c(
-      "{.arg max_retries} is not supported with {.code structured = \"structured\"}.",
+      "{.arg json_retries} is not supported with {.code structured = \"structured\"}.",
       "i" = "It applies to the JSON-mode path; use {.code structured = \"auto\"} or {.code \"json\"}.",
       "i" = "For transport-level retries on any provider, set {.code options(ellmer_max_tries = )}."
     ))
@@ -479,7 +478,7 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args,
       execution_args = execution_args,
       batch = batch,
-      max_retries = max_retries,
+      json_retries = json_retries,
       model_hint = model_hint,
       cost_message = is.null(attempt) && is.null(prices)
     )
@@ -521,7 +520,7 @@ qlm_code <- function(x, codebook, model, ...,
     R_version = paste(R.version$major, R.version$minor, sep = ".")
   )
 
-  # Fields contributed by a provider-specific handler (backend, max_retries, ...)
+  # Fields contributed by a provider-specific handler (backend, json_retries, ...)
   metadata <- c(metadata, backend_meta)
   if (!is.null(cost_note)) {
     metadata$cost_note <- cost_note
@@ -548,8 +547,8 @@ qlm_code <- function(x, codebook, model, ...,
   )
 
   # Complete the run in the same call, with the same model and settings
-  if (backfill_attempts > 0L) {
-    coded <- qlm_backfill(coded, attempts = backfill_attempts)
+  if (backfill > 0L) {
+    coded <- qlm_backfill(coded, passes = backfill)
   }
   coded
 }

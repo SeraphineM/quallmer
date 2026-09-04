@@ -42,15 +42,18 @@
 #'   (default), uses the batch setting from `x`. Set to `TRUE` to use batch
 #'   processing or `FALSE` to use parallel processing, regardless of the
 #'   original setting.
-#' @param backfill logical or `NULL`; whether to complete the replication with
-#'   [qlm_backfill()].
-#'   `NULL` (default) replays the passes recorded on `x`, if any, with the same
-#'   models and overrides in the same order; `TRUE` runs a default backfill
-#'   with the replication's own model whether or not `x` had one; `FALSE`
-#'   leaves the replication as it came back. A replayed pass that fails
-#'   outright is a warning, not an error: the replication and what earlier
-#'   passes recovered are kept, the failed pass is recorded with the units it
-#'   attempted, and no further passes are replayed.
+#' @param backfill whether to complete the replication with [qlm_backfill()],
+#'   taking the values [qlm_code()]'s `backfill` does. `NULL` (default)
+#'   replays the passes recorded on `x`, if any, with the same models and
+#'   overrides in the same order, so that a replication of a completed run is
+#'   completed on the same terms; `TRUE` or a positive integer runs a fresh
+#'   backfill with the replication's own model, of the default number of
+#'   passes or that many, whether or not `x` had one, and so does not repeat a
+#'   second model the parent's passes used; `FALSE` or `0` leaves the
+#'   replication as it came back. A replayed pass that fails outright is a
+#'   warning, not an error: the replication and what earlier passes recovered
+#'   are kept, the failed pass is recorded with the units it attempted, and
+#'   no further passes are replayed.
 #' @param name Optional name for this run. If `NULL`, defaults to the model
 #'   name (if changed) or `"replication_N"` where N is the replication count.
 #' @param notes Optional character string with descriptive notes about this
@@ -84,14 +87,8 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
   # present; also upgrades an old metadata layout
   x <- check_qlm_coded(x)
   # Checked before the replication is coded, not after: a bad value must not
-  # cost a paid call.
-  check_backfill_arg(backfill)
-  if ("backfill_attempts" %in% names(list(...))) {
-    cli::cli_abort(c(
-      "{.arg backfill_attempts} cannot be set in a replication.",
-      "i" = "Use {.arg backfill} to say how the replication is completed."
-    ))
-  }
+  # cost a paid call. The value itself is read again by replay_backfill().
+  backfill_passes(backfill, null = NULL)
 
   # Extract original components
   original_data <- attr(x, "data")
@@ -157,7 +154,7 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
 #'
 #' Everything the original run passed to [ellmer::chat()] -- `params`,
 #' `api_args`, `base_url`, `credentials` -- and to the execution function,
-#' merged with any overrides, plus the `structured` mode and `max_retries`
+#' merged with any overrides, plus the `structured` mode and `json_retries`
 #' derived from the path the run actually took. Used by [qlm_replicate()] and
 #' [qlm_backfill()], so that both re-run a coding with the settings it was
 #' made with.
@@ -265,7 +262,7 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   original_args <- c(original_chat_args, original_execution_args)
   call_args <- modifyList(original_args, overrides)
 
-  # `structured` and `max_retries` are formals of qlm_code(), so they are
+  # `structured` and `json_retries` are formals of qlm_code(), so they are
   # recorded in the run metadata rather than in chat_args. An explicit override
   # in `...` is left alone.
   #
@@ -285,7 +282,7 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   # same prefix enforce a schema quite differently), so with a new endpoint
   # the mode is left for qlm_code() to choose as it would for a fresh run.
   # The endpoint identity is the one computed above, prefix plus base_url.
-  # max_retries still travels, since JSON mode is reachable anywhere and the
+  # json_retries still travels, since JSON mode is reachable anywhere and the
   # setting is inert on the structured path.
   endpoint_changed <- !identical(original_endpoint, use_endpoint)
   original_backend <- if (endpoint_changed) NULL else meta_attr$object$backend
@@ -299,13 +296,14 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   if (!"structured" %in% names(call_args) && !is.null(original_mode)) {
     call_args$structured <- original_mode
   }
-  # max_retries has no effect on the purely structured path, where supplying it
+  # json_retries has no effect on the purely structured path, where supplying it
   # is an error, so carry it only where it can apply.
-  if (!"max_retries" %in% names(call_args) &&
+  if (!"json_retries" %in% names(call_args) &&
       !identical(call_args$structured, "structured")) {
-    original_retries <- meta_attr$user$max_retries
+    # Objects from development versions before the rename recorded max_retries
+    original_retries <- meta_attr$user$json_retries %||% meta_attr$user$max_retries
     if (!is.null(original_retries)) {
-      call_args$max_retries <- original_retries
+      call_args$json_retries <- original_retries
     }
   }
 

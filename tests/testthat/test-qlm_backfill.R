@@ -71,13 +71,13 @@ test_that("qlm_backfill rejects what it cannot backfill", {
   expect_error(qlm_backfill(data.frame(a = 1)), "must be a")
 
   run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = c(NA, NA)))
-  expect_error(qlm_backfill(run, attempts = 0), "single positive integer")
-  expect_error(qlm_backfill(run, attempts = c(1, 2)), "single positive integer")
+  expect_error(qlm_backfill(run, passes = 0), "single positive integer")
+  expect_error(qlm_backfill(run, passes = c(1, 2)), "single positive integer")
   expect_error(qlm_backfill(run, model = c("a", "b")), "single string")
   expect_error(qlm_backfill(run, codebook = codebook(run)), "codebook cannot be changed")
   expect_error(qlm_backfill(run, batch = TRUE), "cannot be set")
-  # `attempts` must be the only bound on paid calls, and the run keeps its name
-  expect_error(qlm_backfill(run, backfill_attempts = 3), "Use `attempts`")
+  # `passes` must be the only bound on paid calls, and the run keeps its name
+  expect_error(qlm_backfill(run, backfill = 3), "Use `passes`")
   expect_error(qlm_backfill(run, name = "retry"), "cannot be set")
 
   human <- qlm_humancoded(data.frame(.id = c("a", "b"), score = c(1L, 2L)), name = "coder")
@@ -122,7 +122,7 @@ test_that("qlm_backfill re-codes only the failed units and merges them in place"
   expect_equal(sent$model, "openai/gpt-4o-mini")
   expect_false(sent$batch)
   # Each pass is a single coding call, never a nested backfill
-  expect_equal(sent$backfill_attempts, 0L)
+  expect_false(sent$backfill)
   expect_equal(sent$params, list(temperature = 0))
   expect_equal(sent$on_error, "continue")
   expect_true(sent$include_tokens)
@@ -188,7 +188,7 @@ test_that("qlm_backfill makes a second pass for what the first did not recover",
   second <- data.frame(id = "b", score = 2L, note = NA_character_)
   f <- backfill_with(list(first, second), calls)
 
-  filled <- suppressMessages(f(run, attempts = 3))
+  filled <- suppressMessages(f(run, passes = 3))
 
   expect_equal(calls$n, 2)
   expect_equal(names(calls$args[[1]]$x), c("a", "b"))
@@ -211,7 +211,7 @@ test_that("qlm_backfill stops after a pass that recovers nothing", {
   nothing <- data.frame(id = c("a", "b"), score = c(NA_integer_, NA_integer_), note = NA_character_)
   f <- backfill_with(list(nothing, nothing, nothing), calls)
 
-  expect_message(filled <- f(run, attempts = 3), "No progress")
+  expect_message(filled <- f(run, passes = 3), "No progress")
   expect_equal(calls$n, 1)
   expect_equal(nrow(qlm_failures(filled)), 2)
 })
@@ -336,7 +336,7 @@ test_that("qlm_backfill re-derives the skip list from what a pass recorded", {
   second <- data.frame(id = "c", score = 3L, note = NA_character_)
   f <- backfill_with(list(first, second), calls)
 
-  filled <- suppressMessages(f(run, attempts = 3))
+  filled <- suppressMessages(f(run, passes = 3))
   expect_equal(calls$n, 2)
   expect_equal(names(calls$args[[1]]$x), c("a", "b", "c"))
   expect_equal(names(calls$args[[2]]$x), "c")
@@ -569,8 +569,8 @@ test_that("replay_backfill repeats the parent's passes, in order, until nothing 
   # A replication with two failures, and a stand-in backfill that fixes one
   # unit per call and records how it was called
   calls <- list()
-  fake_backfill <- function(x, ..., model = NULL, attempts = 2L) {
-    calls[[length(calls) + 1L]] <<- list(model = model, attempts = attempts, dots = list(...))
+  fake_backfill <- function(x, ..., model = NULL, passes = 2L) {
+    calls[[length(calls) + 1L]] <<- list(model = model, passes = passes, dots = list(...))
     i <- which(is.na(x$score))[1]
     x$score[i] <- 9L
     x
@@ -582,7 +582,7 @@ test_that("replay_backfill repeats the parent's passes, in order, until nothing 
   expect_message(out <- f(replication, parent), "Replaying the 2 backfill passes")
   expect_length(calls, 2)
   expect_null(calls[[1]]$model)
-  expect_equal(calls[[1]]$attempts, 1L)
+  expect_equal(calls[[1]]$passes, 1L)
   expect_equal(calls[[2]]$model, "deepseek/deepseek-chat")
   expect_equal(calls[[2]]$dots$params$max_tokens, 100)
   expect_equal(out$score, c(9L, 9L))
@@ -593,17 +593,24 @@ test_that("replay_backfill repeats the parent's passes, in order, until nothing 
   suppressMessages(f(one_gap, parent))
   expect_length(calls, 1)
 
-  # FALSE does nothing; TRUE runs a default backfill even with no passes on record
+  # FALSE and 0 do nothing; TRUE runs a default backfill even with no passes
+  # on record, and an integer that many passes, fresh rather than replayed
   calls <- list()
   expect_identical(f(replication, parent, backfill = FALSE), replication)
+  expect_identical(f(replication, parent, backfill = 0), replication)
   expect_length(calls, 0)
   plain <- make_run(data.frame(id = "a", score = 1L, note = NA_character_))
   expect_identical(f(replication, plain), replication)
   f(replication, plain, backfill = TRUE)
   expect_length(calls, 1)
-  expect_equal(calls[[1]]$attempts, 2L)
+  expect_equal(calls[[1]]$passes, 2L)
+  calls <- list()
+  f(replication, parent, backfill = 3)
+  expect_length(calls, 1)
+  expect_equal(calls[[1]]$passes, 3L)
+  expect_null(calls[[1]]$model)
 
-  expect_error(f(replication, parent, backfill = "yes"), "must be")
+  expect_error(f(replication, parent, backfill = "yes"), "single non-negative integer")
 })
 
 
@@ -797,7 +804,7 @@ test_that("replay_backfill does not send a credential the trail redacted (#154)"
   expect_equal(seen$api_headers, c(`anthropic-beta` = "b"))
   expect_equal(seen$base_url, "https://h/v1")
   expect_equal(seen$params, list(temperature = 0))
-  expect_equal(seen$attempts, 1L)
+  expect_equal(seen$passes, 1L)
 })
 
 usage_rows <- function(id, score, cost, tokens = 10L) {
@@ -815,7 +822,7 @@ test_that("a pass that throws leaves the usage of the units it attempted unknown
     if ((calls$n %||% 0L) >= 1L) stop("HTTP 503.")
     fake(...)
   })
-  expect_warning(out <- suppressMessages(f(run, attempts = 3L)), "pass 2 failed")
+  expect_warning(out <- suppressMessages(f(run, passes = 3L)), "pass 2 failed")
 
   # a: untouched. b: recovered by pass 1, both attempts' usage added up.
   # c: attempted again by the pass that threw, which may have been billed,
