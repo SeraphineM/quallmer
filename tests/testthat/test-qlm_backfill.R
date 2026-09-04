@@ -970,13 +970,17 @@ test_that("the shipped incomplete run carries a transient failure and a cut-off"
   expect_false(is.null(attr(incomplete, "meta")))
   expect_equal(names(incomplete)[1:4], c(".id", "sentiment", "rating", "evidence"))
 
+  # The mix the workflow guide quotes, in its prose and in the backfill
+  # transcript: one request timed out, three responses cut off. The
+  # generating script accepts only a run with these counts; a regeneration
+  # that changes them has to change the guide too.
   failures <- qlm_failures(incomplete)
-  expect_gt(nrow(failures), 0)
-  expect_lt(nrow(failures), nrow(incomplete))
-  # Both kinds the guide names: one a backfill recovers, one it leaves alone
-  expect_true(any(cut_off(failures$.error)))
-  expect_true(any(!cut_off(failures$.error)))
-  expect_true(all(vapply(failures$.error, inherits, logical(1), "condition")))
+  expect_equal(nrow(failures), 4L)
+  timed_out <- !cut_off(failures$.error)
+  expect_equal(sum(cut_off(failures$.error)), 3L)
+  expect_equal(sum(timed_out), 1L)
+  expect_s3_class(failures$.error[[which(timed_out)]], "httr2_failure")
+  expect_match(failures$reason[timed_out], "Timeout was reached", fixed = TRUE)
 
   # A timed-out request records ellmer's condition, which carries the
   # request; the credential header must not have travelled with it

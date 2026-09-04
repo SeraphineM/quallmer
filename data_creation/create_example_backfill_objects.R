@@ -14,8 +14,11 @@
 # low max_tokens produces the failure a backfill leaves alone: a response cut
 # off at the limit, which re-sending the same request cannot fix. Which units
 # time out, and which quoted sentence exceeds the limit, vary from run to run,
-# so the run is repeated until it holds both kinds of failure and the backfill
-# recovers every unit it re-codes.
+# so the run is repeated until it comes back with exactly the mix the guide
+# quotes, one request timed out and three responses cut off, and the backfill
+# recovers the one. The workflow guide's prose and the transcript it quotes,
+# and the tests on the shipped objects, all state those counts, so a
+# regeneration must reproduce them; to change the mix, change all three.
 #
 # create_example_objects.R produces the other objects in the file and keeps
 # these two; this script keeps those. Run from the package root.
@@ -68,18 +71,28 @@ model <- "anthropic/claude-haiku-4-5"
 max_tokens <- 90L  # low enough that the longer quotations are cut off
 timeout_s <- 1.5   # just inside the model's usual latency; it should catch a
                    # few requests, not all, so tune it to the day's latency
-max_runs <- 40L
+max_runs <- 60L
+n_timed_out <- 1L  # the mix the guide quotes; see the note at the top
+n_cut_off <- 3L
 
-is_cut_off <- function(errors) {
-  vapply(errors, inherits, logical(1), "quallmer_truncation_error")
+is_cut_off <- function(failures) {
+  vapply(failures$.error, inherits, logical(1), "quallmer_truncation_error")
+}
+# ellmer records a timeout as an httr2 transport failure whose cause names
+# it; any other failure (a refusal, an extraction error) is not the one the
+# guide describes, and a run holding one is not accepted
+is_timed_out <- function(failures) {
+  vapply(failures$.error, inherits, logical(1), "httr2_failure") &
+    grepl("Timeout was reached", failures$reason, fixed = TRUE)
 }
 
-accepted <- FALSE
-for (run in seq_len(max_runs)) {
+code_with_short_timeout <- function() {
   # ellmer would retry a timed-out request; one try, so that the timeout is
-  # recorded as the failure, as it is after an outage that outlasts the tries
-  options(ellmer_timeout_s = timeout_s, ellmer_max_tries = 1L)
-  incomplete <- suppressWarnings(suppressMessages(qlm_code(
+  # recorded as the failure, as it is after an outage that outlasts the
+  # tries. Both options are restored whatever happens, to what they were.
+  old <- options(ellmer_timeout_s = timeout_s, ellmer_max_tries = 1L)
+  on.exit(options(old), add = TRUE)
+  suppressWarnings(suppressMessages(qlm_code(
     texts, codebook,
     model = model,
     params = ellmer::params(max_tokens = max_tokens),
@@ -89,17 +102,21 @@ for (run in seq_len(max_runs)) {
       "so that the run came back incomplete"
     )
   )))
-  options(ellmer_timeout_s = NULL, ellmer_max_tries = NULL)
+}
+
+accepted <- FALSE
+for (run in seq_len(max_runs)) {
+  incomplete <- code_with_short_timeout()
 
   failures <- qlm_failures(incomplete)
-  cut_off <- is_cut_off(failures$.error)
+  cut_off <- is_cut_off(failures)
+  timed_out <- is_timed_out(failures)
+  other <- !cut_off & !timed_out
   cat(sprintf(
-    "Run %d: %d failed of %d (%d cut off, %d timed out)\n",
-    run, nrow(failures), nrow(incomplete), sum(cut_off), sum(!cut_off)
+    "Run %d: %d failed of %d (%d cut off, %d timed out, %d other)\n",
+    run, nrow(failures), nrow(incomplete), sum(cut_off), sum(timed_out), sum(other)
   ))
-  # Both kinds present, and enough of the run coded for the object to read
-  # as a run that mostly worked
-  if (!any(cut_off) || all(cut_off) || nrow(failures) > 4L) next
+  if (sum(cut_off) != n_cut_off || sum(timed_out) != n_timed_out || any(other)) next
 
   # The pass runs with the run's own model and settings and today's default
   # timeout. Its messages are kept, for the guide to quote.
@@ -116,7 +133,8 @@ for (run in seq_len(max_runs)) {
     "  backfill: attempted %d, recovered %d\n",
     length(pass$attempted), length(pass$recovered)
   ))
-  if (setequal(pass$recovered, pass$attempted)) {
+  if (setequal(pass$attempted, failures$.id[timed_out]) &&
+      setequal(pass$recovered, pass$attempted)) {
     accepted <- TRUE
     break
   }
