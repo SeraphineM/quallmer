@@ -67,6 +67,7 @@ pkgdown::check_pkgdown()  # Validate pkgdown configuration
 
 **Important**:
 - Articles requiring API keys must be built locally and deployed via `make deploy-articles`
+- The Makefile sets `QUALLMER_LIVE_ARTICLES=1` for those builds; an article whose runs cost money checks it and renders its code unrun without it, so a plain `pkgdown::build_site()` bills nothing
 - The CI workflow preserves existing articles on gh-pages using `clean: false` in the deploy action
 - `make articles`, `make site`, and `make deploy-articles` automatically knit README.md before running
 

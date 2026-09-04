@@ -33,7 +33,9 @@ test_that("tool records describe tools without their code, and are recognised as
   records <- tool_records(list(web_search, lookup))
   expect_equal(records[[1]]$name, "web_search")
   expect_equal(records[[1]]$type, "hosted")
-  expect_equal(records[[2]], list(name = "lookup", type = "custom", description = "Looks things up."))
+  expect_equal(records[[2]]$name, "lookup")
+  expect_equal(records[[2]]$type, "custom")
+  expect_equal(records[[2]]$description, "Looks things up.")
   expect_true(is.character(records[[1]]$description))
 
   expect_true(is_tool_record(records))
@@ -55,4 +57,29 @@ test_that("has_hosted_tool and format_tools read objects and records alike", {
   expect_false(has_hosted_tool(list()))
   expect_equal(format_tools(list(web_search, lookup)), "web_search (hosted), lookup (custom)")
   expect_equal(format_tools(records), "web_search (hosted), lookup (custom)")
+})
+
+test_that("tool records keep the configuration that decides what a tool can do (#122)", {
+  a <- ellmer::openai_tool_web_search(allowed_domains = "example.com")
+  b <- ellmer::openai_tool_web_search(allowed_domains = "wikipedia.org")
+  ra <- tool_records(list(a))[[1]]
+  rb <- tool_records(list(b))[[1]]
+  expect_false(identical(ra, rb))
+  expect_equal(ra$config$filters$allowed_domains, "example.com")
+  expect_equal(rb$config$filters$allowed_domains, "wikipedia.org")
+  expect_true(is_tool_record(list(ra, rb)))
+
+  echo <- ellmer::tool(function(x) x, name = "echo", description = "d",
+                       arguments = list(x = ellmer::type_string("s")))
+  rc <- tool_records(list(echo))[[1]]
+  expect_null(rc$config)
+  expect_s3_class(rc$arguments, "ellmer::TypeObject")
+  expect_true(is.list(rc$annotations))
+  expect_false(any(vapply(rc, is.function, logical(1))))
+})
+
+test_that("as_tool_records wraps a bare tool", {
+  expect_true(is_tool_record(as_tool_records(web_search)))
+  expect_true(is_tool_record(as_tool_records(lookup)))
+  expect_equal(as_tool_records(lookup)[[1]]$name, "lookup")
 })

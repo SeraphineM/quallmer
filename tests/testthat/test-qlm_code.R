@@ -1836,3 +1836,27 @@ test_that("the trail keeps a run's tools by description, and none of a custom to
   bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
   expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
 })
+
+test_that("qlm_code requires batch to be a single logical, so tools cannot slip past it", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  web_search <- ellmer::openai_tool_web_search()
+  for (bad in list(1, NA, c(TRUE, FALSE), "TRUE", 0)) {
+    expect_error(qlm_code("a", codebook, model = "openai/gpt-4o-mini", batch = bad),
+                 "must be `TRUE` or `FALSE`")
+    expect_error(qlm_code("a", codebook, model = "openai/gpt-4o-mini", batch = bad, tools = web_search),
+                 "must be `TRUE` or `FALSE`")
+  }
+})
+
+test_that("a trail says tool definitions were kept, and does not call them credentials (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = ellmer::openai_tool_web_search())
+  msgs <- capture_messages(qlm_trail(coded))
+  expect_true(any(grepl("Tool definitions recorded for \"run", msgs)))
+  expect_false(any(grepl("Credential values", msgs)))
+})

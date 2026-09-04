@@ -314,6 +314,12 @@ qlm_code <- function(x, codebook, model, ...,
     cli::cli_abort("{.arg json_retries} must be a single non-negative integer.")
   }
 
+  # `batch` gates the dispatch below with `if (batch)`, which accepts any
+  # truthy value; the tools check has to see the same value, so settle it
+  # first
+  if (!is.logical(batch) || length(batch) != 1L || is.na(batch)) {
+    cli::cli_abort("{.arg batch} must be {.code TRUE} or {.code FALSE}.")
+  }
   # Checked before any paid call, and refused with batch, which cannot send
   # tools; see check_tools()
   tools <- check_tools(tools, batch = batch)
@@ -345,24 +351,6 @@ qlm_code <- function(x, codebook, model, ...,
   # before any request is spent, rather than in the constructor afterwards.
   if (!is.null(names(x))) {
     check_ids(names(x), what = "{.code names(x)}")
-  }
-
-  # A single tool may be passed directly rather than wrapped in a list; ellmer
-  # tool objects are S7 objects, so is.list() reliably distinguishes the two.
-  if (!is.null(tools) && !is.list(tools)) {
-    tools <- list(tools)
-  }
-  # ellmer has no single shared parent class for tools: custom tools from
-  # ellmer::tool() are "ellmer::ToolDef", provider built-ins (e.g.
-  # ellmer::openai_tool_web_search()) are "ellmer::ToolBuiltIn" -- both must
-  # be checked explicitly.
-  is_ellmer_tool <- function(t) inherits(t, "ellmer::ToolDef") || inherits(t, "ellmer::ToolBuiltIn")
-  if (!is.null(tools) && !all(vapply(tools, is_ellmer_tool, logical(1)))) {
-    cli::cli_abort(c(
-      "{.arg tools} must be a list of {.pkg ellmer} tool objects, or a single one.",
-      "i" = "Create tools with {.fn ellmer::tool} or a provider's built-in tool
-             function, e.g. {.fn ellmer::openai_tool_web_search}."
-    ))
   }
 
   # Get valid argument names from ellmer functions
@@ -592,11 +580,8 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Add model to chat_args for easy access
   chat_args$name <- model
-  # Record registered tools for reproducibility (e.g. inspecting via qlm_trail()).
-  if (!is.null(tools)) {
-    chat_args$tools <- tools
-  }
-  # Record registered tools for reproducibility (e.g. inspecting via qlm_trail()).
+  # Recorded for print(), the trail, and whatever completes or reproduces
+  # the run; a tool changes the instrument (#122)
   if (!is.null(tools)) {
     chat_args$tools <- tools
   }
@@ -655,7 +640,13 @@ default_structured_mode <- function(model) {
 #' is `NA` in every row, which is what an endpoint that accepted the schema and
 #' ignored it produces.
 #'
-#' @param x,codebook,model,chat_args,execution_args,batch As in [qlm_code()].
+#' @param x,codebook,model,chat_args,execution_args,batch,tools As in
+#'   [qlm_code()]; `tools` already checked by `check_tools()`, and registered
+#'   on every chat this function builds.
+#' @param allow_skip Whether a codebook on which a failed structured call
+#'   would be invisible may be sent to the JSON path instead; `TRUE` under
+#'   `structured = "auto"` without batch.
+#' @param cost_message Whether to say so when the cost will be `NA`.
 #'
 #' @return A list with `ok`, and either `value` (the results) or `error`.
 #' @keywords internal

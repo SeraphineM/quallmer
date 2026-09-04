@@ -4,7 +4,12 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>")
+# The runs below make about fifty provider requests, some with web search,
+# and need OpenAI and Anthropic keys. They run only when the site's articles
+# are being built for deployment, which the Makefile signals; a plain
+# pkgdown::build_site() in a development session renders the code unrun.
+live <- nzchar(Sys.getenv("QUALLMER_LIVE_ARTICLES"))
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>", eval = live)
 ```
 
 A language model answers from what it was trained on. Ask it for a figure from a web page and it will give you a figure, but unless it can reach the page, the figure comes from its memory of what such pages said, and the same question asked twice gets two answers. This tutorial shows how to give a model live web access through `qlm_code()`'s `tools` argument, why that turns an unreliable extraction into a reliable one, and how quallmer records that the tool was used, since a run with web access is a different instrument from one without.

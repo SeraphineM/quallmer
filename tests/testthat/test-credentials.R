@@ -282,3 +282,38 @@ test_that("the trail keeps tools by description, and a replay does not send desc
   expect_length(kept$dropped, 0)
   expect_identical(kept$args$tools, list(web_search))
 })
+
+test_that("a bare tool in a backfill's overrides is recorded, not serialised (#122)", {
+  secret <- "b4r3t00l"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "d")
+  })
+  web_search <- ellmer::openai_tool_web_search()
+  # A backfill keeps `...` as given: one tool, unwrapped
+  meta <- list(object = list(
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    backfill = list(
+      list(overrides = list(tools = lookup), attempted = "a", recovered = "a"),
+      list(overrides = list(tools = web_search), attempted = "b", recovered = "b")
+    )
+  ))
+  out <- redact_meta(meta)
+  expect_true(is_tool_record(out$object$backfill[[1]]$overrides$tools))
+  expect_equal(out$object$backfill[[1]]$overrides$tools[[1]]$name, "lookup")
+  expect_equal(out$object$backfill[[2]]$overrides$tools[[1]]$type, "hosted")
+  expect_length(grepRaw(secret, serialize(out, NULL), fixed = TRUE), 0)
+  # And a bare tool on the run itself, should one ever be recorded that way
+  bare <- list(object = list(chat_args = list(name = "m", tools = lookup)))
+  expect_true(is_tool_record(redact_meta(bare)$object$chat_args$tools))
+})
+
+test_that("redact_call() replaces an inline tools expression and keeps a name (#122)", {
+  inline <- quote(qlm_code(x, cb, tools = ellmer::tool(function() "SECRET", name = "t", description = "d")))
+  expect_identical(redact_call(inline), quote(qlm_code(x, cb, tools = "<redacted>")))
+  listed <- quote(qlm_code(x, cb, tools = list(ellmer::openai_tool_web_search())))
+  expect_identical(redact_call(listed), quote(qlm_code(x, cb, tools = "<redacted>")))
+  named <- quote(qlm_code(x, cb, tools = my_tools))
+  expect_identical(redact_call(named), named)
+  expect_false(any(grepl("SECRET", deparse(redact_call(inline)), fixed = TRUE)))
+})

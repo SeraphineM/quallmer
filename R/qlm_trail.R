@@ -94,6 +94,7 @@ qlm_trail <- function(..., path = NULL) {
   # Extract runs from all objects
   runs <- list()
   redacted <- integer()
+  tools_kept <- integer()
   for (i in seq_along(objects)) {
     obj <- objects[[i]]
 
@@ -122,7 +123,14 @@ qlm_trail <- function(..., path = NULL) {
     # the .rds and the report agree; see redact_meta().
     redacted_meta <- redact_meta(meta_attr)
     if (!identical(redacted_meta, meta_attr)) {
-      redacted <- c(redacted, i)
+      # Two different things may have changed, and the message must not call
+      # a tool definition a credential
+      if (!identical(without_tools(redacted_meta), without_tools(meta_attr))) {
+        redacted <- c(redacted, i)
+      }
+      if (!identical(only_tools(redacted_meta), only_tools(meta_attr))) {
+        tools_kept <- c(tools_kept, i)
+      }
       meta_attr <- redacted_meta
       attr(obj, "meta") <- meta_attr
     }
@@ -227,12 +235,19 @@ qlm_trail <- function(..., path = NULL) {
     class = "qlm_trail"
   )
 
+  indices <- vapply(runs, function(r) r$object_index, integer(1))
   if (length(redacted) > 0) {
-    indices <- vapply(runs, function(r) r$object_index, integer(1))
     redacted_runs <- names(runs)[indices %in% redacted]
     cli::cli_alert_info(paste(
       "Credential values recorded for {.val {redacted_runs}} are replaced by",
       "{.val {REDACTED}} in the trail."
+    ))
+  }
+  if (length(tools_kept) > 0) {
+    tool_runs <- names(runs)[indices %in% tools_kept]
+    cli::cli_alert_info(paste(
+      "Tool definitions recorded for {.val {tool_runs}} are kept by name,",
+      "type and configuration only in the trail."
     ))
   }
 
@@ -1136,4 +1151,41 @@ is_local_endpoint <- function(identity) {
   }
 
   host %in% c("localhost", "127.0.0.1", "::1", "0.0.0.0")
+}
+
+
+#' The metadata with its tool records removed, and only its tool records
+#'
+#' For telling a credential redaction from a tool one when the trail says
+#' what it changed.
+#'
+#' @param meta A `meta` attribute.
+#'
+#' @return `meta` without tools, or a list of just the tools.
+#' @keywords internal
+#' @noRd
+without_tools <- function(meta) {
+  if (!is.null(meta$object$chat_args)) {
+    meta$object$chat_args[["tools"]] <- NULL
+  }
+  if (is.call(meta$object$call) && "tools" %in% names(meta$object$call)) {
+    meta$object$call[["tools"]] <- NULL
+  }
+  if (length(meta$object$backfill)) {
+    meta$object$backfill <- lapply(meta$object$backfill, function(pass) {
+      if (!is.null(pass$overrides)) {
+        pass$overrides[["tools"]] <- NULL
+      }
+      pass
+    })
+  }
+  meta
+}
+
+only_tools <- function(meta) {
+  list(
+    run = meta$object$chat_args[["tools"]],
+    call = if (is.call(meta$object$call)) meta$object$call[["tools"]],
+    passes = lapply(meta$object$backfill, function(pass) pass$overrides[["tools"]])
+  )
 }

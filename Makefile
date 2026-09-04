@@ -4,14 +4,16 @@
 readme:
 	Rscript -e "rmarkdown::render('README.Rmd', quiet = TRUE)"
 
-# Build all articles locally (with updated README)
+# Build all articles locally (with updated README). QUALLMER_LIVE_ARTICLES
+# lets articles that make provider requests run them; unset, they render
+# their code unrun, so a development build of the site bills nothing.
 articles: readme
-	Rscript -e "pkgdown::build_articles()"
+	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_articles()"
 
 # Build a specific article
 # Usage: make article NAME=pkgdown/getting-started/workflow
 article:
-	Rscript -e "pkgdown::build_article('$(NAME)')"
+	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_article('$(NAME)')"
 
 # Deploy articles and workshop materials to gh-pages without touching other content
 deploy-articles: readme
@@ -26,4 +28,4 @@ deploy-articles: readme
 
 # Full local site build (with updated README)
 site: readme
-	Rscript -e "pkgdown::build_site()"
+	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_site()"

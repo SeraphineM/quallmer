@@ -26,9 +26,12 @@ url_arg_names <- c("base_url", "endpoint")
 #'   (`https://user:token@host`) or a credential-named query parameter
 #'   (`?api_key=...`), in `chat_args` and as a string literal in the call.
 #'   Other query parameters, such as Azure's `api-version`, are kept.
-#' - Registered `tools`, replaced in `chat_args` by their name, type and
-#'   description: a custom tool is an R function, and a closure serialised
-#'   to the `.rds` carries its environment, as a credentials callback does.
+#' - Registered `tools`, replaced in `chat_args` by their name, type,
+#'   description and configuration: a custom tool is an R function, and a
+#'   closure serialised to the `.rds` carries its environment, as a
+#'   credentials callback does. In the call, a `tools` argument written as
+#'   anything but a variable name is replaced, since an inline
+#'   `ellmer::tool()` definition carries its function's source.
 #'
 #' Only literals are redacted from the call. An argument given as a variable
 #' or an expression, `api_key = key` or `api_key = Sys.getenv("KEY")`, names
@@ -201,8 +204,9 @@ redact_chat_args <- function(chat_args) {
     }
   }
   # A custom tool wraps an R function, whose environment would go into the
-  # file with it; the trail keeps what the tools were, not their code
-  if (length(chat_args[["tools"]])) {
+  # file with it; the trail keeps what the tools were, not their code. A
+  # backfill's overrides hold `...` as given, so this may be one bare tool.
+  if (!is.null(chat_args[["tools"]])) {
     chat_args[["tools"]] <- as_tool_records(chat_args[["tools"]])
   }
 
@@ -237,6 +241,10 @@ redact_call <- function(call) {
       call[[i]] <- redact_header_expr(value)
     } else if (identical(nm, "credentials")) {
       call[[i]] <- redact_credentials_expr(value)
+    } else if (identical(nm, "tools") && !is.symbol(value)) {
+      # An inline tool definition can hold an R function and anything the
+      # function holds; only a name that points elsewhere is safe to keep
+      call[[i]] <- REDACTED
     } else if (nm %in% url_arg_names && is.character(value)) {
       call[[i]] <- redact_url(value)
     }

@@ -63,33 +63,55 @@ check_tools <- function(tools, batch = FALSE, call = rlang::caller_env()) {
 #'
 #' What a run records about its tools for anyone reading the object later:
 #' the name, whether the provider runs it (`hosted`) or R does (`custom`),
-#' and the description the model saw. A custom tool wraps an R function,
-#' and a closure carries its environment with it into a saved file, so the
-#' trail keeps these records rather than the objects, as it keeps a
+#' the description the model saw, and the configuration that decides what
+#' the tool can do. For a hosted tool that is the JSON the provider was
+#' sent, which is where a web search's allowed domains, user location and
+#' web-access switch live; two searches restricted to different domains are
+#' different instruments and must not record alike. For a custom tool it is
+#' the argument schema and annotations. The R function of a custom tool is
+#' left out: a closure carries its environment with it into a saved file,
+#' so the trail keeps these records rather than the objects, as it keeps a
 #' credential callback's description rather than the callback.
 #'
 #' @param tools A list of tool objects.
 #'
-#' @return A list of records, each `list(name, type, description)`.
+#' @return A list of records, each with `name`, `type`, `description`, and
+#'   `config` (hosted) or `arguments` and `annotations` (custom).
 #' @keywords internal
 #' @noRd
 tool_records <- function(tools) {
-  lapply(tools, function(tl) list(
-    name = attr(tl, "name", exact = TRUE) %||% NA_character_,
-    type = if (inherits(tl, "ellmer::ToolBuiltIn")) "hosted" else "custom",
-    description = attr(tl, "description", exact = TRUE) %||% NA_character_
-  ))
+  lapply(tools, function(tl) {
+    record <- list(
+      name = attr(tl, "name", exact = TRUE) %||% NA_character_,
+      type = if (inherits(tl, "ellmer::ToolBuiltIn")) "hosted" else "custom",
+      description = attr(tl, "description", exact = TRUE) %||% NA_character_
+    )
+    if (identical(record$type, "hosted")) {
+      record$config <- attr(tl, "json", exact = TRUE)
+    } else {
+      record$arguments <- attr(tl, "arguments", exact = TRUE)
+      record$annotations <- attr(tl, "annotations", exact = TRUE)
+    }
+    record
+  })
 }
 
 
-#' Tool records from either tool objects or records already made
+#' Tool records from tool objects, a bare tool, or records already made
 #'
-#' @param tools A list of tool objects, or of records from `tool_records()`.
+#' A bare tool arrives from a backfill's recorded overrides, which keep `...`
+#' as given before [qlm_code()] wraps it, so it is wrapped here too.
+#'
+#' @param tools A list of tool objects, one bare tool object, or a list of
+#'   records from `tool_records()`.
 #'
 #' @return A list of records.
 #' @keywords internal
 #' @noRd
 as_tool_records <- function(tools) {
+  if (is_ellmer_tool(tools)) {
+    tools <- list(tools)
+  }
   if (!length(tools)) {
     return(list())
   }

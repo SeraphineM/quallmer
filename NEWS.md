@@ -29,12 +29,13 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
-* `qlm_code()` gains a `tools` argument for registering \pkg{ellmer} tools,
+* `qlm_code()` gains a `tools` argument for registering `ellmer` tools,
   such as a provider's hosted web-search tool, on the chat before coding.
   Registered tools are recorded on the object, disclosed by `print()` and
   `qlm_trail()`, carried to backfill passes and to a replication on the same
   endpoint, kept in the trail by name, type and description rather than as
-  objects, and refused with `batch = TRUE`, which cannot send them. A custom
+  objects but with their configuration, and refused with `batch = TRUE`,
+  which cannot send them. A custom
   tool takes effect on the JSON path only, and a run with a hosted tool says
   in its cost note that the tool's calls are billed outside the token cost
   (#122, @SeraphineM). Documentation: added the "Coding with web-search

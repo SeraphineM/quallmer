@@ -965,3 +965,25 @@ test_that("a backfill pass registers the run's tools, unless the provider change
                  "not carrying over endpoint-specific argument: `tools`")
   expect_null(calls$args[[1]]$tools)
 })
+
+test_that("a backfill given a bare tool can be written to a trail (#122)", {
+  skip_if_not_installed("mockery")
+  secret <- "b4ckf1llt00l"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "d")
+  })
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_))
+  f <- backfill_with(list(data.frame(id = "b", score = 2L, note = NA_character_)))
+  filled <- suppressMessages(f(run, tools = lookup))
+  expect_true(is_ellmer_tool(qlm_meta(filled, "backfill", type = "object")[[1]]$overrides$tools))
+
+  stem <- tempfile()
+  msgs <- capture_messages(qlm_trail(filled, path = stem))
+  expect_true(any(grepl("Tool definitions recorded", msgs)))
+  recorded <- attr(qlm_trail(filled)$runs[[1]]$coded, "meta")$object$backfill[[1]]$overrides$tools
+  expect_true(is_tool_record(recorded))
+  rds_file <- paste0(stem, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+})
