@@ -73,6 +73,7 @@ metadata for reproducibility.</p>
 <span>  batch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  structured <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"structured"</span>, <span class="st">"json"</span><span class="op">)</span>,</span>
 <span>  json_retries <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  on_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"continue"</span>, <span class="st">"return"</span>, <span class="st">"stop"</span><span class="op">)</span>,</span>
 <span>  backfill <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  prices <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -141,6 +142,27 @@ it alongside <code>structured = "structured"</code> is an error. What is still
 unusable after the run is left for <code>backfill</code>.</p></dd>
 
 
+<dt id="arg-on-error">on_error<a class="anchor" aria-label="anchor" href="#arg-on-error"></a></dt>
+<dd><p>character; what a failed request does to the rest of a
+parallel call, passed to <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code> or, on the
+JSON path, <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat()</a></code>. <code>"continue"</code> (the default) attempts
+every unit and records each failure in the <code>.error</code> column, for
+<code><a href="qlm_failures.html">qlm_failures()</a></code> to list and <code><a href="qlm_backfill.html">qlm_backfill()</a></code> to re-code. <code>"return"</code>
+stops submitting new requests after the first failure, waits for those in
+flight, and returns what the call has. On the structured path that call
+is the run: the units never sent come back as rows of <code>NA</code> with no
+<code>.error</code>, which for a codebook whose required properties are all arrays
+or nested objects cannot be told from a valid empty answer, so keep
+<code>"continue"</code> on a run that is to be completed with <code><a href="qlm_backfill.html">qlm_backfill()</a></code>. On
+the JSON path the call is one wave: a unit the wave did not reach counts
+as unanswered, so <code>json_retries</code> sends it again in a later wave, each
+stopped in turn at its first failure, and whatever is still unsent at the
+end is recorded in <code>.error</code>; <code>json_retries = 0</code> stops after the first
+wave. <code>"stop"</code> raises the first failure as an error. Applies to parallel
+runs only: the batch API has no equivalent, so it cannot be set with
+<code>batch = TRUE</code>.</p></dd>
+
+
 <dt id="arg-backfill">backfill<a class="anchor" aria-label="anchor" href="#arg-backfill"></a></dt>
 <dd><p>Logical, integer or <code>NULL</code>; whether to complete the run
 before it is returned, by re-coding the units still failed with
@@ -195,7 +217,8 @@ based on their names.</p>
 <p>Progress indicators and error handling are provided by the underlying
 <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code> or <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code>
 function. Set <code>verbose = TRUE</code> to see progress messages during coding.
-Retry logic for API failures should be configured through ellmer's options.</p>
+Retry logic for API failures should be configured through ellmer's options;
+what a failure does to the rest of a parallel run is <code>on_error</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="provider-specific-parameters">Provider-specific parameters<a class="anchor" aria-label="anchor" href="#provider-specific-parameters"></a></h2>
@@ -344,6 +367,15 @@ providers whose listing is known to cover every name they will invoke
 (Bedrock, for one, invokes inference profiles its listing omits). Where
 it cannot run, or the name is on the list, the provider's own error is
 reported unchanged.</p>
+<p>Under the default <code>on_error = "continue"</code> the parallel call does not stop
+at the first refusal, so every unit is sent once before the run comes
+back and is diagnosed. Each such request is refused before anything is
+generated, so it is cheap, but on a large corpus there are many of them,
+paced by <code>rpm</code>. <code>on_error = "return"</code> stops the structured call after the
+first wave, at the cost described under that argument; on the JSON path,
+whose default has always been <code>"continue"</code>, <code>json_retries</code> sends the
+units a wave did not reach in later waves, so <code>"return"</code> stops after the
+first wave there only with <code>json_retries = 0</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="truncated-responses">Truncated responses<a class="anchor" aria-label="anchor" href="#truncated-responses"></a></h2>
@@ -379,7 +411,8 @@ to be hit and detectable when it is.</p>
 which submits jobs to the provider's batch API. This is typically more
 cost-effective but has longer turnaround times. The <code>path</code> argument specifies
 where batch results are cached, <code>wait</code> controls whether to wait for completion,
-and <code>ignore_hash</code> can force reprocessing of cached results.</p>
+and <code>ignore_hash</code> can force reprocessing of cached results. <code>on_error</code> does
+not apply: the batch API has no equivalent.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
