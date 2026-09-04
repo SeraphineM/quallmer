@@ -59,6 +59,7 @@ importFrom(stats,
   ave,
   na.omit
 )
+importFrom(tibble,tibble)
 importFrom(utils,
   head,
   modifyList

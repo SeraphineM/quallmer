@@ -946,3 +946,78 @@ test_that("an ellmer-priced pass on a run costed from supplied rates is disclose
   report <- readLines(paste0(stem, ".qmd"))
   expect_true(any(grepl("^\\*\\*Cost \\(backfill pass 1\\):\\*\\* from ellmer's price table$", report)))
 })
+
+
+# Shipped example objects (#173) ---------------------------------------------
+
+# The workflow guide and the examples of qlm_failures() and qlm_backfill()
+# read these from inst/extdata; the guide's prose depends on the shape
+# checked here, not on the particular units.
+
+shipped_examples <- function() {
+  readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+}
+
+cut_off <- function(errors) {
+  vapply(errors, inherits, logical(1), "quallmer_truncation_error")
+}
+
+test_that("the shipped incomplete run carries a transient failure and a cut-off", {
+  incomplete <- shipped_examples()$example_coded_incomplete
+
+  expect_s3_class(incomplete, "qlm_coded")
+  # Saved in the current metadata layout, not upgraded on read
+  expect_false(is.null(attr(incomplete, "meta")))
+  expect_equal(names(incomplete)[1:4], c(".id", "sentiment", "rating", "evidence"))
+
+  # The mix the workflow guide quotes, in its prose and in the backfill
+  # transcript: one request timed out, three responses cut off. The
+  # generating script accepts only a run with these counts; a regeneration
+  # that changes them has to change the guide too.
+  failures <- qlm_failures(incomplete)
+  expect_equal(nrow(failures), 4L)
+  timed_out <- !cut_off(failures$.error)
+  expect_equal(sum(cut_off(failures$.error)), 3L)
+  expect_equal(sum(timed_out), 1L)
+  expect_s3_class(failures$.error[[which(timed_out)]], "httr2_failure")
+  expect_match(failures$reason[timed_out], "Timeout was reached", fixed = TRUE)
+
+  # A timed-out request records ellmer's condition, which carries the
+  # request; the credential header must not have travelled with it
+  serialised <- rawToChar(serialize(incomplete, NULL, ascii = TRUE))
+  expect_false(grepl("sk-ant-", serialised, fixed = TRUE))
+})
+
+test_that("the shipped backfilled run recovered exactly the transient failures", {
+  examples <- shipped_examples()
+  incomplete <- examples$example_coded_incomplete
+  filled <- examples$example_coded_backfilled
+
+  before <- qlm_failures(incomplete)
+  after <- qlm_failures(filled)
+  transient <- before$.id[!cut_off(before$.error)]
+  terminal <- before$.id[cut_off(before$.error)]
+
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_length(passes, 1L)
+  expect_setequal(passes[[1]]$attempted, transient)
+  expect_setequal(passes[[1]]$recovered, transient)
+  expect_null(passes[[1]]$model)
+
+  # What is left is what a backfill cannot fix, and only that
+  expect_setequal(after$.id, terminal)
+  expect_true(all(cut_off(after$.error)))
+
+  # Everything coded the first time is untouched, in the same order
+  expect_equal(filled$.id, incomplete$.id)
+  untouched <- !incomplete$.id %in% before$.id
+  fields <- c("sentiment", "rating", "evidence")
+  expect_equal(
+    as.data.frame(filled[untouched, fields]),
+    as.data.frame(incomplete[untouched, fields])
+  )
+  expect_false(anyNA(filled$sentiment[filled$.id %in% transient]))
+
+  expect_output(print(filled), "# Backfill: 1 pass, recovered", fixed = TRUE)
+  expect_output(print(qlm_trail(filled)), "Backfill:", fixed = TRUE)
+})

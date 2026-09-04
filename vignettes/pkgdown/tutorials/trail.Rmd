@@ -14,6 +14,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   eval = FALSE
 )
+library(quallmer)
 ```
 
 The `qlm_trail()` function creates audit trails following Lincoln and Guba's (1985) framework for establishing trustworthiness in qualitative research. It captures the complete decision history of your coding workflow.
@@ -116,6 +117,16 @@ The print output shows:
 - Notes documenting why each run was performed
 - Comparison/validation summaries
 - Whether the chain is complete
+
+A run completed by `qlm_backfill()` says so in its trail. The object below ships with the package: a run that came back with failures, backfilled once (the workflow guide walks through it), so this runs without a key:
+
+```{r, eval = TRUE}
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+trail <- qlm_trail(examples$example_coded_backfilled)
+trail
+```
+
+The Quarto report described below carries the same line, as **Backfill:** among the run's process notes, and a pass costed on other rates than the run gets a **Cost** line of its own.
 
 ## Saving the trail
 

@@ -108,16 +108,26 @@ value. \code{\link[=qlm_replicate]{qlm_replicate()}} replays these passes on a r
 replication of a completed run is completed on the same terms.
 }
 \examples{
-\dontrun{
-coded <- qlm_code(texts, codebook, model = "openai/gpt-4o-mini")
-qlm_failures(coded)
+# A run that came back incomplete, and what qlm_backfill() made of it. Both
+# were coded once and saved with the package (see data_creation/ in the
+# source), so they can be looked at without a key.
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+incomplete <- examples$example_coded_incomplete
+incomplete
+qlm_failures(incomplete)
 
-filled <- qlm_backfill(coded)
+# What qlm_backfill(incomplete) returned: the timed-out unit re-coded, the
+# responses cut off at max_tokens left alone, and the pass on record
+filled <- examples$example_coded_backfilled
+filled
 qlm_failures(filled)
 qlm_meta(filled, "backfill", type = "object")
 
+\dontrun{
+filled <- qlm_backfill(incomplete)
+
 # Responses cut off at the output limit are retried only with a higher one
-filled <- qlm_backfill(coded, params = ellmer::params(max_tokens = 32000))
+filled <- qlm_backfill(filled, params = ellmer::params(max_tokens = 2000))
 
 # Units one model refuses or cannot fit, coded by another; the result
 # records which units came from which model

@@ -44,7 +44,17 @@
 #'
 #' @examples
 #' examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+#'
+#' # A complete run: zero rows
 #' qlm_failures(examples$example_coded_sentiment)
+#'
+#' # A run that came back incomplete: a request that timed out, and responses
+#' # cut off at max_tokens
+#' qlm_failures(examples$example_coded_incomplete)
+#'
+#' # The same run after qlm_backfill(): the timed-out unit recovered, the
+#' # cut-off ones left alone, since re-sending the request cannot fix them
+#' qlm_failures(examples$example_coded_backfilled)
 #'
 #' @export
 qlm_failures <- function(x) {
