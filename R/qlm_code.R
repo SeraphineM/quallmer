@@ -20,15 +20,26 @@
 #'   that provider). Passed to the `name` argument of [ellmer::chat()].
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
-#' @param tools Optional list of `ellmer` tool objects to register on the chat
-#'   before coding, e.g. a provider's hosted web-search tool
+#' @param tools Optional list of \pkg{ellmer} tool objects to register on the
+#'   chat before coding: a provider's hosted web-search tool
 #'   ([ellmer::openai_tool_web_search()], [ellmer::claude_tool_web_search()],
 #'   [ellmer::google_tool_web_search()]) or a custom tool from [ellmer::tool()].
-#'   A single tool may be passed directly (it is wrapped in a list). Tools
-#'   cannot be passed through `...` because `ellmer`'s `chat_*()` constructors
-#'   have no `tools` argument -- they must be registered on the chat object
-#'   after it is constructed, via `chat$register_tool()`, which is what this
-#'   argument does on your behalf. Default is `NULL` (no tools registered).
+#'   A single tool may be passed directly. Default is `NULL`, no tools.
+#'
+#'   Tools change the instrument: with a hosted web search the model draws
+#'   on live sources rather than its training data, so they are recorded on
+#'   the object, disclosed by `print()` and [qlm_trail()], carried to backfill
+#'   passes and to a replication on the same endpoint (a provider's hosted
+#'   tool belongs to that provider), and kept in the trail as name, type and
+#'   description rather than as objects.
+#'
+#'   Three limits. A hosted tool takes effect on both coding paths, but a
+#'   custom tool only on the JSON path: [ellmer::parallel_chat_structured()],
+#'   which the structured path uses, sends a custom tool's definition and
+#'   runs no tool-calling loop, so the model may request it and get no
+#'   result. Tools cannot be used with `batch = TRUE`, which does not send
+#'   them. And a hosted tool's calls are billed by the provider outside
+#'   token pricing, so the run's cost is tokens only, as its cost note says.
 #' @param structured character; how the output schema is obtained. `"structured"` uses
 #'   [ellmer::parallel_chat_structured()] and trusts the provider to enforce
 #'   the schema. `"json"` asks for JSON, puts the schema in the system prompt,
@@ -64,15 +75,6 @@
 #'   instead of [ellmer::parallel_chat_structured()]. Batch processing is more
 #'   cost-effective for large jobs but may have longer turnaround times.
 #'   Default is `FALSE`. See [ellmer::batch_chat_structured()] for details.
-#' @param tools Optional list of `ellmer` tool objects to register on the chat
-#'   before coding, e.g. a provider's hosted web-search tool
-#'   ([ellmer::openai_tool_web_search()], [ellmer::claude_tool_web_search()],
-#'   [ellmer::google_tool_web_search()]) or a custom tool from [ellmer::tool()].
-#'   A single tool may be passed directly (it is wrapped in a list). Tools
-#'   cannot be passed through `...` because `ellmer`'s `chat_*()` constructors
-#'   have no `tools` argument -- they must be registered on the chat object
-#'   after it is constructed, via `chat$register_tool()`, which is what this
-#'   argument does on your behalf. Default is `NULL` (no tools registered).
 #' @param ... Additional arguments passed to [ellmer::chat()],
 #'   [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()].
 #'   Arguments recognized by [ellmer::parallel_chat_structured()] or
@@ -312,23 +314,9 @@ qlm_code <- function(x, codebook, model, ...,
     cli::cli_abort("{.arg json_retries} must be a single non-negative integer.")
   }
 
-  # A single tool may be passed directly rather than wrapped in a list; ellmer
-  # tool objects are S7 objects, so is.list() reliably distinguishes the two.
-  if (!is.null(tools) && !is.list(tools)) {
-    tools <- list(tools)
-  }
-  # ellmer has no single shared parent class for tools: custom tools from
-  # ellmer::tool() are "ellmer::ToolDef", provider built-ins (e.g.
-  # ellmer::openai_tool_web_search()) are "ellmer::ToolBuiltIn" -- both must
-  # be checked explicitly.
-  is_ellmer_tool <- function(t) inherits(t, "ellmer::ToolDef") || inherits(t, "ellmer::ToolBuiltIn")
-  if (!is.null(tools) && !all(vapply(tools, is_ellmer_tool, logical(1)))) {
-    cli::cli_abort(c(
-      "{.arg tools} must be a list of {.pkg ellmer} tool objects, or a single one.",
-      "i" = "Create tools with {.fn ellmer::tool} or a provider's built-in tool
-             function, e.g. {.fn ellmer::openai_tool_web_search}."
-    ))
-  }
+  # Checked before any paid call, and refused with batch, which cannot send
+  # tools; see check_tools()
+  tools <- check_tools(tools, batch = batch)
 
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
@@ -541,6 +529,7 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args,
       execution_args = execution_args,
       batch = batch,
+      tools = tools,
       json_retries = json_retries,
       model_hint = model_hint,
       cost_message = is.null(attempt) && is.null(prices)
@@ -566,6 +555,15 @@ qlm_code <- function(x, codebook, model, ...,
   results <- settled$results
   prices <- settled$prices
   cost_note <- settled$cost_note
+  # A hosted tool's calls are billed by the provider outside token pricing,
+  # so a costed run with one is tokens only, and the note must say so even
+  # where ellmer priced the tokens itself and there would be no note
+  if (isTRUE(execution_args$include_cost) && has_hosted_tool(tools)) {
+    cost_note <- paste0(
+      cost_note %||% "from ellmer's price table",
+      "; tokens only, hosted tool calls are billed separately and not counted"
+    )
+  }
 
   # Build metadata list
   metadata <- list(
@@ -683,8 +681,8 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     # because ellmer's chat_*() constructors have no `tools` parameter -- tools
     # are only registered via chat$register_tool(), which requires the chat
     # object to already exist.
-    for (tool in tools) {
-      chat$register_tool(tool)
+    for (tl in tools) {
+      chat$register_tool(tl)
     }
     chat
   }
@@ -1346,6 +1344,9 @@ print.qlm_coded <- function(x, ...) {
   } else {
     cat("# Codebook: ", codebook_attr$name, "\n", sep = "")
     cat("# Model:    ", meta_attr$object$chat_args$name %||% "unknown", "\n", sep = "")
+    if (length(meta_attr$object$chat_args$tools)) {
+      cat("# Tools:    ", format_tools(meta_attr$object$chat_args$tools), "\n", sep = "")
+    }
   }
 
   # Show if this is a gold standard

@@ -47,15 +47,26 @@ instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_st
 cost-effective for large jobs but may have longer turnaround times.
 Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
 
-\item{tools}{Optional list of \code{ellmer} tool objects to register on the chat
-before coding, e.g. a provider's hosted web-search tool
+\item{tools}{Optional list of \pkg{ellmer} tool objects to register on the
+chat before coding: a provider's hosted web-search tool
 (\code{\link[ellmer:openai_tool_web_search]{ellmer::openai_tool_web_search()}}, \code{\link[ellmer:claude_tool_web_search]{ellmer::claude_tool_web_search()}},
 \code{\link[ellmer:google_tool_web_search]{ellmer::google_tool_web_search()}}) or a custom tool from \code{\link[ellmer:tool]{ellmer::tool()}}.
-A single tool may be passed directly (it is wrapped in a list). Tools
-cannot be passed through \code{...} because \code{ellmer}'s \verb{chat_*()} constructors
-have no \code{tools} argument -- they must be registered on the chat object
-after it is constructed, via \code{chat$register_tool()}, which is what this
-argument does on your behalf. Default is \code{NULL} (no tools registered).}
+A single tool may be passed directly. Default is \code{NULL}, no tools.
+
+Tools change the instrument: with a hosted web search the model draws
+on live sources rather than its training data, so they are recorded on
+the object, disclosed by \code{print()} and \code{\link[=qlm_trail]{qlm_trail()}}, carried to backfill
+passes and to a replication on the same endpoint (a provider's hosted
+tool belongs to that provider), and kept in the trail as name, type and
+description rather than as objects.
+
+Three limits. A hosted tool takes effect on both coding paths, but a
+custom tool only on the JSON path: \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}},
+which the structured path uses, sends a custom tool's definition and
+runs no tool-calling loop, so the model may request it and get no
+result. Tools cannot be used with \code{batch = TRUE}, which does not send
+them. And a hosted tool's calls are billed by the provider outside
+token pricing, so the run's cost is tokens only, as its cost note says.}
 
 \item{structured}{character; how the output schema is obtained. \code{"structured"} uses
 \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} and trusts the provider to enforce

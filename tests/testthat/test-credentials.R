@@ -254,3 +254,31 @@ test_that("redacted_args_note() reads correctly for one and for several", {
   expect_match(redacted_args_note("api_key"), "^`api_key` carries a value redacted .* it is not sent\\. Supply it in `\\.\\.\\.` if the endpoint needs it\\.$")
   expect_match(redacted_args_note(c("api_key", "base_url")), "^`api_key`, `base_url` carry values .* they are not sent\\. Supply them .* needs them\\.$")
 })
+
+test_that("the trail keeps tools by description, and a replay does not send descriptions (#122)", {
+  web_search <- ellmer::openai_tool_web_search()
+  secret <- "t00l3cret"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "d")
+  })
+  meta <- list(object = list(
+    chat_args = list(name = "openai/gpt-4o-mini", tools = list(web_search, lookup)),
+    backfill = list(list(overrides = list(tools = list(lookup)), attempted = "a", recovered = "a"))
+  ))
+  out <- redact_meta(meta)
+  expect_true(is_tool_record(out$object$chat_args$tools))
+  expect_equal(vapply(out$object$chat_args$tools, `[[`, "", "name"), c("web_search", "lookup"))
+  expect_true(is_tool_record(out$object$backfill[[1]]$overrides$tools))
+  # The unredacted metadata serialises the closure's environment, with the
+  # secret in it; the redacted metadata carries nothing of the kind
+  expect_true(length(grepRaw(secret, serialize(meta, NULL), fixed = TRUE)) > 0)
+  expect_length(grepRaw(secret, serialize(out, NULL), fixed = TRUE), 0)
+
+  dropped <- drop_redacted_args(out$object$chat_args)
+  expect_equal(dropped$dropped, "tools")
+  expect_null(dropped$args$tools)
+  kept <- drop_redacted_args(list(tools = list(web_search)))
+  expect_length(kept$dropped, 0)
+  expect_identical(kept$args$tools, list(web_search))
+})

@@ -26,6 +26,9 @@ url_arg_names <- c("base_url", "endpoint")
 #'   (`https://user:token@host`) or a credential-named query parameter
 #'   (`?api_key=...`), in `chat_args` and as a string literal in the call.
 #'   Other query parameters, such as Azure's `api-version`, are kept.
+#' - Registered `tools`, replaced in `chat_args` by their name, type and
+#'   description: a custom tool is an R function, and a closure serialised
+#'   to the `.rds` carries its environment, as a credentials callback does.
 #'
 #' Only literals are redacted from the call. An argument given as a variable
 #' or an expression, `api_key = key` or `api_key = Sys.getenv("KEY")`, names
@@ -119,6 +122,11 @@ drop_redacted_args <- function(args) {
       dropped <- c(dropped, arg)
     }
   }
+  # Tools read back from a trail are descriptions, not objects to register
+  if (is_tool_record(args[["tools"]])) {
+    args[["tools"]] <- NULL
+    dropped <- c(dropped, "tools")
+  }
 
   list(args = args, dropped = dropped)
 }
@@ -191,6 +199,11 @@ redact_chat_args <- function(chat_args) {
     if (is.character(chat_args[[arg]])) {
       chat_args[[arg]] <- redact_url(chat_args[[arg]])
     }
+  }
+  # A custom tool wraps an R function, whose environment would go into the
+  # file with it; the trail keeps what the tools were, not their code
+  if (length(chat_args[["tools"]])) {
+    chat_args[["tools"]] <- as_tool_records(chat_args[["tools"]])
   }
 
   chat_args

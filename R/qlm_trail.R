@@ -520,6 +520,11 @@ generate_trail_report <- function(trail, file) {
     if (!is.null(run$chat_args$name)) {
       lines <- c(lines, paste("**Model:**", run$chat_args$name))
     }
+    # A run with a tool registered was coded by a different instrument from
+    # one without, and the report has to say so (#122)
+    if (length(run$chat_args$tools)) {
+      lines <- c(lines, paste("**Tools:**", format_tools(run$chat_args$tools)))
+    }
     if (!is.null(backfill_summary(run$backfill))) {
       lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
     }

@@ -946,3 +946,22 @@ test_that("an ellmer-priced pass on a run costed from supplied rates is disclose
   report <- readLines(paste0(stem, ".qmd"))
   expect_true(any(grepl("^\\*\\*Cost \\(backfill pass 1\\):\\*\\* from ellmer's price table$", report)))
 })
+
+test_that("a backfill pass registers the run's tools, unless the provider changes (#122)", {
+  skip_if_not_installed("mockery")
+  web_search <- ellmer::openai_tool_web_search()
+  run <- make_run(data.frame(id = c("a", "b"), score = c(1L, NA), note = NA_character_),
+                  chat_args = list(tools = list(web_search)))
+  pass <- data.frame(id = "b", score = 2L, note = NA_character_)
+
+  calls <- new.env()
+  f <- backfill_with(list(pass), calls)
+  suppressMessages(f(run))
+  expect_identical(calls$args[[1]]$tools, list(web_search))
+
+  calls <- new.env()
+  f <- backfill_with(list(pass), calls)
+  expect_message(f(run, model = "deepseek/deepseek-chat"),
+                 "not carrying over endpoint-specific argument: `tools`")
+  expect_null(calls$args[[1]]$tools)
+})

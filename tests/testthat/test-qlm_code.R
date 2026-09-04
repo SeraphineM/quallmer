@@ -1754,3 +1754,85 @@ test_that("qlm_code rejects malformed prices before any request (#135)", {
     "Missing: output"
   )
 })
+
+test_that("qlm_code refuses tools with batch = TRUE before any call", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  expect_error(
+    qlm_code("a", codebook, model = "openai/gpt-4o-mini", batch = TRUE,
+             tools = ellmer::openai_tool_web_search()),
+    "cannot be used with `batch = TRUE`"
+  )
+})
+
+test_that("a real Chat accepts what qlm_code registers, under the names print() shows", {
+  # The stubbed chats above record calls to register_tool() whether or not a
+  # real Chat has that method; this pins the method and the tool names
+  ch <- ellmer::chat_openai(
+    model = "gpt-4o-mini",
+    credentials = function() list(Authorization = "Bearer fake")
+  )
+  tools <- check_tools(list(
+    ellmer::openai_tool_web_search(),
+    ellmer::tool(function() "ok", name = "lookup", description = "Looks things up.")
+  ))
+  for (tl in tools) ch$register_tool(tl)
+  expect_named(ch$get_tools(), c("web_search", "lookup"))
+  expect_equal(format_tools(tools), "web_search (hosted), lookup (custom)")
+})
+
+test_that("print discloses tools, and a hosted tool is noted on the cost (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  priced <- data.frame(id = 1:2, score = c(0.5, 0.8), input_tokens = 10L, output_tokens = 5L,
+                       cached_input_tokens = 0L, cost = 0.01)
+  web_search <- ellmer::openai_tool_web_search()
+  lookup <- ellmer::tool(function() "ok", name = "lookup", description = "d")
+
+  f <- tools_stub(new.env(), results = priced)
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = list(web_search, lookup), include_tokens = TRUE, include_cost = TRUE)
+  out <- capture.output(print(coded))
+  expect_true(any(grepl("^# Tools:    web_search \\(hosted\\), lookup \\(custom\\)$", out)))
+  note <- attr(coded, "meta")$user$cost_note
+  expect_match(note, "^from ellmer's price table; tokens only, hosted tool calls are billed separately")
+  expect_true(any(grepl("^# Cost:     from ellmer's price table; tokens only", out)))
+
+  # A custom tool runs in R and costs nothing at the provider: no note
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = lookup, include_tokens = TRUE, include_cost = TRUE)
+  expect_null(attr(coded, "meta")$user$cost_note)
+
+  # No cost column asked for: nothing to annotate
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", tools = web_search)
+  expect_null(attr(coded, "meta")$user$cost_note)
+})
+
+test_that("the trail keeps a run's tools by description, and none of a custom tool's code (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  secret <- "t00l3cret"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "Looks things up.")
+  })
+  f <- tools_stub(new.env())
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = list(ellmer::openai_tool_web_search(), lookup))
+  # The object itself keeps the tools, for a backfill or replication to reuse
+  expect_true(is_ellmer_tool(attr(coded, "meta")$object$chat_args$tools[[2]]))
+
+  stem <- tempfile()
+  trail <- suppressMessages(qlm_trail(coded, path = stem))
+  recorded <- attr(trail$runs[[1]]$coded, "meta")$object$chat_args$tools
+  expect_true(is_tool_record(recorded))
+  expect_equal(vapply(recorded, `[[`, "", "name"), c("web_search", "lookup"))
+
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("^\\*\\*Tools:\\*\\* web_search \\(hosted\\), lookup \\(custom\\)$", report)))
+  rds_file <- paste0(stem, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+})

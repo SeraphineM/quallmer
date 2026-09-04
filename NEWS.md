@@ -29,16 +29,15 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
-* `qlm_code()` gains a `tools` argument for registering `ellmer` tools (e.g.
-  a provider's hosted web-search tool, such as
-  `ellmer::openai_tool_web_search()`) on the chat before coding. Previously
-  there was no way to do this: `ellmer`'s `chat_*()` constructors have no
-  `tools` parameter, so tools must be registered via `chat$register_tool()`
-  on the chat object `qlm_code()` builds internally, which its public API
-  didn't expose. A single tool may be passed directly, or several as a list;
-  registered tools are recorded in the run's `chat_args` metadata for
-  reproducibility.
-
+* `qlm_code()` gains a `tools` argument for registering \pkg{ellmer} tools,
+  such as a provider's hosted web-search tool, on the chat before coding.
+  Registered tools are recorded on the object, disclosed by `print()` and
+  `qlm_trail()`, carried to backfill passes and to a replication on the same
+  endpoint, kept in the trail by name, type and description rather than as
+  objects, and refused with `batch = TRUE`, which cannot send them. A custom
+  tool takes effect on the JSON path only, and a run with a hosted tool says
+  in its cost note that the tool's calls are billed outside the token cost
+  (#122, @SeraphineM).
 
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
   results into the original object, instead of re-running the whole corpus

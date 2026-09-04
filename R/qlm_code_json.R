@@ -20,6 +20,9 @@
 #'   `on_error` are forwarded to [ellmer::parallel_chat()]; `include_tokens` and
 #'   `include_cost` are honoured here, as they are on the default path.
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
+#' @param tools Tools to register on the chat, as checked by `check_tools()`.
+#'   [ellmer::parallel_chat()] runs the tool-calling loop, so on this path a
+#'   custom tool is executed as well as a hosted one.
 #' @param json_retries Number of additional requests quallmer may make for a
 #'   unit after an unusable response, whether empty, unparsable, refused,
 #'   schema-invalid, or still failing on transport after ellmer's own tries.
@@ -36,7 +39,7 @@
 #' @keywords internal
 #' @noRd
 code_handler_json <- function(x, codebook, model, chat_args, execution_args,
-                              batch = FALSE, json_retries = 2L,
+                              batch = FALSE, tools = NULL, json_retries = 2L,
                               model_hint = NULL, cost_message = TRUE) {
   # The handler is reached via do.call(), so report guard failures against
   # qlm_code() rather than against an anonymous function.
@@ -85,6 +88,9 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     ),
     chat_args
   ))
+  for (tl in tools) {
+    chat$register_tool(tl)
+  }
 
   # From the chat the run will use, before anything is sent (#135). Silent
   # when the structured path already said it for this run.
