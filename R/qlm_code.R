@@ -26,14 +26,14 @@
 #'   and validates every response against the codebook locally. `"auto"` (the
 #'   default) attempts the structured call and falls back to `"json"` if it
 #'   fails. See Details for which to use.
-#' @param json_retries integer; the number of additional requests made for a
-#'   unit whose response arrives empty, unparsable, refused, or not conforming
-#'   to the codebook schema. Applies on the JSON path only, so setting it
-#'   alongside `structured = "structured"` is an error. Default is 2, giving
-#'   at most three requests per unit. This is separate from ellmer's
-#'   transport-level retries for rate limits and server errors, which apply
-#'   to every provider and are set with `options(ellmer_max_tries = )`, and
-#'   from backfilling, which happens after the run; see `backfill`.
+#' @param json_retries Integer; the number of additional requests \pkg{quallmer}
+#'   may make for a unit on the JSON path after an unusable response. Default
+#'   is 2, giving at most three JSON-path requests per unit. This is implemented
+#'   by \pkg{quallmer} and is not passed to \pkg{ellmer}. Each request separately uses
+#'   \pkg{ellmer}'s transport retry policy, controlled by
+#'   `options(ellmer_max_tries = )`. Applies on the JSON path only, so setting
+#'   it alongside `structured = "structured"` is an error. What is still
+#'   unusable after the run is left for `backfill`.
 #' @param backfill whether to complete the run before it is returned, by
 #'   re-coding the units still failed with [qlm_backfill()], using the same
 #'   model and settings. `FALSE` or `0` (default) leaves the run as it came
