@@ -37,7 +37,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   objects, and refused with `batch = TRUE`, which cannot send them. A custom
   tool takes effect on the JSON path only, and a run with a hosted tool says
   in its cost note that the tool's calls are billed outside the token cost
-  (#122, @SeraphineM).
+  (#122, @SeraphineM). Documentation: added the "Coding with web-search
+  tools" tutorial, which extracts figures from Wikipedia country pages with
+  and without a tool and shows why the tool is what makes the extraction
+  repeatable.
 
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
   results into the original object, instead of re-running the whole corpus

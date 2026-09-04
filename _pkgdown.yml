@@ -35,6 +35,8 @@ navbar:
       menu:
       - text: The quallmer audit trail
         href: articles/pkgdown/tutorials/trail.html
+      - text: Coding with web-search tools
+        href: articles/pkgdown/tutorials/tools.html
       - text: Using the quallmer.app
         href: articles/pkgdown/tutorials/validate.html
     examples:
