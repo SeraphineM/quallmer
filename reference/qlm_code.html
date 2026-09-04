@@ -378,6 +378,31 @@ units a wave did not reach in later waves, so <code>"return"</code> stops after 
 first wave there only with <code>json_retries = 0</code>.</p>
     </div>
     <div class="section level2">
+    <h2 id="incomplete-runs">Incomplete runs<a class="anchor" aria-label="anchor" href="#incomplete-runs"></a></h2>
+
+
+
+<p>A run over a corpus of any size rarely comes back complete, and an
+incomplete run is not an error. Under the default <code>on_error = "continue"</code>
+every unit is attempted, and a unit that produced no usable coding is
+returned as a row of <code>NA</code> with the reason in its <code>.error</code> column;
+<code>on_error</code> says what a failure does to the rest of the run.
+<code><a href="qlm_failures.html">qlm_failures()</a></code> lists the failed units with their reasons, and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>
+counts them. Trying again happens in layers. ellmer retries each request
+at the transport level, on every path. On the JSON path, <code>json_retries</code>
+sends a unit again during the run when its response was unusable. After
+the run, <code>backfill</code>, or <code><a href="qlm_backfill.html">qlm_backfill()</a></code> on the returned object, re-codes
+what is still failed and merges it back, with the same model and
+settings. A backfill leaves alone the two failures that re-sending the
+same request cannot fix, a text rejected as longer than the context
+window and a response cut off at <code>max_tokens</code> (see below); those need a
+different <code>model</code> or a higher <code>params(max_tokens = )</code>. The section "When
+a run comes back incomplete" of the workflow guide
+(<a href="https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.html">https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.html</a>)
+walks through this on a run that ships with the package, and its table
+matches each kind of failure to the mechanism that handles it.</p>
+    </div>
+    <div class="section level2">
     <h2 id="truncated-responses">Truncated responses<a class="anchor" aria-label="anchor" href="#truncated-responses"></a></h2>
 
 

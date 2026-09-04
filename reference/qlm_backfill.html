@@ -187,16 +187,93 @@ replication of a completed run is completed on the same terms.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">coded</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_code.html">qlm_code</a></span><span class="op">(</span><span class="va">texts</span>, <span class="va">codebook</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="qlm_failures.html">qlm_failures</a></span><span class="op">(</span><span class="va">coded</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A run that came back incomplete, and what qlm_backfill() made of it. Both</span></span></span>
+<span class="r-in"><span><span class="co"># were coded once and saved with the package (see data_creation/ in the</span></span></span>
+<span class="r-in"><span><span class="co"># source), so they can be looked at without a key.</span></span></span>
+<span class="r-in"><span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_objects.rds"</span>, package <span class="op">=</span> <span class="st">"quallmer"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">incomplete</span> <span class="op">&lt;-</span> <span class="va">examples</span><span class="op">$</span><span class="va">example_coded_incomplete</span></span></span>
+<span class="r-in"><span><span class="va">incomplete</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # quallmer coded object</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Run:      example_incomplete</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Codebook: Sentiment with evidence</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Model:    anthropic/claude-haiku-4-5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Units:    8 (4 scored, 4 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Notes:    Coded with a deliberately short request timeout and max_tokens = 90, so that the run came back incomplete</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 8 × 5</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .id          sentiment rating evidence                              .error    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">*</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                 <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> 3275_2.txt   neg            1 <span style="color: #949494;">"</span>Lets just say that from now on, we … <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> 3150_1.txt   <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> 3918_1.txt   <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> 7530_1.txt   neg            1 <span style="color: #949494;">"</span>\"to call this the next cult classi… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span> 4247_8.txt   pos            7 <span style="color: #949494;">"</span>One very strange piece of cinema. Y… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span> 7227_7.txt   <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;httr2_fl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">7</span> 8877_8.txt   pos            9 <span style="color: #949494;">"</span>The one thing I really can't seem t… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">8</span> 11413_10.txt <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-in"><span><span class="fu"><a href="qlm_failures.html">qlm_failures</a></span><span class="op">(</span><span class="va">incomplete</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 3</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .id          reason                                                 .error    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> 3150_1.txt   <span style="color: #949494;">"</span>The response used the whole max_tokens limit of 90 a… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> 3918_1.txt   <span style="color: #949494;">"</span>The response used the whole max_tokens limit of 90 a… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> 7227_7.txt   <span style="color: #949494;">"</span>Failed to perform HTTP request.\nCaused by error:\n!… <span style="color: #949494;">&lt;httr2_fl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> 11413_10.txt <span style="color: #949494;">"</span>The response used the whole max_tokens limit of 90 a… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">filled</span> <span class="op">&lt;-</span> <span class="fu">qlm_backfill</span><span class="op">(</span><span class="va">coded</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># What qlm_backfill(incomplete) returned: the timed-out unit re-coded, the</span></span></span>
+<span class="r-in"><span><span class="co"># responses cut off at max_tokens left alone, and the pass on record</span></span></span>
+<span class="r-in"><span><span class="va">filled</span> <span class="op">&lt;-</span> <span class="va">examples</span><span class="op">$</span><span class="va">example_coded_backfilled</span></span></span>
+<span class="r-in"><span><span class="va">filled</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # quallmer coded object</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Run:      example_incomplete</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Codebook: Sentiment with evidence</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Model:    anthropic/claude-haiku-4-5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Units:    8 (5 scored, 3 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Backfill: 1 pass, recovered 1 of 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> # Notes:    Coded with a deliberately short request timeout and max_tokens = 90, so that the run came back incomplete</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 8 × 5</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .id          sentiment rating evidence                              .error    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                 <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> 3275_2.txt   neg            1 <span style="color: #949494;">"</span>Lets just say that from now on, we … <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> 3150_1.txt   <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> 3918_1.txt   <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> 7530_1.txt   neg            1 <span style="color: #949494;">"</span>\"to call this the next cult classi… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span> 4247_8.txt   pos            7 <span style="color: #949494;">"</span>One very strange piece of cinema. Y… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span> 7227_7.txt   pos            8 <span style="color: #949494;">"</span>ah man this movie was funny as hell… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">7</span> 8877_8.txt   pos            9 <span style="color: #949494;">"</span>The one thing I really can't seem t… <span style="color: #949494;">&lt;NULL&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">8</span> 11413_10.txt <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>  <span style="color: #BB0000;">NA</span>                                   <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
 <span class="r-in"><span><span class="fu"><a href="qlm_failures.html">qlm_failures</a></span><span class="op">(</span><span class="va">filled</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 3</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .id          reason                                                 .error    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> 3150_1.txt   The response used the whole max_tokens limit of 90 an… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> 3918_1.txt   The response used the whole max_tokens limit of 90 an… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> 11413_10.txt The response used the whole max_tokens limit of 90 an… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
 <span class="r-in"><span><span class="fu"><a href="qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">filled</span>, <span class="st">"backfill"</span>, type <span class="op">=</span> <span class="st">"object"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$timestamp</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-09-04 13:01:38 UTC"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$overrides</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> list()</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$attempted</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "7227_7.txt"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$recovered</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "7227_7.txt"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="va">filled</span> <span class="op">&lt;-</span> <span class="fu">qlm_backfill</span><span class="op">(</span><span class="va">incomplete</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Responses cut off at the output limit are retried only with a higher one</span></span></span>
-<span class="r-in"><span><span class="va">filled</span> <span class="op">&lt;-</span> <span class="fu">qlm_backfill</span><span class="op">(</span><span class="va">coded</span>, params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>max_tokens <span class="op">=</span> <span class="fl">32000</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">filled</span> <span class="op">&lt;-</span> <span class="fu">qlm_backfill</span><span class="op">(</span><span class="va">filled</span>, params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>max_tokens <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Units one model refuses or cannot fit, coded by another; the result</span></span></span>
 <span class="r-in"><span><span class="co"># records which units came from which model</span></span></span>

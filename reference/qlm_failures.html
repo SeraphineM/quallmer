@@ -129,9 +129,32 @@ other accessor functions.</p></div>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">examples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_objects.rds"</span>, package <span class="op">=</span> <span class="st">"quallmer"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A complete run: zero rows</span></span></span>
 <span class="r-in"><span><span class="fu">qlm_failures</span><span class="op">(</span><span class="va">examples</span><span class="op">$</span><span class="va">example_coded_sentiment</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 0 × 3</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 3 variables: .id &lt;int&gt;, reason &lt;chr&gt;, .error &lt;list&gt;</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A run that came back incomplete: a request that timed out, and responses</span></span></span>
+<span class="r-in"><span><span class="co"># cut off at max_tokens</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_failures</span><span class="op">(</span><span class="va">examples</span><span class="op">$</span><span class="va">example_coded_incomplete</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 3</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .id          reason                                                 .error    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> 3150_1.txt   <span style="color: #949494;">"</span>The response used the whole max_tokens limit of 90 a… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> 3918_1.txt   <span style="color: #949494;">"</span>The response used the whole max_tokens limit of 90 a… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> 7227_7.txt   <span style="color: #949494;">"</span>Failed to perform HTTP request.\nCaused by error:\n!… <span style="color: #949494;">&lt;httr2_fl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> 11413_10.txt <span style="color: #949494;">"</span>The response used the whole max_tokens limit of 90 a… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The same run after qlm_backfill(): the timed-out unit recovered, the</span></span></span>
+<span class="r-in"><span><span class="co"># cut-off ones left alone, since re-sending the request cannot fix them</span></span></span>
+<span class="r-in"><span><span class="fu">qlm_failures</span><span class="op">(</span><span class="va">examples</span><span class="op">$</span><span class="va">example_coded_backfilled</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 3 × 3</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   .id          reason                                                 .error    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                                  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>    </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> 3150_1.txt   The response used the whole max_tokens limit of 90 an… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> 3918_1.txt   The response used the whole max_tokens limit of 90 an… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> 11413_10.txt The response used the whole max_tokens limit of 90 an… <span style="color: #949494;">&lt;qllmr_t_&gt;</span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
