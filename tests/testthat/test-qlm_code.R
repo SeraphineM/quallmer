@@ -1820,3 +1820,15 @@ test_that("qlm_code rejects malformed prices before any request (#135)", {
     "Missing: output"
   )
 })
+
+
+test_that("print.qlm_coded reaches tibble's print method", {
+  # tibble was in Imports but not in the NAMESPACE, so from an installed
+  # package its namespace loaded only on the first tibble:: call. Until then
+  # NextMethod() fell through to print.data.frame(), which cannot format a
+  # condition among the .error cells (#173).
+  expect_true("tibble" %in% names(getNamespaceImports("quallmer")))
+
+  examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+  expect_output(print(examples$example_coded_incomplete), "# A tibble: 8", fixed = TRUE)
+})

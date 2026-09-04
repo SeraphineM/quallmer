@@ -275,6 +275,14 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   generates. Both functions still warn that `qlm_code()` replaces them
   (#141).
 
+* Printing a `qlm_coded` object, or any other quallmer object built on a
+  tibble, in a session that had not yet loaded tibble fell through to
+  `print.data.frame()`, since tibble was in Imports but not in the
+  NAMESPACE and so loaded only on the first namespaced call. For a run with
+  an `.error` column that was an error rather than plain output, since a
+  recorded condition has no `format()` method. tibble now loads with
+  quallmer (#173).
+
 ### Reliability and validation
 
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
