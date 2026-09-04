@@ -1,24 +1,32 @@
-.PHONY: install articles article deploy-articles site readme
+.PHONY: articles article deploy-articles site readme
 
 # Knit README.md from README.Rmd
 readme:
 	Rscript -e "rmarkdown::render('README.Rmd', quiet = TRUE)"
 
-# Install the checkout. pkgdown knits articles in a fresh process against
-# the installed package, not the source tree, so an article that reads
-# inst/extdata through system.file() or prints an object sees whatever
-# version is installed; a stale one gives stale or missing objects.
-install:
-	R CMD INSTALL --no-multiarch .
+# pkgdown knits articles in a fresh process against an installed quallmer,
+# not the source tree, so an article that reads inst/extdata through
+# system.file() or prints an object sees whatever version is installed; a
+# stale one gives stale or missing objects. The checkout is therefore
+# installed into a throwaway library first, which R_LIBS puts ahead of the
+# others for both the install and the render, so the developer's own
+# installed quallmer is neither read nor overwritten. (pkgdown::build_site()
+# does this itself, so `site` needs nothing of the kind.)
+define with_checkout_installed
+lib=$$(mktemp -d) && \
+R_LIBS="$$lib" R CMD INSTALL --no-multiarch . && \
+R_LIBS="$$lib" Rscript -e "$(1)"; \
+status=$$?; rm -rf "$$lib"; exit $$status
+endef
 
 # Build all articles locally (with updated README)
-articles: readme install
-	Rscript -e "pkgdown::build_articles()"
+articles: readme
+	$(call with_checkout_installed,pkgdown::build_articles())
 
 # Build a specific article
 # Usage: make article NAME=pkgdown/getting-started/workflow
-article: install
-	Rscript -e "pkgdown::build_article('$(NAME)')"
+article:
+	$(call with_checkout_installed,pkgdown::build_article('$(NAME)'))
 
 # Deploy articles and workshop materials to gh-pages without touching other content
 deploy-articles: readme
@@ -32,5 +40,5 @@ deploy-articles: readme
 	git worktree remove gh-pages-tmp
 
 # Full local site build (with updated README)
-site: readme install
+site: readme
 	Rscript -e "pkgdown::build_site()"
