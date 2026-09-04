@@ -12,6 +12,7 @@ qlm_code(
   batch = FALSE,
   structured = c("auto", "structured", "json"),
   json_retries = 2L,
+  on_error = c("continue", "return", "stop"),
   backfill = FALSE,
   prices = NULL,
   name = NULL,
@@ -62,6 +63,20 @@ by \pkg{quallmer} and is not passed to \pkg{ellmer}. Each request separately use
 it alongside \code{structured = "structured"} is an error. What is still
 unusable after the run is left for \code{backfill}.}
 
+\item{on_error}{character; what a failed request does to the rest of a
+parallel run, passed to \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or, on the
+JSON path, \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat()}}. \code{"continue"} (the default) attempts
+every unit and records each failure in the \code{.error} column, for
+\code{\link[=qlm_failures]{qlm_failures()}} to list and \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code. \code{"return"}
+stops submitting new requests after the first failure, waits for those in
+flight, and returns what it has; the units never sent come back as rows
+of \code{NA} with no \code{.error}, which for a codebook whose required properties
+are all arrays or nested objects cannot be told from a valid empty
+answer, so keep \code{"continue"} on a run that is to be completed with
+\code{\link[=qlm_backfill]{qlm_backfill()}}. \code{"stop"} raises the first failure as an error. Applies
+to parallel runs only: the batch API has no equivalent, so it cannot be
+set with \code{batch = TRUE}.}
+
 \item{backfill}{Logical, integer or \code{NULL}; whether to complete the run
 before it is returned, by re-coding the units still failed with
 \code{\link[=qlm_backfill]{qlm_backfill()}}, using the same model and settings. \code{FALSE} or \code{0}
@@ -110,7 +125,8 @@ based on their names.
 Progress indicators and error handling are provided by the underlying
 \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 function. Set \code{verbose = TRUE} to see progress messages during coding.
-Retry logic for API failures should be configured through ellmer's options.
+Retry logic for API failures should be configured through ellmer's options;
+what a failure does to the rest of a parallel run is \code{on_error}.
 }
 \section{Provider-specific parameters}{
 
@@ -259,6 +275,14 @@ providers whose listing is known to cover every name they will invoke
 (Bedrock, for one, invokes inference profiles its listing omits). Where
 it cannot run, or the name is on the list, the provider's own error is
 reported unchanged.
+
+Under the default \code{on_error = "continue"} the parallel call does not stop
+at the first refusal, so every unit is sent once before the run comes
+back and is diagnosed. Each such request is refused before anything is
+generated, so it is cheap, but on a large corpus there are many of them,
+paced by \code{rpm}. \code{on_error = "return"} stops after the first wave, at the
+cost described under that argument. The JSON path has always behaved this
+way.
 }
 
 \section{Truncated responses}{
@@ -296,7 +320,8 @@ When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat_struct
 which submits jobs to the provider's batch API. This is typically more
 cost-effective but has longer turnaround times. The \code{path} argument specifies
 where batch results are cached, \code{wait} controls whether to wait for completion,
-and \code{ignore_hash} can force reprocessing of cached results.
+and \code{ignore_hash} can force reprocessing of cached results. \code{on_error} does
+not apply: the batch API has no equivalent.
 }
 
 \examples{

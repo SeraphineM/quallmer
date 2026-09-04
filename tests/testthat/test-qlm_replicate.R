@@ -1117,3 +1117,89 @@ test_that("qlm_replicate does not send a credential the trail redacted (#154)", 
   expect_true(any(grepl("`api_headers` carries a value redacted", msgs)))
   expect_equal(seen$api_key, "sk-new")
 })
+
+
+# on_error and path-specific execution arguments (#171) ------------------------
+
+# A parent coded on `batch` with `execution_args` recorded, and a stub for
+# qlm_code() that records what a replication passes it.
+replicate_parent <- function(execution_args, batch = FALSE) {
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook,
+    data = c("text1", "text2"),
+    input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    execution_args = execution_args,
+    batch = batch,
+    metadata = list(timestamp = Sys.time(), n_units = 2),
+    name = "original",
+    call = quote(qlm_code(...)),
+    parent = NULL
+  )
+}
+
+replicate_with <- function(seen) {
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, codebook, model, ..., batch = FALSE,
+                                        name = NULL, notes = NULL) {
+    seen$args <- list(...)
+    seen$batch <- batch
+    replicate_parent(list(), batch = batch)
+  })
+  f
+}
+
+test_that("qlm_replicate replays a recorded on_error; an old parent takes the default (#171)", {
+  skip_if_not_installed("mockery")
+  seen <- new.env()
+  f <- replicate_with(seen)
+
+  # Coded before on_error was recorded: nothing is passed, so qlm_code()'s
+  # own default applies to the replication
+  f(replicate_parent(list()))
+  expect_false("on_error" %in% names(seen$args))
+
+  # Recorded: replayed as it was
+  f(replicate_parent(list(on_error = "return", max_active = 5)))
+  expect_equal(seen$args$on_error, "return")
+  expect_equal(seen$args$max_active, 5)
+
+  # An override in `...` wins
+  f(replicate_parent(list(on_error = "return")), on_error = "stop")
+  expect_equal(seen$args$on_error, "stop")
+})
+
+
+test_that("qlm_replicate drops inherited arguments the other path cannot take (#171)", {
+  skip_if_not_installed("mockery")
+  seen <- new.env()
+  f <- replicate_with(seen)
+
+  # Parallel to batch: the parallel call's arguments stay behind
+  f(replicate_parent(list(on_error = "continue", max_active = 5, include_tokens = TRUE)),
+    batch = TRUE, path = "/tmp/batch")
+  expect_true(seen$batch)
+  expect_false(any(c("on_error", "max_active") %in% names(seen$args)))
+  expect_true(seen$args$include_tokens)
+  expect_equal(seen$args$path, "/tmp/batch")
+
+  # Batch to parallel: the batch API's arguments stay behind
+  f(replicate_parent(list(path = "/tmp/batch", wait = TRUE, include_cost = TRUE), batch = TRUE),
+    batch = FALSE)
+  expect_false(seen$batch)
+  expect_false(any(c("path", "wait") %in% names(seen$args)))
+  expect_true(seen$args$include_cost)
+})
+
+
+test_that("an explicit on_error on a batch replication is refused, not dropped (#171)", {
+  # Only the inherited value is filtered out; the caller's own override goes
+  # through to qlm_code(), which says why it cannot apply, before any request
+  expect_error(
+    qlm_replicate(replicate_parent(list()), batch = TRUE, on_error = "return"),
+    "not supported with `batch = TRUE`"
+  )
+})

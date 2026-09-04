@@ -1085,3 +1085,37 @@ test_that("the JSON path diagnoses cost from its own chat, and stays quiet when 
   )
   expect_null(attr(result, "qlm_backend_meta")$unpriced)
 })
+
+
+# on_error (#171) --------------------------------------------------------------
+
+test_that("code_handler_json forwards on_error as given, with no default of its own (#171)", {
+  skip_if_not_installed("mockery")
+  seen <- new.env()
+
+  h <- code_handler_json
+  mockery::stub(h, "ellmer::chat", function(...) structure(list(), class = "fake_chat"))
+  mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
+    seen$pc_args <- pc_args
+    list(
+      text = '{"score": 1}',
+      error = NA_character_, status = NA_integer_, finish = NA_character_,
+      usage = json_test_usage(1)
+    )
+  })
+  codebook <- qlm_codebook(
+    "Test", "Test prompt",
+    ellmer::type_object(score = ellmer::type_integer("Score"))
+  )
+
+  # The default is qlm_code()'s to supply; the handler adds nothing
+  h("a", codebook, "openai/gpt-4o-mini", chat_args = list(),
+    execution_args = list(), cost_message = FALSE)
+  expect_false("on_error" %in% names(seen$pc_args))
+
+  # What it is given is what ellmer gets
+  h("a", codebook, "openai/gpt-4o-mini", chat_args = list(),
+    execution_args = list(on_error = "return", max_active = 3), cost_message = FALSE)
+  expect_equal(seen$pc_args$on_error, "return")
+  expect_equal(seen$pc_args$max_active, 3)
+})

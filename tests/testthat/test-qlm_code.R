@@ -475,7 +475,8 @@ test_that("qlm_code delegates to the handler and records the backend", {
 
   # json_retries reaches the handler as a formal; max_active still routes to execution
   expect_equal(handler_args$json_retries, 5)
-  expect_equal(handler_args$execution_args, list(max_active = 3))
+  # on_error is recorded with the run's execution arguments (#171)
+  expect_equal(handler_args$execution_args, list(max_active = 3, on_error = "continue"))
   expect_length(handler_args$chat_args, 0)
 })
 
@@ -589,15 +590,22 @@ structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
   mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
   mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
   i <- 0L
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
+  # Records the execution arguments that reached ellmer, and how many prompts,
+  # in `calls`; `results` may be a function of them, to model what ellmer
+  # would return under a given `on_error`.
+  ellmer_call <- function(chat, prompts, type, ...) {
     i <<- i + 1L
     if (!is.null(calls)) {
       calls$n <- i
+      calls$dots <- list(...)
+      calls$n_prompts <- length(prompts)
     }
     err <- if (!is.null(errors) && i <= length(errors)) errors[[i]] else NA_character_
     if (!is.na(err)) stop(err, call. = FALSE)
-    results
-  })
+    if (is.function(results)) results(list(...)) else results
+  }
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", ellmer_call)
+  mockery::stub(tsc, "ellmer::batch_chat_structured", ellmer_call)
   tsc
 }
 
@@ -608,6 +616,7 @@ json_stub <- function(calls = NULL) {
       calls$json <- TRUE
       calls$json_retries <- json_retries
       calls$model_hint <- model_hint
+      calls$execution_args <- execution_args
     }
     results <- tibble::tibble(score = rep(0.99, length(x)))
     attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
@@ -1006,6 +1015,157 @@ test_that("auto cannot fall back under batch, and says so", {
     f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", batch = TRUE),
     "has no batch path"
   )
+})
+
+
+# on_error (#171) --------------------------------------------------------------
+
+test_that("qlm_code sends on_error = 'continue' to a parallel run unless told otherwise (#171)", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(calls = calls))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  # The default reaches ellmer, and is recorded with the run
+  coded <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+             structured = "structured")
+  expect_equal(calls$dots$on_error, "continue")
+  expect_equal(qlm_meta(coded, type = "object")$execution_args$on_error, "continue")
+
+  # An explicit value is what reaches ellmer
+  coded <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+             structured = "structured", on_error = "return")
+  expect_equal(calls$dots$on_error, "return")
+  expect_equal(qlm_meta(coded, type = "object")$execution_args$on_error, "return")
+
+  # The JSON path is given the same setting: the default is qlm_code()'s, not
+  # the handler's
+  f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+    structured = "json")
+  expect_equal(calls$execution_args$on_error, "continue")
+  f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+    structured = "json", on_error = "stop")
+  expect_equal(calls$execution_args$on_error, "stop")
+
+  # Only ellmer's three values
+  expect_error(
+    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+      on_error = "carry on"),
+    "should be one of"
+  )
+})
+
+
+test_that("on_error never reaches the batch call, and cannot be set for one (#171)", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(calls = calls))
+
+  coded <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+             batch = TRUE, structured = "structured")
+  expect_equal(calls$n, 1)
+  expect_false("on_error" %in% names(calls$dots))
+  expect_false("on_error" %in% names(qlm_meta(coded, type = "object")$execution_args))
+
+  # An explicit setting is refused before any request, rather than ignored
+  # or left for ellmer to reject as an unused argument
+  calls$n <- NULL
+  expect_error(
+    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini",
+      batch = TRUE, on_error = "continue"),
+    "not supported with `batch = TRUE`"
+  )
+  expect_null(calls$n)
+})
+
+
+test_that("the default leaves every failed unit discoverable, where 'return' would not (#171)", {
+  skip_if_not_installed("mockery")
+
+  # A codebook whose only required property is an array: after conversion a
+  # missing answer and a valid empty one are the same zero-length cell, so
+  # only `.error` identifies a failed unit.
+  codebook <- qlm_codebook(
+    "Themes", "List the themes.",
+    ellmer::type_object(themes = ellmer::type_array(ellmer::type_string("A theme.")))
+  )
+  http_500 <- function() {
+    structure(
+      list(message = "HTTP 500 Internal Server Error.", status = 500L),
+      class = c("httr2_http_500", "httr2_http", "httr2_error", "rlang_error",
+                "error", "condition")
+    )
+  }
+  # What ellmer returns from three units of which the first succeeds and the
+  # second fails. Under "continue" the third is attempted too and fails with
+  # its own reason; under "return" it is never sent and comes back as an
+  # empty row with no `.error`, which this codebook cannot tell from a coded
+  # unit with no themes.
+  ellmer_would_return <- function(dots) {
+    if (identical(dots$on_error, "continue")) {
+      tibble::tibble(
+        themes = list("a", character(0), character(0)),
+        .error = list(NULL, http_500(), http_500())
+      )
+    } else {
+      tibble::tibble(
+        themes = list("a", character(0), character(0)),
+        .error = list(NULL, http_500(), NULL)
+      )
+    }
+  }
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = ellmer_would_return))
+
+  coded <- f(c(u1 = "one", u2 = "two", u3 = "three"), codebook,
+             model = "openai/gpt-4o-mini", structured = "structured")
+  expect_equal(qlm_failures(coded)$.id, c("u2", "u3"))
+
+  early <- f(c(u1 = "one", u2 = "two", u3 = "three"), codebook,
+             model = "openai/gpt-4o-mini", structured = "structured",
+             on_error = "return")
+  expect_equal(qlm_failures(early)$.id, "u2")
+})
+
+
+test_that("a wholly rejected default run sends every unit once, then gives the diagnosis (#171)", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  http_400 <- function() {
+    structure(
+      list(message = "HTTP 400 Bad Request.", status = 400L),
+      class = c("httr2_http_400", "httr2_http", "httr2_error", "rlang_error",
+                "error", "condition")
+    )
+  }
+  # Under "continue" the parallel call does not stop at the first refusal, so
+  # every unit is refused in turn: the cost accepted in #171
+  rejected <- tibble::tibble(
+    score = rep(NA_real_, 3),
+    .error = list(http_400(), http_400(), http_400())
+  )
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = rejected, calls = calls))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+  mockery::stub(f, "model_name_hint", function(model, chat_args) {
+    c("i" = "\"gpt-4o-mimi\" is not a model that \"openai\" lists.")
+  })
+
+  expect_error(
+    f(c("a", "b", "c"), structured_test_codebook(), model = "openai/gpt-4o-mimi"),
+    "is not a model that"
+  )
+  expect_equal(calls$n, 1)
+  expect_equal(calls$n_prompts, 3)
+  expect_equal(calls$dots$on_error, "continue")
+  expect_null(calls$json)
 })
 
 
