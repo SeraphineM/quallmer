@@ -24,9 +24,10 @@ run to have recorded token counts and cost of its own to add to.}
 \item{model}{character or \code{NULL}; the model for the passes, in the form
 used by \code{\link[=qlm_code]{qlm_code()}}. \code{NULL} (default) uses the run's own model.}
 
-\item{passes}{integer; the maximum number of passes. Default is 2. A pass
-that recovers nothing ends the backfill early, since the failures that
-remain are then evidently not transient.}
+\item{passes}{A single positive integer giving the maximum number of
+backfill passes. Default is 2. This counts total passes, not additional
+retries. Backfilling stops early when a pass recovers no units, since
+the failures that remain are then evidently not transient.}
 }
 \value{
 \code{x}, with the recovered units filled in and \code{backfill} added to

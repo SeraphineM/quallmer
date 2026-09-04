@@ -75,6 +75,7 @@ test_that("qlm_backfill rejects what it cannot backfill", {
   expect_error(qlm_backfill(run, passes = c(1, 2)), "single positive integer")
   expect_error(qlm_backfill(run, passes = Inf), "single positive integer")
   expect_error(qlm_backfill(run, passes = NaN), "single positive integer")
+  expect_error(qlm_backfill(run, passes = .Machine$integer.max + 1), "single positive integer")
   expect_error(qlm_backfill(run, model = c("a", "b")), "single string")
   expect_error(qlm_backfill(run, codebook = codebook(run)), "codebook cannot be changed")
   expect_error(qlm_backfill(run, batch = TRUE), "cannot be set")

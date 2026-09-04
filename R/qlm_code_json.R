@@ -20,8 +20,10 @@
 #'   `on_error` are forwarded to [ellmer::parallel_chat()]; `include_tokens` and
 #'   `include_cost` are honoured here, as they are on the default path.
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
-#' @param json_retries Number of additional requests for each empty, unparsable,
-#'   refused or schema-invalid response. Default is 2.
+#' @param json_retries Number of additional requests quallmer may make for a
+#'   unit after an unusable response, whether empty, unparsable, refused,
+#'   schema-invalid, or still failing on transport after ellmer's own tries.
+#'   Default is 2. The same definition as the public argument.
 #' @param model_hint What `model_name_hint()` answered when [qlm_code()]
 #'   already asked it for this run, so a wholly rejected run asks the provider
 #'   at most once; `NULL` when it has not been asked.
@@ -58,8 +60,7 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
       "i" = "This is what produces the one-row-per-unit result that {.fn qlm_code} returns."
     ), call = error_call)
   }
-  if (length(json_retries) != 1L || is.na(json_retries) || !is.numeric(json_retries) ||
-      json_retries < 0 || json_retries != trunc(json_retries)) {
+  if (!is_count(json_retries)) {
     cli::cli_abort("{.arg json_retries} must be a single non-negative integer.",
                    call = error_call)
   }

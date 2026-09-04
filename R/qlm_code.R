@@ -288,6 +288,11 @@ qlm_code <- function(x, codebook, model, ...,
   explicit_retries <- !missing(json_retries)
   explicit_structured <- !missing(structured)
   structured <- match.arg(structured)
+  # Checked here as well as in the JSON handler: under "auto" the handler is
+  # reached only after the structured attempt has been paid for.
+  if (!is_count(json_retries)) {
+    cli::cli_abort("{.arg json_retries} must be a single non-negative integer.")
+  }
 
   # Accept both qlm_codebook and task objects, converting if needed
   if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {

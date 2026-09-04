@@ -42,18 +42,15 @@
 #'   (default), uses the batch setting from `x`. Set to `TRUE` to use batch
 #'   processing or `FALSE` to use parallel processing, regardless of the
 #'   original setting.
-#' @param backfill whether to complete the replication with [qlm_backfill()],
-#'   taking the values [qlm_code()]'s `backfill` does. `NULL` (default)
-#'   replays the passes recorded on `x`, if any, with the same models and
-#'   overrides in the same order, so that a replication of a completed run is
-#'   completed on the same terms; `TRUE` or a positive integer runs a fresh
-#'   backfill with the replication's own model, of the default number of
-#'   passes or that many, whether or not `x` had one, and so does not repeat a
-#'   second model the parent's passes used; `FALSE` or `0` leaves the
-#'   replication as it came back. A replayed pass that fails outright is a
-#'   warning, not an error: the replication and what earlier passes recovered
-#'   are kept, the failed pass is recorded with the units it attempted, and
-#'   no further passes are replayed.
+#' @param backfill Logical, integer, or `NULL`; controls backfilling after the
+#'   replication. `NULL` (default) replays the passes recorded on `x`, using
+#'   the same models and overrides in the same order. `FALSE` or `0` performs
+#'   no backfill. `TRUE` runs a fresh backfill with the replication's model
+#'   and the default number of passes, currently two; a positive integer runs
+#'   at most that many fresh passes. A fresh backfill does not reproduce a
+#'   different model used by the parent's recorded passes. If a replayed pass
+#'   fails outright, the replication and any earlier recoveries are retained,
+#'   the failure is recorded, and no later passes are replayed.
 #' @param name Optional name for this run. If `NULL`, defaults to the model
 #'   name (if changed) or `"replication_N"` where N is the replication count.
 #' @param notes Optional character string with descriptive notes about this

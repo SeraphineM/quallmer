@@ -534,6 +534,19 @@ test_that("qlm_code errors on json_retries only where JSON mode cannot be reache
 })
 
 
+test_that("qlm_code refuses a bad json_retries before any paid call", {
+  skip_if_not_installed("mockery")
+  codebook <- qlm_codebook("Test", "Prompt", ellmer::type_object(score = ellmer::type_number("Score")))
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) stop("a paid call was made"))
+  for (bad in list(-1, 1.5, NA, c(1, 2), "2", Inf, NaN, .Machine$integer.max + 1)) {
+    expect_error(
+      f("a", codebook, model = "openai/gpt-4o-mini", json_retries = bad),
+      "single non-negative integer"
+    )
+  }
+})
+
 test_that("qlm_code passes its json_retries default to the handler", {
   skip_if_not_installed("mockery")
 
@@ -1425,7 +1438,8 @@ test_that("qlm_code(backfill = ) hands the result to qlm_backfill", {
   code(backfill = TRUE)
   expect_identical(seen$passes, 2L)
 
-  for (bad in list(-1, 1.5, NA, c(1, 2), "2", c(TRUE, TRUE), Inf, -Inf, NaN)) {
+  for (bad in list(-1, 1.5, NA, c(1, 2), "2", c(TRUE, TRUE), Inf, -Inf, NaN,
+                   .Machine$integer.max + 1)) {
     expect_error(code(backfill = bad), "single non-negative integer")
   }
 })

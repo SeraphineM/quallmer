@@ -29,9 +29,10 @@
 #'   run to have recorded token counts and cost of its own to add to.
 #' @param model character or `NULL`; the model for the passes, in the form
 #'   used by [qlm_code()]. `NULL` (default) uses the run's own model.
-#' @param passes integer; the maximum number of passes. Default is 2. A pass
-#'   that recovers nothing ends the backfill early, since the failures that
-#'   remain are then evidently not transient.
+#' @param passes A single positive integer giving the maximum number of
+#'   backfill passes. Default is 2. This counts total passes, not additional
+#'   retries. Backfilling stops early when a pass recovers no units, since
+#'   the failures that remain are then evidently not transient.
 #'
 #' @details
 #' Which units are re-coded is decided afresh on every pass, from the object as
@@ -128,8 +129,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
       "i" = "{.fn qlm_backfill} re-runs the model of a {.fn qlm_code} run on the units it failed on."
     ))
   }
-  if (length(passes) != 1L || !is.numeric(passes) || !is.finite(passes) ||
-      passes < 1 || passes != trunc(passes)) {
+  if (!is_count(passes, min = 1L)) {
     cli::cli_abort("{.arg passes} must be a single positive integer.")
   }
   passes <- as.integer(passes)
@@ -464,8 +464,7 @@ backfill_passes <- function(backfill, null = 0L, call = rlang::caller_env()) {
   if (isFALSE(backfill)) {
     return(0L)
   }
-  if (length(backfill) != 1L || !is.numeric(backfill) || !is.finite(backfill) ||
-      backfill < 0 || backfill != trunc(backfill)) {
+  if (!is_count(backfill)) {
     cli::cli_abort(paste0(
       "{.arg backfill} must be {.code TRUE}, {.code FALSE}, {.code NULL} ",
       "or a single non-negative integer."

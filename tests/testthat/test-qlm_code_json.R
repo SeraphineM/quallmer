@@ -664,6 +664,14 @@ test_that("code_handler_json rejects unsupported requests", {
     "single non-negative integer"
   )
   expect_error(
+    code_handler_json("a", codebook, "deepseek", list(), list(), json_retries = Inf),
+    "single non-negative integer"
+  )
+  expect_error(
+    code_handler_json("a", codebook, "deepseek", list(), list(), json_retries = .Machine$integer.max + 1),
+    "single non-negative integer"
+  )
+  expect_error(
     code_handler_json("a", codebook, "deepseek", list(api_args = "seed"), list()),
     "must be a named list"
   )

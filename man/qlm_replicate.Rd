@@ -45,18 +45,15 @@ the codebook from \code{x}.}
 processing or \code{FALSE} to use parallel processing, regardless of the
 original setting.}
 
-\item{backfill}{whether to complete the replication with \code{\link[=qlm_backfill]{qlm_backfill()}},
-taking the values \code{\link[=qlm_code]{qlm_code()}}'s \code{backfill} does. \code{NULL} (default)
-replays the passes recorded on \code{x}, if any, with the same models and
-overrides in the same order, so that a replication of a completed run is
-completed on the same terms; \code{TRUE} or a positive integer runs a fresh
-backfill with the replication's own model, of the default number of
-passes or that many, whether or not \code{x} had one, and so does not repeat a
-second model the parent's passes used; \code{FALSE} or \code{0} leaves the
-replication as it came back. A replayed pass that fails outright is a
-warning, not an error: the replication and what earlier passes recovered
-are kept, the failed pass is recorded with the units it attempted, and
-no further passes are replayed.}
+\item{backfill}{Logical, integer, or \code{NULL}; controls backfilling after the
+replication. \code{NULL} (default) replays the passes recorded on \code{x}, using
+the same models and overrides in the same order. \code{FALSE} or \code{0} performs
+no backfill. \code{TRUE} runs a fresh backfill with the replication's model
+and the default number of passes, currently two; a positive integer runs
+at most that many fresh passes. A fresh backfill does not reproduce a
+different model used by the parent's recorded passes. If a replayed pass
+fails outright, the replication and any earlier recoveries are retained,
+the failure is recorded, and no later passes are replayed.}
 
 \item{name}{Optional name for this run. If \code{NULL}, defaults to the model
 name (if changed) or \code{"replication_N"} where N is the replication count.}
