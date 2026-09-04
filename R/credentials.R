@@ -216,7 +216,12 @@ redact_chat_args <- function(chat_args) {
 
 #' Redact credential literals in a recorded call
 #'
-#' @param call A call, as recorded by `match.call()` in `qlm_code()`.
+#' Applied at every depth: a comparison or validation records the coding
+#' calls it was given as its arguments, and a credential in one of those is
+#' no safer for being nested.
+#'
+#' @param call A call, as recorded by `match.call()` in `qlm_code()` and the
+#'   functions that take its results.
 #'
 #' @return The call with credential literals replaced.
 #' @keywords internal
@@ -225,14 +230,10 @@ redact_call <- function(call) {
   if (!is.call(call)) {
     return(call)
   }
-  nms <- names(call)
-  if (is.null(nms)) {
-    return(call)
-  }
+  nms <- names(call) %||% rep("", length(call))
 
   for (i in seq_along(call)[-1]) {
     nm <- nms[i]
-    if (!nzchar(nm)) next
     value <- call[[i]]
 
     if (identical(nm, "api_key") && is.character(value)) {
@@ -247,6 +248,10 @@ redact_call <- function(call) {
       call[[i]] <- REDACTED
     } else if (nm %in% url_arg_names && is.character(value)) {
       call[[i]] <- redact_url(value)
+    } else if (is.call(value)) {
+      # A qlm_compare() or qlm_validate() call records the qlm_code() calls
+      # it was given, with their arguments; the same rules apply at depth
+      call[[i]] <- redact_call(value)
     }
   }
 

@@ -57,8 +57,8 @@ Tools change the instrument: with a hosted web search the model draws
 on live sources rather than its training data, so they are recorded on
 the object, disclosed by \code{print()} and \code{\link[=qlm_trail]{qlm_trail()}}, carried to backfill
 passes and to a replication on the same endpoint (a provider's hosted
-tool belongs to that provider), and kept in the trail as name, type and
-description rather than as objects.
+tool belongs to that provider), and kept in the trail as name, type,
+description and configuration rather than as objects.
 
 Three limits. A hosted tool takes effect on both coding paths, but a
 custom tool only on the JSON path: \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}},

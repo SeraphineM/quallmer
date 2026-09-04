@@ -317,3 +317,21 @@ test_that("redact_call() replaces an inline tools expression and keeps a name (#
   expect_identical(redact_call(named), named)
   expect_false(any(grepl("SECRET", deparse(redact_call(inline)), fixed = TRUE)))
 })
+
+test_that("redact_call() reaches into nested calls (#122)", {
+  nested <- quote(qlm_compare(
+    qlm_code(x, cb, tools = ellmer::tool(function() "NESTED_SECRET", name = "t", description = "d")),
+    qlm_code(x, cb, api_key = "sk-inner", base_url = "https://u:p@h/v1"),
+    other
+  ))
+  out <- redact_call(nested)
+  expect_identical(out, quote(qlm_compare(
+    qlm_code(x, cb, tools = "<redacted>"),
+    qlm_code(x, cb, api_key = "<redacted>", base_url = "https://h/v1"),
+    other
+  )))
+  expect_false(any(grepl("NESTED_SECRET|sk-inner|u:p@", deparse(out))))
+  # Positional inner calls, with no names on the outer call at all
+  bare <- quote(f(qlm_code(x, cb, api_key = "sk-x")))
+  expect_identical(redact_call(bare), quote(f(qlm_code(x, cb, api_key = "<redacted>"))))
+})

@@ -83,3 +83,16 @@ test_that("as_tool_records wraps a bare tool", {
   expect_true(is_tool_record(as_tool_records(lookup)))
   expect_equal(as_tool_records(lookup)[[1]]$name, "lookup")
 })
+
+test_that("format_tool_details gives each tool's configuration or arguments", {
+  search <- ellmer::openai_tool_web_search(allowed_domains = "example.com")
+  echo <- ellmer::tool(function(x) x, name = "echo", description = "Echoes.",
+                       arguments = list(x = ellmer::type_string("The text")))
+  lines <- format_tool_details(list(search, echo, lookup))
+  expect_length(lines, 3)
+  expect_match(lines[1], '^- web_search \\(hosted\\): `\\{.*"allowed_domains":"example\\.com".*\\}`$')
+  expect_equal(lines[2], "- echo (custom): Echoes. Arguments: x (string)")
+  expect_equal(lines[3], "- lookup (custom): Looks things up. No arguments")
+  # Records read back from a trail render the same way
+  expect_identical(format_tool_details(tool_records(list(search, echo, lookup))), lines)
+})

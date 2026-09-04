@@ -8,7 +8,7 @@ output: html_document
 # and need OpenAI and Anthropic keys. They run only when the site's articles
 # are being built for deployment, which the Makefile signals; a plain
 # pkgdown::build_site() in a development session renders the code unrun.
-live <- nzchar(Sys.getenv("QUALLMER_LIVE_ARTICLES"))
+live <- identical(Sys.getenv("QUALLMER_LIVE_ARTICLES"), "1")
 knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>", eval = live)
 ```
 
@@ -112,7 +112,17 @@ The figures with the tool may or may not differ much from the figures without it
 ```{r replicate}
 plain_again <- qlm_replicate(coded_plain, name = "plain_again")
 web_again <- qlm_replicate(coded_web, name = "web_again")
+```
 
+Two runs that answered from memory:
+
+```{r compare-plain}
+qlm_compare(coded_plain, plain_again, by = "population")
+```
+
+Two runs that read the page:
+
+```{r compare-web}
 qlm_compare(coded_web, web_again, by = "population")
 ```
 
@@ -137,7 +147,7 @@ Everything a tool changes about a run is kept with the run:
 - `print()` shows the tools, and `qlm_trail()`'s report has a `**Tools:**` line for each run, so a coding done with web access is disclosed as one.
 - A backfill of the run, with `qlm_backfill()` or `qlm_code(backfill = )`, registers the same tools on its passes, so the units it recovers are coded by the same instrument.
 - A replication on the same endpoint carries the tools; on another provider or endpoint it drops them with a message, as it does credentials, and takes whatever `tools` you pass instead.
-- The audit trail keeps tools by name, type and description rather than as objects. A custom tool from `ellmer::tool()` wraps an R function, and a function saved to a file carries its environment with it; the trail is written to be shared and does not do that. An object read back from a trail therefore knows which tools its run used but cannot register them again; pass them to replicate it.
+- The audit trail keeps tools by name, type, description and configuration rather than as objects, and the report lists each tool's configuration in full: for a web search, the domains it was allowed to reach and any location it was given, which decide what the model could have read. A custom tool from `ellmer::tool()` wraps an R function, and a function saved to a file carries its environment with it; the trail is written to be shared and does not do that. An object read back from a trail therefore knows which tools its run used but cannot register them again; pass them to replicate it.
 
 ```{r trail}
 trail <- qlm_trail(coded_plain, coded_web, coded_claude, path = tempfile("geostats"))

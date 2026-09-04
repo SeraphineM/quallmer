@@ -163,3 +163,58 @@ format_tools <- function(tools) {
     paste0(r$name, " (", r$type, ")")
   }, character(1)), collapse = ", ")
 }
+
+
+#' The tools in full, for the audit trail report
+#'
+#' `format_tools()` names them; this says what each could do, which is what
+#' an investigator needs. A hosted tool's configuration, the JSON the
+#' provider was sent, is where a web search's allowed domains and user
+#' location live, so it is given verbatim. A custom tool is given its
+#' description and the arguments the model could pass it.
+#'
+#' @param tools A list of tool objects or records.
+#'
+#' @return A character vector of markdown bullet lines, one per tool.
+#' @keywords internal
+#' @noRd
+format_tool_details <- function(tools) {
+  vapply(as_tool_records(tools), function(r) {
+    head <- paste0("- ", r$name, " (", r$type, ")")
+    if (identical(r$type, "hosted")) {
+      config <- if (is.null(r$config)) {
+        "no configuration recorded"
+      } else {
+        paste0("`", jsonlite::toJSON(r$config, auto_unbox = TRUE), "`")
+      }
+      return(paste0(head, ": ", config))
+    }
+    args <- describe_tool_arguments(r$arguments)
+    description <- if (is.na(r$description)) "no description" else sub("\\.$", "", r$description)
+    paste0(
+      head, ": ", description,
+      if (nzchar(args)) paste0(". Arguments: ", args) else ". No arguments"
+    )
+  }, character(1))
+}
+
+
+#' One line naming a custom tool's arguments and their types
+#'
+#' @param arguments The tool's `arguments`, an ellmer type object, or `NULL`.
+#'
+#' @return A single string, empty when there are none.
+#' @keywords internal
+#' @noRd
+describe_tool_arguments <- function(arguments) {
+  props <- attr(arguments, "properties", exact = TRUE)
+  if (!length(props)) {
+    return("")
+  }
+  paste(vapply(names(props), function(nm) {
+    prop <- props[[nm]]
+    type <- attr(prop, "type", exact = TRUE) %||% sub("^ellmer::Type", "", class(prop)[1])
+    required <- attr(prop, "required", exact = TRUE)
+    paste0(nm, " (", tolower(type), if (isFALSE(required)) ", optional" else "", ")")
+  }, character(1)), collapse = ", ")
+}

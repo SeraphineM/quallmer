@@ -1,4 +1,4 @@
-.PHONY: articles deploy-articles site readme
+.PHONY: articles article deploy-articles deploy-article site readme
 
 # Knit README.md from README.Rmd
 readme:
@@ -14,6 +14,11 @@ articles: readme
 # Usage: make article NAME=pkgdown/getting-started/workflow
 article:
 	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_article('$(NAME)')"
+
+# Build one article live and deploy it with whatever else is built
+# Usage: make deploy-article NAME=pkgdown/tutorials/tools
+deploy-article: article
+	$(MAKE) deploy-articles
 
 # Deploy articles and workshop materials to gh-pages without touching other content
 deploy-articles: readme

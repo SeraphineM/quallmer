@@ -539,6 +539,7 @@ generate_trail_report <- function(trail, file) {
     # one without, and the report has to say so (#122)
     if (length(run$chat_args$tools)) {
       lines <- c(lines, paste("**Tools:**", format_tools(run$chat_args$tools)))
+      lines <- c(lines, "", format_tool_details(run$chat_args$tools), "")
     }
     if (!is.null(backfill_summary(run$backfill))) {
       lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
@@ -1168,8 +1169,8 @@ without_tools <- function(meta) {
   if (!is.null(meta$object$chat_args)) {
     meta$object$chat_args[["tools"]] <- NULL
   }
-  if (is.call(meta$object$call) && "tools" %in% names(meta$object$call)) {
-    meta$object$call[["tools"]] <- NULL
+  if (is.call(meta$object$call)) {
+    meta$object$call <- strip_call_tools(meta$object$call)
   }
   if (length(meta$object$backfill)) {
     meta$object$backfill <- lapply(meta$object$backfill, function(pass) {
@@ -1185,7 +1186,46 @@ without_tools <- function(meta) {
 only_tools <- function(meta) {
   list(
     run = meta$object$chat_args[["tools"]],
-    call = if (is.call(meta$object$call)) meta$object$call[["tools"]],
+    call = if (is.call(meta$object$call)) collect_call_tools(meta$object$call),
     passes = lapply(meta$object$backfill, function(pass) pass$overrides[["tools"]])
   )
+}
+
+
+#' A call without its `tools` arguments, at any depth, and just those
+#'
+#' @param call A recorded call.
+#'
+#' @return The call, or a list of the removed expressions.
+#' @keywords internal
+#' @noRd
+strip_call_tools <- function(call) {
+  if (!is.call(call)) {
+    return(call)
+  }
+  nms <- names(call) %||% rep("", length(call))
+  keep <- !(nms == "tools")
+  call <- call[keep]
+  for (i in seq_along(call)[-1]) {
+    if (is.call(call[[i]])) {
+      call[[i]] <- strip_call_tools(call[[i]])
+    }
+  }
+  call
+}
+
+collect_call_tools <- function(call) {
+  if (!is.call(call)) {
+    return(list())
+  }
+  nms <- names(call) %||% rep("", length(call))
+  found <- list()
+  for (i in seq_along(call)[-1]) {
+    if (identical(nms[i], "tools")) {
+      found <- c(found, list(call[[i]]))
+    } else if (is.call(call[[i]])) {
+      found <- c(found, collect_call_tools(call[[i]]))
+    }
+  }
+  found
 }

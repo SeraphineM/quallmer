@@ -1860,3 +1860,51 @@ test_that("a trail says tool definitions were kept, and does not call them crede
   expect_true(any(grepl("Tool definitions recorded for \"run", msgs)))
   expect_false(any(grepl("Credential values", msgs)))
 })
+
+test_that("a comparison's recorded call is redacted at depth, and named for what it was (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  a <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", name = "a")
+  b <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", name = "b")
+  comparison <- qlm_compare(a, b, by = "score", level = "interval")
+  m <- attr(comparison, "meta")
+  m$object$call <- quote(qlm_compare(
+    qlm_code(x, cb, tools = ellmer::tool(function() "NESTED_SECRET", name = "t", description = "d")),
+    b
+  ))
+  attr(comparison, "meta") <- m
+
+  stem <- tempfile()
+  msgs <- capture_messages(qlm_trail(a, b, comparison, path = stem))
+  expect_true(any(grepl("Tool definitions recorded", msgs)))
+  expect_false(any(grepl("Credential values", msgs)))
+  rds_file <- paste0(stem, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  expect_length(grepRaw("NESTED_SECRET", bytes, fixed = TRUE), 0)
+  expect_false(any(grepl("NESTED_SECRET", readLines(paste0(stem, ".qmd")), fixed = TRUE)))
+})
+
+test_that("the trail report says what each tool could do (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  search <- ellmer::openai_tool_web_search(allowed_domains = "wikipedia.org")
+  echo <- ellmer::tool(function(x, n) x, name = "echo", description = "Echoes the text.",
+                       arguments = list(x = ellmer::type_string("The text"),
+                                        n = ellmer::type_integer("Count", required = FALSE)))
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", tools = list(search, echo))
+
+  stem <- tempfile()
+  suppressMessages(qlm_trail(coded, path = stem))
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("^\\*\\*Tools:\\*\\* web_search \\(hosted\\), echo \\(custom\\)$", report)))
+  expect_true(any(grepl('"allowed_domains":"wikipedia.org"', report, fixed = TRUE)))
+  expect_true(any(grepl("^- echo \\(custom\\): Echoes the text\\. Arguments: x \\(string\\), n \\(integer, optional\\)$", report)))
+  # print() stays compact
+  out <- capture.output(print(coded))
+  expect_true(any(grepl("^# Tools:    web_search \\(hosted\\), echo \\(custom\\)$", out)))
+  expect_false(any(grepl("allowed_domains", out)))
+})

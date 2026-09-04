@@ -36,7 +36,7 @@
 #'   the rest: kept on the same endpoint, since a hosted tool belongs to its
 #'   provider, and dropped with the message when it changes; pass `tools` to
 #'   replace them. An object read back from a trail records its tools by
-#'   description only, and those are not sent either.
+#'   description and configuration only, and those are not sent either.
 #' @param codebook Optional replacement codebook. If `NULL` (default), uses
 #'   the codebook from `x`.
 #' @param model Optional replacement model (e.g., `"openai/gpt-4o"`). If `NULL`
