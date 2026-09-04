@@ -453,8 +453,8 @@ test_that("qlm_code delegates to the handler and records the backend", {
 
   handler_args <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries = 2L, model_hint = NULL, ...) {
-    handler_args <<- list(model = model, batch = batch, max_retries = max_retries,
+                           json_retries = 2L, model_hint = NULL, ...) {
+    handler_args <<- list(model = model, batch = batch, json_retries = json_retries,
                           chat_args = chat_args, execution_args = execution_args)
     results <- tibble::tibble(score = c(0.5, 0.8))
     attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
@@ -465,7 +465,7 @@ test_that("qlm_code delegates to the handler and records the backend", {
   mockery::stub(f, "code_handler_json", fake_handler)
 
   result <- f(c("a", "b"), codebook, model = "deepseek/deepseek-chat",
-              max_retries = 5, max_active = 3)
+              json_retries = 5, max_active = 3)
 
   expect_s3_class(result, "qlm_coded")
   expect_equal(result$.id, 1:2)
@@ -473,8 +473,8 @@ test_that("qlm_code delegates to the handler and records the backend", {
   expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
   expect_equal(qlm_meta(result, type = "user")$n_invalid, 0)
 
-  # max_retries reaches the handler as a formal; max_active still routes to execution
-  expect_equal(handler_args$max_retries, 5)
+  # json_retries reaches the handler as a formal; max_active still routes to execution
+  expect_equal(handler_args$json_retries, 5)
   expect_equal(handler_args$execution_args, list(max_active = 3))
   expect_length(handler_args$chat_args, 0)
 })
@@ -502,7 +502,7 @@ test_that("qlm_code still uses parallel_chat_structured for other providers", {
 })
 
 
-test_that("qlm_code errors on max_retries only where JSON mode cannot be reached", {
+test_that("qlm_code errors on json_retries only where JSON mode cannot be reached", {
   skip_if_not_installed("mockery")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
@@ -511,13 +511,13 @@ test_that("qlm_code errors on max_retries only where JSON mode cannot be reached
   # `structured` forbids the JSON path, so repair attempts can never happen
   expect_error(
     qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini",
-             structured = "structured", max_retries = 2),
+             structured = "structured", json_retries = 2),
     "not supported with"
   )
   # Even when the value happens to equal the default
   expect_error(
     qlm_code(c("a"), codebook, model = "openai/gpt-4o-mini",
-             structured = "structured", max_retries = 2L),
+             structured = "structured", json_retries = 2L),
     "not supported with"
   )
 
@@ -528,13 +528,26 @@ test_that("qlm_code errors on max_retries only where JSON mode cannot be reached
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   expect_s3_class(
-    f(c("a"), codebook, model = "openai/gpt-4o-mini", max_retries = 4),
+    f(c("a"), codebook, model = "openai/gpt-4o-mini", json_retries = 4),
     "qlm_coded"
   )
 })
 
 
-test_that("qlm_code passes its max_retries default to the handler", {
+test_that("qlm_code refuses a bad json_retries before any paid call", {
+  skip_if_not_installed("mockery")
+  codebook <- qlm_codebook("Test", "Prompt", ellmer::type_object(score = ellmer::type_number("Score")))
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) stop("a paid call was made"))
+  for (bad in list(-1, 1.5, NA, c(1, 2), "2", Inf, NaN, .Machine$integer.max + 1)) {
+    expect_error(
+      f("a", codebook, model = "openai/gpt-4o-mini", json_retries = bad),
+      "single non-negative integer"
+    )
+  }
+})
+
+test_that("qlm_code passes its json_retries default to the handler", {
   skip_if_not_installed("mockery")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
@@ -542,8 +555,8 @@ test_that("qlm_code passes its max_retries default to the handler", {
 
   seen <- NULL
   fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
-                           max_retries, model_hint = NULL, ...) {
-    seen <<- max_retries
+                           json_retries, model_hint = NULL, ...) {
+    seen <<- json_retries
     tibble::tibble(score = 0.5)
   }
   f <- qlm_code
@@ -589,11 +602,11 @@ structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
 }
 
 json_stub <- function(calls = NULL) {
-  function(x, codebook, model, chat_args, execution_args, batch, max_retries,
+  function(x, codebook, model, chat_args, execution_args, batch, json_retries,
            model_hint = NULL, ...) {
     if (!is.null(calls)) {
       calls$json <- TRUE
-      calls$max_retries <- max_retries
+      calls$json_retries <- json_retries
       calls$model_hint <- model_hint
     }
     results <- tibble::tibble(score = rep(0.99, length(x)))
@@ -1039,7 +1052,7 @@ test_that("an unrelated error falls back without a second structured attempt", {
 })
 
 
-test_that("max_retries reaches the JSON path under auto", {
+test_that("json_retries reaches the JSON path under auto", {
   skip_if_not_installed("mockery")
   calls <- new.env()
 
@@ -1048,9 +1061,9 @@ test_that("max_retries reaches the JSON path under auto", {
   mockery::stub(f, "code_handler_json", json_stub(calls))
 
   suppressWarnings(
-    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", max_retries = 7)
+    f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", json_retries = 7)
   )
-  expect_equal(calls$max_retries, 7)
+  expect_equal(calls$json_retries, 7)
 })
 
 
@@ -1390,6 +1403,45 @@ test_that("new_qlm_coded rejects a table whose .id repeats", {
     ),
     "must be unique"
   )
+})
+
+
+# Completing a run in the same call -------------------------------------------
+
+test_that("qlm_code(backfill = ) hands the result to qlm_backfill", {
+  skip_if_not_installed("mockery")
+  seen <- new.env()
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub())
+  mockery::stub(f, "qlm_backfill", function(x, ..., passes) {
+    seen$x <- x
+    seen$passes <- passes
+    x
+  })
+  code <- function(...) f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", ...)
+
+  # FALSE, 0 and NULL all mean none in a fresh run
+  code()
+  expect_null(seen$x)
+  code(backfill = 0)
+  expect_null(seen$x)
+  code(backfill = NULL)
+  expect_null(seen$x)
+
+  result <- code(backfill = 3)
+  expect_s3_class(seen$x, "qlm_coded")
+  expect_identical(seen$passes, 3L)
+  expect_equal(seen$x$score, result$score)
+
+  # TRUE is the default number of passes, not one pass by coercion
+  code(backfill = TRUE)
+  expect_identical(seen$passes, 2L)
+
+  for (bad in list(-1, 1.5, NA, c(1, 2), "2", c(TRUE, TRUE), Inf, -Inf, NaN,
+                   .Machine$integer.max + 1)) {
+    expect_error(code(backfill = bad), "single non-negative integer")
+  }
 })
 
 

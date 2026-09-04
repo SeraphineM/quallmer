@@ -54,7 +54,7 @@ qlm_failures(examples$example_coded_sentiment)
 
 }
 \seealso{
-\code{\link[=qlm_code]{qlm_code()}}, whose \code{on_error = "continue"} is what leaves failed
-units in the object rather than stopping the run; \link{accessors} for the
-other accessor functions.
+\code{\link[=qlm_backfill]{qlm_backfill()}} to re-code the failed units; \code{\link[=qlm_code]{qlm_code()}}, whose
+\code{on_error = "continue"} is what leaves failed units in the object rather
+than stopping the run; \link{accessors} for the other accessor functions.
 }

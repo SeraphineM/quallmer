@@ -37,9 +37,9 @@
 #'   for a unit that failed by returning `NA` for every required property).
 #'   Zero rows when every unit was coded.
 #'
-#' @seealso [qlm_code()], whose `on_error = "continue"` is what leaves failed
-#'   units in the object rather than stopping the run; [accessors] for the
-#'   other accessor functions.
+#' @seealso [qlm_backfill()] to re-code the failed units; [qlm_code()], whose
+#'   `on_error = "continue"` is what leaves failed units in the object rather
+#'   than stopping the run; [accessors] for the other accessor functions.
 #'
 #' @examples
 #' examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))

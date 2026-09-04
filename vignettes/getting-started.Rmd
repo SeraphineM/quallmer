@@ -41,7 +41,7 @@ library(quallmer)
 The typical quallmer workflow consists of five steps:
 
 1. **Define** your codebook with `qlm_codebook()`
-2. **Code** your data with `qlm_code()`
+2. **Code** your data with `qlm_code()`, and complete a run that came back with failures using `qlm_backfill()`
 3. **Replicate** with different settings using `qlm_replicate()`
 4. **Compare** results with `qlm_compare()`
 5. **Document** everything with `qlm_trail()`

@@ -155,6 +155,9 @@ qlm_trail <- function(..., path = NULL) {
       run$cost_note <- meta_attr$user$cost_note
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
+      # Passes that completed the run, and any other model they used: the
+      # audit trail is where a composite most needs to be disclosed (#136)
+      run$backfill <- meta_attr$object$backfill
     } else if (inherits(obj, "qlm_comparison")) {
       run$comparison <- obj
       run$metadata$n_raters <- meta_attr$object$n_raters
@@ -287,6 +290,9 @@ print.qlm_trail <- function(x, ...) {
     if (!is.null(run$chat_args$name)) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
     }
+    if (!is.null(backfill_summary(run$backfill))) {
+      cat("Backfill:", backfill_summary(run$backfill), "\n")
+    }
     if (!is.null(run$metadata$notes)) {
       cat("Notes:   ", run$metadata$notes, "\n", sep = "")
     }
@@ -348,6 +354,9 @@ print.qlm_trail <- function(x, ...) {
 
       cat(i, ". ", run$name, parent_str, "\n", sep = "")
       cat("   ", ts, " | ", model, "\n", sep = "")
+      if (!is.null(backfill_summary(run$backfill))) {
+        cat("   Backfill: ", backfill_summary(run$backfill), "\n", sep = "")
+      }
 
       if (!is.null(run$codebook$name)) {
         cat("   Codebook: ", run$codebook$name, "\n", sep = "")
@@ -511,6 +520,9 @@ generate_trail_report <- function(trail, file) {
     if (!is.null(run$chat_args$name)) {
       lines <- c(lines, paste("**Model:**", run$chat_args$name))
     }
+    if (!is.null(backfill_summary(run$backfill))) {
+      lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
+    }
 
     params <- run_params(run)
     if (length(params) > 0) {
@@ -524,6 +536,10 @@ generate_trail_report <- function(trail, file) {
     # figure resting on entered rates must say so in the artefact (#135)
     if (!is.null(run$cost_note)) {
       lines <- c(lines, paste("**Cost:**", run$cost_note))
+    }
+    pass_notes <- backfill_cost_notes(run$backfill, run$cost_note)
+    for (i in seq_along(pass_notes)) {
+      lines <- c(lines, paste0("**Cost (", names(pass_notes)[i], "):** ", pass_notes[[i]]))
     }
 
     # Codebook reference

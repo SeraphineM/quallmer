@@ -49,8 +49,8 @@ cat(quallmer:::json_system_prompt(data_codebook_sentiment))
 
 # Guards, all of which should error before any request is made
 try(qlm_code(texts, data_codebook_sentiment, model = MODEL, batch = TRUE))
-try(qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", max_retries = 2))
-try(qlm_code(texts, data_codebook_sentiment, model = MODEL, max_retries = -1))
+try(qlm_code(texts, data_codebook_sentiment, model = "openai/gpt-4o-mini", json_retries = 2))
+try(qlm_code(texts, data_codebook_sentiment, model = MODEL, json_retries = -1))
 
 
 # 1. Basic run ----------------------------------------------------------------
@@ -157,10 +157,10 @@ table(coded_awkward$register, useNA = "ifany")
 
 
 # 5. What failure looks like --------------------------------------------------
-# max_retries = 0 disables repair, so any non-conformance surfaces directly.
+# json_retries = 0 disables repair, so any non-conformance surfaces directly.
 # Compare the .error messages here against a default run of section 4.
 
-coded_noretry <- qlm_code(texts, codebook_awkward, model = MODEL, max_retries = 0)
+coded_noretry <- qlm_code(texts, codebook_awkward, model = MODEL, json_retries = 0)
 coded_noretry
 
 if (".error" %in% names(coded_noretry)) {
@@ -177,7 +177,7 @@ qlm_meta(coded_noretry, type = "user")$n_invalid
 # A JSON-path result must behave like any other qlm_coded object.
 
 qlm_trail(coded)
-rep1 <- qlm_replicate(coded)             # NB: reverts to max_retries = 2
+rep1 <- qlm_replicate(coded)             # NB: reverts to json_retries = 2
 qlm_compare(coded, rep1)
 
 
@@ -229,5 +229,5 @@ coded_adv
 qlm_meta(coded_adv, type = "user")$n_invalid
 
 # Raise retries if failures persist, to see whether they are recoverable at all
-coded_adv5 <- qlm_code(long_texts, codebook_adversarial, model = MODEL, max_retries = 5)
+coded_adv5 <- qlm_code(long_texts, codebook_adversarial, model = MODEL, json_retries = 5)
 qlm_meta(coded_adv5, type = "user")$n_invalid

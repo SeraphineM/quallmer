@@ -47,6 +47,8 @@ Every quallmer object carries metadata about how it was created. The trail syste
 ```
 qlm_code()       →  Creates coded object with run metadata
       ↓
+qlm_backfill()   →  Completes the run; each pass is recorded on the same object
+      ↓
 qlm_replicate()  →  Creates new object linked to parent
       ↓
 qlm_compare()    →  Creates comparison linked to inputs
@@ -110,6 +112,7 @@ The print output shows:
 
 - Run names and parent relationships
 - Timestamps and model information
+- Backfill passes, and any other model they used, so a run completed by two instruments is disclosed as one
 - Notes documenting why each run was performed
 - Comparison/validation summaries
 - Whether the chain is complete

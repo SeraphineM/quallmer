@@ -10,6 +10,7 @@ qlm_replicate(
   codebook = NULL,
   model = NULL,
   batch = NULL,
+  backfill = NULL,
   name = NULL,
   notes = NULL
 )
@@ -21,8 +22,10 @@ qlm_replicate(
 \code{api_args}, or \code{max_active}. Any setting not overridden is restored from
 the original run when the endpoint is unchanged, including the arguments
 it passed to \code{\link[ellmer:chat]{ellmer::chat()}}. An endpoint is identified by both the
-provider prefix and \code{base_url}, since every provider ellmer has no
-\verb{chat_*()} for is reached as \verb{openai_compatible/<model>} — so Qwen through
+provider prefix and \code{base_url} (an explicit \code{base_url = NULL}, meaning
+the provider's default host, counts as a change of endpoint), since
+every provider ellmer has no \verb{chat_*()} for is reached as
+\verb{openai_compatible/<model>} — so Qwen through
 Alibaba Model Studio and Kimi through Moonshot share a prefix while being
 different services with different credentials. When either changes, only
 portable chat settings (\code{params} and \code{echo}) are carried over; supply
@@ -41,6 +44,16 @@ the codebook from \code{x}.}
 (default), uses the batch setting from \code{x}. Set to \code{TRUE} to use batch
 processing or \code{FALSE} to use parallel processing, regardless of the
 original setting.}
+
+\item{backfill}{Logical, integer, or \code{NULL}; controls backfilling after the
+replication. \code{NULL} (default) replays the passes recorded on \code{x}, using
+the same models and overrides in the same order. \code{FALSE} or \code{0} performs
+no backfill. \code{TRUE} runs a fresh backfill with the replication's model
+and the default number of passes, currently two; a positive integer runs
+at most that many fresh passes. A fresh backfill does not reproduce a
+different model used by the parent's recorded passes. If a replayed pass
+fails outright, the replication and any earlier recoveries are retained,
+the failure is recorded, and no later passes are replayed.}
 
 \item{name}{Optional name for this run. If \code{NULL}, defaults to the model
 name (if changed) or \code{"replication_N"} where N is the replication count.}
@@ -65,7 +78,12 @@ The coding path is reproduced from the path the original run actually took,
 not the \code{structured} mode it requested: a run that asked for \code{"auto"} and
 fell back to JSON mode replicates as \code{"json"}, so that an intermittently
 conforming endpoint cannot quietly skip the local validation the original
-relied on. Pass \code{structured} explicitly to override.
+relied on. Pass \code{structured} explicitly to override. When the endpoint
+changes, provider or \code{base_url}, the path is chosen afresh for it. By the
+same rule,
+a parent that was completed with \code{\link[=qlm_backfill]{qlm_backfill()}} has its passes replayed
+on the replication, so the two are complete on the same terms; see
+\code{backfill}.
 }
 \examples{
 \dontrun{
@@ -83,5 +101,6 @@ qlm_compare(coded, coded2, by = "sentiment", level = "nominal")
 }
 \seealso{
 \code{\link[=qlm_code]{qlm_code()}} for initial coding, \code{\link[=qlm_compare]{qlm_compare()}} for comparing
-replicated results.
+replicated results, \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code only the units a run
+failed on.
 }

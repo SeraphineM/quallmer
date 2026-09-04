@@ -601,7 +601,7 @@ test_that("qlm_replicate does not carry tools across a replication", {
 })
 
 
-test_that("qlm_replicate carries max_retries only where it applies", {
+test_that("qlm_replicate carries json_retries only where it applies", {
   skip_if_not_installed("mockery")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
@@ -614,7 +614,7 @@ test_that("qlm_replicate carries max_retries only where it applies", {
       chat_args = list(name = model),
       execution_args = list(),
       batch = FALSE,
-      metadata = list(n_units = 1, backend = "json_mode", max_retries = 5L),
+      metadata = list(n_units = 1, backend = "json_mode", json_retries = 5L),
       name = "run1", call = quote(qlm_code())
     )
   }
@@ -629,13 +629,13 @@ test_that("qlm_replicate carries max_retries only where it applies", {
   f <- qlm_replicate
   mockery::stub(f, "qlm_code", capture)
   f(make("deepseek/deepseek-chat"), name = "run2")
-  expect_equal(seen$max_retries, 5L)
+  expect_equal(seen$json_retries, 5L)
 
   # JSON mode is now reachable for any provider, so the setting still applies
   # after a model change
   seen <- NULL
   f(make("deepseek/deepseek-chat"), model = "openai/gpt-4o-mini", name = "run3")
-  expect_equal(seen$max_retries, 5L)
+  expect_equal(seen$json_retries, 5L)
 })
 
 
@@ -667,9 +667,9 @@ test_that("qlm_replicate reproduces the path taken, not the mode requested", {
   # it validated locally. Replicating with "auto" would let an intermittently
   # conforming endpoint take the structured path instead and skip that
   # validation, making the two runs incomparable.
-  f(make(structured = "auto", backend = "json_mode", max_retries = 4L), name = "run2")
+  f(make(structured = "auto", backend = "json_mode", json_retries = 4L), name = "run2")
   expect_equal(seen$structured, "json")
-  expect_equal(seen$max_retries, 4L)
+  expect_equal(seen$json_retries, 4L)
 
   # Likewise the other way: a run that did take the structured path replicates
   # as "structured", so a failure surfaces rather than being papered over by a
@@ -677,8 +677,8 @@ test_that("qlm_replicate reproduces the path taken, not the mode requested", {
   seen <- NULL
   f(make(structured = "auto", backend = "structured"), name = "run3")
   expect_equal(seen$structured, "structured")
-  # max_retries has no meaning there, and supplying it is an error
-  expect_false("max_retries" %in% names(seen))
+  # json_retries has no meaning there, and supplying it is an error
+  expect_false("json_retries" %in% names(seen))
 
   # An explicit override still wins
   seen <- NULL
@@ -837,6 +837,173 @@ test_that("qlm_replicate keeps an explicitly supplied credential across an endpo
 })
 
 
+test_that("qlm_replicate completes the replication as its parent was completed", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "test/model"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+
+  seen <- new.env()
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", coded)
+  mockery::stub(f, "replay_backfill", function(result, parent, backfill = NULL) {
+    seen$parent <- parent
+    seen$backfill <- backfill
+    result
+  })
+
+  f(coded)
+  expect_identical(seen$parent, coded)
+  expect_null(seen$backfill)
+
+  f(coded, backfill = FALSE)
+  expect_false(seen$backfill)
+})
+
+test_that("qlm_replicate leaves the coding path to a new provider", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "deepseek/deepseek-chat"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2, backend = "json_mode",
+                    json_retries = 3L),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+
+  seen <- new.env()
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen$args <- list(...)
+    coded
+  })
+  mockery::stub(f, "replay_backfill", function(result, ...) result)
+
+  # Same provider: the JSON path and its retries travel
+  f(coded)
+  expect_equal(seen$args$structured, "json")
+  expect_equal(seen$args$json_retries, 3L)
+
+  # Another provider: the path does not, so qlm_code() chooses for it; the
+  # retry budget still applies wherever JSON mode is taken
+  f(coded, model = "openai/gpt-4o-mini")
+  expect_null(seen$args$structured)
+  expect_equal(seen$args$json_retries, 3L)
+
+  # The same prefix at another base_url is another endpoint too: Qwen through
+  # DashScope and Kimi through Moonshot enforce a schema quite differently
+  compatible <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "openai_compatible/qwen3.5",
+                     base_url = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
+    execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2, backend = "structured"),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+  f(compatible)
+  expect_equal(seen$args$structured, "structured")
+  f(compatible, model = "openai_compatible/kimi-k3", base_url = "https://api.moonshot.ai/v1")
+  expect_null(seen$args$structured)
+})
+
+test_that("qlm_replicate validates backfill before coding anything", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook, data = c("t1", "t2"), input_type = "text",
+    chat_args = list(name = "test/model"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2),
+    name = "original", call = quote(qlm_code(...)), parent = NULL
+  )
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) stop("a paid call was made"))
+  expect_error(f(coded, backfill = "yes"), "single non-negative integer")
+  expect_error(f(coded, backfill = -1), "single non-negative integer")
+  expect_error(f(coded, backfill = 1.5), "single non-negative integer")
+  expect_error(f(coded, backfill = Inf), "single non-negative integer")
+  expect_error(f(coded, backfill = .Machine$integer.max + 1), "single non-negative integer")
+})
+
+
+test_that("qlm_replicate treats an explicit base_url = NULL as a change of endpoint", {
+  skip_if_not_installed("mockery")
+
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+
+  proxied <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai/gpt-4o-mini",
+      base_url = "https://proxy.example/v1",
+      credentials = function() list(Authorization = "Bearer proxy-secret"),
+      api_args = list(reasoning_effort = "max"),
+      params = list(temperature = 0)
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1, backend = "structured"),
+    name = "run1", call = quote(qlm_code())
+  )
+
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) {
+    seen <<- list(...)
+    proxied
+  })
+
+  # Clearing base_url points the run at OpenAI's own host. The proxy's
+  # credential and request arguments must not go there, and the path the
+  # proxy took says nothing about what the default host accepts.
+  expect_message(
+    f(proxied, base_url = NULL, name = "run2"),
+    "to the provider's default endpoint; not carrying over"
+  )
+  expect_false("base_url" %in% names(seen))
+  expect_false("credentials" %in% names(seen))
+  expect_false("api_args" %in% names(seen))
+  expect_null(seen$structured)
+  expect_equal(seen$params, list(temperature = 0))
+})
+
+
+test_that("qlm_replicate hands an integer backfill on as given", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+  seen <- new.env()
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", coded)
+  mockery::stub(f, "replay_backfill", function(result, parent, backfill = NULL) {
+    seen$backfill <- backfill
+    result
+  })
+  f(coded, backfill = 3)
+  expect_equal(seen$backfill, 3)
+  f(coded, backfill = 0)
+  expect_equal(seen$backfill, 0)
+})
+
+
 # supplied prices (#135) -------------------------------------------------------
 
 priced_coded <- function() {
@@ -914,4 +1081,39 @@ test_that("qlm_replicate carries supplied prices to the same model, not to anoth
   # An explicit override is left alone
   f(coded, model = "deepseek/deepseek-reasoner", prices = c(input = 2, output = 20))
   expect_equal(seen$prices, c(input = 2, output = 20))
+})
+
+
+test_that("qlm_replicate does not send a credential the trail redacted (#154)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(
+      name = "openai/gpt-4o-mini",
+      api_key = "<redacted>",
+      api_headers = c(Authorization = "<redacted>", `anthropic-beta` = "b"),
+      params = list(temperature = 0)
+    ),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) { seen <<- list(...); coded })
+  mockery::stub(f, "replay_backfill", function(result, ...) result)
+
+  msgs <- capture_messages(f(coded, name = "run2"))
+  expect_true(any(grepl("`api_key`, `api_headers` carry values redacted", msgs)))
+  expect_false("api_key" %in% names(seen))
+  expect_equal(seen$api_headers, c(`anthropic-beta` = "b"))
+  expect_equal(seen$params, list(temperature = 0))
+
+  # An explicit value in `...` supersedes the redacted one and is not
+  # reported as dropped
+  msgs <- capture_messages(f(coded, api_key = "sk-new", name = "run3"))
+  expect_true(any(grepl("`api_headers` carries a value redacted", msgs)))
+  expect_equal(seen$api_key, "sk-new")
 })

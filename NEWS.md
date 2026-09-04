@@ -29,6 +29,31 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
+* New `qlm_backfill()` re-codes only the units a run failed on and merges the
+  results into the original object, instead of re-running the whole corpus
+  to recover a handful of transient failures. Which units to retry is
+  decided afresh on each pass by the test `qlm_failures()` uses, so a
+  request rejected on length drops out as soon as a pass records it, and a
+  response cut off at `max_tokens` is retried only when the backfill raises
+  the limit through `params`; content refusals are retried, because they are
+  not deterministic. A pass that recovers nothing ends the backfill early.
+  Passes run with the run's own model and settings by default, on the path
+  the run actually took. A different `model` may be given, for units the
+  original model consistently refuses or cannot fit in its context window,
+  and the result then records which units came from which model and says so
+  when printed, since a coding by two instruments has to be disclosed as
+  one. Rows keep their order, a failed retry never overwrites anything, and
+  token and cost columns are summed across attempts, a total staying `NA`
+  when any attempt's figure is unknown, as it becomes for the units a pass
+  that failed outright attempted, since the pass may have been billed. A
+  pass costed on other rates than the run records them, and `print()` and
+  `qlm_trail()` say so beside the run's own cost note. `qlm_code()` gains
+  `backfill` to complete a run in the same call, and `qlm_replicate()`
+  gains `backfill`, which by default replays the passes recorded on the
+  parent so that a replication of a completed run is complete on the same
+  terms. `qlm_trail()` reports the passes and any other model they used, so
+  a composite is disclosed in the audit trail as well as when printed (#136).
+
 * New `qlm_failures()` lists the units a coding run failed on, with the
   reason for each, and `print()` of a `qlm_coded` object now reports
   `Units: 251 (211 scored, 40 failed)` rather than the number attempted, so a
@@ -96,7 +121,7 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   prompt, validates each response locally against `codebook$schema`, and
   re-prompts the model with the specific validation error
   (`$.claims[2].salience must be a number`) when a response does not conform.
-  Repair attempts default to 2 and are configurable with `max_retries`. Units
+  Repair attempts default to 2 and are configurable with `json_retries`. Units
   that never validate have `NA` coded values and a `.error` list-column
   recording why, and token and cost accounting sums across repair attempts. A
   document the provider rejects as too long is not re-sent, but a content
@@ -352,13 +377,22 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   send one vendor's credential to the other. The model is still passed as
   `model`, and registered `tools` are never carried over (#125).
 
-* `qlm_replicate()` also reproduces the coding path and `max_retries` of the
+* `qlm_replicate()` also reproduces the coding path and `json_retries` of the
   original run. The path is derived from the backend the run actually used
   rather than the mode it requested, so a run that asked for
   `structured = "auto"` and fell back to JSON mode replicates as `"json"`:
   requesting `"auto"` again would let an intermittently conforming endpoint
   take the structured path instead, silently skipping the local validation the
   original relied on and leaving the two runs incomparable (#128, #134).
+
+* `qlm_replicate()` no longer carries the coding path across a change of
+  endpoint, provider or `base_url`. It reproduced the path the parent took,
+  `structured` or `json`, which is right for the same endpoint and wrong for
+  another: a JSON-mode DeepSeek run replicated on OpenAI would skip
+  provider-side enforcement, a structured OpenAI run replicated on DeepSeek
+  would fail outright, and two OpenAI-compatible services behind the same
+  prefix enforce a schema quite differently. With a new endpoint the path is
+  now chosen as for a fresh run; `json_retries` still carries, as before.
 
 * `qlm_trail()` no longer emits "unknown column" warnings or crashes with
   `the condition has length > 1` when passed a `qlm_comparison` or
