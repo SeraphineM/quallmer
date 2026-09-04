@@ -417,6 +417,17 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   can be extracted from the trail for replication without modification
   (#93).
 
+## Documentation
+
+* The package now ships a coded run that came back incomplete and its
+  backfilled counterpart, in `inst/extdata/example_objects.rds`, coded once
+  with a live model and a deliberately short timeout and low `max_tokens`.
+  The workflow guide's "When a run comes back incomplete" section, the audit
+  trail tutorial, and the examples of `qlm_failures()` and `qlm_backfill()`
+  now show `qlm_failures()`, `print()` and the trail's `Backfill:` line on
+  those objects, evaluated, where before they described the output in prose
+  or sat in `\dontrun{}` (#173).
+
 ## Internal changes
 
 * All reliability statistics are now native R implementations, derived

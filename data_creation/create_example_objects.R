@@ -106,7 +106,14 @@ example_objects <- list(
   example_humancoded = example_humancoded
 )
 
+# The file also carries the objects create_example_backfill_objects.R makes,
+# which cost a live run of their own; a rerun here keeps them
 output_file <- "inst/extdata/example_objects.rds"
+if (file.exists(output_file)) {
+  existing <- readRDS(output_file)
+  kept <- existing[setdiff(names(existing), names(example_objects))]
+  example_objects <- c(example_objects, kept)
+}
 saveRDS(example_objects, output_file)
 
 cat("\nSuccessfully saved example objects to:", output_file, "\n")
