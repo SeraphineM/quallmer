@@ -33,9 +33,11 @@ url_arg_names <- c("base_url", "endpoint")
 #'   anything but a variable name is replaced, since an inline
 #'   `ellmer::tool()` definition carries its function's source.
 #'
-#' Only literals are redacted from the call. An argument given as a variable
-#' or an expression, `api_key = key` or `api_key = Sys.getenv("KEY")`, names
-#' where the value came from rather than containing it, and stays.
+#' A credential argument in the call is kept only when it names a source that
+#' cannot itself contain the value: a variable, a namespace-qualified name,
+#' or an exact one-argument `Sys.getenv("KEY")` lookup. A computed expression
+#' can contain a literal credential even though its result was not evaluated
+#' when the call was captured, so any other expression is replaced wholesale.
 #'
 #' A `credentials` callback is a literal of its own kind: ellmer calls it for
 #' the secret, so `function() "sk-..."` holds the value as surely as
@@ -214,7 +216,7 @@ redact_chat_args <- function(chat_args) {
 }
 
 
-#' Redact credential literals in a recorded call
+#' Redact credential values and expressions in a recorded call
 #'
 #' Applied at every depth: a comparison or validation records the coding
 #' calls it was given as its arguments, and a credential in one of those is
@@ -223,7 +225,7 @@ redact_chat_args <- function(chat_args) {
 #' @param call A call, as recorded by `match.call()` in `qlm_code()` and the
 #'   functions that take its results.
 #'
-#' @return The call with credential literals replaced.
+#' @return The call with credential-bearing values and expressions replaced.
 #' @keywords internal
 #' @noRd
 redact_call <- function(call) {
@@ -236,8 +238,10 @@ redact_call <- function(call) {
     nm <- nms[i]
     value <- call[[i]]
 
-    if (identical(nm, "api_key") && is.character(value)) {
-      call[[i]] <- REDACTED
+    if (identical(nm, "api_key")) {
+      if (!is_safe_credential_source(value)) {
+        call[[i]] <- REDACTED
+      }
     } else if (identical(nm, "api_headers")) {
       call[[i]] <- redact_header_expr(value)
     } else if (identical(nm, "credentials")) {
@@ -246,8 +250,12 @@ redact_call <- function(call) {
       # An inline tool definition can hold an R function and anything the
       # function holds; only a name that points elsewhere is safe to keep
       call[[i]] <- REDACTED
-    } else if (nm %in% url_arg_names && is.character(value)) {
-      call[[i]] <- redact_url(value)
+    } else if (nm %in% url_arg_names) {
+      if (is.character(value)) {
+        call[[i]] <- redact_url(value)
+      } else if (!is_safe_credential_source(value)) {
+        call[[i]] <- REDACTED
+      }
     } else if (is.call(value)) {
       # A qlm_compare() or qlm_validate() call records the qlm_code() calls
       # it was given, with their arguments; the same rules apply at depth
@@ -278,28 +286,34 @@ redact_headers <- function(headers) {
 }
 
 
-#' Redact credential-named string literals in a header expression
+#' Redact credential-bearing values in a header expression
 #'
 #' Handles the literal form, `c(Authorization = "Bearer ...")` or the same
-#' with `list()`. A header given as a variable or built by an expression is
-#' left as written.
+#' with `list()`, replacing a credential-named entry regardless of whether its
+#' value is a string or a computed expression. A source reference is safe to
+#' keep. Any other expression is replaced wholesale because it can contain a
+#' credential in its unevaluated language object.
 #'
 #' @param expr The `api_headers` argument of a recorded call.
 #'
-#' @return `expr` with matching string literals replaced.
+#' @return `expr` with matching entries replaced, or `"<redacted>"`.
 #' @keywords internal
 #' @noRd
 redact_header_expr <- function(expr) {
-  if (!is.call(expr)) {
+  if (is_safe_credential_source(expr)) {
     return(expr)
   }
+  if (!is.call(expr) ||
+      !identical(expr[[1]], quote(c)) && !identical(expr[[1]], quote(list))) {
+    return(REDACTED)
+  }
   nms <- names(expr)
-  if (is.null(nms)) {
-    return(expr)
+  if (is.null(nms) || any(!nzchar(nms[-1]))) {
+    return(REDACTED)
   }
 
   for (i in seq_along(expr)[-1]) {
-    if (nzchar(nms[i]) && is_credential_name(nms[i]) && is.character(expr[[i]])) {
+    if (is_credential_name(nms[i])) {
       expr[[i]] <- REDACTED
     }
   }
@@ -334,8 +348,8 @@ redact_credentials <- function(f) {
 #'
 #' A `function` literal is kept only in the recognised safe form, and then
 #' rebuilt from its parts so that no source reference, which can carry text
-#' beyond the code, travels with it. A variable or any other expression names
-#' a source and stays as written.
+#' beyond the code, travels with it. A safe source reference stays as written;
+#' any other expression is replaced because it may contain a credential.
 #'
 #' @param expr The `credentials` argument of a recorded call.
 #'
@@ -343,13 +357,38 @@ redact_credentials <- function(f) {
 #' @keywords internal
 #' @noRd
 redact_credentials_expr <- function(expr) {
-  if (!is.call(expr) || !identical(expr[[1]], as.name("function"))) {
+  if (is.call(expr) && identical(expr[[1]], as.name("function"))) {
+    if (!is.null(expr[[2]]) || !is_safe_credentials_body(expr[[3]])) {
+      return(REDACTED)
+    }
+    return(as.call(list(as.name("function"), NULL, expr[[3]], NULL)))
+  }
+  if (is_safe_credential_source(expr)) {
     return(expr)
   }
-  if (!is.null(expr[[2]]) || !is_safe_credentials_body(expr[[3]])) {
-    return(REDACTED)
+  REDACTED
+}
+
+
+#' Is this expression only a reference to a credential source?
+#'
+#' Symbols and namespace-qualified names cannot contain a credential value in
+#' the recorded call. An exact one-argument `Sys.getenv()` lookup contains only
+#' the environment-variable name. Calls that compute a value are not safe:
+#' their unevaluated arguments may contain the credential itself.
+#'
+#' @param expr An expression from a recorded call.
+#'
+#' @return `TRUE` when the expression cannot itself contain a credential value.
+#' @keywords internal
+#' @noRd
+is_safe_credential_source <- function(expr) {
+  if (is.null(expr) || is.symbol(expr) || is_safe_credentials_body(expr)) {
+    return(TRUE)
   }
-  as.call(list(as.name("function"), NULL, expr[[3]], NULL))
+  is.call(expr) && length(expr) == 3L &&
+    (identical(expr[[1]], quote(`::`)) || identical(expr[[1]], quote(`:::`))) &&
+    is.symbol(expr[[2]]) && is.symbol(expr[[3]])
 }
 
 

@@ -1902,7 +1902,11 @@ test_that("the trail report says what each tool could do (#122)", {
   report <- readLines(paste0(stem, ".qmd"))
   expect_true(any(grepl("^\\*\\*Tools:\\*\\* web_search \\(hosted\\), echo \\(custom\\)$", report)))
   expect_true(any(grepl('"allowed_domains":"wikipedia.org"', report, fixed = TRUE)))
-  expect_true(any(grepl("^- echo \\(custom\\): Echoes the text\\. Arguments: x \\(string\\), n \\(integer, optional\\)$", report)))
+  tool_line <- report[grepl("^- echo \\(custom\\):", report)]
+  expect_length(tool_line, 1)
+  expect_match(tool_line, '"description":"The text"')
+  expect_match(tool_line, '"description":"Count"')
+  expect_match(tool_line, '"required":\\["x"\\]')
   # print() stays compact
   out <- capture.output(print(coded))
   expect_true(any(grepl("^# Tools:    web_search \\(hosted\\), echo \\(custom\\)$", out)))

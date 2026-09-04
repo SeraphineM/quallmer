@@ -84,15 +84,24 @@ test_that("as_tool_records wraps a bare tool", {
   expect_equal(as_tool_records(lookup)[[1]]$name, "lookup")
 })
 
-test_that("format_tool_details gives each tool's configuration or arguments", {
+test_that("format_tool_details gives each tool's complete configuration", {
   search <- ellmer::openai_tool_web_search(allowed_domains = "example.com")
   echo <- ellmer::tool(function(x) x, name = "echo", description = "Echoes.",
-                       arguments = list(x = ellmer::type_string("The text")))
+                       arguments = list(x = ellmer::type_enum(c("a", "b"), "The choice")),
+                       annotations = ellmer::tool_annotations(read_only_hint = TRUE))
   lines <- format_tool_details(list(search, echo, lookup))
   expect_length(lines, 3)
   expect_match(lines[1], '^- web_search \\(hosted\\): `\\{.*"allowed_domains":"example\\.com".*\\}`$')
-  expect_equal(lines[2], "- echo (custom): Echoes. Arguments: x (string)")
-  expect_equal(lines[3], "- lookup (custom): Looks things up. No arguments")
+  expect_match(lines[2], '^- echo \\(custom\\): Echoes\\. Configuration: `\\{')
+  expect_match(lines[2], '"enum":\\["a","b"\\]')
+  expect_match(lines[2], '"description":"The choice"')
+  expect_match(lines[2], '"read_only_hint":true')
+  expect_match(lines[3], '^- lookup \\(custom\\): Looks things up\\. Configuration: `\\{')
   # Records read back from a trail render the same way
   expect_identical(format_tool_details(tool_records(list(search, echo, lookup))), lines)
+
+  other <- ellmer::tool(function(x) x, name = "echo", description = "Echoes.",
+                        arguments = list(x = ellmer::type_enum(c("c", "d"), "The choice")),
+                        annotations = ellmer::tool_annotations(read_only_hint = FALSE))
+  expect_false(identical(format_tool_details(echo), format_tool_details(other)))
 })

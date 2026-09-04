@@ -50,13 +50,14 @@
 #' what it was; a `qlm_coded` object loaded from the `.rds` therefore needs a
 #' credential of its own before it can be replicated.
 #'
-#' Only literal values are redacted from a call. A credential read where it
-#' is needed, through an environment variable ellmer reads by default or a
-#' `credentials = function() Sys.getenv("MY_KEY")` argument, never enters the
-#' record and is the recommended form. That is also the only `credentials`
-#' callback the trail keeps, rebuilt without its environment; a callback of
-#' any other shape is replaced by `"<redacted>"`, since it may hold or
-#' capture the secret it returns.
+#' In a recorded call, a credential argument is kept only when it names a
+#' source that cannot itself contain the value: a variable, a qualified name,
+#' or an exact one-argument `Sys.getenv("MY_KEY")` lookup. Other computed
+#' expressions are replaced wholesale because their unevaluated arguments may
+#' contain a literal credential. The exact `credentials = function()
+#' Sys.getenv("MY_KEY")` callback is also kept, rebuilt without its environment;
+#' a callback of any other shape is replaced by `"<redacted>"`, since it may
+#' hold or capture the secret it returns.
 #' }
 #'
 #' @references

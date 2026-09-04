@@ -33,8 +33,8 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   such as a provider's hosted web-search tool, on the chat before coding.
   Registered tools are recorded on the object, disclosed by `print()` and
   `qlm_trail()`, carried to backfill passes and to a replication on the same
-  endpoint, kept in the trail by name, type and description rather than as
-  objects but with their configuration, and refused with `batch = TRUE`,
+  endpoint, kept in the trail by name, type, description and full configuration
+  rather than as objects, and refused with `batch = TRUE`,
   which cannot send them. A custom
   tool takes effect on the JSON path only, and a run with a hosted tool says
   in its cost note that the tool's calls are billed outside the token cost
@@ -327,15 +327,15 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 * `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
   a credential-named `api_headers` entry, or a `base_url` carrying userinfo
-  or a credential-named query parameter, given to `qlm_code()` as a literal,
-  previously appeared verbatim in the report's Call section and in the saved
-  `.rds`. Their values are now replaced by `"<redacted>"` in each run's
-  recorded call and chat arguments, in the returned trail and in both files,
-  and a message says which runs were affected. A `credentials` callback is
-  kept only as `function() Sys.getenv("NAME")`, rebuilt without its
-  environment; any other callback is redacted too. Reading the key where it
-  is needed, through an environment variable or that callback form, keeps
-  it out of the record entirely and is the recommended form (#154).
+  or a credential-named query parameter previously appeared verbatim in the
+  report's Call section and in the saved `.rds`. Their values are now replaced
+  by `"<redacted>"` in each run's recorded call and chat arguments, in the
+  returned trail and in both files; computed expressions that may contain
+  those values are redacted wholesale. A `credentials` callback is kept only
+  as `function() Sys.getenv("NAME")`, rebuilt without its environment; any
+  other callback is redacted too. Reading the key where it is needed, through
+  an environment variable or that callback form, keeps it out of the record
+  entirely and is the recommended form (#154).
 
 * `qlm_trail()` reports which endpoint each run actually used, and points at
   the right ellmer help page for setting it up. The report derived a provider

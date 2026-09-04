@@ -84,7 +84,7 @@ test_that("redact_chat_args() leaves unnamed input alone", {
 
 # ---- redact_call() -----------------------------------------------------------
 
-test_that("redact_call() replaces credential literals and nothing else", {
+test_that("redact_call() replaces credential literals and keeps safe context", {
   call <- quote(qlm_code(
     x, cb, model = "m",
     api_key = "sk-abc",
@@ -106,7 +106,8 @@ test_that("redact_call() keeps an argument that names its source rather than hol
     api_key = Sys.getenv("OPENAI_API_KEY"),
     base_url = my_url,
     api_headers = my_headers,
-    credentials = my_creds
+    credentials = my_creds,
+    endpoint = base::identity
   ))
   expect_identical(redact_call(call), call)
 })
@@ -148,14 +149,15 @@ test_that("redact_call() is a no-op on calls without named arguments and on non-
   expect_identical(redact_call("a string"), "a string")
 })
 
-test_that("redact_header_expr() only touches credential-named string literals", {
+test_that("redact_header_expr() replaces whole credential-named entries", {
   expr <- quote(list(Authorization = paste("Bearer", key), `X-Api-Key` = "k", accept = "json"))
   out <- redact_header_expr(expr)
   expect_identical(
     out,
-    quote(list(Authorization = paste("Bearer", key), `X-Api-Key` = "<redacted>", accept = "json"))
+    quote(list(Authorization = "<redacted>", `X-Api-Key` = "<redacted>", accept = "json"))
   )
-  expect_identical(redact_header_expr(quote(c("a", "b"))), quote(c("a", "b")))
+  expect_identical(redact_header_expr(quote(c("a", "b"))), REDACTED)
+  expect_identical(redact_header_expr(quote(setNames("secret", "Authorization"))), REDACTED)
   expect_identical(redact_header_expr(quote(my_headers)), quote(my_headers))
 })
 
@@ -334,4 +336,28 @@ test_that("redact_call() reaches into nested calls (#122)", {
   # Positional inner calls, with no names on the outer call at all
   bare <- quote(f(qlm_code(x, cb, api_key = "sk-x")))
   expect_identical(redact_call(bare), quote(f(qlm_code(x, cb, api_key = "<redacted>"))))
+})
+
+test_that("computed credential expressions cannot survive in a trail (#123)", {
+  secrets <- c("COMPUTED_SECRET", "CALLBACK_SECRET", "URL_SECRET", "HEADER_SECRET")
+  meta <- list(object = list(call = quote(qlm_code(
+    x, cb,
+    api_key = paste0("sk-", "COMPUTED_SECRET"),
+    credentials = local(function() "CALLBACK_SECRET"),
+    base_url = paste0("https://u:", "URL_SECRET", "@host/v1"),
+    api_headers = setNames(paste("Bearer", "HEADER_SECRET"), "Authorization")
+  ))))
+
+  out <- redact_meta(meta)
+  expect_identical(out$object$call, quote(qlm_code(
+    x, cb,
+    api_key = "<redacted>",
+    credentials = "<redacted>",
+    base_url = "<redacted>",
+    api_headers = "<redacted>"
+  )))
+  raw <- serialize(out, NULL)
+  expect_true(all(vapply(secrets, function(secret) {
+    length(grepRaw(secret, raw, fixed = TRUE)) == 0L
+  }, logical(1))))
 })

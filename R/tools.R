@@ -171,7 +171,7 @@ format_tools <- function(tools) {
 #' an investigator needs. A hosted tool's configuration, the JSON the
 #' provider was sent, is where a web search's allowed domains and user
 #' location live, so it is given verbatim. A custom tool is given its
-#' description and the arguments the model could pass it.
+#' description, complete JSON argument schema, and annotations.
 #'
 #' @param tools A list of tool objects or records.
 #'
@@ -189,32 +189,14 @@ format_tool_details <- function(tools) {
       }
       return(paste0(head, ": ", config))
     }
-    args <- describe_tool_arguments(r$arguments)
     description <- if (is.na(r$description)) "no description" else sub("\\.$", "", r$description)
+    config <- list(
+      arguments = if (is.null(r$arguments)) NULL else json_schema_from_type(r$arguments),
+      annotations = r$annotations %||% list()
+    )
     paste0(
-      head, ": ", description,
-      if (nzchar(args)) paste0(". Arguments: ", args) else ". No arguments"
+      head, ": ", description, ". Configuration: `",
+      jsonlite::toJSON(config, auto_unbox = TRUE, null = "null"), "`"
     )
   }, character(1))
-}
-
-
-#' One line naming a custom tool's arguments and their types
-#'
-#' @param arguments The tool's `arguments`, an ellmer type object, or `NULL`.
-#'
-#' @return A single string, empty when there are none.
-#' @keywords internal
-#' @noRd
-describe_tool_arguments <- function(arguments) {
-  props <- attr(arguments, "properties", exact = TRUE)
-  if (!length(props)) {
-    return("")
-  }
-  paste(vapply(names(props), function(nm) {
-    prop <- props[[nm]]
-    type <- attr(prop, "type", exact = TRUE) %||% sub("^ellmer::Type", "", class(prop)[1])
-    required <- attr(prop, "required", exact = TRUE)
-    paste0(nm, " (", tolower(type), if (isFALSE(required)) ", optional" else "", ")")
-  }, character(1)), collapse = ", ")
 }
