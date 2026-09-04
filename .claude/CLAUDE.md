@@ -69,6 +69,7 @@ pkgdown::check_pkgdown()  # Validate pkgdown configuration
 - Articles requiring API keys must be built locally and deployed via `make deploy-articles`
 - The CI workflow preserves existing articles on gh-pages using `clean: false` in the deploy action
 - `make articles`, `make site`, and `make deploy-articles` automatically knit README.md before running
+- `make articles`, `make article`, and `make site` install the checkout first: pkgdown knits articles against the installed package, so an article that reads `inst/extdata` or prints an object would otherwise see a stale version
 
 ### Running the Shiny App
 ```r
