@@ -27,6 +27,21 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   no columns to reorder, and the call failed later with `incorrect number of
   dimensions` (#134).
 
+* `qlm_code()` now runs with `on_error = "continue"` by default, on the
+  structured path as it already did on the JSON path, and gains `on_error`
+  as a documented argument taking ellmer's three values. A parallel run
+  therefore attempts every unit and leaves the failures for `qlm_failures()`
+  and `qlm_backfill()`, rather than stopping at the first and returning the
+  rest as `NA` rows with no `.error`, which for a codebook of arrays or
+  nested objects could not be told from valid empty answers. Stopping early
+  saved money when the only remedy was to run again from the start; with
+  backfilling it costs more than it saves. The setting is recorded with the
+  run, so a run coded before this change records none and is replicated and
+  backfilled with the new default. `on_error` cannot be set with
+  `batch = TRUE`, which has no equivalent, and `qlm_replicate()` no longer
+  carries a parallel-only or batch-only argument into a replication that
+  switches path (#171).
+
 ## New features
 
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the

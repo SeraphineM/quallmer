@@ -100,8 +100,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' coded <- qlm_code(texts, codebook, model = "openai/gpt-4o-mini",
-#'                   on_error = "continue")
+#' coded <- qlm_code(texts, codebook, model = "openai/gpt-4o-mini")
 #' qlm_failures(coded)
 #'
 #' filled <- qlm_backfill(coded)

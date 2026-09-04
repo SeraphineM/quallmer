@@ -34,6 +34,24 @@
 #'   `options(ellmer_max_tries = )`. Applies on the JSON path only, so setting
 #'   it alongside `structured = "structured"` is an error. What is still
 #'   unusable after the run is left for `backfill`.
+#' @param on_error character; what a failed request does to the rest of a
+#'   parallel call, passed to [ellmer::parallel_chat_structured()] or, on the
+#'   JSON path, [ellmer::parallel_chat()]. `"continue"` (the default) attempts
+#'   every unit and records each failure in the `.error` column, for
+#'   [qlm_failures()] to list and [qlm_backfill()] to re-code. `"return"`
+#'   stops submitting new requests after the first failure, waits for those in
+#'   flight, and returns what the call has. On the structured path that call
+#'   is the run: the units never sent come back as rows of `NA` with no
+#'   `.error`, which for a codebook whose required properties are all arrays
+#'   or nested objects cannot be told from a valid empty answer, so keep
+#'   `"continue"` on a run that is to be completed with [qlm_backfill()]. On
+#'   the JSON path the call is one wave: a unit the wave did not reach counts
+#'   as unanswered, so `json_retries` sends it again in a later wave, each
+#'   stopped in turn at its first failure, and whatever is still unsent at the
+#'   end is recorded in `.error`; `json_retries = 0` stops after the first
+#'   wave. `"stop"` raises the first failure as an error. Applies to parallel
+#'   runs only: the batch API has no equivalent, so it cannot be set with
+#'   `batch = TRUE`.
 #' @param backfill Logical, integer or `NULL`; whether to complete the run
 #'   before it is returned, by re-coding the units still failed with
 #'   [qlm_backfill()], using the same model and settings. `FALSE` or `0`
@@ -70,7 +88,8 @@
 #' Progress indicators and error handling are provided by the underlying
 #' [ellmer::parallel_chat_structured()] or [ellmer::batch_chat_structured()]
 #' function. Set `verbose = TRUE` to see progress messages during coding.
-#' Retry logic for API failures should be configured through ellmer's options.
+#' Retry logic for API failures should be configured through ellmer's options;
+#' what a failure does to the rest of a parallel run is `on_error`.
 #'
 #' @section Provider-specific parameters:
 #'
@@ -214,6 +233,16 @@
 #' it cannot run, or the name is on the list, the provider's own error is
 #' reported unchanged.
 #'
+#' Under the default `on_error = "continue"` the parallel call does not stop
+#' at the first refusal, so every unit is sent once before the run comes
+#' back and is diagnosed. Each such request is refused before anything is
+#' generated, so it is cheap, but on a large corpus there are many of them,
+#' paced by `rpm`. `on_error = "return"` stops the structured call after the
+#' first wave, at the cost described under that argument; on the JSON path,
+#' whose default has always been `"continue"`, `json_retries` sends the
+#' units a wave did not reach in later waves, so `"return"` stops after the
+#' first wave there only with `json_retries = 0`.
+#'
 #' @section Truncated responses:
 #'
 #' A response that runs into the provider's output limit (`max_tokens`) is cut
@@ -248,7 +277,8 @@
 #' which submits jobs to the provider's batch API. This is typically more
 #' cost-effective but has longer turnaround times. The `path` argument specifies
 #' where batch results are cached, `wait` controls whether to wait for completion,
-#' and `ignore_hash` can force reprocessing of cached results.
+#' and `ignore_hash` can force reprocessing of cached results. `on_error` does
+#' not apply: the batch API has no equivalent.
 #'
 #' @return A `qlm_coded` object (a tibble with additional attributes):
 #'   \describe{
@@ -281,13 +311,17 @@
 qlm_code <- function(x, codebook, model, ...,
                      batch = FALSE,
                      structured = c("auto", "structured", "json"),
-                     json_retries = 2L, backfill = FALSE, prices = NULL,
+                     json_retries = 2L,
+                     on_error = c("continue", "return", "stop"),
+                     backfill = FALSE, prices = NULL,
                      name = NULL, notes = NULL) {
   # Distinguishes a value the user chose from the default, so that the default
   # never errors but an explicit setting is never silently ignored.
   explicit_retries <- !missing(json_retries)
   explicit_structured <- !missing(structured)
+  explicit_on_error <- !missing(on_error)
   structured <- match.arg(structured)
+  on_error <- match.arg(on_error)
   # Checked here as well as in the JSON handler: under "auto" the handler is
   # reached only after the structured attempt has been paid for.
   if (!is_count(json_retries)) {
@@ -395,6 +429,23 @@ qlm_code <- function(x, codebook, model, ...,
       "i" = "A {.cls qlm_coded} object is built from the converted table, one row per unit.",
       "i" = "For the unconverted list, call {.fn ellmer::parallel_chat_structured} directly."
     ))
+  }
+
+  # `on_error` belongs to the parallel call; the batch API has no equivalent
+  # and would refuse the argument. So under batch the default is simply not
+  # sent, and an explicit setting is refused rather than silently ignored.
+  # On a parallel run it is recorded with the other execution arguments, so
+  # a replication or backfill replays the setting the run actually used.
+  if (batch) {
+    if (explicit_on_error) {
+      cli::cli_abort(c(
+        "{.arg on_error} is not supported with {.code batch = TRUE}.",
+        "i" = "It controls a parallel run; the batch API has no equivalent.",
+        "i" = "Re-run with {.code batch = FALSE} to use it."
+      ))
+    }
+  } else {
+    execution_args$on_error <- on_error
   }
 
   # Metadata contributed by the coding path

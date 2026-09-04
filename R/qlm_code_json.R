@@ -17,8 +17,10 @@
 #' @param model Provider (and optionally model) name, as passed to [qlm_code()].
 #' @param chat_args List of arguments for [ellmer::chat()].
 #' @param execution_args List of execution arguments. `max_active`, `rpm` and
-#'   `on_error` are forwarded to [ellmer::parallel_chat()]; `include_tokens` and
-#'   `include_cost` are honoured here, as they are on the default path.
+#'   `on_error` are forwarded to [ellmer::parallel_chat()] as given, so the
+#'   default `on_error = "continue"` is [qlm_code()]'s, not this handler's;
+#'   `include_tokens` and `include_cost` are honoured here, as they are on the
+#'   default path.
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
 #' @param json_retries Number of additional requests quallmer may make for a
 #'   unit after an unusable response, whether empty, unparsable, refused,
@@ -94,11 +96,6 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   include_cost <- isTRUE(execution_args$include_cost)
   pc_arg_names <- setdiff(names(formals(ellmer::parallel_chat)), c("chat", "prompts"))
   pc_args <- execution_args[names(execution_args) %in% pc_arg_names]
-  # Continue lets one bad request be retried without discarding the valid
-  # responses from the rest of the parallel call.
-  if (is.null(pc_args$on_error)) {
-    pc_args$on_error <- "continue"
-  }
 
   parsed <- vector("list", length(x))
   problems <- vector("list", length(x))
@@ -277,7 +274,8 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 #'
 #' [ellmer::parallel_chat_text()] would be the natural call, but it reduces each
 #' chat to its last turn's text and discards the `Turn`, which is where tokens
-#' and cost live. With `on_error = "continue"`, [ellmer::parallel_chat()]
+#' and cost live. With `on_error = "continue"`, which [qlm_code()] sends
+#' unless told otherwise, [ellmer::parallel_chat()]
 #' returns a list whose failed elements are error conditions rather than chats;
 #' the condition carries the real reason (context length, rate limit, timeout),
 #' so it is captured here. Without it every failure reads as a bare "empty
