@@ -18,7 +18,7 @@ Description: Tools for AI-assisted qualitative data coding using large language
     models ('LLMs') via the 'ellmer' package, supporting providers including
     'OpenAI', 'Anthropic', 'Google', 'Azure', and local models via 'Ollama'.
     Provides a 'codebook'-based workflow for defining coding instructions and
-    applying them to texts, images, and other data. Includes built-in 'codebooks'
+    applying them to texts, images, audio recordings, and other data. Includes built-in 'codebooks'
     for common applications such as sentiment analysis and policy coding, and
     functions for creating custom 'codebooks' for specific research questions.
     Supports systematic replication across models and settings, computing
@@ -34,7 +34,7 @@ License: GPL (>= 3)
 URL: https://quallmer.github.io/quallmer/
 Depends:
     R (>= 3.5.0),
-    ellmer (>= 0.4.0)
+    ellmer (>= 0.5.0)
 Imports:
     cli,
     digest,
@@ -60,5 +60,6 @@ Suggests:
     withr,
     yardstick
 Config/testthat/edition: 3
+Remotes: tidyverse/ellmer
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.1.0

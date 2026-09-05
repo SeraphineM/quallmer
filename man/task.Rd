@@ -9,7 +9,10 @@ task(name, system_prompt, type_def, input_type = c("text", "image"))
 \arguments{
 \item{name}{Name of the codebook (character).}
 
-\item{input_type}{Type of input data: \code{"text"} (default) or \code{"image"}.}
+\item{input_type}{Type of input data: \code{"text"} (default), \code{"image"} or
+\code{"audio"}. For \code{"image"} and \code{"audio"} the elements of \code{x} in
+\code{\link[=qlm_code]{qlm_code()}} are file paths; see its section "Audio input" for which
+providers accept audio and how the files are handled.}
 }
 \value{
 A task object (a list with class \code{"task"}) containing the task

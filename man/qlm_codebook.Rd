@@ -9,7 +9,7 @@ qlm_codebook(
   instructions,
   schema,
   role = NULL,
-  input_type = c("text", "image"),
+  input_type = input_types(),
   levels = NULL
 )
 }
@@ -25,7 +25,10 @@ qlm_codebook(
 annotator"). If provided, this will be prepended to the instructions when
 creating the system prompt.}
 
-\item{input_type}{Type of input data: \code{"text"} (default) or \code{"image"}.}
+\item{input_type}{Type of input data: \code{"text"} (default), \code{"image"} or
+\code{"audio"}. For \code{"image"} and \code{"audio"} the elements of \code{x} in
+\code{\link[=qlm_code]{qlm_code()}} are file paths; see its section "Audio input" for which
+providers accept audio and how the files are handled.}
 
 \item{levels}{Optional named list specifying measurement levels for each
 variable in the schema. Names should match schema property names. Values

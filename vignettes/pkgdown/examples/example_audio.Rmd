@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This example demonstrates a two-step process for analyzing audio content: (1) transcribing audio to text using OpenAI's Whisper model, and (2) extracting structured information from the transcripts using `qlm_code()`. This workflow enables large-scale analysis of speeches, interviews, and other audio content.
+This example demonstrates two ways of analyzing audio content. The first is a two-step process: (1) transcribing audio to text using OpenAI's Whisper model, and (2) extracting structured information from the transcripts using `qlm_code()`. The second, added in quallmer 0.5, codes the recordings directly: a codebook with `input_type = "audio"` sends each file to a multimodal model, which transcribes and codes it in one pass. Both workflows enable large-scale analysis of speeches, interviews, and other audio content, and the final section compares their results.
 
 ## Loading packages and data
 
@@ -255,12 +255,136 @@ cat("\nSentiment distribution:\n")
 print(table(coded_transcripts$sentiment))
 ```
 
+## Coding the recordings directly
+
+The two-step route has a cost beyond Whisper's fee: the coding model only ever sees the transcript, so anything the transcriber dropped is gone, and the transcript itself is a second instrument whose errors are invisible to the coder. Since quallmer 0.5, a codebook can declare `input_type = "audio"`, and `qlm_code()` then uploads each recording to the provider and sends the model a reference to it alongside the instructions. The model listens to the audio itself, so the schema can ask for a transcript as one field among the others.
+
+Which providers accept audio this way is checked before anything is uploaded. As of this writing only Google Gemini does, in its pro, flash and flash-lite families; OpenAI's audio models refuse a schema-constrained request and Anthropic takes no audio at all, so for those providers the two-step route above remains the way. See the section "Audio input" in `?qlm_code` for the details, including how a newer Gemini model can be accepted with `qlm_register_input_model()`.
+
+The codebook is the one used on the transcripts with one field added, so that the two routes can be compared field by field:
+
+```{r define-audio-codebook}
+codebook_audio <- qlm_codebook(
+  name = "Speech Audio Analysis",
+  instructions = paste(
+    "You are a research assistant analyzing a speech recording.",
+    "Listen to the recording, transcribe it, and provide structured analysis",
+    "of the speech based on its content. Be objective and accurate in your assessments."
+  ),
+  schema = ellmer::type_object(
+    transcript = ellmer::type_string(
+      "Verbatim transcript of the speech, in the language spoken"
+    ),
+    language = ellmer::type_string(
+      "Primary language of the speech, in English (e.g., 'English', 'Mandarin', 'French', 'Indonesian')"
+    ),
+    language_confidence = ellmer::type_enum(
+      c("high", "medium", "low"),
+      "Confidence in language identification"
+    ),
+    speech_type = ellmer::type_enum(
+      c("conversational", "formal_speech", "reading", "spontaneous", "other"),
+      "Type or style of speech"
+    ),
+    main_topics = ellmer::type_string(
+      "Main topics or themes discussed in the speech (comma-separated, max 5 topics)"
+    ),
+    key_phrases = ellmer::type_string(
+      "Important phrases or keywords mentioned (comma-separated, max 5 phrases)"
+    ),
+    tone = ellmer::type_enum(
+      c("formal", "informal", "neutral", "technical", "conversational"),
+      "Overall tone of the speech"
+    ),
+    sentiment = ellmer::type_enum(
+      c("positive", "negative", "neutral", "mixed"),
+      "Overall sentiment expressed in the speech"
+    ),
+    summary = ellmer::type_string(
+      "Brief 2-3 sentence summary of the speech content"
+    )
+  ),
+  role = "You are an expert linguist and discourse analyst.",
+  input_type = "audio"
+)
+```
+
+The input is the vector of file paths rather than the transcripts. Naming it by file name gives the same `.id` values as the transcript run, which is what the comparison below merges on. Every file is uploaded before the first coding request is sent, so a failed upload stops the run with nothing spent.
+
+```{r code-audio, eval=FALSE}
+names(audio_files) <- basename(audio_files)
+
+coded_audio <- qlm_code(
+  audio_files,
+  codebook = codebook_audio,
+  model = "google_gemini/gemini-2.5-flash",
+  name = "audio_direct_gemini",
+  notes = "Single-pass coding of the recordings, no transcription step",
+  include_cost = TRUE
+)
+
+saveRDS(coded_audio, "data/coded_audio_gemini.rds")
+```
+
+```{r load-audio-results, echo=FALSE}
+coded_audio <- readRDS("data/coded_audio_gemini.rds")
+```
+
+```{r display-audio-results}
+coded_audio %>%
+  select(.id, language, language_confidence, speech_type, tone, sentiment) %>%
+  kable(
+    col.names = c("File", "Language", "Confidence", "Type", "Tone", "Sentiment"),
+    caption = "Direct Audio Analysis Results"
+  )
+```
+
+### Transcripts from two instruments
+
+The model's transcript can be set beside Whisper's for the same recording. Here is the first clip:
+
+```{r compare-transcripts}
+first <- coded_audio$.id[1]
+cat("=== Whisper ===\n")
+cat(transcriptions[[first]], "\n\n")
+cat("=== gemini-2.5-flash, in the same pass as the coding ===\n")
+cat(coded_audio$transcript[coded_audio$.id == first], "\n")
+```
+
+### Agreement between the two routes
+
+Both runs are `qlm_coded` objects keyed by file name, so `qlm_compare()` measures their agreement on the categorical fields exactly as it would for two coders:
+
+```{r compare-routes}
+qlm_compare(coded_transcripts, coded_audio,
+            by = c("language", "speech_type", "tone", "sentiment"))
+```
+
+Disagreement here is not simply error in one route: the two models heard different things (one a transcript, one the audio) and were asked the same questions. A gold-standard subset coded by hand, checked with `qlm_validate()`, is what settles which route is closer to the truth for a given corpus.
+
+### Cost and provenance
+
+The cost of the direct run is reported by `qlm_code()`, with a qualification: providers price audio tokens above text tokens, and ellmer prices the total at the text rate, so the figure is potentially underestimated. The note travels with the object and appears when it is printed and in the audit trail.
+
+```{r audio-cost}
+cat("Direct coding cost (Gemini, at the text rate): $",
+    round(sum(coded_audio$cost, na.rm = TRUE), 4), "\n", sep = "")
+```
+
+A run on files also records what it coded. Each unit's file name, size and SHA-256 hash are kept in the run's metadata; `qlm_replicate()` and `qlm_backfill()` check them before uploading the files again, and refuse to continue if a path now points at different bytes.
+
+```{r audio-provenance}
+qlm_meta(coded_audio, "input_files") %>%
+  mutate(sha256 = paste0(substr(sha256, 1, 12), "...")) %>%
+  kable(caption = "Files behind each coded unit")
+```
+
 ## Creating an audit trail
 
 Document the complete analysis:
 
 ```{r trail, eval=FALSE}
-qlm_trail(coded_transcripts, path = "audio_analysis")
+qlm_trail(coded_transcripts, coded_audio, path = "audio_analysis")
 ```
 
 This creates two files:
@@ -272,11 +396,11 @@ This creates two files:
 
 This example demonstrates:
 
-1. **Two-step workflow**: Transcription (Whisper) → Analysis (LLM)
-2. **Multilingual capability**: Whisper handles multiple languages automatically
-3. **Structured extraction**: Codebooks define what to extract from transcripts
-4. **Scalability**: Process multiple audio files in batch
-5. **Cost efficiency**: Whisper is significantly cheaper than human transcription
-6. **Reproducibility**: All steps are documented and can be replicated
+1. **Two-step workflow**: Transcription (Whisper) → Analysis (LLM), which works with any coding model
+2. **Direct workflow**: `input_type = "audio"` sends the recordings themselves to a multimodal model, currently Gemini, which transcribes and codes in one pass
+3. **Multilingual capability**: Both routes handle multiple languages automatically
+4. **Structured extraction**: The same codebook fields serve both routes, so `qlm_compare()` measures their agreement
+5. **Scalability**: Process multiple audio files in batch
+6. **Reproducibility**: Transcripts are cached, file hashes are recorded, and both runs go into the audit trail
 
-This workflow enables researchers to analyze audio content at scale, from political speeches to interviews to podcast episodes. The combination of Whisper for transcription and LLMs for analysis provides both accuracy and interpretability.
+Both workflows enable researchers to analyze audio content at scale, from political speeches to interviews to podcast episodes. The two-step route keeps transcription as a separate, cacheable instrument that any coding model can read; the direct route lets the model hear the recording, at the price of being tied to the providers that accept audio.
