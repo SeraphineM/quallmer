@@ -214,6 +214,15 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   cost could be worked out from are being recorded, which needs
   `include_tokens = TRUE` (#135).
 
+## Documentation
+
+* The "Audio transcription and analysis" example article now shows both
+  routes: transcription with Whisper followed by coding of the transcripts,
+  and coding the recordings directly with `input_type = "audio"` on
+  `gemini-2.5-flash`, ending with `qlm_compare()` of the two runs, the
+  model's transcript beside Whisper's, the cost, and the recorded file
+  hashes (#124).
+
 ## Bug fixes
 
 ### Coding runs
