@@ -563,13 +563,24 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, "**Processing:** Batch")
     }
 
-    # A model accepted by registration rather than by the built-in table
+    # A model accepted by registration rather than by the built-in table,
+    # for the run and for any backfill pass
     if (!is.null(run$input_model_registered)) {
       lines <- c(lines, paste0(
         "**Model accepted by:** `qlm_register_input_model(\"",
         run$input_model_registered, "\", input_type = \"",
         run$input_type %||% "audio", "\")` in the coding session"
       ))
+    }
+    for (k in seq_along(run$backfill)) {
+      pass_registered <- run$backfill[[k]]$input_model_registered
+      if (!is.null(pass_registered)) {
+        lines <- c(lines, paste0(
+          "**Backfill pass ", k, " model accepted by:** `qlm_register_input_model(\"",
+          pass_registered, "\", input_type = \"",
+          run$input_type %||% "audio", "\")` in the coding session"
+        ))
+      }
     }
 
     lines <- c(lines, "")
@@ -588,7 +599,8 @@ generate_trail_report <- function(trail, file) {
         f <- run$input_files[k, ]
         lines <- c(lines, paste0(
           "| ", f$.id, " | ", f$file, " | ",
-          format(f$size, big.mark = ",", scientific = FALSE), " | `", f$sha256, "` |"
+          if (is.na(f$size)) "" else format(f$size, big.mark = ",", scientific = FALSE),
+          " | ", if (is.na(f$sha256)) "not recorded" else paste0("`", f$sha256, "`"), " |"
         ))
       }
       lines <- c(lines, "")

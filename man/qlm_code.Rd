@@ -299,9 +299,14 @@ transient or the file itself. Uploads expire after 48 hours and storage
 is free, so \code{\link[=qlm_replicate]{qlm_replicate()}} and \code{\link[=qlm_backfill]{qlm_backfill()}} upload the files again
 from the paths in \code{x}. Before they do, they check the files against the
 SHA-256 hashes the run recorded for each unit, and refuse to continue if
-a path now points at different bytes; the hashes are kept in the run's
-metadata as \code{input_files} and reported by \code{\link[=qlm_trail]{qlm_trail()}}. A run coded by an
-earlier version that recorded no hashes proceeds with a notice.
+a path now points at different bytes. The hashes are taken before
+anything is uploaded, so they are of the bytes the model received even
+if a file is replaced while the requests run; they are kept in the run's
+metadata as \code{input_files} and reported by \code{\link[=qlm_trail]{qlm_trail()}}. A backfill pass
+records its own hashes for the units it re-coded, so a run coded by an
+earlier version that recorded none gains them unit by unit; units still
+without one are reported as unverifiable, with a notice, rather than as
+changed.
 
 \code{batch = TRUE} is not supported for audio: ellmer's batch cache is keyed
 on the prompts, and an upload gets a new reference every time, so a

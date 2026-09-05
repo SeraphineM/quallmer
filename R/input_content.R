@@ -124,6 +124,8 @@ the$registered_input_models <- list()
 
 #' Accept a model for a file input type in this session
 #'
+#' `r lifecycle::badge("experimental")`
+#'
 #' `qlm_code()` refuses to upload a file to a provider/model combination it
 #' does not know to accept that kind of input, because the refusal would
 #' otherwise arrive only after the upload, as a failed request. The
@@ -456,9 +458,23 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
     ), call = call)
   }
 
-  current <- file_provenance(paths, ids)
+  # A unit with no hash was coded before hashes were recorded, or by a run
+  # that was later backfilled with hashes for other units only. Nothing can
+  # be checked for it, which is said; it is not called changed.
   expected <- recorded$sha256[match(ids, recorded$.id)]
-  changed <- is.na(expected) | current$sha256 != expected
+  unknown <- is.na(expected)
+  if (any(unknown)) {
+    cli::cli_inform(c(
+      "i" = paste0(
+        "{sum(unknown)} unit{?s} of this run {?has/have} no recorded file hash, so ",
+        "the identity of {?its/their} {input_type} file{?s} cannot be verified: ",
+        "{.val {ids[unknown]}}. The new run records {?it/them}."
+      )
+    ))
+  }
+
+  current <- file_provenance(paths, ids)
+  changed <- !unknown & current$sha256 != expected
   if (any(changed)) {
     cli::cli_abort(c(
       "{cli::qty(sum(changed))}The {input_type} file{?s} of {sum(changed)} unit{?s} differ{?s/} from the one{?s} this run coded: {.val {ids[changed]}}.",
@@ -467,6 +483,70 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
     ), call = call)
   }
   invisible(NULL)
+}
+
+
+#' Carry a backfill pass's file hashes into the run it completed
+#'
+#' The pass uploaded and coded its units from the files as they were at that
+#' moment, so its rows are the provenance of those units now. A run with a
+#' table gets those rows replaced; a run coded before hashes were recorded
+#' gets a table covering every unit, with the pass's rows filled and the
+#' rest left `NA`, so that a later check can say which units it cannot
+#' verify rather than treating them as changed.
+#'
+#' @param x The `qlm_coded` object being backfilled.
+#' @param new The object a pass returned.
+#'
+#' @return `x`, with its `input_files` metadata updated.
+#' @keywords internal
+#' @noRd
+merge_input_files <- function(x, new) {
+  meta_attr <- attr(x, "meta")
+  if (!meta_attr$object$input_type %in% file_input_types()) {
+    return(x)
+  }
+  added <- attr(new, "meta")$user$input_files
+  if (!is.data.frame(added) || !nrow(added)) {
+    return(x)
+  }
+
+  table <- meta_attr$user$input_files
+  if (is.null(table)) {
+    data <- inputs(x)
+    ids <- as.character(names(data) %||% seq_along(data))
+    table <- data.frame(
+      .id = ids,
+      file = basename(unname(data)),
+      size = NA_real_,
+      sha256 = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  }
+  pos <- match(as.character(added$.id), table$.id)
+  keep <- !is.na(pos)
+  table[pos[keep], c("file", "size", "sha256")] <- added[keep, c("file", "size", "sha256")]
+
+  meta_attr$user$input_files <- table
+  attr(x, "meta") <- meta_attr
+  x
+}
+
+
+#' Every registration a run and its backfill passes relied on
+#'
+#' @param x A `qlm_coded` object.
+#'
+#' @return A character vector of `"provider/model"` pairs, possibly empty.
+#' @keywords internal
+#' @noRd
+recorded_registrations <- function(x) {
+  meta_attr <- attr(x, "meta")
+  from_passes <- unlist(lapply(
+    meta_attr$object$backfill,
+    function(pass) pass$input_model_registered
+  ))
+  unique(c(meta_attr$user$input_model_registered, from_passes))
 }
 
 
@@ -486,27 +566,35 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
 #' @noRd
 check_registered_input_model <- function(x, model, call = rlang::caller_env()) {
   meta_attr <- attr(x, "meta")
-  registered <- meta_attr$user$input_model_registered
-  if (is.null(registered)) {
+  pairs <- recorded_registrations(x)
+  if (!length(pairs)) {
     return(invisible(NULL))
   }
   input_type <- meta_attr$object$input_type
-  # Another model is checked afresh by qlm_code(); only the run's own is
-  # known to have needed the registration
-  if (!identical(model, meta_attr$object$chat_args$name) && !identical(model, registered)) {
-    return(invisible(NULL))
+  # The run's own model needed the run-level registration; a pass's model
+  # needed the pass's. Any other model is checked afresh by qlm_code().
+  needed <- character()
+  if (identical(model, meta_attr$object$chat_args$name)) {
+    needed <- meta_attr$user$input_model_registered
   }
-  pair <- strsplit(registered, "/", fixed = TRUE)[[1]]
-  if (is_registered_input_model(input_type, pair[1], pair[2])) {
-    return(invisible(NULL))
+  if (model %in% pairs) {
+    needed <- c(needed, model)
   }
-  cli::cli_abort(c(
-    "This run accepted {.val {registered}} for {input_type} input through {.fn qlm_register_input_model}, and this session has not registered it.",
-    "i" = paste0(
-      "Run {.code qlm_register_input_model(\"", registered, "\", input_type = \"",
-      input_type, "\")} and try again."
-    )
-  ), call = call)
+  needed <- unique(needed)
+  for (registered in needed) {
+    pair <- strsplit(registered, "/", fixed = TRUE)[[1]]
+    if (is_registered_input_model(input_type, pair[1], pair[2])) {
+      next
+    }
+    cli::cli_abort(c(
+      "This run accepted {.val {registered}} for {input_type} input through {.fn qlm_register_input_model}, and this session has not registered it.",
+      "i" = paste0(
+        "Run {.code qlm_register_input_model(\"", registered, "\", input_type = \"",
+        input_type, "\")} and try again."
+      )
+    ), call = call)
+  }
+  invisible(NULL)
 }
 
 

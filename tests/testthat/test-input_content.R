@@ -489,3 +489,101 @@ test_that("as_input_content dispatches on the input type", {
   expect_equal(as_input_content(c("a", "b"), "text", NULL), list("a", "b"))
   expect_error(as_input_content("a", "video", NULL), "Unknown input type")
 })
+
+
+# Provenance is taken before inference, and survives a backfill -------------------
+
+test_that("hashes record the bytes sent, not the file as it stands after inference", {
+  paths <- c(a = audio_file(as.raw(1:10)))
+  original <- hash_file(paths[[1]])
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) {
+    # The file is replaced while the request is in flight
+    writeBin(as.raw(80:90), paths[[1]])
+    list(ok = TRUE, value = data.frame(language = "en"))
+  })
+
+  coded <- f(paths, audio_codebook(), model = "google_gemini/gemini-2.5-flash")
+  expect_equal(qlm_meta(coded, "input_files")$sha256, original)
+  # So the replacement is refused by a replication, not accepted as the input
+  expect_error(verify_input_files(coded), "differs from the one this run coded")
+})
+
+
+test_that("a file deleted during inference does not lose the results", {
+  paths <- c(a = audio_file(as.raw(1:10)))
+  original <- hash_file(paths[[1]])
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) {
+    unlink(paths[[1]])
+    list(ok = TRUE, value = data.frame(language = "en"))
+  })
+  coded <- f(paths, audio_codebook(), model = "google_gemini/gemini-2.5-flash")
+  expect_equal(coded$language, "en")
+  expect_equal(qlm_meta(coded, "input_files")$sha256, original)
+})
+
+
+test_that("a unit without a recorded hash is reported as unverifiable, not as changed", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run <- audio_run(paths)
+  meta_attr <- attr(run, "meta")
+  meta_attr$user$input_files$sha256[2] <- NA_character_
+  attr(run, "meta") <- meta_attr
+
+  expect_message(verify_input_files(run), 'no recorded file hash.*"b"')
+  expect_silent(verify_input_files(run, ids = "a"))
+  expect_message(verify_input_files(run, ids = "b"), "cannot be verified")
+
+  # A change to the unit that does have a hash is still caught
+  writeBin(as.raw(99:110), paths[["a"]])
+  expect_error(suppressMessages(verify_input_files(run)), 'differs.*"a"')
+})
+
+
+test_that("merge_input_files fills a pass's rows and builds a table for a legacy run", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  legacy <- audio_run(paths, with_hashes = FALSE)
+  pass <- audio_run(paths["b"])
+
+  merged <- merge_input_files(legacy, pass)
+  table <- qlm_meta(merged, "input_files")
+  expect_equal(table$.id, c("a", "b"))
+  expect_equal(table$sha256, c(NA_character_, hash_file(paths[["b"]])))
+  expect_equal(table$file, basename(unname(paths)))
+  expect_true(is.na(table$size[1]))
+
+  # A run with a table has the pass's rows replaced, others untouched
+  run <- audio_run(paths)
+  writeBin(as.raw(99:110), paths[["b"]])
+  pass2 <- audio_run(paths["b"])
+  merged2 <- merge_input_files(run, pass2)
+  table2 <- qlm_meta(merged2, "input_files")
+  expect_equal(table2$sha256, c(hash_file(paths[["a"]]), hash_file(paths[["b"]])))
+
+  # A text run, or a pass without a table, is left alone
+  expect_identical(merge_input_files(run, legacy), run)
+})
+
+
+test_that("a registration a backfill pass relied on is required again, like the run's", {
+  withr::defer(reset_registered_input_models())
+  paths <- c(a = audio_file(), b = audio_file())
+  run <- audio_run(paths, failed = "b")
+  meta_attr <- attr(run, "meta")
+  meta_attr$object$backfill <- list(backfill_pass(
+    model = "google_gemini/gemini-4-ultra", overrides = list(), attempted = "b",
+    recovered = "b", registered = "google_gemini/gemini-4-ultra"
+  ))
+  attr(run, "meta") <- meta_attr
+
+  expect_equal(recorded_registrations(run), "google_gemini/gemini-4-ultra")
+  expect_error(
+    check_registered_input_model(run, "google_gemini/gemini-4-ultra"),
+    "qlm_register_input_model"
+  )
+  # The run's own model needed no registration
+  expect_silent(check_registered_input_model(run, "google_gemini/gemini-2.5-flash"))
+  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  expect_silent(check_registered_input_model(run, "google_gemini/gemini-4-ultra"))
+})

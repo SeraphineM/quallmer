@@ -251,9 +251,14 @@
 #' is free, so [qlm_replicate()] and [qlm_backfill()] upload the files again
 #' from the paths in `x`. Before they do, they check the files against the
 #' SHA-256 hashes the run recorded for each unit, and refuse to continue if
-#' a path now points at different bytes; the hashes are kept in the run's
-#' metadata as `input_files` and reported by [qlm_trail()]. A run coded by an
-#' earlier version that recorded no hashes proceeds with a notice.
+#' a path now points at different bytes. The hashes are taken before
+#' anything is uploaded, so they are of the bytes the model received even
+#' if a file is replaced while the requests run; they are kept in the run's
+#' metadata as `input_files` and reported by [qlm_trail()]. A backfill pass
+#' records its own hashes for the units it re-coded, so a run coded by an
+#' earlier version that recorded none gains them unit by unit; units still
+#' without one are reported as unverifiable, with a notice, rather than as
+#' changed.
 #'
 #' `batch = TRUE` is not supported for audio: ellmer's batch cache is keyed
 #' on the prompts, and an upload gets a new reference every time, so a
@@ -488,6 +493,11 @@ qlm_code <- function(x, codebook, model, ...,
     ))
   }
 
+  # Hashed now, before any upload or request, so the record is of the bytes
+  # about to be sent: a file replaced while requests run cannot be recorded
+  # in their place, and one deleted then cannot stop the results coming back
+  input_files <- if (file_input) file_provenance(x, names(x) %||% seq_along(x))
+
   # Providers whose API rejects the schema-constrained request skip straight to
   # JSON mode rather than spending a wasted round trip; see
   # default_structured_mode().
@@ -713,8 +723,8 @@ qlm_code <- function(x, codebook, model, ...,
   }
   # What was coded, so a later replication or backfill can check it is
   # uploading the same bytes, and the trail can name the files
-  if (file_input) {
-    metadata$input_files <- file_provenance(x, results$id)
+  if (!is.null(input_files)) {
+    metadata$input_files <- input_files
   }
   if (!is.null(prices)) {
     metadata$prices <- prices

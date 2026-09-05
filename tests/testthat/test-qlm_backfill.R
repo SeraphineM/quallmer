@@ -1060,3 +1060,40 @@ test_that("qlm_backfill needs the registration a run relied on (#124)", {
   suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   expect_error(f(run), "pass reached the model")
 })
+
+
+test_that("a backfill keeps the pass's file hashes and registration (#124)", {
+  withr::defer(reset_registered_input_models())
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+
+  # A legacy run gains hashes for exactly the units the pass re-coded
+  legacy <- audio_run(paths, with_hashes = FALSE, failed = "b")
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(x, ...) audio_run(x))
+  filled <- suppressMessages(f(legacy, passes = 1L))
+  table <- qlm_meta(filled, "input_files")
+  expect_equal(table$.id, c("a", "b"))
+  expect_equal(table$sha256, c(NA_character_, hash_file(paths[["b"]])))
+  # ... which a later check reports as unverifiable for "a" and passes for "b"
+  expect_message(verify_input_files(filled), 'no recorded file hash.*"a"')
+
+  # A pass on a registered replacement model records the registration on the
+  # pass, and the run then needs it again to be replayed
+  run <- audio_run(paths, failed = "b")
+  g <- qlm_backfill
+  mockery::stub(g, "qlm_code", function(x, ...) {
+    audio_run(x, registered = "google_gemini/gemini-4-ultra", model = "google_gemini/gemini-4-ultra")
+  })
+  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  filled2 <- suppressMessages(g(run, model = "google_gemini/gemini-4-ultra", passes = 1L))
+  passes <- qlm_meta(filled2, type = "object")$backfill
+  expect_length(passes, 1L)
+  expect_equal(passes[[1]]$input_model_registered, "google_gemini/gemini-4-ultra")
+  expect_equal(recorded_registrations(filled2), "google_gemini/gemini-4-ultra")
+
+  reset_registered_input_models()
+  expect_error(
+    suppressMessages(qlm_backfill(filled2, model = "google_gemini/gemini-4-ultra")),
+    "qlm_register_input_model"
+  )
+})

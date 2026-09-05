@@ -19,6 +19,9 @@ Currently only \code{"audio"} is gated.}
 \code{model}, invisibly.
 }
 \description{
+\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
+}
+\details{
 \code{qlm_code()} refuses to upload a file to a provider/model combination it
 does not know to accept that kind of input, because the refusal would
 otherwise arrive only after the upload, as a failed request. The
@@ -26,8 +29,7 @@ combinations it knows are a snapshot (see \code{?qlm_code}, section "Audio
 input"), so a model released after this version of quallmer may be
 refused although it works. This function accepts one exact
 \code{"provider/model"} pair for one input type, for the rest of the R session.
-}
-\details{
+
 Only the model check is bypassed. The provider must still be one that
 takes the input type through ellmer's file upload, \code{batch = TRUE} is still
 refused for audio, and the files are still checked. Registering a model of
