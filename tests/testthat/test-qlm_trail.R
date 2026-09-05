@@ -1074,3 +1074,76 @@ test_that("qlm_trail() report says why a cost is NA (#135)", {
   )))
   expect_null(qlm_code_call(content)$prices)
 })
+
+
+# File inputs (#124) -----------------------------------------------------------
+
+test_that("the report names a file-input run's files by hash, and any registration (#124)", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
+                   model = "google_gemini/gemini-4-ultra")
+  temp_path <- tempfile("trail_audio")
+  withr::defer({
+    unlink(paste0(temp_path, ".rds"))
+    unlink(paste0(temp_path, ".qmd"))
+  })
+
+  suppressMessages(trail <- qlm_trail(run, path = temp_path))
+  content <- readLines(paste0(temp_path, ".qmd"))
+
+  expect_true(any(grepl("**Input files (audio):** 2 files, SHA-256 recorded", content, fixed = TRUE)))
+  expect_true(any(grepl(hash_file(paths[["a"]]), content, fixed = TRUE)))
+  expect_true(any(grepl(paste0("| b | ", basename(paths[["b"]]), " | 10 | `"), content, fixed = TRUE)))
+  expect_true(any(grepl(
+    'qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio")',
+    content, fixed = TRUE
+  )))
+
+  # The trail object keeps what the report was built from
+  expect_equal(trail$runs[["audio_run"]]$input_files$.id, c("a", "b"))
+
+  # A text run says nothing about files
+  text_path <- tempfile("trail_text")
+  withr::defer({
+    unlink(paste0(text_path, ".rds"))
+    unlink(paste0(text_path, ".qmd"))
+  })
+  text_run <- new_qlm_coded(
+    results = data.frame(id = "a", score = 1),
+    codebook = qlm_codebook("T", "P", ellmer::type_object(score = ellmer::type_number("s"))),
+    data = c(a = "some text"), input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 1),
+    name = "t", call = quote(qlm_code(...))
+  )
+  suppressMessages(qlm_trail(text_run, path = text_path))
+  expect_false(any(grepl("Input files", readLines(paste0(text_path, ".qmd")), fixed = TRUE)))
+})
+
+
+test_that("the report discloses a registration a backfill pass relied on, and unrecorded hashes (#124)", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run <- audio_run(paths, failed = "b")
+  meta_attr <- attr(run, "meta")
+  meta_attr$user$input_files$sha256[1] <- NA_character_
+  meta_attr$user$input_files$size[1] <- NA_real_
+  meta_attr$object$backfill <- list(backfill_pass(
+    model = "google_gemini/gemini-4-ultra", overrides = list(), attempted = "b",
+    recovered = "b", registered = "google_gemini/gemini-4-ultra"
+  ))
+  attr(run, "meta") <- meta_attr
+  temp_path <- tempfile("trail_pass")
+  withr::defer({
+    unlink(paste0(temp_path, ".rds"))
+    unlink(paste0(temp_path, ".qmd"))
+  })
+
+  suppressMessages(qlm_trail(run, path = temp_path))
+  content <- readLines(paste0(temp_path, ".qmd"))
+  expect_true(any(grepl(
+    '**Backfill pass 1 model accepted by:** `qlm_register_input_model("google_gemini/gemini-4-ultra"',
+    content, fixed = TRUE
+  )))
+  expect_true(any(grepl("| a | ", content, fixed = TRUE) & grepl("not recorded", content, fixed = TRUE)))
+  expect_true(any(grepl(hash_file(paths[["b"]]), content, fixed = TRUE)))
+})

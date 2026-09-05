@@ -8,13 +8,10 @@
 #' [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()]
 #' based on their names.
 #'
-#' @param x character; the input data, either texts (for text codebooks) or,
-#'   for image codebooks, image file paths or URLs, which may be mixed. An
-#'   element beginning with `http://`, `https://` or `data:` is a URL and is
-#'   fetched by the provider; every other element is a path, which must exist
-#'   before anything is sent and is read, resized as the codebook's
-#'   `image_file_resize` says, and sent inline. See the section on image
-#'   input. Named vectors will use names
+#' @param x character; the input data: texts for a text codebook, file
+#'   paths or URLs for an image codebook (see the section on image input), or
+#'   file paths for an audio codebook (see the section on audio input).
+#'   Named vectors will use names
 #'   as identifiers in the output; unnamed vectors will use sequential integers.
 #'   The identifiers become the `.id` column, on which every later operation
 #'   keys, so names must be unique.
@@ -240,10 +237,60 @@
 #' and `print()` reports how many there were. Most such failures are
 #' transient, and [qlm_backfill()] re-codes just those units and merges them
 #' back; `backfill` does that before returning. Batch processing and
-#' image codebooks
-#' are not supported there, so `"auto"` will not fall back under
-#' `batch = TRUE`. The path actually taken is recorded in the run metadata as
-#' `backend`.
+#' file inputs (image and audio codebooks) are not supported there, so
+#' `"auto"` will not fall back under `batch = TRUE` or for a file input: a
+#' failed structured call then stops with the provider's own error, and
+#' `structured = "json"` is refused up front. The path actually taken is
+#' recorded in the run metadata as `backend`.
+#'
+#' @section Audio input:
+#'
+#' A codebook with `input_type = "audio"` codes recordings in one pass: each
+#' file in `x` is uploaded to the provider through ellmer's file upload,
+#' and the model receives a reference to it with the codebook's
+#' instructions, so the schema can ask for a transcript, a language, a
+#' summary or any coding of the content. Accepted formats are mp3, wav, ogg,
+#' m4a, flac and aac.
+#'
+#' Which providers accept audio this way is checked before anything is
+#' uploaded, from the chat the run will use. As of this version only Google
+#' Gemini does, so `model` must be a `google_gemini/` model in the
+#' `gemini-<version>-pro`, `-flash` or `-flash-lite` families, with an
+#' optional preview, date or `-latest` suffix; TTS, image, live and
+#' transcription models that share a family stem are refused, as is Vertex,
+#' which has no file upload. This is a snapshot of what providers accepted on
+#' the date it was written. A model outside the recognised families that
+#' does accept audio can be accepted for the session with
+#' [qlm_register_input_model()]; a run coded that way records it, and
+#' replicating or backfilling the run in another session needs the
+#' registration again. For any other provider, transcribe the recordings
+#' first and code the transcripts with a text codebook.
+#'
+#' Every upload completes before the first coding request is sent, so either
+#' all the inputs are ready or nothing is spent; a failed upload stops the
+#' run with the provider's message, which says whether the failure was
+#' transient or the file itself. Uploads expire after 48 hours and storage
+#' is free, so [qlm_replicate()] and [qlm_backfill()] upload the files again
+#' from the paths in `x`. Before they do, they check the files against the
+#' SHA-256 hashes the run recorded for each unit, and refuse to continue if
+#' a path now points at different bytes. The hashes are taken before
+#' anything is uploaded, so they are of the bytes the model received even
+#' if a file is replaced while the requests run; they are kept in the run's
+#' metadata as `input_files` and reported by [qlm_trail()]. A backfill pass
+#' records its own hashes for the units it re-coded, so a run coded by an
+#' earlier version that recorded none gains them unit by unit; units still
+#' without one are reported as unverifiable, with a notice, rather than as
+#' changed.
+#'
+#' `batch = TRUE` is not supported for audio: ellmer's batch cache is keyed
+#' on the prompts, and an upload gets a new reference every time, so a
+#' batch run could not be resumed.
+#'
+#' With `include_cost = TRUE`, or `prices`, the cost of an audio run is
+#' potentially underestimated: providers charge more per audio token than
+#' per text token, and the figure is computed at the text rate from the
+#' total. The run's cost note says so, in `print()`, the trail, and any
+#' backfill pass.
 #'
 #' @section Rejected runs:
 #' When the provider rejects every request with a status that will not change
@@ -353,6 +400,23 @@
 #' texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
 #' coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 #' coded2
+#'
+#' # Audio recordings, coded in one pass by a Gemini model; see the section
+#' # "Audio input" for which providers accept audio. The model hears the
+#' # recording, so the schema can ask for the transcript as well as the codes
+#' speech_codebook <- qlm_codebook(
+#'   "Speech", "Transcribe the recording, identify the language and summarise what is said.",
+#'   ellmer::type_object(
+#'     transcript = ellmer::type_string("Verbatim transcript, in the language spoken"),
+#'     language = ellmer::type_string("Language spoken"),
+#'     summary = ellmer::type_string("One-sentence summary in English")
+#'   ),
+#'   input_type = "audio"
+#' )
+#' coded_audio <- qlm_code(
+#'   c(interview1 = "interview1.mp3", interview2 = "interview2.wav"),
+#'   speech_codebook, model = "google_gemini/gemini-2.5-flash"
+#' )
 #' }
 #'
 #' @export
@@ -398,9 +462,21 @@ qlm_code <- function(x, codebook, model, ...,
   if (codebook$input_type == "text" && !is.character(x)) {
     cli::cli_abort("This codebook expects text input (a character vector).")
   }
+  if (codebook$input_type %in% file_input_types()) {
+    check_file_inputs(x, codebook$input_type)
+  }
   if (codebook$input_type == "image") {
-    check_image_inputs(x)
     check_image_resize(codebook, x)
+  }
+  # Audio is uploaded, and an upload gets a new reference every time, so a
+  # batch job could never be resumed against ellmer's prompt-keyed cache.
+  # Refused here, before any upload.
+  if (identical(codebook$input_type, "audio") && isTRUE(batch)) {
+    cli::cli_abort(c(
+      "{.code batch = TRUE} is not supported for audio input.",
+      "i" = "ellmer's batch cache is keyed on the prompts, and an uploaded file gets a new reference on every upload, so a batch run could not be resumed.",
+      "i" = "Re-run with {.code batch = FALSE}."
+    ))
   }
   # Names become .id, the key every later operation relies on. Checked here,
   # before any request is spent, rather than in the constructor afterwards.
@@ -434,10 +510,27 @@ qlm_code <- function(x, codebook, model, ...,
   # the model first. `dot_names` is already in hand from the capture above.
   check_model_params(dot_names, model)
 
+  # A file input never takes the JSON path: that handler sends text, so the
+  # provider's own failure would be replaced by "supports text codebooks
+  # only". Refused as an explicit request, and never chosen as a default.
+  file_input <- codebook$input_type %in% file_input_types()
+  if (file_input && explicit_structured && identical(structured, "json")) {
+    cli::cli_abort(c(
+      "{.code structured = \"json\"} is not supported for {codebook$input_type} input.",
+      "i" = "JSON mode sends text and validates locally; a file input needs the provider's structured output.",
+      "i" = "Use {.code structured = \"auto\"} or {.code \"structured\"}."
+    ))
+  }
+
+  # Hashed now, before any upload or request, so the record is of the bytes
+  # about to be sent: a file replaced while requests run cannot be recorded
+  # in their place, and one deleted then cannot stop the results coming back
+  input_files <- if (file_input) file_provenance(x, names(x) %||% seq_along(x))
+
   # Providers whose API rejects the schema-constrained request skip straight to
   # JSON mode rather than spending a wasted round trip; see
   # default_structured_mode().
-  if (!explicit_structured) {
+  if (!explicit_structured && !file_input) {
     structured <- default_structured_mode(model)
   }
 
@@ -516,7 +609,7 @@ qlm_code <- function(x, codebook, model, ...,
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
-      allow_skip = identical(structured, "auto") && !batch,
+      allow_skip = identical(structured, "auto") && !batch && !file_input,
       cost_message = is.null(prices)
     )
 
@@ -525,6 +618,11 @@ qlm_code <- function(x, codebook, model, ...,
     if (isTRUE(attempt$ok)) {
       results <- attempt$value
       backend_meta <- list(backend = "structured")
+      # The model was accepted by a session registration: recorded, so that
+      # a replay elsewhere knows to ask for it again
+      if (!is.null(attempt$registered)) {
+        backend_meta$input_model_registered <- attempt$registered
+      }
       incomplete <- n_incomplete(results, codebook$schema)
       if (incomplete) {
         cli::cli_warn(
@@ -559,6 +657,14 @@ qlm_code <- function(x, codebook, model, ...,
         "Structured output failed for model {.val {model}}.",
         set_bullets(attempt$error),
         "i" = "Use {.code structured = \"auto\"} to fall back to JSON mode with local validation."
+      ))
+    } else if (file_input) {
+      # The JSON handler sends text, so a file input has nothing to fall back
+      # to. The provider's error is the reason, so it is what is reported.
+      cli::cli_abort(c(
+        "Structured output failed for model {.val {model}}.",
+        set_bullets(attempt$error),
+        "i" = "A {codebook$input_type} input cannot fall back to JSON mode, which sends text."
       ))
     } else if (batch) {
       # JSON mode drives its own parallel requests and has no batch API path,
@@ -614,6 +720,15 @@ qlm_code <- function(x, codebook, model, ...,
   prices <- settled$prices
   cost_note <- settled$cost_note
 
+  # An audio cost is computed at the text rate, whoever supplied the rates,
+  # so the qualification joins whatever note the cost already carries rather
+  # than replacing it, and is said once here as well as kept with the object
+  if (identical(codebook$input_type, "audio") &&
+      (isTRUE(execution_args$include_cost) || !is.null(prices))) {
+    cost_note <- paste(c(cost_note, audio_cost_note()), collapse = "; ")
+    cli::cli_inform(c("i" = paste0("Cost: ", audio_cost_note(), ".")))
+  }
+
   # Build metadata list
   metadata <- list(
     timestamp = Sys.time(),
@@ -634,6 +749,11 @@ qlm_code <- function(x, codebook, model, ...,
   metadata <- c(metadata, backend_meta)
   if (!is.null(cost_note)) {
     metadata$cost_note <- cost_note
+  }
+  # What was coded, so a later replication or backfill can check it is
+  # uploading the same bytes, and the trail can name the files
+  if (!is.null(input_files)) {
+    metadata$input_files <- input_files
   }
   if (!is.null(prices)) {
     metadata$prices <- prices
@@ -709,16 +829,14 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
     codebook$instructions
   }
 
-  if (codebook$input_type == "image") {
-    prompts <- as_image_content(x, codebook$image_file_resize)
-  } else {
-    prompts <- as.list(x)
-  }
-
   build_chat <- function(prompt) {
     do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
   }
   chat <- build_chat(system_prompt)
+
+  # Whether this provider and model take the input at all is known from the
+  # chat before anything is uploaded or sent; a refusal here costs nothing
+  capability <- check_input_capability(codebook$input_type, chat, model)
 
   # From the chat the run will use, before anything is sent (#135)
   unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
@@ -753,6 +871,10 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   warn_unenforced_schema(chat, model)
+
+  # Every upload completes here, before the first request: either all the
+  # inputs are ready or nothing is spent. Text and images are built inline.
+  prompts <- as_input_content(x, codebook, chat)
 
   # Whether a response ran into a declared output limit is knowable only from
   # the token counts, which ellmer attaches on request; the finish reason
@@ -847,6 +969,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   attempt$unpriced <- unpriced
+  attempt$registered <- capability$registered
   attempt
 }
 
@@ -1197,7 +1320,7 @@ warn_unenforced_schema <- function(chat, model) {
 #' @param results Data frame of coded results with id column.
 #' @param codebook A qlm_codebook object.
 #' @param data The original input data (x from qlm_code).
-#' @param input_type Type of input ("text" or "image").
+#' @param input_type Type of input ("text", "image" or "audio").
 #' @param chat_args List of arguments passed to ellmer::chat().
 #' @param execution_args List of arguments passed to ellmer::parallel_chat_structured()
 #'   or ellmer::batch_chat_structured(). For backward compatibility, also accepts

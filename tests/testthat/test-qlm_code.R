@@ -134,11 +134,13 @@ test_that("try_structured_call resizes images as the codebook says (#177)", {
                                  image_file_resize = "1024x1024>")
 
   resize_seen <- NULL
-  tsc <- try_structured_call
-  mockery::stub(tsc, "as_image_content", function(x, resize) {
+  aic <- as_input_content
+  mockery::stub(aic, "as_image_content", function(x, resize) {
     resize_seen <<- resize
     as.list(x)
   })
+  tsc <- try_structured_call
+  mockery::stub(tsc, "as_input_content", aic)
   mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "ellmer_chat"))
   mockery::stub(tsc, "ellmer::parallel_chat_structured",
                 data.frame(id = 1, score = 0.5))
@@ -193,11 +195,13 @@ test_that("qlm_code records the resolution an old image codebook was coded at (#
   writeLines("", existing)
 
   resize_seen <- NULL
-  tsc <- try_structured_call
-  mockery::stub(tsc, "as_image_content", function(x, resize) {
+  aic <- as_input_content
+  mockery::stub(aic, "as_image_content", function(x, resize) {
     resize_seen <<- resize
     as.list(x)
   })
+  tsc <- try_structured_call
+  mockery::stub(tsc, "as_input_content", aic)
   mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "ellmer_chat"))
   mockery::stub(tsc, "ellmer::parallel_chat_structured",
                 data.frame(id = 1, score = 0.5))

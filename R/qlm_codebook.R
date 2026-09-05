@@ -15,9 +15,13 @@
 #' @param role Optional role description for the model (e.g., "You are an expert
 #'   annotator"). If provided, this will be prepended to the instructions when
 #'   creating the system prompt.
-#' @param input_type Type of input data: `"text"` (default) or `"image"`.
+#' @param input_type Type of input data: `"text"` (default), `"image"` or
+#'   `"audio"`. For `"image"` and `"audio"` the elements of `x` in
+#'   [qlm_code()] are file paths; see its section "Audio input" for which
+#'   providers accept audio and how the files are handled. For `"image"`
+#'   the elements may also be URLs; see its section "Image input".
 #' @param image_file_resize How image files are resized before they are sent,
-#'   for `input_type = "image"` only; setting it on a text codebook is an
+#'   for `input_type = "image"` only; setting it on any other codebook is an
 #'   error. One of `"high"` (the default: fit within 2000x768 or 768x2000
 #'   pixels, whichever suits the orientation), `"low"` (fit within 512x512),
 #'   `"none"` (send the file as it is), or a \pkg{magick} geometry string
@@ -97,7 +101,7 @@
 #'
 #' @export
 qlm_codebook <- function(name, instructions, schema, role = NULL,
-                         input_type = c("text", "image"), levels = NULL,
+                         input_type = input_types(), levels = NULL,
                          image_file_resize = NULL) {
   input_type <- match.arg(input_type)
   image_file_resize <- check_image_file_resize(image_file_resize, input_type)

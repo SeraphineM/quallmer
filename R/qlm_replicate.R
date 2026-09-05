@@ -124,6 +124,14 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
     }
   }
 
+  # A file input is uploaded again from the recorded paths: first check they
+  # still hold the bytes the parent coded, and that a model the parent
+  # accepted by registration is registered in this session too
+  if (use_codebook$input_type %in% file_input_types()) {
+    verify_input_files(x)
+    check_registered_input_model(x, use_model)
+  }
+
   # Call qlm_code with merged arguments, including batch flag
   result <- do.call(qlm_code, c(
     list(

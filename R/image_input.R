@@ -14,38 +14,6 @@ is_image_url <- function(x) {
 }
 
 
-#' Check image inputs before any request
-#'
-#' Every element must be a URL or the path of an existing file. Checked in
-#' one pass so that every missing file is reported at once, and before any
-#' paid call, rather than one at a time inside ellmer.
-#'
-#' @param x The input vector.
-#' @param call The calling environment, for the error.
-#'
-#' @return `x`, invisibly.
-#' @keywords internal
-#' @noRd
-check_image_inputs <- function(x, call = rlang::caller_env()) {
-  if (!is.character(x)) {
-    cli::cli_abort(
-      "This codebook expects image file paths or URLs (a character vector).",
-      call = call
-    )
-  }
-  is_path <- !is_image_url(x)
-  missing <- is_path & (is.na(x) | !file.exists(x) | dir.exists(x))
-  if (any(missing)) {
-    cli::cli_abort(c(
-      "{sum(missing)} image {cli::qty(sum(missing))}file{?s} {?does/do} not exist: {.path {x[missing]}}.",
-      "i" = "Every element of {.arg x} must be the path of an existing file or a URL.",
-      "i" = "A URL is recognised by its scheme: {.code http://}, {.code https://} or {.code data:}."
-    ), call = call)
-  }
-  invisible(x)
-}
-
-
 #' Check that the codebook's resize setting can be applied
 #'
 #' Resizing needs magick, which ellmer only Suggests. Checked here, naming the

@@ -44,6 +44,32 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
+* `qlm_codebook()` accepts `input_type = "audio"`, and `qlm_code()` codes
+  recordings in one pass: each file is uploaded to the provider through
+  ellmer's file upload and the model receives a reference to it with the
+  codebook, so the schema can ask for a transcript alongside any coding of
+  the content. Which providers accept audio is checked from the chat before
+  anything is uploaded; as of this version that is Google Gemini's pro,
+  flash and flash-lite families, and a newer model that also accepts audio
+  can be accepted for the session with the new `qlm_register_input_model()`,
+  which the run then records. Every upload completes before the first
+  request is sent, so a failed upload stops the run with the provider's
+  message and nothing spent. The run records the SHA-256 of each file, which
+  `qlm_replicate()` and `qlm_backfill()` check before uploading again and
+  `qlm_trail()` reports. `batch = TRUE` is refused for audio, since an
+  upload gets a new reference every time and ellmer's prompt-keyed batch
+  cache could not resume the job, and the cost note says that an audio cost
+  computed at the text rate is potentially underestimated. Requires ellmer
+  0.5.0 (#124).
+
+* A file input (image or audio codebook) no longer falls back to JSON mode
+  under `structured = "auto"`: that handler sends text, so a failed
+  structured call used to end in the misleading error that the model
+  "supports text codebooks only". The provider's own error is now reported,
+  and `structured = "json"` is refused up front for a file input. `qlm_code()`
+  also checks that every image or audio file exists before building a
+  request (#124).
+
 * `qlm_codebook()` gains `image_file_resize`, which sets how an image
   codebook's files are resized before they are sent: `"high"` (the new
   default, fitting within 2000x768 or 768x2000 pixels), `"low"` (512x512),
@@ -204,6 +230,15 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   since the remedies differ, and the message says whether the token counts a
   cost could be worked out from are being recorded, which needs
   `include_tokens = TRUE` (#135).
+
+## Documentation
+
+* The "Audio transcription and analysis" example article now shows both
+  routes: transcription with Whisper followed by coding of the transcripts,
+  and coding the recordings directly with `input_type = "audio"` on
+  `gemini-2.5-flash`, ending with `qlm_compare()` of the two runs, the
+  model's transcript beside Whisper's, the cost, and the recorded file
+  hashes (#124).
 
 ## Bug fixes
 

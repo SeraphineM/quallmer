@@ -1203,3 +1203,49 @@ test_that("an explicit on_error on a batch replication is refused, not dropped (
     "not supported with `batch = TRUE`"
   )
 })
+
+
+# File inputs (#124) -----------------------------------------------------------
+
+test_that("qlm_replicate checks a file input's hashes before coding it again (#124)", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run <- audio_run(paths)
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, ...) {
+    seen <<- x
+    run
+  })
+
+  expect_s3_class(f(run, name = "rep"), "qlm_coded")
+  expect_equal(seen, paths)
+
+  # The path now holds different bytes: refused before anything is coded
+  writeBin(as.raw(99:110), paths[["b"]])
+  seen <- NULL
+  expect_error(f(run, name = "rep2"), 'differs from the one this run coded: "b"')
+  expect_null(seen)
+})
+
+
+test_that("qlm_replicate of a run without recorded hashes proceeds with a notice (#124)", {
+  paths <- c(a = audio_file())
+  legacy <- audio_run(paths, with_hashes = FALSE)
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, ...) legacy)
+  expect_message(f(legacy, name = "rep"), "cannot be verified")
+})
+
+
+test_that("qlm_replicate needs the registration a run relied on (#124)", {
+  withr::defer(reset_registered_input_models())
+  paths <- c(a = audio_file())
+  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
+                   model = "google_gemini/gemini-4-ultra")
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, ...) run)
+
+  expect_error(f(run, name = "rep"), "qlm_register_input_model")
+  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  expect_s3_class(f(run, name = "rep"), "qlm_coded")
+})

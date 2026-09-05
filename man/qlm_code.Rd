@@ -20,13 +20,10 @@ qlm_code(
 )
 }
 \arguments{
-\item{x}{character; the input data, either texts (for text codebooks) or,
-for image codebooks, image file paths or URLs, which may be mixed. An
-element beginning with \verb{http://}, \verb{https://} or \verb{data:} is a URL and is
-fetched by the provider; every other element is a path, which must exist
-before anything is sent and is read, resized as the codebook's
-\code{image_file_resize} says, and sent inline. See the section on image
-input. Named vectors will use names
+\item{x}{character; the input data: texts for a text codebook, file
+paths or URLs for an image codebook (see the section on image input), or
+file paths for an audio codebook (see the section on audio input).
+Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the \code{.id} column, on which every later operation
 keys, so names must be unique.}
@@ -288,10 +285,62 @@ lists the units that produced no usable coding, with the reason for each,
 and \code{print()} reports how many there were. Most such failures are
 transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes just those units and merges them
 back; \code{backfill} does that before returning. Batch processing and
-image codebooks
-are not supported there, so \code{"auto"} will not fall back under
-\code{batch = TRUE}. The path actually taken is recorded in the run metadata as
-\code{backend}.
+file inputs (image and audio codebooks) are not supported there, so
+\code{"auto"} will not fall back under \code{batch = TRUE} or for a file input: a
+failed structured call then stops with the provider's own error, and
+\code{structured = "json"} is refused up front. The path actually taken is
+recorded in the run metadata as \code{backend}.
+}
+
+\section{Audio input}{
+
+
+A codebook with \code{input_type = "audio"} codes recordings in one pass: each
+file in \code{x} is uploaded to the provider through ellmer's file upload,
+and the model receives a reference to it with the codebook's
+instructions, so the schema can ask for a transcript, a language, a
+summary or any coding of the content. Accepted formats are mp3, wav, ogg,
+m4a, flac and aac.
+
+Which providers accept audio this way is checked before anything is
+uploaded, from the chat the run will use. As of this version only Google
+Gemini does, so \code{model} must be a \verb{google_gemini/} model in the
+\verb{gemini-<version>-pro}, \code{-flash} or \code{-flash-lite} families, with an
+optional preview, date or \code{-latest} suffix; TTS, image, live and
+transcription models that share a family stem are refused, as is Vertex,
+which has no file upload. This is a snapshot of what providers accepted on
+the date it was written. A model outside the recognised families that
+does accept audio can be accepted for the session with
+\code{\link[=qlm_register_input_model]{qlm_register_input_model()}}; a run coded that way records it, and
+replicating or backfilling the run in another session needs the
+registration again. For any other provider, transcribe the recordings
+first and code the transcripts with a text codebook.
+
+Every upload completes before the first coding request is sent, so either
+all the inputs are ready or nothing is spent; a failed upload stops the
+run with the provider's message, which says whether the failure was
+transient or the file itself. Uploads expire after 48 hours and storage
+is free, so \code{\link[=qlm_replicate]{qlm_replicate()}} and \code{\link[=qlm_backfill]{qlm_backfill()}} upload the files again
+from the paths in \code{x}. Before they do, they check the files against the
+SHA-256 hashes the run recorded for each unit, and refuse to continue if
+a path now points at different bytes. The hashes are taken before
+anything is uploaded, so they are of the bytes the model received even
+if a file is replaced while the requests run; they are kept in the run's
+metadata as \code{input_files} and reported by \code{\link[=qlm_trail]{qlm_trail()}}. A backfill pass
+records its own hashes for the units it re-coded, so a run coded by an
+earlier version that recorded none gains them unit by unit; units still
+without one are reported as unverifiable, with a notice, rather than as
+changed.
+
+\code{batch = TRUE} is not supported for audio: ellmer's batch cache is keyed
+on the prompts, and an upload gets a new reference every time, so a
+batch run could not be resumed.
+
+With \code{include_cost = TRUE}, or \code{prices}, the cost of an audio run is
+potentially underestimated: providers charge more per audio token than
+per text token, and the figure is computed at the text rate from the
+total. The run's cost note says so, in \code{print()}, the trail, and any
+backfill pass.
 }
 
 \section{Rejected runs}{
@@ -395,6 +444,23 @@ coded
 texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
 coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 coded2
+
+# Audio recordings, coded in one pass by a Gemini model; see the section
+# "Audio input" for which providers accept audio. The model hears the
+# recording, so the schema can ask for the transcript as well as the codes
+speech_codebook <- qlm_codebook(
+  "Speech", "Transcribe the recording, identify the language and summarise what is said.",
+  ellmer::type_object(
+    transcript = ellmer::type_string("Verbatim transcript, in the language spoken"),
+    language = ellmer::type_string("Language spoken"),
+    summary = ellmer::type_string("One-sentence summary in English")
+  ),
+  input_type = "audio"
+)
+coded_audio <- qlm_code(
+  c(interview1 = "interview1.mp3", interview2 = "interview2.wav"),
+  speech_codebook, model = "google_gemini/gemini-2.5-flash"
+)
 }
 
 }
