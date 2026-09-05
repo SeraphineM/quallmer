@@ -20,8 +20,13 @@ qlm_code(
 )
 }
 \arguments{
-\item{x}{character; the input data, either texts (for text codebooks) or
-file paths to images (for image codebooks). Named vectors will use names
+\item{x}{character; the input data, either texts (for text codebooks) or,
+for image codebooks, image file paths or URLs, which may be mixed. An
+element beginning with \verb{http://}, \verb{https://} or \verb{data:} is a URL and is
+fetched by the provider; every other element is a path, which must exist
+before anything is sent and is read, resized as the codebook's
+\code{image_file_resize} says, and sent inline. See the section on image
+input. Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the \code{.id} column, on which every later operation
 keys, so names must be unique.}
@@ -133,6 +138,29 @@ function. Set \code{verbose = TRUE} to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options;
 what a failure does to the rest of a parallel run is \code{on_error}.
 }
+\section{Image input}{
+
+
+An image codebook codes one image per element of \code{x}. A file path is read
+and sent inline, after being resized as the codebook's \code{image_file_resize}
+says: \code{"high"} by default, which fits the image within 2000x768 or 768x2000
+pixels, \code{"low"} for 512x512, \code{"none"} to send the file as it is, or a
+magick geometry string. Anything but \code{"none"} needs the \pkg{magick}
+package, which is checked here before any request is sent. The resolution
+is part of the codebook because it is part of the measurement: a poster
+whose small print is legible at one size is not at another, and a
+replication should read the image the original run read. Codebooks saved
+before the setting existed are read as \code{"low"}, which is what they were
+coded at. See \code{\link[=qlm_codebook]{qlm_codebook()}}.
+
+A URL is passed to the provider as it is, through
+\code{\link[ellmer:content_image_url]{ellmer::content_image_url()}}, so \code{image_file_resize} does not apply to
+it; what the provider does with a remote image is its own affair, and not
+every provider fetches URLs. A path that does not exist is refused before
+anything is sent, so a URL typed without its scheme fails here with the
+path named, not inside the request.
+}
+
 \section{Provider-specific parameters}{
 
 

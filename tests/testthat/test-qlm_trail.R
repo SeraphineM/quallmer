@@ -609,6 +609,34 @@ qlm_code_call <- function(content, run_name = "run1") {
 }
 
 
+test_that("qlm_trail() report records the image resolution a codebook codes at (#177)", {
+  coded <- trail_params_fixture(list(name = "openai/gpt-4o"))
+  attr(coded, "run")$codebook <- list(
+    name = "posters", instructions = "Read the posters",
+    input_type = "image", image_file_resize = "1024x1024>"
+  )
+  path <- file.path(tempdir(), "test_trail_resize")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  expect_true(any(grepl(
+    '**Input:** image files, resized with `image_file_resize = "1024x1024>"`',
+    content, fixed = TRUE
+  )))
+
+  # A run saved before the field existed was coded at "low", and says so
+  attr(coded, "run")$codebook$image_file_resize <- NULL
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+  expect_true(any(grepl('`image_file_resize = "low"`', content, fixed = TRUE)))
+
+  # A text codebook has no such line
+  content <- trail_params_report(list(name = "openai/gpt-4o"))
+  expect_false(any(grepl("**Input:**", content, fixed = TRUE)))
+})
+
+
 test_that("qlm_trail() report reads sampling settings from chat_args$params (#127)", {
   content <- trail_params_report(list(
     name = "openai/gpt-4o-mini",

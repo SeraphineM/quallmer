@@ -361,7 +361,8 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
   type <- match.arg(type)
 
   # For codebooks, user metadata includes name and instructions
-  # Object metadata includes schema, role, input_type, levels
+  # Object metadata includes schema, role, input_type, levels, and for image
+  # codebooks image_file_resize
   # System metadata is empty (codebooks don't have timestamps etc)
 
   if (type == "user") {
@@ -376,6 +377,11 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       input_type = x$input_type,
       levels = x$levels
     )
+    # Filled for an image codebook saved before the field existed (#177)
+    resize <- fill_codebook_fields(x)$image_file_resize
+    if (!is.null(resize)) {
+      metadata$image_file_resize <- resize
+    }
   } else if (type == "system") {
     # Codebooks don't have system metadata
     metadata <- list()

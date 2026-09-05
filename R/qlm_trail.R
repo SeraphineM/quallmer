@@ -468,6 +468,17 @@ generate_trail_report <- function(trail, file) {
         lines <- c(lines, paste0("### ", cb_name))
         lines <- c(lines, "")
 
+        # The resolution an image was coded at is part of the instrument; a
+        # run saved before the field existed was coded at "low" (#177)
+        resize <- fill_codebook_fields(run$codebook)$image_file_resize
+        if (!is.null(resize)) {
+          lines <- c(lines, paste0(
+            "**Input:** image files, resized with `image_file_resize = \"",
+            resize, "\"`"
+          ))
+          lines <- c(lines, "")
+        }
+
         if (!is.null(run$codebook$instructions)) {
           lines <- c(lines, "**Instructions:**")
           lines <- c(lines, "")

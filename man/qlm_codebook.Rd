@@ -10,7 +10,8 @@ qlm_codebook(
   schema,
   role = NULL,
   input_type = c("text", "image"),
-  levels = NULL
+  levels = NULL,
+  image_file_resize = NULL
 )
 }
 \arguments{
@@ -44,6 +45,20 @@ re-wrapped with \code{\link[=as_qlm_coded]{as_qlm_coded()}}, passing this codebo
 for the declared levels to be found. Because \code{levels} is a flat list, a
 name that occurs at more than one place in the schema cannot be declared
 and is an error; rename the properties to make them distinct.}
+
+\item{image_file_resize}{How image files are resized before they are sent,
+for \code{input_type = "image"} only; setting it on a text codebook is an
+error. One of \code{"high"} (the default: fit within 2000x768 or 768x2000
+pixels, whichever suits the orientation), \code{"low"} (fit within 512x512),
+\code{"none"} (send the file as it is), or a \pkg{magick} geometry string
+such as \code{"1024x1024>"}. Anything other than \code{"none"} needs the
+\pkg{magick} package, and \code{\link[=qlm_code]{qlm_code()}} says so if it is missing. The
+value is stored on the codebook, so replications and backfills code at
+the same resolution and \code{\link[=qlm_trail]{qlm_trail()}} records it. It applies to file
+paths only: an element of \code{x} that is a URL is fetched by the provider
+as it is. Codebooks saved before this field existed, including
+\code{\link[=task]{task()}} objects, are read as \code{"low"}, the resolution they were coded
+at, rather than the current default. See \code{\link[ellmer:content_image_file]{ellmer::content_image_file()}}.}
 }
 \value{
 A codebook object (a list with class \code{c("qlm_codebook", "task")})

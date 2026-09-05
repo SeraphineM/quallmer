@@ -51,6 +51,7 @@ Suggests:
     ggplot2,
     janitor,
     knitr,
+    magick,
     rmarkdown,
     testthat (>= 3.0.0),
     kableExtra,

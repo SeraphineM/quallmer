@@ -16,6 +16,19 @@
 #'   annotator"). If provided, this will be prepended to the instructions when
 #'   creating the system prompt.
 #' @param input_type Type of input data: `"text"` (default) or `"image"`.
+#' @param image_file_resize How image files are resized before they are sent,
+#'   for `input_type = "image"` only; setting it on a text codebook is an
+#'   error. One of `"high"` (the default: fit within 2000x768 or 768x2000
+#'   pixels, whichever suits the orientation), `"low"` (fit within 512x512),
+#'   `"none"` (send the file as it is), or a \pkg{magick} geometry string
+#'   such as `"1024x1024>"`. Anything other than `"none"` needs the
+#'   \pkg{magick} package, and [qlm_code()] says so if it is missing. The
+#'   value is stored on the codebook, so replications and backfills code at
+#'   the same resolution and [qlm_trail()] records it. It applies to file
+#'   paths only: an element of `x` that is a URL is fetched by the provider
+#'   as it is. Codebooks saved before this field existed, including
+#'   [task()] objects, are read as `"low"`, the resolution they were coded
+#'   at, rather than the current default. See [ellmer::content_image_file()].
 #' @param levels Optional named list specifying measurement levels for each
 #'   variable in the schema. Names should match schema property names. Values
 #'   should be one of `"nominal"`, `"ordinal"`, `"interval"`, or `"ratio"`.
@@ -84,8 +97,10 @@
 #'
 #' @export
 qlm_codebook <- function(name, instructions, schema, role = NULL,
-                         input_type = c("text", "image"), levels = NULL) {
+                         input_type = c("text", "image"), levels = NULL,
+                         image_file_resize = NULL) {
   input_type <- match.arg(input_type)
+  image_file_resize <- check_image_file_resize(image_file_resize, input_type)
 
   # Auto-detect levels if not provided
   if (is.null(levels)) {
@@ -94,17 +109,70 @@ qlm_codebook <- function(name, instructions, schema, role = NULL,
     validate_levels(levels, schema)
   }
 
+  codebook <- list(
+    name = name,
+    instructions = instructions,
+    schema = schema,
+    role = role,
+    input_type = input_type,
+    levels = levels
+  )
+  # Stored on image codebooks only, and always resolved there, so that every
+  # image codebook says what resolution it codes at and a text codebook
+  # carries no meaningless value (#177)
+  if (input_type == "image") {
+    codebook$image_file_resize <- image_file_resize
+  }
+
   structure(
-    list(
-      name = name,
-      instructions = instructions,
-      schema = schema,
-      role = role,
-      input_type = input_type,
-      levels = levels
-    ),
+    codebook,
     class = c("qlm_codebook", "task")  # Dual class for backward compatibility
   )
+}
+
+
+#' Validate the image resize setting of a codebook
+#'
+#' Accepts what [ellmer::content_image_file()] accepts as `resize`: one of
+#' the keywords or a magick geometry string. `NULL` on an image codebook
+#' resolves to the default; on any other codebook the setting is refused
+#' rather than stored and ignored.
+#'
+#' @param x The value to check.
+#' @param input_type The codebook's input type.
+#' @param call The calling environment, for the error.
+#'
+#' @return The resolved value: a string for image codebooks, `NULL`
+#'   otherwise.
+#' @keywords internal
+#' @noRd
+check_image_file_resize <- function(x, input_type, call = rlang::caller_env()) {
+  if (input_type != "image") {
+    if (!is.null(x)) {
+      cli::cli_abort(c(
+        "{.arg image_file_resize} applies to image codebooks only.",
+        "x" = "This codebook has {.code input_type = \"{input_type}\"}."
+      ), call = call)
+    }
+    return(NULL)
+  }
+  if (is.null(x)) {
+    return("high")
+  }
+  keywords <- c("high", "low", "none")
+  # A magick geometry: digits with an optional x, a scale or fit flag, and
+  # an optional offset, e.g. "1024x1024>", "50%", "800x", "x600!"
+  geometry <- "^[0-9]*%?(x[0-9]*%?)?[!<>^@]*(\\+[0-9]+\\+[0-9]+)?$"
+  ok <- is.character(x) && length(x) == 1L && !is.na(x) &&
+    (x %in% keywords || (grepl("[0-9]", x) && grepl(geometry, x)))
+  if (!ok) {
+    cli::cli_abort(c(
+      "{.arg image_file_resize} must be one of {.val {keywords}} or a magick geometry string.",
+      "i" = "For example {.val 1024x1024>} fits each image within 1024 pixels a side.",
+      "i" = "See {.fn ellmer::content_image_file}."
+    ), call = call)
+  }
+  x
 }
 
 
@@ -133,10 +201,10 @@ as_qlm_codebook.task <- function(x, ...) {
   }
 
   # Convert task to qlm_codebook by adding the class
-  structure(
+  fill_codebook_fields(structure(
     x,
     class = c("qlm_codebook", "task")
-  )
+  ))
 }
 
 
@@ -144,6 +212,25 @@ as_qlm_codebook.task <- function(x, ...) {
 #' @keywords internal
 #' @export
 as_qlm_codebook.qlm_codebook <- function(x, ...) {
+  fill_codebook_fields(x)
+}
+
+
+#' Fill fields a saved codebook predates
+#'
+#' Image codebooks made before `image_file_resize` existed were coded at
+#' ellmer's default of `"low"`. That is what they are read as, not the
+#' current default, so that [qlm_replicate()] on such a run measures what the
+#' original run measured (#177).
+#'
+#' @param x A qlm_codebook.
+#' @return `x` with every field present.
+#' @keywords internal
+#' @noRd
+fill_codebook_fields <- function(x) {
+  if (identical(x$input_type, "image") && is.null(x$image_file_resize)) {
+    x$image_file_resize <- "low"
+  }
   x
 }
 
@@ -159,6 +246,9 @@ as_qlm_codebook.qlm_codebook <- function(x, ...) {
 print.qlm_codebook <- function(x, ...) {
   cat("quallmer codebook:", x$name, "\n")
   cat("  Input type:   ", x$input_type, "\n", sep = "")
+  if (!is.null(x$image_file_resize)) {
+    cat("  Image resize: ", x$image_file_resize, "\n", sep = "")
+  }
   if (!is.null(x$role)) {
     cat("  Role:         ", substr(x$role, 1, 60),
         if (nchar(x$role) > 60) "..." else "", "\n", sep = "")

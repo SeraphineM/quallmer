@@ -44,6 +44,23 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
+* `qlm_codebook()` gains `image_file_resize`, which sets how an image
+  codebook's files are resized before they are sent: `"high"` (the new
+  default, fitting within 2000x768 or 768x2000 pixels), `"low"` (512x512),
+  `"none"`, or a magick geometry string such as `"1024x1024>"`. Until now
+  every image was sent at ellmer's default of 512x512, with nothing in
+  quallmer saying so, which is a thumbnail for a poster whose small print
+  is what the codebook asks about. The setting lives on the codebook
+  because the resolution is part of the measurement: `qlm_replicate()` and
+  `qlm_backfill()` inherit it, `qlm_trail()` reports it, and a codebook
+  saved before the field existed is read as `"low"`, what it was coded at,
+  so replicating an old run still measures what the original measured.
+  magick, which the resizing needs, is now in Suggests, and `qlm_code()`
+  says so if it is missing. `x` may now also hold image URLs alongside
+  paths: an element beginning with `http://`, `https://` or `data:` is
+  passed to the provider as it is, and every path is checked to exist
+  before any request is sent (#177).
+
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
   results into the original object, instead of re-running the whole corpus
   to recover a handful of transient failures. Which units to retry is
