@@ -422,10 +422,12 @@ coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-
 coded2
 
 # Audio recordings, coded in one pass by a Gemini model; see the section
-# "Audio input" for which providers accept audio
+# "Audio input" for which providers accept audio. The model hears the
+# recording, so the schema can ask for the transcript as well as the codes
 speech_codebook <- qlm_codebook(
-  "Speech", "Identify the language and summarise what is said.",
+  "Speech", "Transcribe the recording, identify the language and summarise what is said.",
   ellmer::type_object(
+    transcript = ellmer::type_string("Verbatim transcript, in the language spoken"),
     language = ellmer::type_string("Language spoken"),
     summary = ellmer::type_string("One-sentence summary in English")
   ),
