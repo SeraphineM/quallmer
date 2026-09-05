@@ -406,8 +406,13 @@ test_that("the same holds for an image codebook, which used to reach the JSON ha
   )
   calls <- new.env()
   withr::local_envvar(c(OPENAI_API_KEY = "test"))
+  # content_image_file() is reached through as_input_content(), and its
+  # default resize needs magick, which CI does not have: replace the binding
+  testthat::local_mocked_bindings(
+    content_image_file = function(path, ...) ellmer::ContentText(path),
+    .package = "ellmer"
+  )
   tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::content_image_file", function(path, ...) ellmer::ContentText(path))
   mockery::stub(tsc, "ellmer::parallel_chat_structured",
                 function(...) stop("HTTP 400 Bad Request. Image too large.", call. = FALSE))
   f <- qlm_code
