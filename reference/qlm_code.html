@@ -86,8 +86,9 @@ metadata for reproducibility.</p>
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>character; the input data, either texts (for text codebooks) or
-file paths to images (for image codebooks). Named vectors will use names
+<dd><p>character; the input data: texts for a text codebook, or file
+paths for an image or audio codebook (see the section on audio input).
+Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the <code>.id</code> column, on which every later operation
 keys, so names must be unique.</p></dd>
@@ -346,10 +347,59 @@ lists the units that produced no usable coding, with the reason for each,
 and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> reports how many there were. Most such failures are
 transient, and <code><a href="qlm_backfill.html">qlm_backfill()</a></code> re-codes just those units and merges them
 back; <code>backfill</code> does that before returning. Batch processing and
-image codebooks
-are not supported there, so <code>"auto"</code> will not fall back under
-<code>batch = TRUE</code>. The path actually taken is recorded in the run metadata as
-<code>backend</code>.</p>
+file inputs (image and audio codebooks) are not supported there, so
+<code>"auto"</code> will not fall back under <code>batch = TRUE</code> or for a file input: a
+failed structured call then stops with the provider's own error, and
+<code>structured = "json"</code> is refused up front. The path actually taken is
+recorded in the run metadata as <code>backend</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="audio-input">Audio input<a class="anchor" aria-label="anchor" href="#audio-input"></a></h2>
+
+
+
+<p>A codebook with <code>input_type = "audio"</code> codes recordings in one pass: each
+file in <code>x</code> is uploaded to the provider through ellmer's file upload,
+and the model receives a reference to it with the codebook's
+instructions, so the schema can ask for a transcript, a language, a
+summary or any coding of the content. Accepted formats are mp3, wav, ogg,
+m4a, flac and aac.</p>
+<p>Which providers accept audio this way is checked before anything is
+uploaded, from the chat the run will use. As of this version only Google
+Gemini does, so <code>model</code> must be a <code>google_gemini/</code> model in the
+<code>gemini-&lt;version&gt;-pro</code>, <code>-flash</code> or <code>-flash-lite</code> families, with an
+optional preview, date or <code>-latest</code> suffix; TTS, image, live and
+transcription models that share a family stem are refused, as is Vertex,
+which has no file upload. This is a snapshot of what providers accepted on
+the date it was written. A model outside the recognised families that
+does accept audio can be accepted for the session with
+<code><a href="qlm_register_input_model.html">qlm_register_input_model()</a></code>; a run coded that way records it, and
+replicating or backfilling the run in another session needs the
+registration again. For any other provider, transcribe the recordings
+first and code the transcripts with a text codebook.</p>
+<p>Every upload completes before the first coding request is sent, so either
+all the inputs are ready or nothing is spent; a failed upload stops the
+run with the provider's message, which says whether the failure was
+transient or the file itself. Uploads expire after 48 hours and storage
+is free, so <code><a href="qlm_replicate.html">qlm_replicate()</a></code> and <code><a href="qlm_backfill.html">qlm_backfill()</a></code> upload the files again
+from the paths in <code>x</code>. Before they do, they check the files against the
+SHA-256 hashes the run recorded for each unit, and refuse to continue if
+a path now points at different bytes. The hashes are taken before
+anything is uploaded, so they are of the bytes the model received even
+if a file is replaced while the requests run; they are kept in the run's
+metadata as <code>input_files</code> and reported by <code><a href="qlm_trail.html">qlm_trail()</a></code>. A backfill pass
+records its own hashes for the units it re-coded, so a run coded by an
+earlier version that recorded none gains them unit by unit; units still
+without one are reported as unverifiable, with a notice, rather than as
+changed.</p>
+<p><code>batch = TRUE</code> is not supported for audio: ellmer's batch cache is keyed
+on the prompts, and an upload gets a new reference every time, so a
+batch run could not be resumed.</p>
+<p>With <code>include_cost = TRUE</code>, or <code>prices</code>, the cost of an audio run is
+potentially underestimated: providers charge more per audio token than
+per text token, and the figure is computed at the text rate from the
+total. The run's cost note says so, in <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, the trail, and any
+backfill pass.</p>
     </div>
     <div class="section level2">
     <h2 id="rejected-runs">Rejected runs<a class="anchor" aria-label="anchor" href="#rejected-runs"></a></h2>
@@ -458,6 +508,23 @@ coding runs, <code><a href="qlm_compare.html">qlm_compare()</a></code> and <code
 <span class="r-in"><span><span class="va">texts_named</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>review1 <span class="op">=</span> <span class="st">"Great service!"</span>, review2 <span class="op">=</span> <span class="st">"Very disappointing."</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">coded2</span> <span class="op">&lt;-</span> <span class="fu">qlm_code</span><span class="op">(</span><span class="va">texts_named</span>, <span class="va">data_codebook_sentiment</span>, model <span class="op">=</span> <span class="st">"openai/gpt-4o-mini"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">coded2</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Audio recordings, coded in one pass by a Gemini model; see the section</span></span></span>
+<span class="r-in"><span><span class="co"># "Audio input" for which providers accept audio. The model hears the</span></span></span>
+<span class="r-in"><span><span class="co"># recording, so the schema can ask for the transcript as well as the codes</span></span></span>
+<span class="r-in"><span><span class="va">speech_codebook</span> <span class="op">&lt;-</span> <span class="fu"><a href="qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"Speech"</span>, <span class="st">"Transcribe the recording, identify the language and summarise what is said."</span>,</span></span>
+<span class="r-in"><span>  <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    transcript <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Verbatim transcript, in the language spoken"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    language <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"Language spoken"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    summary <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="st">"One-sentence summary in English"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  input_type <span class="op">=</span> <span class="st">"audio"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">coded_audio</span> <span class="op">&lt;-</span> <span class="fu">qlm_code</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>interview1 <span class="op">=</span> <span class="st">"interview1.mp3"</span>, interview2 <span class="op">=</span> <span class="st">"interview2.wav"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="va">speech_codebook</span>, model <span class="op">=</span> <span class="st">"google_gemini/gemini-2.5-flash"</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

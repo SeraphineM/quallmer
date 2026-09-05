@@ -70,7 +70,7 @@ that guide the LLM and the structured output schema.</p>
 <span>  <span class="va">instructions</span>,</span>
 <span>  <span class="va">schema</span>,</span>
 <span>  role <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  input_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"text"</span>, <span class="st">"image"</span><span class="op">)</span>,</span>
+<span>  input_type <span class="op">=</span> <span class="fu">input_types</span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  levels <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -99,7 +99,10 @@ creating the system prompt.</p></dd>
 
 
 <dt id="arg-input-type">input_type<a class="anchor" aria-label="anchor" href="#arg-input-type"></a></dt>
-<dd><p>Type of input data: <code>"text"</code> (default) or <code>"image"</code>.</p></dd>
+<dd><p>Type of input data: <code>"text"</code> (default), <code>"image"</code> or
+<code>"audio"</code>. For <code>"image"</code> and <code>"audio"</code> the elements of <code>x</code> in
+<code><a href="qlm_code.html">qlm_code()</a></code> are file paths; see its section "Audio input" for which
+providers accept audio and how the files are handled.</p></dd>
 
 
 <dt id="arg-levels">levels<a class="anchor" aria-label="anchor" href="#arg-levels"></a></dt>
