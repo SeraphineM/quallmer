@@ -55,6 +55,9 @@ test_that("qlm_codebook validates input_type", {
   cb_image <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")
   expect_equal(cb_image$input_type, "image")
 
+  cb_audio <- qlm_codebook("Test", "Prompt", type_obj, input_type = "audio")
+  expect_equal(cb_audio$input_type, "audio")
+
   # Invalid input type should error
   expect_error(
     qlm_codebook("Test", "Prompt", type_obj, input_type = "invalid"),

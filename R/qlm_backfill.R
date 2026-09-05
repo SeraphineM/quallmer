@@ -216,6 +216,9 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
   run_name <- meta_attr$user$name
   records <- list()
 
+  # A model the run accepted by registration must be registered here too
+  check_registered_input_model(x, restored$model)
+
   for (attempt in seq_len(passes)) {
     failed <- failed_units(x)
     if (!any(failed)) {
@@ -247,6 +250,8 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     ))
 
     subset <- inputs_by_id(x, ids[retry])
+    # The files about to be uploaded again must be the ones the run coded
+    verify_input_files(x, ids[retry])
     result <- tryCatch(
       do.call(qlm_code, c(
         list(

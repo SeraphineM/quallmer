@@ -29,7 +29,7 @@ quallmer objects store metadata in three categories:
 \item \code{chat_args}: Arguments passed to the LLM chat
 \item \code{execution_args}: Arguments for parallel/batch execution
 \item \code{n_units}: Number of coded units
-\item \code{input_type}: Type of input ("text", "image", or "human")
+\item \code{input_type}: Type of input ("text", "image", "audio", or "human")
 \item \code{source}: Coding source ("human" or "llm")
 \item \code{is_gold}: Whether this is a gold standard
 }

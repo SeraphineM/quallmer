@@ -15,7 +15,10 @@
 #' @param role Optional role description for the model (e.g., "You are an expert
 #'   annotator"). If provided, this will be prepended to the instructions when
 #'   creating the system prompt.
-#' @param input_type Type of input data: `"text"` (default) or `"image"`.
+#' @param input_type Type of input data: `"text"` (default), `"image"` or
+#'   `"audio"`. For `"image"` and `"audio"` the elements of `x` in
+#'   [qlm_code()] are file paths; see its section "Audio input" for which
+#'   providers accept audio and how the files are handled.
 #' @param levels Optional named list specifying measurement levels for each
 #'   variable in the schema. Names should match schema property names. Values
 #'   should be one of `"nominal"`, `"ordinal"`, `"interval"`, or `"ratio"`.
@@ -84,7 +87,7 @@
 #'
 #' @export
 qlm_codebook <- function(name, instructions, schema, role = NULL,
-                         input_type = c("text", "image"), levels = NULL) {
+                         input_type = input_types(), levels = NULL) {
   input_type <- match.arg(input_type)
 
   # Auto-detect levels if not provided

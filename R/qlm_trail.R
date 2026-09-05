@@ -153,6 +153,12 @@ qlm_trail <- function(..., path = NULL) {
       run$execution_args <- meta_attr$object$execution_args
       run$prices <- meta_attr$user$prices
       run$cost_note <- meta_attr$user$cost_note
+      # The files a file-input run coded, by hash, and whether its model was
+      # accepted by a session registration: both are what a reader needs to
+      # reproduce the run, so both belong in the report
+      run$input_type <- meta_attr$object$input_type
+      run$input_files <- meta_attr$user$input_files
+      run$input_model_registered <- meta_attr$user$input_model_registered
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
       # Passes that completed the run, and any other model they used: the
@@ -557,7 +563,36 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, "**Processing:** Batch")
     }
 
+    # A model accepted by registration rather than by the built-in table
+    if (!is.null(run$input_model_registered)) {
+      lines <- c(lines, paste0(
+        "**Model accepted by:** `qlm_register_input_model(\"",
+        run$input_model_registered, "\", input_type = \"",
+        run$input_type %||% "audio", "\")` in the coding session"
+      ))
+    }
+
     lines <- c(lines, "")
+
+    # The files behind each unit, with the hash recorded at coding time
+    if (is.data.frame(run$input_files) && nrow(run$input_files)) {
+      lines <- c(lines, paste0(
+        "**Input files (", run$input_type %||% "file", "):** ",
+        nrow(run$input_files), " file", if (nrow(run$input_files) == 1L) "" else "s",
+        ", SHA-256 recorded at coding time"
+      ))
+      lines <- c(lines, "")
+      lines <- c(lines, "| .id | File | Bytes | SHA-256 |")
+      lines <- c(lines, "|---|---|---|---|")
+      for (k in seq_len(nrow(run$input_files))) {
+        f <- run$input_files[k, ]
+        lines <- c(lines, paste0(
+          "| ", f$.id, " | ", f$file, " | ",
+          format(f$size, big.mark = ",", scientific = FALSE), " | `", f$sha256, "` |"
+        ))
+      }
+      lines <- c(lines, "")
+    }
 
     # Call (materials relating to intentions)
     if (!is.null(run$call)) {
