@@ -336,7 +336,7 @@ unpriced_reason <- function(chat, model) {
   }
 
   ns <- asNamespace("ellmer")
-  prices <- get0("prices", envir = ns, inherits = FALSE)
+  prices <- ellmer_prices(ns)
   has_cost <- get0("has_cost", envir = ns, inherits = FALSE)
   if (!is.data.frame(prices) || !is.function(has_cost)) {
     return(NULL)
@@ -346,15 +346,51 @@ unpriced_reason <- function(chat, model) {
   if (is.null(provider)) {
     return(NULL)
   }
-  if (isTRUE(has_cost(provider, provider@model))) {
+  # The model name lives on the chat; `Provider@model` is deprecated in
+  # ellmer 0.5 and kept only as a fallback for a chat that cannot say
+  model_name <- tryCatch(chat$get_model(), error = function(e) NULL)
+  if (is.null(model_name)) {
+    model_name <- suppressWarnings(provider@model)
+  }
+  # ellmer 0.5 takes the provider's name; earlier versions took the object
+  priced <- if (identical(names(formals(has_cost))[1], "provider_name")) {
+    has_cost(provider@name, model_name)
+  } else {
+    has_cost(provider, model_name)
+  }
+  if (isTRUE(priced)) {
     return(NULL)
   }
 
   list(
     kind = if (provider@name %in% prices$provider) "model" else "provider",
     provider = provider@name,
-    model = provider@model
+    model = model_name
   )
+}
+
+
+#' ellmer's price table, wherever this version keeps it
+#'
+#' A data frame `prices` in the namespace up to ellmer 0.4; from 0.5 a
+#' `prices_get()` accessor. Neither is exported, so both are looked up
+#' rather than called by name.
+#'
+#' @param ns ellmer's namespace.
+#'
+#' @return The table, or `NULL` when neither is found.
+#' @keywords internal
+#' @noRd
+ellmer_prices <- function(ns) {
+  prices <- get0("prices", envir = ns, inherits = FALSE)
+  if (is.data.frame(prices)) {
+    return(prices)
+  }
+  getter <- get0("prices_get", envir = ns, inherits = FALSE)
+  if (is.function(getter)) {
+    return(tryCatch(getter(), error = function(e) NULL))
+  }
+  NULL
 }
 
 
