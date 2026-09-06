@@ -673,7 +673,7 @@ backfill_summary <- function(passes) {
 #'   its cost rests on, and one line saying where the cost came from. `NULL`
 #'   when the pass was priced by ellmer, and the elements are absent.
 #' @param registered The `"provider/model"` pair the pass's model was
-#'   accepted on through [qlm_register_input_model()], or `NULL`, and the
+#'   accepted on through [qlm_register_model()], or `NULL`, and the
 #'   element is absent.
 #'
 #' @param resolution Requested and effective model identity for a registered

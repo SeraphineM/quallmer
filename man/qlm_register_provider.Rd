@@ -69,3 +69,6 @@ qlm_code(texts, codebook, model = "dashscope/qwen-plus")
 qlm_code(texts, codebook, model = "my_gateway/organisation/model")
 }
 }
+\seealso{
+\code{\link[=qlm_register_model]{qlm_register_model()}} for accepting a model for a file input type.
+}

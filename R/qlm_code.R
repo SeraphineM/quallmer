@@ -284,7 +284,7 @@
 #' which has no file upload. This is a snapshot of what providers accepted on
 #' the date it was written. A model outside the recognised families that
 #' does accept audio can be accepted for the session with
-#' [qlm_register_input_model()]; a run coded that way records it, and
+#' [qlm_register_model()]; a run coded that way records it, and
 #' replicating or backfilling the run in another session needs the
 #' registration again. For any other provider, transcribe the recordings
 #' first and code the transcripts with a text codebook.

@@ -77,7 +77,11 @@ reference:
       - qlm_backfill
       - qlm_codebook
       - qlm_segment
-      - qlm_register_input_model
+
+  - title: Advanced configuration
+    desc: Optional session configuration for additional models and provider endpoints
+    contents:
+      - qlm_register_model
       - qlm_register_provider
 
   - title: Human-coded data

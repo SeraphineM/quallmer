@@ -44,6 +44,7 @@
 #' labelled "endpoint overridden" in print and trail output; its recorded
 #' `base_url` is the effective endpoint used for replay.
 #'
+#' @seealso [qlm_register_model()] for accepting a model for a file input type.
 #' @return The endpoint definition, invisibly.
 #' @export
 #' @examples

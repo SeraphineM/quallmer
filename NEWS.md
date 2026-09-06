@@ -5,6 +5,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## Breaking changes
 
+* `qlm_register_input_model()` is now named `qlm_register_model()`. Both model
+  and provider registration appear under Advanced configuration in the
+  reference index.
+
 * `qlm_code()` now validates every structured response against the codebook
   schema before ellmer converts it to a row, on every provider and both
   paths. A response that does not conform, whether a required field sent
@@ -94,7 +98,7 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   the content. Which providers accept audio is checked from the chat before
   anything is uploaded; as of this version that is Google Gemini's pro,
   flash and flash-lite families, and a newer model that also accepts audio
-  can be accepted for the session with the new `qlm_register_input_model()`,
+  can be accepted for the session with the new `qlm_register_model()`,
   which the run then records. Every upload completes before the first
   request is sent, so a failed upload stops the run with the provider's
   message and nothing spent. The run records the SHA-256 of each file, which
