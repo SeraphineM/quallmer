@@ -11,17 +11,15 @@
 #'
 #' A unit counts as failed when either of two things holds:
 #'
-#' * it carries an `.error`. ellmer records one when the request failed.
-#'   [qlm_code()] records one when a response came back but ellmer could
-#'   extract no structured data from it, which ellmer reports only by
-#'   warning; when a response used the whole declared `max_tokens` limit and
-#'   returned nothing; and on the JSON path when a response never validated
-#'   or was cut off at that limit (see the *Truncated responses* section of
-#'   [qlm_code()]); or
+#' * it carries an `.error`. [qlm_code()] records one when the request
+#'   failed, when the provider cut the response off or withheld it (see the
+#'   *Truncated responses* section of [qlm_code()]), when the response held
+#'   no JSON or JSON that did not parse, and when its JSON did not match the
+#'   codebook schema, naming the offending path; or
 #' * every required scalar property of the codebook schema is `NA` for it.
-#'   A structured call can succeed at the HTTP level and still return nothing
-#'   usable, when the endpoint accepted the JSON schema and ignored it, so an
-#'   `.error` alone is not a sufficient test.
+#'   That is how an object coded before every response was validated shows
+#'   a response the endpoint sent without honouring the schema; a run coded
+#'   since records such a unit under the first rule.
 #'
 #' Array and nested-object properties are not consulted. After conversion, a
 #' missing array and a schema-valid empty one are the same zero-length

@@ -104,103 +104,6 @@ test_that("json_schema_from_type rejects unsupported types", {
 })
 
 
-# validate_against_type() -----------------------------------------------------
-
-test_that("validate_against_type accepts a conforming object", {
-  schema <- json_test_codebook()$schema
-  value <- list(score = 1, lab = "pos")
-
-  expect_equal(validate_against_type(value, schema, "$"), value)
-})
-
-test_that("validate_against_type reports missing, wrong-type and bad-enum values", {
-  schema <- json_test_codebook()$schema
-
-  expect_error(
-    validate_against_type(list(lab = "pos"), schema, "$"),
-    "\\$\\.score is required but missing",
-  )
-  expect_error(
-    validate_against_type(list(score = "high", lab = "pos"), schema, "$"),
-    "\\$\\.score must be a number"
-  )
-  expect_error(
-    validate_against_type(list(score = 1, lab = "maybe"), schema, "$"),
-    "\\$\\.lab must be one of: pos, neg"
-  )
-  expect_error(
-    validate_against_type(list(score = 1, lab = "pos", extra = 2), schema, "$"),
-    "\\$ has unexpected property: extra"
-  )
-  expect_error(
-    validate_against_type(list(score = NULL, lab = "pos"), schema, "$"),
-    "\\$\\.score is required and cannot be null"
-  )
-})
-
-test_that("validate_against_type reports the JSON path of a nested failure", {
-  type <- ellmer::type_object(
-    claims = ellmer::type_array(
-      ellmer::type_object(salience = ellmer::type_number("Salience"))
-    )
-  )
-  value <- list(claims = list(
-    list(salience = 1),
-    list(salience = 2),
-    list(salience = "high")
-  ))
-
-  expect_error(
-    validate_against_type(value, type, "$"),
-    "\\$\\.claims\\[3\\]\\.salience must be a number"
-  )
-})
-
-test_that("validate_against_type distinguishes arrays from objects", {
-  type <- ellmer::type_object(xs = ellmer::type_array(ellmer::type_string()))
-
-  expect_error(
-    validate_against_type(list(xs = list(a = "one")), type, "$"),
-    "\\$\\.xs must be a JSON array"
-  )
-  expect_equal(
-    validate_against_type(list(xs = list("one", "two")), type, "$"),
-    list(xs = list("one", "two"))
-  )
-  # An empty array is legal
-  expect_equal(validate_against_type(list(xs = list()), type, "$"), list(xs = list()))
-})
-
-test_that("validate_against_type accepts an empty object when nothing is required", {
-  type <- ellmer::type_object(a = ellmer::type_string("A", required = FALSE))
-  # jsonlite parses "{}" to a *named* empty list, not an unnamed one
-  value <- jsonlite::fromJSON("{}", simplifyVector = FALSE)
-
-  expect_named(value)
-  expect_equal(validate_against_type(value, type, "$"), list(a = NULL))
-})
-
-test_that("validate_against_type keeps extras when additional_properties is TRUE", {
-  withr::local_options(lifecycle_verbosity = "quiet")
-  type <- ellmer::type_object(
-    a = ellmer::type_string("A"),
-    .additional_properties = TRUE
-  )
-
-  expect_equal(
-    validate_against_type(list(a = "x", b = 2), type, "$"),
-    list(a = "x", b = 2)
-  )
-})
-
-test_that("validate_against_type enforces integer bounds", {
-  type <- ellmer::type_object(n = ellmer::type_integer("N"))
-
-  expect_equal(validate_against_type(list(n = 3), type, "$"), list(n = 3))
-  expect_error(validate_against_type(list(n = 3.5), type, "$"), "must be a integer")
-})
-
-
 # parse_and_validate_json() ---------------------------------------------------
 
 test_that("parse_and_validate_json handles empty, unparsable and non-object text", {
@@ -299,7 +202,9 @@ test_that("json_chat_turns captures the reason a request failed", {
   expect_equal(result$error[[2]], "the request failed")
   expect_true(all(is.na(result$text)))
   expect_true(all(is.na(result$finish)))
-  expect_equal(sum(result$usage), 0)
+  # An unexplained failure may have been billed; a request never sent was not
+  expect_true(all(is.na(result$usage[1, ])))
+  expect_equal(unname(result$usage[2, ]), c(0, 0, 0, 0))
 })
 
 test_that("json_chat_turns keeps the finish reason of each turn", {
@@ -916,8 +821,11 @@ test_that("code_handler_json names the reasons in its warning", {
 })
 
 
-# Structured-failure detection ------------------------------------------------
+# Legacy failure detection ----------------------------------------------------
 
+# Objects coded before every response was validated (#140) carry no .error
+# for a value the endpoint silently left out; failed_units() still reads
+# their required scalars.
 test_that("required_scalar_fields covers only checkable properties", {
   schema <- ellmer::type_object(
     code     = ellmer::type_enum("A code", values = c("a", "b")),
@@ -929,95 +837,6 @@ test_that("required_scalar_fields covers only checkable properties", {
   # NA representation, so they are not checkable this way
   expect_setequal(required_scalar_fields(schema), c("code", "n"))
   expect_equal(required_scalar_fields("not a schema"), character())
-})
-
-test_that("all_required_missing detects a call that returned nothing usable", {
-  schema <- json_test_codebook()$schema
-
-  expect_true(all_required_missing(
-    data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_)),
-    schema
-  ))
-  # One good row is enough to say the endpoint did something
-  expect_false(all_required_missing(
-    data.frame(score = c(1, NA_real_), lab = c("pos", NA_character_)),
-    schema
-  ))
-  expect_false(all_required_missing(
-    data.frame(score = c(1, 2), lab = c("pos", "neg")),
-    schema
-  ))
-})
-
-test_that("all_required_missing does not misread a non-table result", {
-  schema <- json_test_codebook()$schema
-  # convert = FALSE returns a list; there is no table to inspect and so no
-  # basis for calling the attempt a failure
-  expect_false(all_required_missing(list(list(score = 1, lab = "pos")), schema))
-  expect_false(all_required_missing(data.frame(), schema))
-  expect_false(all_required_missing(NULL, schema))
-})
-
-test_that("n_incomplete counts partially failed rows", {
-  schema <- json_test_codebook()$schema
-  results <- data.frame(score = c(1, NA_real_, 3), lab = c("pos", "neg", NA_character_))
-
-  expect_equal(n_incomplete(results, schema), 2)
-  expect_equal(n_incomplete(data.frame(score = 1, lab = "pos"), schema), 0)
-  expect_equal(n_incomplete(list(), schema), 0L)
-})
-
-test_that("rows with a recorded error are not evidence about schema enforcement", {
-  schema <- json_test_codebook()$schema
-
-  # Every row failed for a recorded reason: nothing to judge enforcement from,
-  # and nothing to count as incomplete that is not already counted as failed
-  failed <- data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_))
-  failed$.error <- list(simpleError("HTTP 401"), simpleError("cut off"))
-  expect_false(all_required_missing(failed, schema))
-  expect_equal(n_incomplete(failed, schema), 0L)
-
-  # The one intact row is all NA: that is the non-enforcement signal
-  mixed <- data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_))
-  mixed$.error <- list(simpleError("HTTP 401"), NULL)
-  expect_true(all_required_missing(mixed, schema))
-  expect_equal(n_incomplete(mixed, schema), 1L)
-
-  # A response ellmer could extract nothing from is the signal itself: the
-  # endpoint answered, in prose, so these rows are judged and "auto" falls back
-  prose <- data.frame(score = c(NA_real_, NA_real_), lab = c(NA_character_, NA_character_))
-  prose$.error <- list(
-    extraction_error("Data extraction failed: no JSON responses found."),
-    extraction_error("Data extraction failed: no JSON responses found.")
-  )
-  expect_true(all_required_missing(prose, schema))
-  expect_equal(n_incomplete(prose, schema), 0L)
-})
-
-
-# Provider capability ---------------------------------------------------------
-
-test_that("provider_enforces_schema follows ellmer's mechanism, not a vendor list", {
-  withr::local_envvar(OPENAI_API_KEY = "x", ANTHROPIC_API_KEY = "x",
-                      GROQ_API_KEY = "x", MISTRAL_API_KEY = "x")
-  # ellmer::chat() derives the model from the name string, so it must not also
-  # be passed through `...`
-  provider_of <- function(name, ...) {
-    suppressWarnings(ellmer::chat(name, echo = "none", ...)$get_provider())
-  }
-
-  # Own chat_body() using a mechanism the provider enforces
-  expect_true(provider_enforces_schema(provider_of("openai/gpt-4o-mini")))
-  expect_true(provider_enforces_schema(provider_of("anthropic/claude-sonnet-4-5")))
-
-  # Falls through to ProviderOpenAICompatible, which sends strict = TRUE and
-  # takes the answer on trust
-  expect_false(provider_enforces_schema(provider_of("groq/llama-3.1-8b-instant")))
-  expect_false(provider_enforces_schema(provider_of("mistral/mistral-large-latest")))
-  expect_false(provider_enforces_schema(
-    provider_of("openai_compatible/some-model", base_url = "https://example.com/v1",
-                credentials = function() "k")
-  ))
 })
 
 test_that("is_json_word_error recognises the DashScope rejection", {

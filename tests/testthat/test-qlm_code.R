@@ -194,10 +194,10 @@ test_that("the URL detail notice reaches the user through qlm_code, prices or no
   mockery::stub(said, "ellmer_forwards_image_detail", FALSE)
   tsc <- try_structured_call
   mockery::stub(tsc, "say_image_url_detail", said)
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(...) {
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(
     data.frame(score = 1, input_tokens = 10, output_tokens = 5,
                cached_input_tokens = 0, cost = NA_real_)
-  })
+  ))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   url <- "https://example.org/poster.png"
@@ -241,8 +241,7 @@ test_that("try_structured_call resizes images as the codebook says (#177)", {
   tsc <- try_structured_call
   mockery::stub(tsc, "as_input_content", aic)
   mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "ellmer_chat"))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured",
-                data.frame(id = 1, score = 0.5))
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(data.frame(score = 0.5)))
 
   tsc(c(a = "poster.jpg"), image_codebook, model = "openai/gpt-4o",
       chat_args = list(), execution_args = list(), batch = FALSE)
@@ -302,8 +301,7 @@ test_that("qlm_code records the resolution an old image codebook was coded at (#
   tsc <- try_structured_call
   mockery::stub(tsc, "as_input_content", aic)
   mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "ellmer_chat"))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured",
-                data.frame(id = 1, score = 0.5))
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(data.frame(score = 0.5)))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   mockery::stub(f, "check_image_resize", function(...) NULL)
@@ -537,11 +535,11 @@ test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
     chat_args_received <<- list(...)
     structure(list(), class = "ellmer_chat")
   }
-  mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
+  mock_results <- data.frame(score = c(0.5, 0.8))
 
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", mock_chat)
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_results)
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(mock_results))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 
@@ -555,7 +553,7 @@ test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
 })
 
 
-test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
+test_that("qlm_code runs the structured adapter in parallel when batch=FALSE", {
   skip_if_not_installed("ellmer")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
@@ -563,20 +561,21 @@ test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
 
   # Mock the functions
   mock_chat <- structure(list(), class = "ellmer_chat")
-  mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
+  mock_results <- data.frame(score = c(0.5, 0.8))
 
-  mock_pcs <- mockery::mock(mock_results, cycle = TRUE)
+  mock_pcs <- mockery::mock(rows_as_turns(mock_results), cycle = TRUE)
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", mock_chat)
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_pcs)
+  mockery::stub(tsc, "structured_chat_turns", mock_pcs)
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 
   result <- f(c("text1", "text2"), codebook,
                      model = "openai_compatible/test-model", batch = FALSE)
 
-  # Verify parallel_chat_structured was called
+  # The adapter was asked once, for a parallel run
   mockery::expect_called(mock_pcs, 1)
+  expect_false(mockery::mock_args(mock_pcs)[[1]]$batch)
 
   # Verify result structure
   expect_s3_class(result, "qlm_coded")
@@ -584,7 +583,7 @@ test_that("qlm_code uses parallel_chat_structured when batch=FALSE", {
 })
 
 
-test_that("qlm_code uses batch_chat_structured when batch=TRUE", {
+test_that("qlm_code runs the structured adapter as a batch when batch=TRUE", {
   skip_if_not_installed("ellmer")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
@@ -592,12 +591,12 @@ test_that("qlm_code uses batch_chat_structured when batch=TRUE", {
 
   # Mock the functions
   mock_chat <- structure(list(), class = "ellmer_chat")
-  mock_results <- data.frame(id = 1:2, score = c(0.5, 0.8))
+  mock_results <- data.frame(score = c(0.5, 0.8))
 
-  mock_bcs <- mockery::mock(mock_results, cycle = TRUE)
+  mock_bcs <- mockery::mock(rows_as_turns(mock_results), cycle = TRUE)
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", mock_chat)
-  mockery::stub(tsc, "ellmer::batch_chat_structured", mock_bcs)
+  mockery::stub(tsc, "structured_chat_turns", mock_bcs)
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 
@@ -608,8 +607,9 @@ test_that("qlm_code uses batch_chat_structured when batch=TRUE", {
       convert = TRUE)
   )
 
-  # Verify batch_chat_structured was called
+  # The adapter was asked once, for a batch
   mockery::expect_called(mock_bcs, 1)
+  expect_true(mockery::mock_args(mock_bcs)[[1]]$batch)
 
   # Verify result structure
   expect_s3_class(result, "qlm_coded")
@@ -626,11 +626,11 @@ test_that("qlm_code builds metadata correctly", {
 
   # Mock the functions
   mock_chat <- structure(list(), class = "ellmer_chat")
-  mock_results <- data.frame(id = 1:3, score = c(0.5, 0.8, 0.2))
+  mock_results <- data.frame(score = c(0.5, 0.8, 0.2))
 
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", mock_chat)
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_results)
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(mock_results))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 
@@ -735,16 +735,16 @@ test_that("qlm_code delegates to the handler and records the backend", {
 })
 
 
-test_that("qlm_code still uses parallel_chat_structured for other providers", {
+test_that("qlm_code takes the structured path for other providers", {
   skip_if_not_installed("mockery")
 
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
   codebook <- qlm_codebook("Test", "Prompt", type_obj)
 
-  mock_pcs <- mockery::mock(data.frame(score = c(0.5, 0.8)), cycle = TRUE)
+  mock_pcs <- mockery::mock(rows_as_turns(data.frame(score = c(0.5, 0.8))), cycle = TRUE)
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", mock_pcs)
+  mockery::stub(tsc, "structured_chat_turns", mock_pcs)
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 
@@ -830,7 +830,7 @@ test_that("qlm_code errors on json_retries only where JSON mode cannot be reache
   # Under "auto" the JSON path is reachable, so the argument applies
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(data.frame(score = 0.5)))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   expect_s3_class(
@@ -886,44 +886,53 @@ test_that("qlm_code requires a single model string", {
 
 # structured = c("auto", "structured", "json") --------------------------------
 
-# A try_structured_call() with the ellmer calls stubbed out. `results` is
-# returned by the structured call; `errors` is a character vector of messages
-# to throw, one per attempt, NA meaning "succeed".
+# A try_structured_call() with the chat and the structured adapter stubbed
+# out. `results` is what the adapter answers: a list of turns, a table for
+# rows_as_turns(), or a function of the execution arguments returning
+# either, to model what ellmer would return under a given `on_error`.
+# `errors` is a character vector of messages to throw, one per attempt, NA
+# meaning "succeed". The execution arguments that reached the adapter, and
+# how many prompts, are recorded in `calls`.
 structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
                             calls = NULL) {
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
-  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
+  answer <- turns_stub(results, calls)
   i <- 0L
-  # Records the execution arguments that reached ellmer, and how many prompts,
-  # in `calls`; `results` may be a function of them, to model what ellmer
-  # would return under a given `on_error`.
-  ellmer_call <- function(chat, prompts, type, ...) {
+  adapter <- function(chat, prompts, type, batch = FALSE, execution_args = list()) {
     i <<- i + 1L
-    if (!is.null(calls)) {
-      calls$n <- i
-      calls$dots <- list(...)
-      calls$n_prompts <- length(prompts)
-    }
     err <- if (!is.null(errors) && i <= length(errors)) errors[[i]] else NA_character_
-    if (!is.na(err)) stop(err, call. = FALSE)
-    if (is.function(results)) results(list(...)) else results
+    if (!is.na(err)) {
+      if (!is.null(calls)) calls$n <- i
+      stop(err, call. = FALSE)
+    }
+    answer(chat, prompts, type, batch, execution_args)
   }
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", ellmer_call)
-  mockery::stub(tsc, "ellmer::batch_chat_structured", ellmer_call)
+  mockery::stub(tsc, "structured_chat_turns", adapter)
   tsc
 }
 
 json_stub <- function(calls = NULL) {
   function(x, codebook, model, chat_args, execution_args, batch, json_retries,
-           model_hint = NULL, ...) {
+           model_hint = NULL, prior_usage = NULL, ...) {
     if (!is.null(calls)) {
       calls$json <- TRUE
       calls$json_retries <- json_retries
       calls$model_hint <- model_hint
       calls$execution_args <- execution_args
+      calls$x <- x
+      calls$prior_usage <- prior_usage
     }
     results <- tibble::tibble(score = rep(0.99, length(x)))
+    # The usage columns the handler would add, so a merge has them to align
+    if (isTRUE(execution_args$include_tokens)) {
+      results$input_tokens <- rep(1, length(x))
+      results$output_tokens <- rep(1, length(x))
+      results$cached_input_tokens <- rep(0, length(x))
+    }
+    if (isTRUE(execution_args$include_cost)) {
+      results$cost <- rep(0.01, length(x))
+    }
     attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
     results
   }
@@ -992,14 +1001,18 @@ test_that("structured = 'auto' falls back to JSON mode when the call errors", {
 })
 
 
-test_that("structured = 'auto' falls back when every required field is NA", {
+test_that("structured = 'auto' falls back when every completed response fails validation", {
   skip_if_not_installed("mockery")
   calls <- new.env()
 
-  # HTTP 200, but the endpoint accepted the schema and ignored it
+  # HTTP 200, but the endpoint accepted the schema and ignored it: one answer
+  # leaves the required field out, the other sends it as a string
+  ignored <- list(
+    json_turn(string = "{}"),
+    json_turn(string = '{"score": "high"}')
+  )
   f <- qlm_code
-  mockery::stub(f, "try_structured_call",
-                structured_stub(results = data.frame(score = c(NA_real_, NA_real_))))
+  mockery::stub(f, "try_structured_call", structured_stub(results = ignored))
   mockery::stub(f, "code_handler_json", json_stub(calls))
 
   expect_warning(
@@ -1008,13 +1021,92 @@ test_that("structured = 'auto' falls back when every required field is NA", {
     "no usable values"
   )
   expect_true(calls$json)
+  expect_match(qlm_meta(result, type = "user")$fallback_reason, "\\$\\.score is required")
 })
 
 
-test_that("a partly incomplete structured result warns without falling back", {
+test_that("the JSON fallback re-codes only the units it can help, and keeps the rest", {
   skip_if_not_installed("mockery")
   calls <- new.env()
 
+  # Every completed response is invalid, so the run falls back. The first
+  # unit was cut off at the output limit: JSON mode would hit the same
+  # limit, and a backfill would leave it alone, so it keeps its row. The
+  # refused request and the invalid response are re-coded.
+  turns <- list(
+    json_turn(string = '{"sco', tokens = c(10, 100, 0), cost = 0.4,
+              finish_reason = "max_tokens"),
+    request_error("HTTP 500 Internal Server Error.", 500L),
+    json_turn(string = '{"score": "high"}', tokens = c(10, 6, 0), cost = 0.2)
+  )
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = turns))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    coded <- f(c(cut = "long", refused = "b", invalid = "c"), structured_test_codebook(),
+               model = "openai_compatible/x", base_url = "https://example.com/v1",
+               include_tokens = TRUE, include_cost = TRUE),
+    "falling back to JSON mode"
+  )
+
+  # Only the eligible units reached the handler, with their own prior usage
+  expect_equal(names(calls$x), c("refused", "invalid"))
+  expect_equal(nrow(calls$prior_usage), 2L)
+  expect_equal(unname(calls$prior_usage[2, "cost"]), 0.2)
+
+  # The cut-off unit keeps its row, reason and usage; the others are re-coded
+  expect_equal(coded$.id, c("cut", "refused", "invalid"))
+  expect_equal(coded$score, c(NA, 0.99, 0.99))
+  expect_s3_class(coded$.error[[1]], "quallmer_truncation_error")
+  expect_null(coded$.error[[2]])
+  expect_null(coded$.error[[3]])
+  expect_equal(coded$output_tokens, c(100, 1, 1))
+  expect_equal(coded$cost, c(0.4, 0.01, 0.01))
+  expect_equal(names(coded)[names(coded) != ".id"],
+               c("score", ".error", "input_tokens", "output_tokens",
+                 "cached_input_tokens", "cost"))
+  expect_equal(qlm_failures(coded)$.id, "cut")
+  expect_equal(qlm_meta(coded, type = "object")$backend, "json_mode")
+  expect_equal(qlm_meta(coded, type = "user")$fallback_kept, 1L)
+})
+
+
+test_that("where no fallback is possible, an all-invalid run is returned with its failures", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+  ignored <- list(json_turn(string = "{}"), json_turn(string = '{"score": "high"}'))
+
+  # structured = "structured": no fallback by choice
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = ignored))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mini",
+                structured = "structured"),
+    'every completed response failed validation.*structured = "auto"'
+  )
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  expect_equal(nrow(qlm_failures(result)), 2L)
+  expect_match(qlm_failures(result)$reason[[2]], "\\$\\.score must be a number")
+
+  # batch = TRUE under auto: no batch path to fall back to
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mini",
+                batch = TRUE),
+    "every completed response failed validation.*no batch path"
+  )
+  expect_null(calls$json)
+  expect_equal(nrow(qlm_failures(result)), 2L)
+})
+
+
+test_that("a response that fails validation is a failed unit, not grounds for a fallback", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # The middle answer sends the required field as null; the others are fine
   f <- qlm_code
   mockery::stub(f, "try_structured_call",
                 structured_stub(results = data.frame(score = c(1, NA_real_, 3))))
@@ -1022,10 +1114,16 @@ test_that("a partly incomplete structured result warns without falling back", {
 
   expect_warning(
     result <- f(c("a", "b", "c"), structured_test_codebook(), model = "openai/gpt-4o-mini"),
-    "1 row from the structured call is missing"
+    "1 response from the structured call could not be coded, out of 3"
   )
   expect_null(calls$json)
   expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  expect_equal(qlm_meta(result, type = "object")$validation, "local")
+  expect_equal(result$score, c(1, NA, 3))
+  failures <- qlm_failures(result)
+  expect_equal(failures$.id, 2L)
+  expect_match(failures$reason, "\\$\\.score is required and cannot be null")
+  expect_s3_class(result$.error[[2]], "quallmer_schema_error")
 })
 
 
@@ -1033,14 +1131,10 @@ test_that("structured = 'auto' still falls back when the endpoint answered in pr
   skip_if_not_installed("mockery")
   calls <- new.env()
 
-  # Every row carries the extraction error qlm_code() records from ellmer's
-  # warning: the endpoint answered, but not with the schema
-  prose <- tibble::tibble(
-    score = c(NA_real_, NA_real_),
-    .error = list(
-      extraction_error("Data extraction failed: no JSON responses found."),
-      extraction_error("Data extraction failed: no JSON responses found.")
-    )
+  # The endpoint answered, but not with JSON at all
+  prose <- list(
+    text_turn("The sentiment here is broadly positive."),
+    text_turn("I would rate this a 4.")
   )
   f <- qlm_code
   mockery::stub(f, "try_structured_call", structured_stub(results = prose))
@@ -1072,11 +1166,6 @@ test_that("a structured run the provider rejects outright names the model (#133)
     score = c(NA_real_, NA_real_),
     .error = list(http_400(), http_400())
   )
-  expect_true(all_rejected(rejected))
-  expect_false(all_rejected(tibble::tibble(score = NA_real_, .error = list(simpleError("cut off")))))
-  expect_false(all_rejected(tibble::tibble(score = c(NA_real_, 1), .error = list(http_400(), NULL))))
-  expect_false(all_rejected(tibble::tibble(score = NA_real_)))
-
   f <- qlm_code
   mockery::stub(f, "try_structured_call", structured_stub(results = rejected))
   mockery::stub(f, "code_handler_json", json_stub(calls))
@@ -1119,23 +1208,28 @@ test_that("a wholly failed structured run is reported, not re-coded in JSON mode
   skip_if_not_installed("mockery")
   calls <- new.env()
 
-  # Every row carries a reason -- here, as ellmer will report a cut-off
-  # response once it consults the finish reason on the parallel path
-  failed <- tibble::tibble(score = NA_real_, .error = list(simpleError("cut off")))
+  # The one response was cut off: a reason, but no evidence about the schema
+  failed <- list(json_turn(string = '{"sco', tokens = c(10, 100, 0),
+                           finish_reason = "max_tokens"))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", structured_stub(results = failed))
   mockery::stub(f, "code_handler_json", json_stub(calls))
 
-  result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini")
+  expect_warning(
+    result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini"),
+    "could not be coded"
+  )
 
   expect_null(calls$json)
   expect_equal(qlm_meta(result, type = "object")$backend, "structured")
-  expect_equal(qlm_failures(result)$reason, "cut off")
+  expect_match(qlm_failures(result)$reason, "cut off at the max_tokens limit")
+  expect_s3_class(result$.error[[1]], "quallmer_truncation_error")
 })
 
 
 # Truncated structured responses ----------------------------------------------
 
+# declared_max_tokens() is what a backfill reads to tell a raised limit
 test_that("declared_max_tokens reads params() and nothing else", {
   expect_equal(declared_max_tokens(list(params = ellmer::params(max_tokens = 200))), 200)
   expect_null(declared_max_tokens(list()))
@@ -1146,125 +1240,30 @@ test_that("declared_max_tokens reads params() and nothing else", {
   expect_null(declared_max_tokens(list(api_args = list(max_tokens = 5))))
 })
 
-test_that("mark_truncated_rows flags only rows that spent the whole limit and hold nothing", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(
-    score = c(NA_real_, 0.4, NA_real_),
-    input_tokens = c(10, 10, 10),
-    output_tokens = c(100, 100, 30),
-    cached_input_tokens = c(0, 0, 0)
-  )
-
-  expect_warning(
-    out <- mark_truncated_rows(results, schema, cap = 100),
-    "1 response from the structured call used the whole"
-  )
-  errors <- out$.error
-  expect_s3_class(errors[[1]], "simpleError")  # spent it all, nothing back
-  expect_null(errors[[2]])                      # spent it all, but answered
-  expect_null(errors[[3]])                      # nothing back, but well under the limit
-  expect_match(conditionMessage(errors[[1]]), "max_tokens limit of 100")
-  expect_match(conditionMessage(errors[[1]]), "params\\(max_tokens = \\)")
-  # ellmer's column order: coded values, .error, usage
-  expect_equal(
-    names(out),
-    c("score", ".error", "input_tokens", "output_tokens", "cached_input_tokens")
-  )
-})
-
-test_that("mark_truncated_rows keeps a request failure but replaces a parse symptom", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(
-    score = c(NA_real_, NA_real_, NA_real_),
-    # A failed request spends nothing; an extraction failure at the limit is
-    # what a cut-off response looks like after with_extraction_errors()
-    .error = list(simpleError("HTTP 500"), simpleError("parse error: premature EOF"), NULL),
-    input_tokens = c(0, 3, 3), output_tokens = c(0, 100, 100), cached_input_tokens = c(0, 0, 0)
-  )
-
-  expect_warning(out <- mark_truncated_rows(results, schema, cap = 100), "2 responses")
-  expect_equal(conditionMessage(out$.error[[1]]), "HTTP 500")
-  expect_match(conditionMessage(out$.error[[2]]), "most likely cut off")
-  expect_match(conditionMessage(out$.error[[3]]), "most likely cut off")
-})
-
-test_that("mark_truncated_rows removes token columns it asked for itself", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(
-    score = 0.4, input_tokens = 1, output_tokens = 5, cached_input_tokens = 0, cost = 0.01
-  )
-
-  expect_equal(names(mark_truncated_rows(results, schema, cap = 100, keep_tokens = FALSE)),
-               c("score", "cost"))
-  expect_equal(names(mark_truncated_rows(results, schema, cap = 100, keep_tokens = TRUE)),
-               names(results))
-})
-
-test_that("mark_truncated_rows is a no-op without a declared limit or token counts", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(score = NA_real_)
-
-  expect_identical(mark_truncated_rows(results, schema, cap = NULL), results)
-  expect_identical(mark_truncated_rows(results, schema, cap = 100), results)
-  # convert = FALSE would hand back a list; there is no table to mark
-  expect_identical(mark_truncated_rows(list(1), schema, cap = 100), list(1))
-  expect_identical(mark_truncated_rows(tibble::tibble(), schema, cap = 100), tibble::tibble())
-})
-
-test_that("mark_truncated_rows reads arrays and nested objects as blank when empty", {
-  # The shape from the issue: the content sits inside a type_array(), so a
-  # cut-off response converts to a zero-row tibble, not NA
-  schema <- ellmer::type_object(
-    domains = ellmer::type_array(ellmer::type_object(name = ellmer::type_string())),
-    meta = ellmer::type_object(a = ellmer::type_string(), b = ellmer::type_integer())
-  )
-  converted <- ellmer:::convert_from_type(
-    list(
-      NULL,
-      list(domains = list(list(name = "x")), meta = list(a = "q", b = 1L)),
-      list(domains = list(), meta = list(a = "q", b = 1L))
-    ),
-    ellmer::type_array(schema)
-  )
-  expect_equal(NROW(converted$domains[[1]]), 0)
-  converted$input_tokens <- c(5, 5, 5)
-  converted$output_tokens <- c(4096, 4096, 4096)
-  converted$cached_input_tokens <- c(0, 0, 0)
-
-  expect_warning(out <- mark_truncated_rows(converted, schema, cap = 4096), "1 response")
-  expect_s3_class(out$.error[[1]], "simpleError")
-  expect_null(out$.error[[2]])
-  # An empty array beside a filled nested object is an answer, not a blank
-  expect_null(out$.error[[3]])
-})
-
-test_that("a declared max_tokens lets the structured path flag a cut-off response", {
+test_that("the structured path reads the finish reason to flag a cut-off response", {
   skip_if_not_installed("mockery")
   calls <- new.env()
 
-  tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
-  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
-    calls$args <- list(...)
-    tibble::tibble(
-      score = c(NA_real_, 0.7),
-      input_tokens = c(50, 40), output_tokens = c(100, 12), cached_input_tokens = c(0, 0)
-    )
-  })
+  # The first response spent the whole limit and stopped mid-document; it
+  # happens not to parse. The second is complete.
+  turns <- list(
+    json_turn(string = '{"score": 0.', tokens = c(50, 100, 0), finish_reason = "max_tokens"),
+    json_turn(list(score = 0.7), tokens = c(40, 12, 0))
+  )
   f <- qlm_code
-  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "try_structured_call", structured_stub(results = turns, calls = calls))
   mockery::stub(f, "code_handler_json", json_stub(calls))
 
   expect_warning(
     result <- f(c("a", "b"), structured_test_codebook(),
                 model = "anthropic/claude-sonnet-5",
                 params = ellmer::params(max_tokens = 100)),
-    "used the whole"
+    "cut off at the max_tokens limit after 100 output tokens"
   )
 
-  # Token counts were requested for the check, and not handed on
-  expect_true(isTRUE(calls$args$include_tokens))
+  # Nothing extra was asked of ellmer for the check, and no usage column is
+  # handed on that was not requested
+  expect_null(calls$dots$include_tokens)
   expect_false("output_tokens" %in% names(result))
   # The cut-off row is a failure with a reason, not grounds for a JSON re-run
   expect_null(calls$json)
@@ -1272,27 +1271,52 @@ test_that("a declared max_tokens lets the structured path flag a cut-off respons
   failures <- qlm_failures(result)
   expect_equal(nrow(failures), 1)
   expect_match(failures$reason, "max_tokens")
+  expect_s3_class(result$.error[[1]], "quallmer_truncation_error")
   expect_equal(result$score[[2]], 0.7)
 })
 
-test_that("without a declared limit the structured path asks for nothing extra", {
+test_that("a cut-off response that happens to parse is still a failure", {
   skip_if_not_installed("mockery")
-  calls <- new.env()
 
-  tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "Chat"))
-  mockery::stub(tsc, "warn_unenforced_schema", function(...) invisible(NULL))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
-    calls$args <- list(...)
-    tibble::tibble(score = 0.7)
-  })
+  # The object closed just before the limit: valid JSON, and the provider
+  # still says the response was cut off. The provider's word wins.
+  turns <- list(json_turn(list(score = 0.7), tokens = c(50, 100, 0),
+                          finish_reason = "max_tokens"))
   f <- qlm_code
-  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "try_structured_call", structured_stub(results = turns))
 
-  result <- f("a", structured_test_codebook(), model = "anthropic/claude-sonnet-5")
+  expect_warning(
+    result <- f("a", structured_test_codebook(), model = "openai/gpt-4o-mini"),
+    "cut off at the max_tokens limit"
+  )
+  expect_true(is.na(result$score))
+  expect_s3_class(result$.error[[1]], "quallmer_truncation_error")
+})
 
-  expect_null(calls$args$include_tokens)
-  expect_equal(result$score, 0.7)
+test_that("a response the provider filtered or left unexplained is a failure with that reason", {
+  skip_if_not_installed("mockery")
+
+  turns <- list(
+    text_turn("", finish_reason = "content_filter"),
+    json_turn(list(score = 0.2), finish_reason = I("odd")),
+    json_turn(list(score = 0.4), finish_reason = "tool_use"),
+    json_turn(list(score = 0.6))
+  )
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = turns))
+
+  expect_warning(
+    result <- f(letters[1:4], structured_test_codebook(), model = "openai/gpt-4o-mini"),
+    "2 responses from the structured call could not be coded"
+  )
+  reasons <- qlm_failures(result)$reason
+  expect_match(reasons[[1]], "content filter")
+  expect_match(reasons[[2]], "finish reason \"odd\"")
+  # A forced tool call finishes as tool_use; that is a normal completion
+  expect_equal(result$score, c(NA, NA, 0.4, 0.6))
+  # Neither is terminal for a backfill: only a cut at an output limit is
+  expect_false(inherits(result$.error[[1]], "quallmer_truncation_error"))
+  expect_false(inherits(result$.error[[2]], "quallmer_truncation_error"))
 })
 
 
@@ -1407,34 +1431,37 @@ test_that("the default leaves every failed unit discoverable, where 'return' wou
   }
   # What ellmer returns from three units of which the first succeeds and the
   # second fails. Under "continue" the third is attempted too and fails with
-  # its own reason; under "return" it is never sent and comes back as an
-  # empty row with no `.error`, which this codebook cannot tell from a coded
-  # unit with no themes.
+  # its own reason; under "return" it is never sent, and ellmer's converted
+  # table once showed it as an empty row with no `.error`, which this
+  # codebook cannot tell from a coded unit with no themes. Read from the
+  # turns, a request never sent is a failure with that reason.
   ellmer_would_return <- function(dots) {
     if (identical(dots$on_error, "continue")) {
-      tibble::tibble(
-        themes = list("a", character(0), character(0)),
-        .error = list(NULL, http_500(), http_500())
-      )
+      list(json_turn(list(themes = list("a"))), http_500(), http_500())
     } else {
-      tibble::tibble(
-        themes = list("a", character(0), character(0)),
-        .error = list(NULL, http_500(), NULL)
-      )
+      list(json_turn(list(themes = list("a"))), http_500(), NULL)
     }
   }
 
   f <- qlm_code
   mockery::stub(f, "try_structured_call", structured_stub(results = ellmer_would_return))
 
-  coded <- f(c(u1 = "one", u2 = "two", u3 = "three"), codebook,
-             model = "openai/gpt-4o-mini", structured = "structured")
+  coded <- suppressWarnings(
+    f(c(u1 = "one", u2 = "two", u3 = "three"), codebook,
+      model = "openai/gpt-4o-mini", structured = "structured")
+  )
   expect_equal(qlm_failures(coded)$.id, c("u2", "u3"))
+  expect_match(qlm_failures(coded)$reason[[2]], "HTTP 500")
 
-  early <- f(c(u1 = "one", u2 = "two", u3 = "three"), codebook,
-             model = "openai/gpt-4o-mini", structured = "structured",
-             on_error = "return")
-  expect_equal(qlm_failures(early)$.id, "u2")
+  early <- suppressWarnings(
+    f(c(u1 = "one", u2 = "two", u3 = "three"), codebook,
+      model = "openai/gpt-4o-mini", structured = "structured",
+      on_error = "return")
+  )
+  expect_equal(qlm_failures(early)$.id, c("u2", "u3"))
+  expect_equal(qlm_failures(early)$reason[[2]], "API request failed: the request failed")
+  # The coded unit's empty answer is still not a failure
+  expect_equal(coded$themes[[1]], "a")
 })
 
 
@@ -1532,134 +1559,42 @@ test_that("json_retries reaches the JSON path under auto", {
 })
 
 
-test_that("the enforcement note fires for unverifiable endpoints only", {
-  skip_if_not_installed("mockery")
-  # The note is once-per-session; disable that so the test does not depend on
-  # whether something earlier in the suite already consumed it
-  withr::local_options(quallmer.quiet_schema_note = FALSE,
-                       rlib_message_verbosity = "verbose")
-
-  fake_chat <- function(provider_class) {
-    list(get_provider = function() structure(list(), class = c(provider_class, "S7_object")))
-  }
-
-  # A provider whose own chat_body() uses an enforced mechanism: nothing to say
-  expect_silent(
-    warn_unenforced_schema(fake_chat("ellmer::ProviderOpenAI"), "openai/gpt-4o-mini")
-  )
-  expect_silent(
-    warn_unenforced_schema(fake_chat("ellmer::ProviderAnthropic"), "anthropic/claude")
-  )
-
-  # Anything on the generic OpenAI-compatible path is unverified
-  expect_message(
-    warn_unenforced_schema(fake_chat("ellmer::ProviderOpenAICompatible"),
-                           "openai_compatible/kimi-k3"),
-    "may accept the output schema without enforcing it"
-  )
-})
-
-
-test_that("the enforcement note can be silenced", {
-  withr::local_options(quallmer.quiet_schema_note = TRUE)
-  fake <- list(get_provider = function() {
-    structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
-  })
-
-  expect_silent(warn_unenforced_schema(fake, "openai_compatible/kimi-k3"))
-})
-
-
-test_that("the enforcement note survives a provider it cannot inspect", {
-  withr::local_options(quallmer.quiet_schema_note = FALSE)
-  broken <- list(get_provider = function() stop("no provider"))
-
-  expect_silent(warn_unenforced_schema(broken, "some/model"))
-})
-
-
-test_that("auto validates locally when a failed structured call would be invisible", {
+test_that("an array-only codebook is validated like any other", {
   skip_if_not_installed("mockery")
 
-  # Required properties are all arrays, so there is no scalar field whose
-  # absence would reveal a failed structured call
+  # Required properties are all arrays. After conversion a missing answer and
+  # a valid empty one are the same zero-length cell; validated before
+  # conversion, the missing one is caught and the empty one is not.
   array_codebook <- qlm_codebook(
     "Test", "Prompt",
     ellmer::type_object(
       claims = ellmer::type_array(ellmer::type_string("A claim"))
     )
   )
-  expect_length(required_scalar_fields(array_codebook$schema), 0)
 
   calls <- new.env()
-  tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::chat", function(...) {
-    list(get_provider = function() {
-      structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
-    })
-  })
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(...) {
-    calls$structured <- TRUE
-    tibble::tibble(claims = list("x"))
-  })
+  answers <- list(
+    json_turn(string = '{"claims": ["x"]}'),
+    json_turn(string = '{"claims": []}'),
+    json_turn(string = "{}"),
+    json_turn(string = '{"claims": {}}')
+  )
   f <- qlm_code
-  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "try_structured_call", structured_stub(results = answers, calls = calls))
   mockery::stub(f, "code_handler_json", json_stub(calls))
 
-  expect_message(
-    result <- f("a", array_codebook, model = "openai_compatible/kimi-k3",
+  expect_warning(
+    result <- f(letters[1:4], array_codebook, model = "openai_compatible/kimi-k3",
                 base_url = "https://example.com/v1"),
-    "no required scalar field whose absence would reveal"
+    "2 responses from the structured call could not be coded"
   )
-
-  # No request was spent on a call that could not be checked
-  expect_null(calls$structured)
-  expect_true(calls$json)
-  expect_equal(qlm_meta(result, type = "object")$backend, "json_mode")
-  # ... and the reason is recorded, not just printed
-  expect_match(qlm_meta(result, type = "user")$fallback_reason, "cannot be verified")
-})
-
-
-test_that("the undetectable skip applies only where it is warranted", {
-  skip_if_not_installed("mockery")
-
-  array_codebook <- qlm_codebook(
-    "Test", "Prompt",
-    ellmer::type_object(claims = ellmer::type_array(ellmer::type_string("A claim")))
-  )
-  results <- tibble::tibble(claims = list("x"))
-
-  make_tsc <- function(provider_class) {
-    tsc <- try_structured_call
-    mockery::stub(tsc, "ellmer::chat", function(...) {
-      list(get_provider = function() structure(list(), class = c(provider_class, "S7_object")))
-    })
-    mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
-    tsc
-  }
-
-  # An endpoint that enforces by construction needs no local validation
-  calls <- new.env()
-  f <- qlm_code
-  mockery::stub(f, "try_structured_call", make_tsc("ellmer::ProviderOpenAI"))
-  mockery::stub(f, "code_handler_json", json_stub(calls))
-  expect_silent(f("a", array_codebook, model = "openai/gpt-4o-mini"))
   expect_null(calls$json)
-
-  # And an explicit `structured` is never overridden. The enforcement note may
-  # still fire here -- trusting an unverified endpoint is exactly when it
-  # should -- so assert on the skip reason rather than on silence.
-  calls <- new.env()
-  f2 <- qlm_code
-  mockery::stub(f2, "try_structured_call", make_tsc("ellmer::ProviderOpenAICompatible"))
-  mockery::stub(f2, "code_handler_json", json_stub(calls))
-  emitted <- testthat::capture_messages(
-    f2("a", array_codebook, model = "openai_compatible/x",
-       base_url = "https://example.com/v1", structured = "structured")
-  )
-  expect_false(any(grepl("no required scalar field", emitted)))
-  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  expect_equal(result$claims, list("x", character(0), character(0), character(0)))
+  failures <- qlm_failures(result)
+  expect_equal(failures$.id, c(3L, 4L))
+  expect_match(failures$reason[[1]], "\\$\\.claims is required but missing")
+  expect_match(failures$reason[[2]], "\\$\\.claims must be a JSON array")
 })
 
 
@@ -1678,9 +1613,6 @@ test_that("a schema-valid empty array is not mistaken for a failure", {
   )
   results <- tibble::tibble(score = c(1, 2), claims = list(character(0), character(0)))
 
-  expect_false(all_required_missing(results, codebook$schema))
-  expect_equal(n_incomplete(results, codebook$schema), 0)
-
   calls <- new.env()
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", function(...) {
@@ -1688,7 +1620,7 @@ test_that("a schema-valid empty array is not mistaken for a failure", {
       structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
     })
   })
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(results))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   mockery::stub(f, "code_handler_json", json_stub(calls))
@@ -1712,7 +1644,7 @@ test_that("qlm_code rejects convert = FALSE rather than failing downstream", {
   skip_if_not_installed("mockery")
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(data.frame(score = 0.5)))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   expect_s3_class(
@@ -1742,7 +1674,7 @@ test_that("qlm_code forwards params and api_args to ellmer unchanged", {
     seen <<- list(...)
     structure(list(), class = "Chat")
   })
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", data.frame(score = 0.5))
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(data.frame(score = 0.5)))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 
@@ -1960,7 +1892,7 @@ test_that("every entry point refuses an object a row operation has left with a r
 # structured = "structured": DeepSeek defaults to the JSON path.
 coding_run <- function(results) {
   tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", results)
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(results))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   f
@@ -2037,9 +1969,9 @@ test_that("qlm_code is silent about cost when it was not asked for, or is priced
 # received recorded in `seen`.
 priced_run <- function(results, seen) {
   tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(chat, prompts, type, ...) {
-    seen$execution_args <- list(...)
-    results
+  mockery::stub(tsc, "structured_chat_turns", function(chat, prompts, type, batch, execution_args) {
+    seen$execution_args <- execution_args
+    rows_as_turns(results)
   })
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
