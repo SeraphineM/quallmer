@@ -859,3 +859,40 @@ test_that("resolve_input_files leaves audio and image inputs where they are", {
   expect_equal(out$local, c(png, NA))
   expect_length(out$temp, 0L)
 })
+
+
+test_that("two units sharing a URL are each held to their own recorded bytes", {
+  first <- video_file(as.raw(1:10))
+  second <- video_file(as.raw(11:30))
+  url <- "https://example.org/ad.mp4"
+  x <- c(a = url, b = url)
+  run <- media_run(x, input_type = "video", local = c(first, second))
+  expected <- expected_url_hashes(run)
+  expect_equal(expected$.id, c("a", "b"))
+  expect_equal(expected$sha256, c(hash_file(first), hash_file(second)))
+
+  # Both downloads now return the first unit's bytes: the second has changed
+  calls <- new.env()
+  f <- audio_runner(calls = calls, download = fake_download(as.raw(1:10)))
+  err <- tryCatch(
+    with_expected_hashes(expected, suppressMessages(
+      f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")
+    )),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, 'differs from the one this run coded: "b"')
+  expect_no_match(err, '"a"')
+  expect_false(any(grepl("^upload:", calls$log)))
+
+  # Unnamed input is matched by position, as .id is
+  unnamed <- media_run(unname(x), input_type = "video", local = c(first, second))
+  expect_equal(expected_url_hashes(unnamed)$.id, c("1", "2"))
+  g <- audio_runner(calls = calls, download = fake_download(as.raw(11:30)))
+  err2 <- tryCatch(
+    with_expected_hashes(expected_url_hashes(unnamed), suppressMessages(
+      g(unname(x), video_codebook(), model = "google_gemini/gemini-2.5-flash")
+    )),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err2, 'differs from the one this run coded: "1"')
+})

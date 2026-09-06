@@ -285,8 +285,9 @@ known_input_providers_hint <- function(input_type) {
 #'
 #' @param x The input vector, already checked.
 #' @param input_type One of `file_input_types()`.
-#' @param say Whether to say what is about to be uploaded; `FALSE` when the
-#'   downloads are for a check rather than an upload.
+#' @param ids The `.id` of each element, for the hash check a replication
+#'   or backfill asks for; two units may share a URL and differ in bytes.
+#' @param say Whether to say what is about to be uploaded.
 #' @param call The calling environment, for the error.
 #'
 #' @return A list: `local`, a character vector with the local path of each
@@ -294,7 +295,8 @@ known_input_providers_hint <- function(input_type) {
 #'   temporary downloads, for the caller to remove.
 #' @keywords internal
 #' @noRd
-resolve_input_files <- function(x, input_type, say = TRUE, call = rlang::caller_env()) {
+resolve_input_files <- function(x, input_type, ids = names(x) %||% seq_along(x),
+                                say = TRUE, call = rlang::caller_env()) {
   local <- unname(x)
   temp <- character()
 
@@ -344,7 +346,7 @@ resolve_input_files <- function(x, input_type, say = TRUE, call = rlang::caller_
       ), call = call)
     }
     local[download] <- temp
-    check_downloaded_hashes(x[download], temp, call = call)
+    check_downloaded_hashes(x[download], temp, as.character(ids)[download], call = call)
   }
 
   check_upload_sizes(local, x, input_type, call = call)
@@ -414,17 +416,21 @@ with_expected_hashes <- function(expected, code) {
 
 #' Refuse a download whose bytes are not the ones the parent run coded
 #'
+#' Matched on unit and URL together: two units may share a URL and have
+#' recorded different bytes, and each is held to its own record.
+#'
 #' @param urls The URLs just downloaded.
 #' @param paths Where each landed.
+#' @param ids The `.id` of each.
 #' @param call The calling environment, for the error.
 #' @keywords internal
 #' @noRd
-check_downloaded_hashes <- function(urls, paths, call = rlang::caller_env()) {
+check_downloaded_hashes <- function(urls, paths, ids, call = rlang::caller_env()) {
   expected <- input_state$expected
   if (is.null(expected)) {
     return(invisible(NULL))
   }
-  pos <- match(urls, expected$url)
+  pos <- match(paste(ids, urls), paste(expected$.id, expected$url))
   known <- !is.na(pos)
   if (!any(known)) {
     return(invisible(NULL))
