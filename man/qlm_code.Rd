@@ -49,12 +49,14 @@ instead of \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_st
 cost-effective for large jobs but may have longer turnaround times.
 Default is \code{FALSE}. See \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}} for details.}
 
-\item{structured}{character; how the output schema is obtained. \code{"structured"} uses
-\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} and trusts the provider to enforce
-the schema. \code{"json"} asks for JSON, puts the schema in the system prompt,
-and validates every response against the codebook locally. \code{"auto"} (the
+\item{structured}{character; how the output schema is obtained.
+\code{"structured"} sends it through the provider's structured-output
+mechanism. \code{"json"} asks for JSON, puts the schema in the system prompt,
+and re-prompts a unit whose response does not conform. \code{"auto"} (the
 default) attempts the structured call and falls back to \code{"json"} if it
-fails. See Details for which to use.}
+fails, or if no response it completed matched the schema. On either
+path every response is validated against the codebook locally before it
+is tabulated. See Details for which to use.}
 
 \item{json_retries}{Integer; the number of additional requests \pkg{quallmer}
 may make for a unit on the JSON path after an unusable response. Default
@@ -72,10 +74,8 @@ every unit and records each failure in the \code{.error} column, for
 \code{\link[=qlm_failures]{qlm_failures()}} to list and \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code. \code{"return"}
 stops submitting new requests after the first failure, waits for those in
 flight, and returns what the call has. On the structured path that call
-is the run: the units never sent come back as rows of \code{NA} with no
-\code{.error}, which for a codebook whose required properties are all arrays
-or nested objects cannot be told from a valid empty answer, so keep
-\code{"continue"} on a run that is to be completed with \code{\link[=qlm_backfill]{qlm_backfill()}}. On
+is the run: the units never sent are recorded in \code{.error} as not
+completed, for \code{\link[=qlm_backfill]{qlm_backfill()}} to send. On
 the JSON path the call is one wave: a unit the wave did not reach counts
 as unanswered, so \code{json_retries} sends it again in a later wave, each
 stopped in turn at its first failure, and whatever is still unsent at the
@@ -240,62 +240,67 @@ unchanged, so a cost that rests on entered figures is always labelled as
 such. quallmer bundles no prices of its own.
 }
 
-\section{Schema enforcement}{
+\section{Schema enforcement and validation}{
 
 
-Some providers accept a JSON Schema without enforcing it, so a response can
-come back parseable but non-conforming — and the non-conformance then arrives
-silently as \code{NA}, indistinguishable from missing data. Providers reached
-through ellmer's generic OpenAI-compatible request path are all in this
-position: \code{strict = TRUE} is sent and may simply be ignored. \code{qlm_code()}
-emits a one-time note when it detects one, which
-\code{options(quallmer.quiet_schema_note = TRUE)} silences.
+Some providers accept a JSON Schema without enforcing it, so a response
+can come back parseable but non-conforming: a number as a string, a
+required property missing, an extra one added. Providers reached through
+ellmer's generic OpenAI-compatible request path are all in this position:
+\code{strict = TRUE} is sent and may simply be ignored. Converted straight to
+a table, such a response would arrive silently as \code{NA}, or as an empty
+list-column cell that a valid empty answer also produces.
 
-\code{structured} chooses what to do about it:
+So every response is validated against \code{codebook$schema} before it is
+converted, on either path and whatever the provider: required properties
+present and not null, scalars of the declared type without coercion,
+enum values from the declared set, arrays and nested objects of the
+declared shape, no undeclared properties unless the schema allows them.
+A response that fails is a failed unit: its row is \code{NA}, its \code{.error}
+names the offending JSON path (\verb{$.claims[2].score must be a number}), and
+\code{\link[=qlm_failures]{qlm_failures()}} lists it for \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code. The other
+units keep their coded values. The response's usage is recorded with the
+failure, since the request was billed.
+
+\code{structured} chooses how the schema reaches the model, and what to do
+when the provider ignores it:
 
 \describe{
-\item{\code{"structured"}}{Trust the provider. Fails loudly if the call fails.}
-\item{\code{"json"}}{Never trust it: ask for JSON, put the schema in the system
-prompt, and validate each response against \code{codebook$schema} locally,
-re-prompting with the specific validation error when one does not
-conform. The reliable choice for an endpoint known not to enforce.}
-\item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} if it
-errors, or if it returns a result in which every required field is \code{NA}
-in every row, which is what an endpoint that ignored the schema
-produces. Rows whose request failed, or whose response was cut off
-at \code{max_tokens}, are left out of that judgement, since neither says
-anything about the schema; a row from which ellmer could extract no
-structured data counts, since that is what an endpoint that ignored
-the schema produces.}
+\item{\code{"structured"}}{Send the schema through the provider's
+structured-output mechanism. Fails loudly if the call fails; a
+response that does not conform is a failed unit.}
+\item{\code{"json"}}{Ask for JSON, put the schema in the system prompt, and
+re-prompt with the specific validation error when a response does not
+conform, up to \code{json_retries} times. The reliable choice for an
+endpoint known not to enforce.}
+\item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} for
+the whole run if it errors, or if every response the provider
+completed fails validation, which is what an endpoint that ignored
+the schema produces. Requests the provider refused, and responses it
+cut off or filtered, are left out of that judgement, since neither
+says anything about the schema. A run in which some responses
+conform keeps them, and records the rest as failed units: the
+intermittent kind of non-enforcement is caught per unit, not by
+re-coding the corpus.}
 }
 
-\code{"auto"} catches wholesale non-enforcement, not the intermittent kind: a
-single non-conforming row among many leaves that check silent. Only
-\code{"json"} catches that, at the cost of putting the schema in the prompt.
+On either path, \code{\link[=qlm_failures]{qlm_failures()}} lists the units that produced no usable
+coding, with the reason for each, and \code{print()} reports how many there
+were. Most such failures are transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes
+just those units and merges them back; \code{backfill} does that before
+returning. Batch processing and file inputs (image and audio codebooks)
+are not supported on the JSON path, so \code{"auto"} will not fall back under
+\code{batch = TRUE} or for a file input: a failed structured call then stops
+with the provider's own error, and \code{structured = "json"} is refused up
+front. The path actually taken is recorded in the run metadata as
+\code{backend}, and a run validated this way carries \code{validation = "local"}.
 
-That check also needs something to look at. It reads required scalar
-properties, because those become ordinary columns; required arrays and
-nested objects become list-columns in which a missing value and a
-schema-valid empty one are the same zero-length cell, and cannot be told
-apart. So for a codebook whose required properties are all arrays or nested
-objects, \code{"auto"} on an unverified endpoint validates locally from the
-start rather than making a call it could not check, and says so. Use
-\code{"structured"} to rely on the provider regardless.
-
-On the JSON path, units that never validate have \code{NA} coded values and a
-\code{.error} list-column recording the reason, and \code{json_retries} controls how
-many repair attempts each unit gets. On the structured path, a response
-from which ellmer could extract no structured data, which it reports only
-by warning, is likewise given an \code{.error}. On either path, \code{\link[=qlm_failures]{qlm_failures()}}
-lists the units that produced no usable coding, with the reason for each,
-and \code{print()} reports how many there were. Most such failures are
-transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes just those units and merges them
-back; \code{backfill} does that before returning. Batch processing and
-file inputs (image and audio codebooks) are not supported there, so
-\code{"auto"} will not fall back under \code{batch = TRUE} or for a file input: a
-failed structured call then stops with the provider's own error, and
-\code{structured = "json"} is refused up front. The path actually taken is
-recorded in the run metadata as \code{backend}.
+The schema itself must be a \code{type_object()} at the root, whose properties
+become the columns of the result, built from \code{type_string()},
+\code{type_boolean()}, \code{type_integer()}, \code{type_number()}, \code{type_enum()},
+\code{type_array()} and \code{type_object()}. Any other type is refused before a
+request is sent, since there would be nothing to validate a response
+against.
 }
 
 \section{Audio input}{
@@ -406,29 +411,17 @@ A response that runs into the provider's output limit (\code{max_tokens}) is cut
 off mid-JSON, and the request is billed in full. The affected units are
 systematically the longest and richest ones, and for a codebook where an
 empty answer is a legitimate outcome, a cut-off answer that reads as empty
-is the worst kind of silent failure. What arrives depends on the path.
+is the worst kind of silent failure.
 
-On the JSON path the finish reason travels with the response, so a unit cut
-off this way is recorded in \code{.error} with the token count, is listed by
-\code{\link[=qlm_failures]{qlm_failures()}}, and is not retried: a repair prompt cannot supply what the
-limit withheld, and would only press the model into a shorter answer.
-
-On the structured path, \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} returns the
-converted table and discards the turns, and the finish reason with them. A
-truncated response therefore arrives as a row of \code{NA} scalars and
-zero-length arrays. Where the cut leaves unparsable JSON behind, ellmer
-warns that it could extract no data, and that warning becomes an \code{.error}
-naming a parse error rather than the cut. Where it leaves nothing behind,
-as on Anthropic's forced-tool path, there is no warning, and nothing in the
-table distinguishes the row from a unit to which nothing applied. What the
-table can carry is the output token count, so when \code{params(max_tokens = )}
-is set, a row that used the whole budget and has nothing in it is recorded
-in \code{.error} as cut off, with that as the reason in either case. Without a
-declared limit the cap is not known here (ellmer supplies a provider
-default, 4096 for Anthropic, inside its request builder), and the silent
-case stays silent. So set \code{max_tokens} explicitly, high enough for the
-longest answer the codebook can produce: the limit is then both less likely
-to be hit and detectable when it is.
+The provider's finish reason travels with every response, on either path,
+and is read before the response is parsed: a unit cut off this way is
+recorded in \code{.error} with the token count, whether or not the fragment
+happens to parse, is listed by \code{\link[=qlm_failures]{qlm_failures()}}, and is not retried: a
+repair prompt cannot supply what the limit withheld, and would only press
+the model into a shorter answer. A backfill leaves it alone too; raise
+\code{params(max_tokens = )} and backfill again. A response the provider
+withheld under a content filter, or finished for a reason it did not
+recognise, is recorded the same way with that reason.
 
 When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 which submits jobs to the provider's batch API. This is typically more

@@ -1027,11 +1027,6 @@ test_that("a structured run the provider rejects outright names the model (#133)
     score = c(NA_real_, NA_real_),
     .error = list(http_400(), http_400())
   )
-  expect_true(all_rejected(rejected))
-  expect_false(all_rejected(tibble::tibble(score = NA_real_, .error = list(simpleError("cut off")))))
-  expect_false(all_rejected(tibble::tibble(score = c(NA_real_, 1), .error = list(http_400(), NULL))))
-  expect_false(all_rejected(tibble::tibble(score = NA_real_)))
-
   f <- qlm_code
   mockery::stub(f, "try_structured_call", structured_stub(results = rejected))
   mockery::stub(f, "code_handler_json", json_stub(calls))
@@ -1095,6 +1090,7 @@ test_that("a wholly failed structured run is reported, not re-coded in JSON mode
 
 # Truncated structured responses ----------------------------------------------
 
+# declared_max_tokens() is what a backfill reads to tell a raised limit
 test_that("declared_max_tokens reads params() and nothing else", {
   expect_equal(declared_max_tokens(list(params = ellmer::params(max_tokens = 200))), 200)
   expect_null(declared_max_tokens(list()))
@@ -1103,98 +1099,6 @@ test_that("declared_max_tokens reads params() and nothing else", {
   expect_null(declared_max_tokens(list(params = list(max_tokens = -1))))
   # api_args is forwarded unread
   expect_null(declared_max_tokens(list(api_args = list(max_tokens = 5))))
-})
-
-test_that("mark_truncated_rows flags only rows that spent the whole limit and hold nothing", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(
-    score = c(NA_real_, 0.4, NA_real_),
-    input_tokens = c(10, 10, 10),
-    output_tokens = c(100, 100, 30),
-    cached_input_tokens = c(0, 0, 0)
-  )
-
-  expect_warning(
-    out <- mark_truncated_rows(results, schema, cap = 100),
-    "1 response from the structured call used the whole"
-  )
-  errors <- out$.error
-  expect_s3_class(errors[[1]], "simpleError")  # spent it all, nothing back
-  expect_null(errors[[2]])                      # spent it all, but answered
-  expect_null(errors[[3]])                      # nothing back, but well under the limit
-  expect_match(conditionMessage(errors[[1]]), "max_tokens limit of 100")
-  expect_match(conditionMessage(errors[[1]]), "params\\(max_tokens = \\)")
-  # ellmer's column order: coded values, .error, usage
-  expect_equal(
-    names(out),
-    c("score", ".error", "input_tokens", "output_tokens", "cached_input_tokens")
-  )
-})
-
-test_that("mark_truncated_rows keeps a request failure but replaces a parse symptom", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(
-    score = c(NA_real_, NA_real_, NA_real_),
-    # A failed request spends nothing; an extraction failure at the limit is
-    # what a cut-off response looks like after with_extraction_errors()
-    .error = list(simpleError("HTTP 500"), simpleError("parse error: premature EOF"), NULL),
-    input_tokens = c(0, 3, 3), output_tokens = c(0, 100, 100), cached_input_tokens = c(0, 0, 0)
-  )
-
-  expect_warning(out <- mark_truncated_rows(results, schema, cap = 100), "2 responses")
-  expect_equal(conditionMessage(out$.error[[1]]), "HTTP 500")
-  expect_match(conditionMessage(out$.error[[2]]), "most likely cut off")
-  expect_match(conditionMessage(out$.error[[3]]), "most likely cut off")
-})
-
-test_that("mark_truncated_rows removes token columns it asked for itself", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(
-    score = 0.4, input_tokens = 1, output_tokens = 5, cached_input_tokens = 0, cost = 0.01
-  )
-
-  expect_equal(names(mark_truncated_rows(results, schema, cap = 100, keep_tokens = FALSE)),
-               c("score", "cost"))
-  expect_equal(names(mark_truncated_rows(results, schema, cap = 100, keep_tokens = TRUE)),
-               names(results))
-})
-
-test_that("mark_truncated_rows is a no-op without a declared limit or token counts", {
-  schema <- structured_test_codebook()$schema
-  results <- tibble::tibble(score = NA_real_)
-
-  expect_identical(mark_truncated_rows(results, schema, cap = NULL), results)
-  expect_identical(mark_truncated_rows(results, schema, cap = 100), results)
-  # convert = FALSE would hand back a list; there is no table to mark
-  expect_identical(mark_truncated_rows(list(1), schema, cap = 100), list(1))
-  expect_identical(mark_truncated_rows(tibble::tibble(), schema, cap = 100), tibble::tibble())
-})
-
-test_that("mark_truncated_rows reads arrays and nested objects as blank when empty", {
-  # The shape from the issue: the content sits inside a type_array(), so a
-  # cut-off response converts to a zero-row tibble, not NA
-  schema <- ellmer::type_object(
-    domains = ellmer::type_array(ellmer::type_object(name = ellmer::type_string())),
-    meta = ellmer::type_object(a = ellmer::type_string(), b = ellmer::type_integer())
-  )
-  converted <- ellmer:::convert_from_type(
-    list(
-      NULL,
-      list(domains = list(list(name = "x")), meta = list(a = "q", b = 1L)),
-      list(domains = list(), meta = list(a = "q", b = 1L))
-    ),
-    ellmer::type_array(schema)
-  )
-  expect_equal(NROW(converted$domains[[1]]), 0)
-  converted$input_tokens <- c(5, 5, 5)
-  converted$output_tokens <- c(4096, 4096, 4096)
-  converted$cached_input_tokens <- c(0, 0, 0)
-
-  expect_warning(out <- mark_truncated_rows(converted, schema, cap = 4096), "1 response")
-  expect_s3_class(out$.error[[1]], "simpleError")
-  expect_null(out$.error[[2]])
-  # An empty array beside a filled nested object is an answer, not a blank
-  expect_null(out$.error[[3]])
 })
 
 test_that("the structured path reads the finish reason to flag a cut-off response", {
@@ -1513,52 +1417,6 @@ test_that("json_retries reaches the JSON path under auto", {
     f("a", structured_test_codebook(), model = "openai/gpt-4o-mini", json_retries = 7)
   )
   expect_equal(calls$json_retries, 7)
-})
-
-
-test_that("the enforcement note fires for unverifiable endpoints only", {
-  skip_if_not_installed("mockery")
-  # The note is once-per-session; disable that so the test does not depend on
-  # whether something earlier in the suite already consumed it
-  withr::local_options(quallmer.quiet_schema_note = FALSE,
-                       rlib_message_verbosity = "verbose")
-
-  fake_chat <- function(provider_class) {
-    list(get_provider = function() structure(list(), class = c(provider_class, "S7_object")))
-  }
-
-  # A provider whose own chat_body() uses an enforced mechanism: nothing to say
-  expect_silent(
-    warn_unenforced_schema(fake_chat("ellmer::ProviderOpenAI"), "openai/gpt-4o-mini")
-  )
-  expect_silent(
-    warn_unenforced_schema(fake_chat("ellmer::ProviderAnthropic"), "anthropic/claude")
-  )
-
-  # Anything on the generic OpenAI-compatible path is unverified
-  expect_message(
-    warn_unenforced_schema(fake_chat("ellmer::ProviderOpenAICompatible"),
-                           "openai_compatible/kimi-k3"),
-    "may accept the output schema without enforcing it"
-  )
-})
-
-
-test_that("the enforcement note can be silenced", {
-  withr::local_options(quallmer.quiet_schema_note = TRUE)
-  fake <- list(get_provider = function() {
-    structure(list(), class = c("ellmer::ProviderOpenAICompatible", "S7_object"))
-  })
-
-  expect_silent(warn_unenforced_schema(fake, "openai_compatible/kimi-k3"))
-})
-
-
-test_that("the enforcement note survives a provider it cannot inspect", {
-  withr::local_options(quallmer.quiet_schema_note = FALSE)
-  broken <- list(get_provider = function() stop("no provider"))
-
-  expect_silent(warn_unenforced_schema(broken, "some/model"))
 })
 
 

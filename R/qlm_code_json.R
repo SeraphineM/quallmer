@@ -817,10 +817,12 @@ ellmer_convert_from_type <- function(x, type) {
 
 #' Required properties whose absence is detectable in the result table
 #'
-#' Restricted to required scalar properties, because those are the ones
-#' [ellmer::parallel_chat_structured()] renders as a single column that can be
-#' checked for `NA`. Arrays and nested objects become list-columns, where "the
-#' model returned nothing useful" has no simple representation.
+#' Restricted to required scalar properties, because those are the ones the
+#' converter renders as a single column that can be checked for `NA`. Arrays
+#' and nested objects become list-columns, where "the model returned nothing
+#' useful" has no simple representation. Kept for objects coded before every
+#' response was validated (#140), whose silently missing values carry no
+#' `.error`; see `failed_units()`.
 #'
 #' @param schema An [ellmer::type_object()].
 #'
@@ -839,107 +841,10 @@ required_scalar_fields <- function(schema) {
 }
 
 
-#' Did the structured call return nothing usable at all?
-#'
-#' A structured call can succeed at the HTTP level and still return a table in
-#' which every required field is `NA` in every row: the endpoint accepted the
-#' JSON schema and ignored it, so ellmer had nothing to map onto the type and
-#' emitted `NA` rather than an error. Observed with `qwen3.5-397b-a17b` through
-#' Alibaba Model Studio. Erroring is therefore not a sufficient test of whether
-#' the structured path worked.
-#'
-#' @param results The result of [ellmer::parallel_chat_structured()].
-#' @param schema An [ellmer::type_object()].
-#'
-#' @return `TRUE` when the call produced no usable values.
-#' @keywords internal
-#' @noRd
-all_required_missing <- function(results, schema) {
-  # A user may have passed convert = FALSE, in which case there is no table to
-  # inspect and no basis for calling the attempt a failure.
-  if (!is.data.frame(results) || !nrow(results)) {
-    return(FALSE)
-  }
-  fields <- intersect(required_scalar_fields(schema), names(results))
-  if (!length(fields)) {
-    return(FALSE)
-  }
-  # A row with a recorded error is evidence only if the endpoint answered. A
-  # rejected request, or a response cut off at max_tokens, says nothing about
-  # whether the endpoint honours the schema, so those rows are set aside. A
-  # response ellmer could extract nothing from -- prose where JSON was asked
-  # for -- is exactly what an endpoint that ignored the schema produces, so
-  # those rows are judged alongside the intact ones. If nothing is left to
-  # judge, there is nothing to conclude.
-  judged <- vapply(
-    recorded_errors(results),
-    function(e) is.null(e) || is_extraction_error(e),
-    logical(1)
-  )
-  if (!any(judged)) {
-    return(FALSE)
-  }
-  all(vapply(fields, function(f) all(is.na(results[[f]][judged])), logical(1)))
-}
 
 
-#' How many rows are missing at least one required field?
-#'
-#' Partial failure, which is worth reporting but is not grounds for discarding
-#' the whole attempt and re-coding in JSON mode. Rows carrying an `.error` are
-#' not counted: they are reported as failed already, with their reason.
-#'
-#' @param results The result of [ellmer::parallel_chat_structured()].
-#' @param schema An [ellmer::type_object()].
-#'
-#' @return An integer count.
-#' @keywords internal
-#' @noRd
-n_incomplete <- function(results, schema) {
-  if (!is.data.frame(results) || !nrow(results)) {
-    return(0L)
-  }
-  fields <- intersect(required_scalar_fields(schema), names(results))
-  if (!length(fields)) {
-    return(0L)
-  }
-  missing <- Reduce(`|`, lapply(fields, function(f) is.na(results[[f]])))
-  sum(missing & !errored_rows(results))
-}
 
 
-#' Does this provider enforce the output schema by construction?
-#'
-#' Derived from ellmer's own dispatch rather than from a list of vendors.
-#' These provider classes define their own `chat_body()` method using a
-#' mechanism the provider is documented to enforce: OpenAI's `/responses`
-#' format with `strict = TRUE`, Anthropic's native structured output or a
-#' forced tool call, Gemini's `response_schema`, Bedrock's forced tool call,
-#' Snowflake's typed `response_format`.
-#'
-#' Everything else falls through to `ProviderOpenAICompatible`'s method, which
-#' sends `response_format = {type: "json_schema", strict: true}` and takes the
-#' answer on trust. Whether that is honoured is up to the endpoint, and
-#' measurement shows it often is not.
-#'
-#' Deriving this rather than tabulating it means a provider ellmer adds later
-#' defaults to "cannot vouch for this", which is the safe direction.
-#'
-#' @param provider A provider object from `chat$get_provider()`.
-#'
-#' @return `TRUE` when the schema is enforced by the provider's mechanism.
-#' @keywords internal
-#' @noRd
-provider_enforces_schema <- function(provider) {
-  enforcing <- c(
-    "ellmer::ProviderOpenAI",
-    "ellmer::ProviderAnthropic",
-    "ellmer::ProviderGoogleGemini",
-    "ellmer::ProviderAWSBedrock",
-    "ellmer::ProviderSnowflakeCortex"
-  )
-  any(class(provider) %in% enforcing)
-}
 
 
 #' Is this the DashScope "messages must contain the word json" rejection?

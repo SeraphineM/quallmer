@@ -15,12 +15,12 @@
 #' for that. It repeats the few orchestration lines of the two ellmer
 #' functions up to the point where they convert, and reuses ellmer's own
 #' request construction, throttling, batch submission and result parsing
-#' through the internals that [ellmer_structured_internals()] looks up.
+#' through the internals that `ellmer_structured_internals()` looks up.
 #' Nothing here builds a request or reads a response body.
 #'
 #' @param chat An ellmer `Chat`, carrying the system prompt, model
 #'   parameters and tools.
-#' @param prompts A list of prompts as [as_input_content()] returns them: each
+#' @param prompts A list of prompts as `as_input_content()` returns them: each
 #'   a string, a single ellmer `Content` object, or a list of `Content`
 #'   objects.
 #' @param type The codebook schema, unwrapped.
@@ -108,7 +108,7 @@ structured_needs_wrapper <- function(type, provider) {
 #' A user turn for one prompt, as ellmer builds it
 #'
 #' Mirrors ellmer's `as_user_turn()` for the three shapes
-#' [as_input_content()] produces, using exported constructors only.
+#' `as_input_content()` produces, using exported constructors only.
 #'
 #' @param prompt A string, a `Content` object, or a list of `Content` objects.
 #'

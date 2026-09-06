@@ -22,12 +22,14 @@
 #'   that provider). Passed to the `name` argument of [ellmer::chat()].
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
-#' @param structured character; how the output schema is obtained. `"structured"` uses
-#'   [ellmer::parallel_chat_structured()] and trusts the provider to enforce
-#'   the schema. `"json"` asks for JSON, puts the schema in the system prompt,
-#'   and validates every response against the codebook locally. `"auto"` (the
+#' @param structured character; how the output schema is obtained.
+#'   `"structured"` sends it through the provider's structured-output
+#'   mechanism. `"json"` asks for JSON, puts the schema in the system prompt,
+#'   and re-prompts a unit whose response does not conform. `"auto"` (the
 #'   default) attempts the structured call and falls back to `"json"` if it
-#'   fails. See Details for which to use.
+#'   fails, or if no response it completed matched the schema. On either
+#'   path every response is validated against the codebook locally before it
+#'   is tabulated. See Details for which to use.
 #' @param json_retries Integer; the number of additional requests \pkg{quallmer}
 #'   may make for a unit on the JSON path after an unusable response. Default
 #'   is 2, giving at most three JSON-path requests per unit. This is implemented
@@ -43,10 +45,8 @@
 #'   [qlm_failures()] to list and [qlm_backfill()] to re-code. `"return"`
 #'   stops submitting new requests after the first failure, waits for those in
 #'   flight, and returns what the call has. On the structured path that call
-#'   is the run: the units never sent come back as rows of `NA` with no
-#'   `.error`, which for a codebook whose required properties are all arrays
-#'   or nested objects cannot be told from a valid empty answer, so keep
-#'   `"continue"` on a run that is to be completed with [qlm_backfill()]. On
+#'   is the run: the units never sent are recorded in `.error` as not
+#'   completed, for [qlm_backfill()] to send. On
 #'   the JSON path the call is one wave: a unit the wave did not reach counts
 #'   as unanswered, so `json_retries` sends it again in a later wave, each
 #'   stopped in turn at its first failure, and whatever is still unsent at the
@@ -193,61 +193,66 @@
 #' unchanged, so a cost that rests on entered figures is always labelled as
 #' such. quallmer bundles no prices of its own.
 #'
-#' @section Schema enforcement:
+#' @section Schema enforcement and validation:
 #'
-#' Some providers accept a JSON Schema without enforcing it, so a response can
-#' come back parseable but non-conforming — and the non-conformance then arrives
-#' silently as `NA`, indistinguishable from missing data. Providers reached
-#' through ellmer's generic OpenAI-compatible request path are all in this
-#' position: `strict = TRUE` is sent and may simply be ignored. `qlm_code()`
-#' emits a one-time note when it detects one, which
-#' `options(quallmer.quiet_schema_note = TRUE)` silences.
+#' Some providers accept a JSON Schema without enforcing it, so a response
+#' can come back parseable but non-conforming: a number as a string, a
+#' required property missing, an extra one added. Providers reached through
+#' ellmer's generic OpenAI-compatible request path are all in this position:
+#' `strict = TRUE` is sent and may simply be ignored. Converted straight to
+#' a table, such a response would arrive silently as `NA`, or as an empty
+#' list-column cell that a valid empty answer also produces.
 #'
-#' `structured` chooses what to do about it:
+#' So every response is validated against `codebook$schema` before it is
+#' converted, on either path and whatever the provider: required properties
+#' present and not null, scalars of the declared type without coercion,
+#' enum values from the declared set, arrays and nested objects of the
+#' declared shape, no undeclared properties unless the schema allows them.
+#' A response that fails is a failed unit: its row is `NA`, its `.error`
+#' names the offending JSON path (`$.claims[2].score must be a number`), and
+#' [qlm_failures()] lists it for [qlm_backfill()] to re-code. The other
+#' units keep their coded values. The response's usage is recorded with the
+#' failure, since the request was billed.
+#'
+#' `structured` chooses how the schema reaches the model, and what to do
+#' when the provider ignores it:
 #'
 #' \describe{
-#'   \item{`"structured"`}{Trust the provider. Fails loudly if the call fails.}
-#'   \item{`"json"`}{Never trust it: ask for JSON, put the schema in the system
-#'     prompt, and validate each response against `codebook$schema` locally,
-#'     re-prompting with the specific validation error when one does not
-#'     conform. The reliable choice for an endpoint known not to enforce.}
-#'   \item{`"auto"`}{Attempt the structured call; fall back to `"json"` if it
-#'     errors, or if it returns a result in which every required field is `NA`
-#'     in every row, which is what an endpoint that ignored the schema
-#'     produces. Rows whose request failed, or whose response was cut off
-#'     at `max_tokens`, are left out of that judgement, since neither says
-#'     anything about the schema; a row from which ellmer could extract no
-#'     structured data counts, since that is what an endpoint that ignored
-#'     the schema produces.}
+#'   \item{`"structured"`}{Send the schema through the provider's
+#'     structured-output mechanism. Fails loudly if the call fails; a
+#'     response that does not conform is a failed unit.}
+#'   \item{`"json"`}{Ask for JSON, put the schema in the system prompt, and
+#'     re-prompt with the specific validation error when a response does not
+#'     conform, up to `json_retries` times. The reliable choice for an
+#'     endpoint known not to enforce.}
+#'   \item{`"auto"`}{Attempt the structured call; fall back to `"json"` for
+#'     the whole run if it errors, or if every response the provider
+#'     completed fails validation, which is what an endpoint that ignored
+#'     the schema produces. Requests the provider refused, and responses it
+#'     cut off or filtered, are left out of that judgement, since neither
+#'     says anything about the schema. A run in which some responses
+#'     conform keeps them, and records the rest as failed units: the
+#'     intermittent kind of non-enforcement is caught per unit, not by
+#'     re-coding the corpus.}
 #' }
 #'
-#' `"auto"` catches wholesale non-enforcement, not the intermittent kind: a
-#' single non-conforming row among many leaves that check silent. Only
-#' `"json"` catches that, at the cost of putting the schema in the prompt.
+#' On either path, [qlm_failures()] lists the units that produced no usable
+#' coding, with the reason for each, and `print()` reports how many there
+#' were. Most such failures are transient, and [qlm_backfill()] re-codes
+#' just those units and merges them back; `backfill` does that before
+#' returning. Batch processing and file inputs (image and audio codebooks)
+#' are not supported on the JSON path, so `"auto"` will not fall back under
+#' `batch = TRUE` or for a file input: a failed structured call then stops
+#' with the provider's own error, and `structured = "json"` is refused up
+#' front. The path actually taken is recorded in the run metadata as
+#' `backend`, and a run validated this way carries `validation = "local"`.
 #'
-#' That check also needs something to look at. It reads required scalar
-#' properties, because those become ordinary columns; required arrays and
-#' nested objects become list-columns in which a missing value and a
-#' schema-valid empty one are the same zero-length cell, and cannot be told
-#' apart. So for a codebook whose required properties are all arrays or nested
-#' objects, `"auto"` on an unverified endpoint validates locally from the
-#' start rather than making a call it could not check, and says so. Use
-#' `"structured"` to rely on the provider regardless.
-#'
-#' On the JSON path, units that never validate have `NA` coded values and a
-#' `.error` list-column recording the reason, and `json_retries` controls how
-#' many repair attempts each unit gets. On the structured path, a response
-#' from which ellmer could extract no structured data, which it reports only
-#' by warning, is likewise given an `.error`. On either path, [qlm_failures()]
-#' lists the units that produced no usable coding, with the reason for each,
-#' and `print()` reports how many there were. Most such failures are
-#' transient, and [qlm_backfill()] re-codes just those units and merges them
-#' back; `backfill` does that before returning. Batch processing and
-#' file inputs (image and audio codebooks) are not supported there, so
-#' `"auto"` will not fall back under `batch = TRUE` or for a file input: a
-#' failed structured call then stops with the provider's own error, and
-#' `structured = "json"` is refused up front. The path actually taken is
-#' recorded in the run metadata as `backend`.
+#' The schema itself must be a `type_object()` at the root, whose properties
+#' become the columns of the result, built from `type_string()`,
+#' `type_boolean()`, `type_integer()`, `type_number()`, `type_enum()`,
+#' `type_array()` and `type_object()`. Any other type is refused before a
+#' request is sent, since there would be nothing to validate a response
+#' against.
 #'
 #' @section Audio input:
 #'
@@ -350,29 +355,17 @@
 #' off mid-JSON, and the request is billed in full. The affected units are
 #' systematically the longest and richest ones, and for a codebook where an
 #' empty answer is a legitimate outcome, a cut-off answer that reads as empty
-#' is the worst kind of silent failure. What arrives depends on the path.
+#' is the worst kind of silent failure.
 #'
-#' On the JSON path the finish reason travels with the response, so a unit cut
-#' off this way is recorded in `.error` with the token count, is listed by
-#' [qlm_failures()], and is not retried: a repair prompt cannot supply what the
-#' limit withheld, and would only press the model into a shorter answer.
-#'
-#' On the structured path, [ellmer::parallel_chat_structured()] returns the
-#' converted table and discards the turns, and the finish reason with them. A
-#' truncated response therefore arrives as a row of `NA` scalars and
-#' zero-length arrays. Where the cut leaves unparsable JSON behind, ellmer
-#' warns that it could extract no data, and that warning becomes an `.error`
-#' naming a parse error rather than the cut. Where it leaves nothing behind,
-#' as on Anthropic's forced-tool path, there is no warning, and nothing in the
-#' table distinguishes the row from a unit to which nothing applied. What the
-#' table can carry is the output token count, so when `params(max_tokens = )`
-#' is set, a row that used the whole budget and has nothing in it is recorded
-#' in `.error` as cut off, with that as the reason in either case. Without a
-#' declared limit the cap is not known here (ellmer supplies a provider
-#' default, 4096 for Anthropic, inside its request builder), and the silent
-#' case stays silent. So set `max_tokens` explicitly, high enough for the
-#' longest answer the codebook can produce: the limit is then both less likely
-#' to be hit and detectable when it is.
+#' The provider's finish reason travels with every response, on either path,
+#' and is read before the response is parsed: a unit cut off this way is
+#' recorded in `.error` with the token count, whether or not the fragment
+#' happens to parse, is listed by [qlm_failures()], and is not retried: a
+#' repair prompt cannot supply what the limit withheld, and would only press
+#' the model into a shorter answer. A backfill leaves it alone too; raise
+#' `params(max_tokens = )` and backfill again. A response the provider
+#' withheld under a content filter, or finished for a reason it did not
+#' recognise, is recorded the same way with that reason.
 #'
 #' When `batch = TRUE`, the function uses [ellmer::batch_chat_structured()]
 #' which submits jobs to the provider's batch API. This is typically more
@@ -817,7 +810,7 @@ default_structured_mode <- function(model) {
 
 #' Attempt schema-constrained structured output
 #'
-#' Runs the structured call through [structured_chat_turns()] and validates
+#' Runs the structured call through `structured_chat_turns()` and validates
 #' every response against the codebook before conversion (#140), so that
 #' [qlm_code()] can decide what to do with what came back. A unit whose
 #' response failed -- refused by the provider, cut off, without JSON, or
@@ -938,12 +931,12 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
 
 #' Validate and tabulate the turns of a structured call
 #'
-#' @param turns What [structured_chat_turns()] returned.
+#' @param turns What `structured_chat_turns()` returned.
 #' @param schema The codebook schema.
 #' @param provider The chat's provider, for ellmer's wrapper rule.
 #' @param execution_args As in [qlm_code()]; read for the usage columns.
 #'
-#' @return An attempt, as [try_structured_call()] documents it.
+#' @return An attempt, as `try_structured_call()` documents it.
 #' @keywords internal
 #' @noRd
 structured_attempt <- function(turns, schema, provider, execution_args) {
@@ -1022,117 +1015,10 @@ structured_attempt <- function(turns, schema, provider, execution_args) {
 }
 
 
-#' Run an ellmer structured call, keeping the extraction failures it reports
-#'
-#' ellmer's `multi_convert()` attaches `.error` only to turns whose request
-#' failed. A turn that came back but yielded no structured data -- a refusal
-#' in prose, say -- is reported in a warning listing the affected rows and
-#' then dropped: scalar fields become `NA` and an array becomes a zero-length
-#' cell, with no `.error`. For an array-only schema that is indistinguishable
-#' from a valid empty answer, so the failure would be invisible to
-#' [qlm_failures()] (#132). Capture the warning as it passes and record an
-#' `.error` for each listed row that has none. The warning still reaches the
-#' user; nothing is muffled.
-#'
-#' This depends on the format of ellmer's warning, one `* <row>: <message>`
-#' line per failure. `test-qlm_failures.R` pins that against ellmer's actual
-#' `multi_convert()`, so an upstream change fails the suite rather than
-#' silently restoring the blind spot.
-#'
-#' @param expr A call returning what [ellmer::parallel_chat_structured()] or
-#'   [ellmer::batch_chat_structured()] returns.
-#'
-#' @return The value of `expr`, with `.error` set for reported rows when it is
-#'   a data frame; unchanged otherwise.
-#' @keywords internal
-#' @noRd
-with_extraction_errors <- function(expr) {
-  failures <- NULL
-  value <- withCallingHandlers(
-    expr,
-    warning = function(w) {
-      found <- parse_extraction_warning(conditionMessage(w))
-      if (!is.null(found)) {
-        failures <<- rbind(failures, found)
-      }
-    }
-  )
-  attach_extraction_errors(value, failures)
-}
 
 
-#' Read the rows named in ellmer's extraction warning
-#'
-#' @param msg The warning's condition message.
-#'
-#' @return A data frame with `index` and `message`, or `NULL` when `msg` is
-#'   not that warning or names no rows.
-#' @keywords internal
-#' @noRd
-parse_extraction_warning <- function(msg) {
-  msg <- strip_ansi(msg)
-  if (!grepl("^Failed to extract data from", msg)) {
-    return(NULL)
-  }
-  lines <- strsplit(msg, "\n", fixed = TRUE)[[1]]
-  parts <- regmatches(lines, regexec("^\\s*[*]\\s*([0-9]+):\\s*(.*)$", lines))
-  hits <- Filter(function(m) length(m) == 3L, parts)
-  if (!length(hits)) {
-    return(NULL)
-  }
-  data.frame(
-    index = as.integer(vapply(hits, `[`, character(1), 2L)),
-    message = vapply(hits, `[`, character(1), 3L),
-    stringsAsFactors = FALSE
-  )
-}
 
 
-#' Record extraction failures in .error
-#'
-#' Only rows with no `.error` already are touched; a request failure ellmer
-#' recorded takes precedence. `.error` is placed where ellmer puts it, before
-#' any token and cost columns, so both origins yield the same column order.
-#'
-#' @param results What the structured call returned.
-#' @param failures The data frame from `parse_extraction_warning()`, or `NULL`.
-#'
-#' @return `results`, with `.error` set where needed.
-#' @keywords internal
-#' @noRd
-attach_extraction_errors <- function(results, failures) {
-  if (is.null(failures) || !is.data.frame(results)) {
-    return(results)
-  }
-  failures <- failures[failures$index >= 1L & failures$index <= nrow(results), ]
-  if (!nrow(failures)) {
-    return(results)
-  }
-
-  had_error <- ".error" %in% names(results)
-  errors <- if (had_error) {
-    as.list(results$.error)
-  } else {
-    vector("list", nrow(results))
-  }
-  for (k in seq_len(nrow(failures))) {
-    i <- failures$index[k]
-    if (is.null(errors[[i]])) {
-      errors[[i]] <- extraction_error(failures$message[k])
-    }
-  }
-  results$.error <- errors
-
-  if (!had_error) {
-    usage <- intersect(
-      c("input_tokens", "output_tokens", "cached_input_tokens", "cost"),
-      names(results)
-    )
-    others <- setdiff(names(results), c(".error", usage))
-    results <- results[, c(others, ".error", usage)]
-  }
-  results
-}
 
 
 #' The output limit the caller declared, if any
@@ -1163,126 +1049,11 @@ declared_max_tokens <- function(chat_args) {
 }
 
 
-#' Flag structured rows that used the whole output budget and returned nothing
-#'
-#' [ellmer::parallel_chat_structured()] returns the converted table and
-#' discards the turns, and with them the finish reason. A response the provider
-#' cut off at `max_tokens` therefore arrives as an ordinary row with nothing in
-#' it -- `NA` scalars, zero-length arrays -- at full cost. When the cut leaves
-#' unparsable JSON, ellmer warns and `with_extraction_errors()` records the
-#' parse error; when it leaves nothing, as on Anthropic's forced-tool path,
-#' there is no `.error` at all and the row is indistinguishable from a unit to
-#' which nothing applied. ellmer's sequential `chat_structured()` raises an
-#' error for the very same response.
-#'
-#' What the table does carry, when asked, is the output token count. A row
-#' that spent every token of a declared limit *and* has nothing in it was, to
-#' a near certainty, cut off: a complete answer that happened to end exactly at
-#' the limit would carry data, and an empty answer does not need the whole
-#' budget. Both conditions are required, so "empty is not missing" still
-#' holds: an empty row below the limit is left alone, since a required array
-#' may validly be `[]`.
-#'
-#' Only a limit the caller declared is known here (see `declared_max_tokens()`).
-#' The finish reason is the right signal and is read directly on the JSON
-#' path; using it here too needs ellmer to return it from the parallel call.
-#'
-#' @param results The result of [ellmer::parallel_chat_structured()], with
-#'   token columns when `cap` is not `NULL`.
-#' @param schema The codebook schema.
-#' @param cap The declared output limit, or `NULL` when none is known.
-#' @param keep_tokens Whether the caller asked for the token columns. If not,
-#'   they were requested only for this check and are removed again.
-#'
-#' @return `results`, with `.error` set for the flagged rows.
-#' @keywords internal
-#' @noRd
-mark_truncated_rows <- function(results, schema, cap, keep_tokens = TRUE) {
-  if (is.null(cap) || !is.data.frame(results) || !nrow(results) ||
-      !"output_tokens" %in% names(results)) {
-    return(results)
-  }
-  spent <- results$output_tokens
-  # A request that failed outright spent no output tokens, so it can never
-  # land here and keeps ellmer's reason. A row that did spend the whole limit
-  # may already carry an extraction error from with_extraction_errors()
-  # ("premature EOF"): that is the symptom, and the cut is the cause, so the
-  # reason recorded here replaces it.
-  hit <- !is.na(spent) & spent >= cap & blank_rows(results, schema)
-
-  if (!keep_tokens) {
-    token_columns <- c("input_tokens", "output_tokens", "cached_input_tokens")
-    results[intersect(token_columns, names(results))] <- NULL
-  }
-  if (!any(hit)) {
-    return(results)
-  }
-
-  errors <- recorded_errors(results)
-  for (i in which(hit)) {
-    errors[i] <- list(truncation_error(paste0(
-      "The response used the whole max_tokens limit of ",
-      format(cap, big.mark = ","), " and returned nothing, so it was most ",
-      "likely cut off; raise the limit with params(max_tokens = )."
-    )))
-  }
-  results$.error <- errors
-
-  # ellmer's column order: coded values, then .error, then usage
-  trailing <- intersect(
-    c("input_tokens", "output_tokens", "cached_input_tokens", "cost"),
-    names(results)
-  )
-  results <- results[c(setdiff(names(results), c(".error", trailing)), ".error", trailing)]
-
-  n <- sum(hit)
-  cli::cli_warn(c(
-    "{n} response{?s} from the structured call used the whole {.code max_tokens} limit of {cap} and returned nothing.",
-    "i" = "{cli::qty(n)}{?It was/They were} most likely cut off; raise the limit with {.code params(max_tokens = )}.",
-    "i" = "{.fn qlm_failures} lists the affected units."
-  ))
-  results
-}
 
 
-#' Which rows of a converted result carry no coded value at all?
-#'
-#' Reads the columns the schema defines, ignoring `.error` and the usage
-#' columns. A scalar is blank when `NA`; an array, which converts to a
-#' list-column, when its cell is empty; a nested object, which converts to a
-#' data-frame column, when every one of its columns is blank.
-#'
-#' @param results A data frame as returned by ellmer's converter.
-#' @param schema The codebook schema.
-#'
-#' @return A logical vector, one element per row.
-#' @keywords internal
-#' @noRd
-blank_rows <- function(results, schema) {
-  meta <- c(".error", "input_tokens", "output_tokens", "cached_input_tokens", "cost")
-  cols <- if (inherits(schema, "ellmer::TypeObject")) {
-    intersect(names(schema@properties), names(results))
-  } else {
-    setdiff(names(results), meta)
-  }
-  if (!length(cols)) {
-    return(rep(FALSE, nrow(results)))
-  }
-  Reduce(`&`, lapply(results[cols], blank_column))
-}
 
-blank_column <- function(v) {
-  if (is.data.frame(v)) {
-    if (!ncol(v)) {
-      return(rep(TRUE, nrow(v)))
-    }
-    return(Reduce(`&`, lapply(v, blank_column)))
-  }
-  if (is.list(v)) {
-    return(vapply(v, blank_cell, logical(1)))
-  }
-  is.na(v)
-}
+
+
 
 blank_cell <- function(x) {
   if (is.null(x)) {
@@ -1295,16 +1066,16 @@ blank_cell <- function(x) {
 }
 
 
-#' An error recorded for a response ellmer could extract nothing from
+#' An error recorded for a response that held no structured data at all
 #'
-#' Carries a class of its own so that the schema-enforcement check in
-#' `all_required_missing()` can tell it from a request failure or a cut-off
-#' response. The distinction matters: here the endpoint did answer, and the
-#' answer was not the schema, which is precisely the evidence that check
-#' looks for; a request that never got an answer, or an answer the provider
-#' cut short, is not.
+#' Prose where JSON was asked for, or JSON that does not parse. Carries a
+#' class of its own so that the fallback decision in `structured_attempt()`
+#' can tell it from a request failure or a cut-off response. The distinction
+#' matters: here the endpoint did answer, and the answer was not the schema,
+#' which is precisely the evidence that decision reads; a request that never
+#' got an answer, or an answer the provider cut short, is not.
 #'
-#' @param message The message ellmer gave for the row.
+#' @param message What was wrong with the response.
 #'
 #' @return A condition inheriting from `simpleError`.
 #' @keywords internal
@@ -1321,41 +1092,6 @@ is_extraction_error <- function(e) {
 }
 
 
-#' Note when the provider does not guarantee schema enforcement
-#'
-#' Emitted once per session. The structured path is being trusted to return
-#' conforming output, and for anything on ellmer's generic OpenAI-compatible
-#' request path that trust is unverified: `strict = TRUE` is sent and may
-#' simply be ignored. Informational rather than a warning, because it describes
-#' a property of the endpoint, not a problem with this run.
-#'
-#' @param chat An [ellmer::Chat] object.
-#' @param model The model string, for the message.
-#'
-#' @return Invisibly `NULL`.
-#' @keywords internal
-#' @noRd
-warn_unenforced_schema <- function(chat, model) {
-  if (isTRUE(getOption("quallmer.quiet_schema_note", FALSE))) {
-    return(invisible(NULL))
-  }
-  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
-  if (is.null(provider) || provider_enforces_schema(provider)) {
-    return(invisible(NULL))
-  }
-
-  cli::cli_inform(
-    c(
-      "!" = "{.val {model}} is reached through an OpenAI-compatible endpoint, which may accept the output schema without enforcing it.",
-      "i" = "Non-conforming values arrive as {.val NA}, indistinguishable from missing data.",
-      "i" = "Use {.code structured = \"json\"} to validate each response against the codebook locally.",
-      "i" = "Silence this with {.code options(quallmer.quiet_schema_note = TRUE)}."
-    ),
-    .frequency = "once",
-    .frequency_id = "quallmer_schema_enforcement"
-  )
-  invisible(NULL)
-}
 
 
 #' Create a qlm_coded object (internal)
@@ -1614,27 +1350,5 @@ print.qlm_coded <- function(x, ...) {
 
 
 
-#' Did the provider reject every row of a structured result?
-#'
-#' On the structured path a rejected request arrives as a row whose `.error`
-#' is the HTTP condition, with every field `NA`. A run rejected in its
-#' entirety is misconfiguration, not a schema problem, and should be reported
-#' as such.
-#'
-#' @param results What the structured call returned.
-#'
-#' @return `TRUE` when every row carries an error with a status that will not
-#'   change on retry.
-#' @keywords internal
-#' @noRd
-all_rejected <- function(results) {
-  errors <- recorded_errors(results)
-  if (!length(errors)) {
-    return(FALSE)
-  }
-  all(vapply(
-    errors,
-    function(e) !is.null(e) && is_fatal_status(api_error_status(e)),
-    logical(1)
-  ))
-}
+
+

@@ -5,6 +5,35 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## Breaking changes
 
+* `qlm_code()` now validates every structured response against the codebook
+  schema before ellmer converts it to a row, on every provider and both
+  paths. A response that does not conform, whether a required field sent
+  as null or left out, a number sent as a string, a value outside its enum,
+  an array sent as an object, or an undeclared property, is now a failed
+  unit: its row is `NA`, its `.error` names the offending JSON path, and
+  `qlm_failures()` lists it for `qlm_backfill()` to re-code. Previously
+  such a response was converted regardless, so a missing scalar became a
+  silent `NA` with no `.error`, an extra property was dropped, and a
+  missing required array became the same empty cell as a valid empty one;
+  the "every required field is `NA`" heuristic caught only the wholesale
+  case, and only for scalar fields. The whole-run fallback of
+  `structured = "auto"` to JSON mode is now driven by the validator: it
+  fires when every response the provider completed fails validation, and
+  not when some do. The usage of a structured attempt the run fell back
+  from is carried into the JSON-mode result. The finish reason is read
+  from every structured response, so a response cut off at `max_tokens`,
+  withheld by a content filter or finished for an unrecognised reason is
+  recorded with that reason whether or not it parses, on any provider and
+  without a declared limit; the inference from token counts, and the
+  `params(max_tokens = )` it needed, are gone. A codebook whose schema
+  has a `type_array()` root or an opaque type such as
+  `type_from_schema()` is refused before a request is sent, since neither
+  can be validated or tabulated. The enforcement note for unverified
+  endpoints, and the `quallmer.quiet_schema_note` option that silenced
+  it, are gone: there is nothing to warn about now that every response is
+  checked. A run validated this way records `validation = "local"` in its
+  metadata (#140).
+
 * The `.id` column of a `qlm_coded` object must now be a key: unique and
   never missing. Every later operation merges on `.id`, and `qlm_compare()`
   and `qlm_validate()` silently formed a Cartesian product of repeated

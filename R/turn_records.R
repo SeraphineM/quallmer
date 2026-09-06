@@ -3,7 +3,7 @@
 #' Both coding paths end with one record per input: what the model answered,
 #' what the request cost, and why it failed if it did. The JSON path reads a
 #' list of chats from [ellmer::parallel_chat()]; the structured path reads
-#' the turns [structured_chat_turns()] returns. Either way the elements are
+#' the turns `structured_chat_turns()` returns. Either way the elements are
 #' the same three things: a turn (or a chat holding one), an error condition
 #' for a request the provider refused, or `NULL` for a request never sent
 #' after an earlier failure stopped the run.
@@ -78,9 +78,9 @@ turn_records <- function(results) {
 #' nothing more, so that validation sees a wrong type, an extra property or a
 #' missing array before conversion can hide it (#140).
 #'
-#' @param records What [turn_records()] returned.
+#' @param records What `turn_records()` returned.
 #' @param needs_wrapper Whether the answer arrives as `{"wrapper": <value>}`,
-#'   from [structured_needs_wrapper()].
+#'   from `structured_needs_wrapper()`.
 #'
 #' @return `records`, with `value` (a list, `NULL` where nothing could be
 #'   extracted) and `problem` (character, the extraction failure, `NA`
@@ -112,7 +112,7 @@ add_structured_values <- function(records, needs_wrapper = FALSE) {
 #' Extract the parsed JSON from one assistant turn
 #'
 #' @param turn An [ellmer::AssistantTurn].
-#' @param needs_wrapper As in [add_structured_values()].
+#' @param needs_wrapper As in `add_structured_values()`.
 #'
 #' @return A list with `ok`, and either `value` or `error`.
 #' @keywords internal
@@ -156,7 +156,7 @@ extract_structured_value <- function(turn, needs_wrapper = FALSE) {
 #' request that failed outright, so this never overrides a transport error.
 #' Only a completed response is checked against the schema.
 #'
-#' @param checked What [validate_structured_value()] returned for the parsed
+#' @param checked What `validate_structured_value()` returned for the parsed
 #'   value, or `NULL` when there was nothing to parse.
 #' @param problem The extraction or parse failure, `NA` when there was none.
 #' @param error The transport failure, `NA` when the request succeeded.
@@ -204,7 +204,7 @@ settle_response <- function(checked, problem, error, finish,
 #' reached it.
 #'
 #' @param message The failure message.
-#' @param stage,truncated As [settle_response()] returns them.
+#' @param stage,truncated As `settle_response()` returns them.
 #'
 #' @return A condition inheriting from `simpleError`.
 #' @keywords internal
@@ -258,7 +258,7 @@ is_schema_error <- function(e) {
 #'
 #' @param values A list of validated values, `NULL` for a failed unit.
 #' @param errors A list of conditions, `NULL` for a unit that succeeded.
-#' @param usage The usage matrix from [turn_records()], summed over attempts.
+#' @param usage The usage matrix from `turn_records()`, summed over attempts.
 #' @param schema The codebook schema.
 #' @param include_tokens,include_cost Whether to attach the usage columns.
 #'

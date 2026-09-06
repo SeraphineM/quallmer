@@ -31,7 +31,7 @@ validate_structured_value <- function(value, schema) {
 #' Returns the value unchanged; conversion happens once, after every valid
 #' record has passed the same deterministic checks. Signals with `stop()`
 #' rather than `cli::cli_abort()` because the condition is caught by
-#' [validate_structured_value()] and reported as a coding failure, not
+#' `validate_structured_value()` and reported as a coding failure, not
 #' raised to the user.
 #'
 #' Scalars are checked without coercion: `"3"` is not a number, `1` is not a
