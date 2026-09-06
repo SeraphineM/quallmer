@@ -863,14 +863,25 @@ structured_stub <- function(results = data.frame(score = 0.5), errors = NULL,
 
 json_stub <- function(calls = NULL) {
   function(x, codebook, model, chat_args, execution_args, batch, json_retries,
-           model_hint = NULL, ...) {
+           model_hint = NULL, prior_usage = NULL, ...) {
     if (!is.null(calls)) {
       calls$json <- TRUE
       calls$json_retries <- json_retries
       calls$model_hint <- model_hint
       calls$execution_args <- execution_args
+      calls$x <- x
+      calls$prior_usage <- prior_usage
     }
     results <- tibble::tibble(score = rep(0.99, length(x)))
+    # The usage columns the handler would add, so a merge has them to align
+    if (isTRUE(execution_args$include_tokens)) {
+      results$input_tokens <- rep(1, length(x))
+      results$output_tokens <- rep(1, length(x))
+      results$cached_input_tokens <- rep(0, length(x))
+    }
+    if (isTRUE(execution_args$include_cost)) {
+      results$cost <- rep(0.01, length(x))
+    }
     attr(results, "qlm_backend_meta") <- list(backend = "json_mode", n_invalid = 0)
     results
   }
@@ -960,6 +971,53 @@ test_that("structured = 'auto' falls back when every completed response fails va
   )
   expect_true(calls$json)
   expect_match(qlm_meta(result, type = "user")$fallback_reason, "\\$\\.score is required")
+})
+
+
+test_that("the JSON fallback re-codes only the units it can help, and keeps the rest", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+
+  # Every completed response is invalid, so the run falls back. The first
+  # unit was cut off at the output limit: JSON mode would hit the same
+  # limit, and a backfill would leave it alone, so it keeps its row. The
+  # refused request and the invalid response are re-coded.
+  turns <- list(
+    json_turn(string = '{"sco', tokens = c(10, 100, 0), cost = 0.4,
+              finish_reason = "max_tokens"),
+    request_error("HTTP 500 Internal Server Error.", 500L),
+    json_turn(string = '{"score": "high"}', tokens = c(10, 6, 0), cost = 0.2)
+  )
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = turns))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+
+  expect_warning(
+    coded <- f(c(cut = "long", refused = "b", invalid = "c"), structured_test_codebook(),
+               model = "openai_compatible/x", base_url = "https://example.com/v1",
+               include_tokens = TRUE, include_cost = TRUE),
+    "falling back to JSON mode"
+  )
+
+  # Only the eligible units reached the handler, with their own prior usage
+  expect_equal(names(calls$x), c("refused", "invalid"))
+  expect_equal(nrow(calls$prior_usage), 2L)
+  expect_equal(unname(calls$prior_usage[2, "cost"]), 0.2)
+
+  # The cut-off unit keeps its row, reason and usage; the others are re-coded
+  expect_equal(coded$.id, c("cut", "refused", "invalid"))
+  expect_equal(coded$score, c(NA, 0.99, 0.99))
+  expect_s3_class(coded$.error[[1]], "quallmer_truncation_error")
+  expect_null(coded$.error[[2]])
+  expect_null(coded$.error[[3]])
+  expect_equal(coded$output_tokens, c(100, 1, 1))
+  expect_equal(coded$cost, c(0.4, 0.01, 0.01))
+  expect_equal(names(coded)[names(coded) != ".id"],
+               c("score", ".error", "input_tokens", "output_tokens",
+                 "cached_input_tokens", "cost"))
+  expect_equal(qlm_failures(coded)$.id, "cut")
+  expect_equal(qlm_meta(coded, type = "object")$backend, "json_mode")
+  expect_equal(qlm_meta(coded, type = "user")$fallback_kept, 1L)
 })
 
 

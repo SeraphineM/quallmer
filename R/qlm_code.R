@@ -230,7 +230,11 @@
 #'     completed fails validation, which is what an endpoint that ignored
 #'     the schema produces. Requests the provider refused, and responses it
 #'     cut off or filtered, are left out of that judgement, since neither
-#'     says anything about the schema. A run in which some responses
+#'     says anything about the schema. The fallback re-codes the units JSON
+#'     mode can help: a response cut off at the output limit, or an input
+#'     rejected as longer than the context window, fails the same way on
+#'     any path, so those units keep the row, reason and usage the
+#'     structured attempt gave them. A run in which some responses
 #'     conform keeps them, and records the rest as failed units: the
 #'     intermittent kind of non-enforcement is caught per unit, not by
 #'     re-coding the corpus.}
@@ -717,8 +721,17 @@ qlm_code <- function(x, codebook, model, ...,
 
   # ---- JSON mode with local validation ------------------------------------
   if (is.null(results)) {
-    results <- code_handler_json(
-      x = x,
+    # A fallback from an attempt that came back re-codes only the units JSON
+    # mode can help. A response cut off at the output limit, or an input
+    # rejected as longer than the context window, fails the same way on any
+    # path, so those units keep the row the structured attempt gave them,
+    # with its reason and usage, as a backfill would leave them alone
+    retry <- rep(TRUE, length(x))
+    if (isTRUE(attempt$invalid) && !is.null(attempt$value)) {
+      retry <- !is_terminal_failure(recorded_errors(attempt$value))
+    }
+    coded <- code_handler_json(
+      x = x[retry],
       codebook = codebook,
       model = model,
       chat_args = chat_args,
@@ -728,14 +741,20 @@ qlm_code <- function(x, codebook, model, ...,
       model_hint = model_hint,
       cost_message = is.null(attempt) && is.null(prices),
       # What the structured attempt spent is part of what the run cost
-      prior_usage = attempt$usage
+      prior_usage = attempt$usage[retry, , drop = FALSE]
     )
-    backend_meta <- attr(results, "qlm_backend_meta") %||% list()
-    attr(results, "qlm_backend_meta") <- NULL
+    backend_meta <- attr(coded, "qlm_backend_meta") %||% list()
+    attr(coded, "qlm_backend_meta") <- NULL
     if (is.null(unpriced)) {
       unpriced <- backend_meta$unpriced
     }
     backend_meta$unpriced <- NULL
+    results <- if (all(retry)) {
+      coded
+    } else {
+      backend_meta$fallback_kept <- sum(!retry)
+      merge_fallback_rows(attempt$value, coded, retry)
+    }
   }
 
   backend_meta$structured <- structured
@@ -959,6 +978,30 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   attempt$unpriced <- unpriced
   attempt$registered <- capability$registered
   attempt
+}
+
+
+#' Put the rows a fallback re-coded back among the rows it kept
+#'
+#' @param kept The structured attempt's table, one row per unit.
+#' @param coded The JSON handler's table for the units in `retry`.
+#' @param retry Which rows of `kept` `coded` replaces.
+#'
+#' @return `kept` with those rows replaced, in ellmer's column order.
+#' @keywords internal
+#' @noRd
+merge_fallback_rows <- function(kept, coded, retry) {
+  if (!".error" %in% names(kept)) {
+    kept$.error <- vector("list", nrow(kept))
+  }
+  if (!".error" %in% names(coded)) {
+    coded$.error <- vector("list", nrow(coded))
+  }
+  out <- vctrs::vec_assign(kept, which(retry), coded[names(kept)])
+  trailing <- intersect(
+    c("input_tokens", "output_tokens", "cached_input_tokens", "cost"), names(out)
+  )
+  out[c(setdiff(names(out), c(".error", trailing)), ".error", trailing)]
 }
 
 

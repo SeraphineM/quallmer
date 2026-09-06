@@ -25,16 +25,33 @@ test_that("turn_records reads turns, chats, errors and absent results alike", {
   expect_equal(records$status, c(NA, NA, 429L, NA))
   expect_equal(records$finish, c("success", "success", NA, NA))
   expect_equal(unname(records$usage[1, ]), c(10, 5, 2, 0.004))
+  # Refused before generation: nothing was billed
   expect_equal(unname(records$usage[3, ]), c(0, 0, 0, 0))
+  # Never sent: nothing was billed
   expect_equal(unname(records$usage[4, ]), c(0, 0, 0, 0))
 })
 
-test_that("turn_records keeps unknown usage as NA and a refused request at zero", {
+test_that("turn_records records usage as NA where the outcome of a request is unknown", {
   unknown <- ellmer::AssistantTurn(list(ellmer::ContentText("x")))
-  records <- turn_records(list(unknown, request_error()))
+  timeout <- structure(
+    simpleError("Timeout was reached after request upload"),
+    class = c("httr2_failure", "httr2_error", "error", "condition")
+  )
+  records <- turn_records(list(
+    unknown, timeout, request_error("HTTP 500 Internal Server Error.", 500L),
+    request_error("HTTP 429 Too Many Requests.", 429L), simpleError("boom"), NULL
+  ))
 
+  # The provider reported nothing
   expect_true(all(is.na(records$usage[1, ])))
-  expect_equal(unname(records$usage[2, ]), c(0, 0, 0, 0))
+  # A timeout after upload, a server error, an unexplained failure: the
+  # request may have been generated and billed
+  expect_true(all(is.na(records$usage[2, ])))
+  expect_true(all(is.na(records$usage[3, ])))
+  expect_true(all(is.na(records$usage[5, ])))
+  # Refused with a 4xx, or never sent: established non-execution
+  expect_equal(unname(records$usage[4, ]), c(0, 0, 0, 0))
+  expect_equal(unname(records$usage[6, ]), c(0, 0, 0, 0))
 })
 
 test_that("turn_records has nothing to say about an empty run", {
@@ -266,8 +283,9 @@ test_that("structured_attempt keeps valid rows beside failed ones, with their us
   expect_equal(classes, c("ok", "quallmer_schema_error", "simpleError",
                           "quallmer_extraction_error", "quallmer_truncation_error",
                           "simpleError"))
-  expect_equal(out$output_tokens, c(5, 6, 0, 7, 100, 0))
-  expect_equal(out$cost, c(0.1, 0.2, 0, 0.3, 0.4, 0))
+  # The server error may have been billed: unknown, not zero
+  expect_equal(out$output_tokens, c(5, 6, NA, 7, 100, 0))
+  expect_equal(out$cost, c(0.1, 0.2, NA, 0.3, 0.4, 0))
   expect_identical(attempt$usage[, "cost"], out$cost)
 })
 

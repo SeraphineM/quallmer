@@ -202,7 +202,9 @@ test_that("json_chat_turns captures the reason a request failed", {
   expect_equal(result$error[[2]], "the request failed")
   expect_true(all(is.na(result$text)))
   expect_true(all(is.na(result$finish)))
-  expect_equal(sum(result$usage), 0)
+  # An unexplained failure may have been billed; a request never sent was not
+  expect_true(all(is.na(result$usage[1, ])))
+  expect_equal(unname(result$usage[2, ]), c(0, 0, 0, 0))
 })
 
 test_that("json_chat_turns keeps the finish reason of each turn", {

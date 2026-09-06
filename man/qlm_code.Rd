@@ -278,7 +278,11 @@ the whole run if it errors, or if every response the provider
 completed fails validation, which is what an endpoint that ignored
 the schema produces. Requests the provider refused, and responses it
 cut off or filtered, are left out of that judgement, since neither
-says anything about the schema. A run in which some responses
+says anything about the schema. The fallback re-codes the units JSON
+mode can help: a response cut off at the output limit, or an input
+rejected as longer than the context window, fails the same way on
+any path, so those units keep the row, reason and usage the
+structured attempt gave them. A run in which some responses
 conform keeps them, and records the rest as failed units: the
 intermittent kind of non-enforcement is caught per unit, not by
 re-coding the corpus.}

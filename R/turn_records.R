@@ -16,13 +16,21 @@
 #' @param results A list of [ellmer::Chat] objects, [ellmer::AssistantTurn]s,
 #'   error conditions and `NULL`s, one per input.
 #'
+#' Usage for a failed request is zero only where non-execution is
+#' established: a request never sent, or one the provider refused with a
+#' 4xx status before generating anything. A timeout, a connection failure
+#' or a 5xx answer says nothing about whether generation, and billing,
+#' happened, so those stay `NA`, and a total that includes them stays `NA`
+#' rather than understating the run.
+#'
 #' @return A list of parallel vectors, each indexed as `results`: `turn`
 #'   (list of turns, `NULL` where there is none), `text` (character), `usage`
 #'   (numeric matrix of input, output and cached input tokens and cost; zero
-#'   for a request that was refused or never sent, `NA` where the provider
-#'   reported nothing), `error` (character, `NA` where the request
-#'   succeeded), `status` (integer HTTP status, `NA` when the failure was
-#'   not an HTTP error) and `finish` (character finish reason).
+#'   for a request never sent or refused before generation, `NA` where the
+#'   outcome is unknown or the provider reported nothing), `error`
+#'   (character, `NA` where the request succeeded), `status` (integer HTTP
+#'   status, `NA` when the failure was not an HTTP error) and `finish`
+#'   (character finish reason).
 #' @keywords internal
 #' @noRd
 turn_records <- function(results) {
@@ -44,6 +52,7 @@ turn_records <- function(results) {
     if (is.null(item) || inherits(item, "error")) {
       error[[i]] <- api_error_message(item)
       status[[i]] <- api_error_status(item)
+      usage[i, ] <- failed_request_usage(item)
       next
     }
     # A chat from parallel_chat() holds its turn; anything else is one
@@ -52,6 +61,7 @@ turn_records <- function(results) {
       if (is.null(item) || inherits(item, "error")) {
         error[[i]] <- api_error_message(item)
         status[[i]] <- api_error_status(item)
+        usage[i, ] <- failed_request_usage(item)
         next
       }
     }
@@ -67,6 +77,22 @@ turn_records <- function(results) {
 
   list(turn = turn, text = text, usage = usage, error = error,
        status = status, finish = finish)
+}
+
+
+#' Usage to record for a request that produced no turn
+#'
+#' @param item `NULL` for a request never sent, or the error condition.
+#'
+#' @return Zero when non-execution is established, `NA` otherwise.
+#' @keywords internal
+#' @noRd
+failed_request_usage <- function(item) {
+  if (is.null(item)) {
+    return(0)
+  }
+  status <- api_error_status(item)
+  if (!is.na(status) && status >= 400L && status < 500L) 0 else NA_real_
 }
 
 
