@@ -129,12 +129,21 @@ transcription_response_is_error <- function(resp) {
 }
 
 #' The transcript in a response body, or `NULL`
+#'
+#' A blank string is no transcript, as on the chat route: a recording the
+#' model heard nothing in must be recorded as a failure, not as coded
+#' silence.
+#'
 #' @keywords internal
 #' @noRd
 transcription_text <- function(resp) {
   json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
   text <- json$text
-  if (is.character(text) && length(text) == 1L && !is.na(text)) text else NULL
+  if (is.character(text) && length(text) == 1L && !is.na(text) && nzchar(trimws(text))) {
+    text
+  } else {
+    NULL
+  }
 }
 
 #' The usage in a response body, or `NULL`

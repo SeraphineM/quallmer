@@ -230,6 +230,18 @@ test_that("a response without a transcript is a failure of that unit, under ever
   expect_equal(attr(out, "provenance")$status, c("ok", "failed", "unsubmitted"))
   expect_length(seen$reqs, 2)
   expect_error(qlm_transcribe(c(a, b, c_), on_error = "stop"), "no transcript text")
+
+  # A blank transcript is no transcript either, under every policy
+  seen <- mock_transcription_endpoint(fixture_responder(blank = b))
+  expect_warning(out <- qlm_transcribe(c(a, b, c_)), "carried no transcript text")
+  prov <- attr(out, "provenance")
+  expect_equal(prov$status, c("ok", "failed", "ok"))
+  expect_true(is.na(out[[2]]))
+  expect_equal(prov$usage[[2]], list(type = "duration", seconds = 2L))
+  seen <- mock_transcription_endpoint(fixture_responder(blank = b))
+  expect_warning(out <- qlm_transcribe(c(a, b, c_), on_error = "return"), "not submitted")
+  expect_equal(attr(out, "provenance")$status, c("ok", "failed", "unsubmitted"))
+  expect_error(qlm_transcribe(c(a, b, c_), on_error = "stop"), "no transcript text")
 })
 
 

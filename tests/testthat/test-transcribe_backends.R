@@ -26,6 +26,11 @@ test_that("transcription_error_body reads the provider's sentence, and nothing e
   expect_equal(transcription_error_body(empty), "the response carried no transcript text")
   expect_false(transcription_response_is_error(httr2::response_json(body = transcription_fixture("whisper_1_cn"))))
   expect_true(transcription_response_is_error(resp))
+  # Empty and whitespace-only text are no transcript
+  expect_true(transcription_response_is_error(httr2::response_json(body = list(text = ""))))
+  expect_true(transcription_response_is_error(httr2::response_json(body = list(text = " \t\n"))))
+  expect_null(transcription_text(httr2::response_json(body = list(text = ""))))
+  expect_equal(transcription_text(httr2::response_json(body = list(text = " a "))), " a ")
 })
 
 

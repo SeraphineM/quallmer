@@ -26,8 +26,9 @@ mock_transcription_endpoint <- function(respond = fixture_responder(), seen = ne
 # Answers every request with the gpt-4o-mini-transcribe fixture for the
 # American clip, except the paths in `fail`, which get the captured 404
 # error body under `status`, and the paths in `empty`, which get a body
-# with no transcript.
-fixture_responder <- function(fail = character(), status = 500L, empty = character()) {
+# with no transcript, and the paths in `blank`, which get whitespace for one.
+fixture_responder <- function(fail = character(), status = 500L, empty = character(),
+                              blank = character()) {
   function(req) {
     path <- req$body$data$file$path
     if (basename(path) %in% basename(fail)) {
@@ -35,6 +36,9 @@ fixture_responder <- function(fail = character(), status = 500L, empty = charact
     }
     if (basename(path) %in% basename(empty)) {
       return(httr2::response_json(body = list(usage = list(type = "duration", seconds = 3))))
+    }
+    if (basename(path) %in% basename(blank)) {
+      return(httr2::response_json(body = list(text = "  \n ", usage = list(type = "duration", seconds = 2))))
     }
     httr2::response_json(body = transcription_fixture("gpt_4o_mini_transcribe_us"))
   }
