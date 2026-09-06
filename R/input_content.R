@@ -49,15 +49,26 @@ audio_extensions <- function() {
 check_file_inputs <- function(x, input_type, call = rlang::caller_env()) {
   if (!is.character(x)) {
     cli::cli_abort(
-      "This codebook expects {input_type} file paths (a character vector).",
+      "This codebook expects {input_type} file paths{if (input_type == 'image') ' or URLs' else ''} (a character vector).",
       call = call
     )
   }
-  missing <- is.na(x) | !file.exists(x)
+  # An image may be given as a URL, which the provider fetches; a URL is
+  # recognised by its scheme and is not a file here (#177)
+  is_path <- if (input_type == "image") !is_image_url(x) else rep(TRUE, length(x))
+  missing <- is_path & (is.na(x) | !file.exists(x) | dir.exists(x))
   if (any(missing)) {
+    hint <- if (input_type == "image") {
+      c(
+        "i" = "Every element of {.arg x} must be the path of an existing file or a URL.",
+        "i" = "A URL is recognised by its scheme: {.code http://}, {.code https://} or {.code data:}."
+      )
+    } else {
+      c("i" = "Every element of {.arg x} must be the path of an existing file.")
+    }
     cli::cli_abort(c(
       "{sum(missing)} {input_type} {cli::qty(sum(missing))}file{?s} {?does/do} not exist: {.path {x[missing]}}.",
-      "i" = "Every element of {.arg x} must be the path of an existing file."
+      hint
     ), call = call)
   }
   if (input_type == "audio") {
@@ -303,17 +314,21 @@ check_input_capability <- function(input_type, chat, model, call = rlang::caller
 #' request is made.
 #'
 #' @param x The input vector, already checked.
-#' @param input_type The codebook's input type.
+#' @param codebook The codebook: its `input_type` chooses the route, and for
+#'   images its `image_file_resize` is applied to each file and its
+#'   `image_url_detail` to each URL.
 #' @param chat The chat the run will use; its provider receives the uploads.
 #' @param call The calling environment, for the error.
 #'
 #' @return A list of prompts, one per element of `x`.
 #' @keywords internal
 #' @noRd
-as_input_content <- function(x, input_type, chat, call = rlang::caller_env()) {
+as_input_content <- function(x, codebook, chat, call = rlang::caller_env()) {
+  input_type <- codebook$input_type
   switch(input_type,
     text = as.list(x),
-    image = lapply(x, ellmer::content_image_file),
+    image = as_image_content(x, codebook$image_file_resize,
+                             codebook$image_url_detail %||% "auto"),
     audio = upload_inputs(x, chat, input_type, call = call),
     cli::cli_abort("Unknown input type {.val {input_type}}.", .internal = TRUE)
   )
@@ -396,11 +411,18 @@ upload_input_file <- function(chat, path) {
 #' @keywords internal
 #' @noRd
 file_provenance <- function(x, ids) {
+  # A URL has no bytes here to size or hash: the provider fetches it, so
+  # the record keeps the URL itself and leaves both NA (#177)
+  is_path <- !is_image_url(x)
+  size <- rep(NA_real_, length(x))
+  size[is_path] <- as.numeric(file.size(x[is_path]))
+  sha256 <- rep(NA_character_, length(x))
+  sha256[is_path] <- vapply(x[is_path], hash_file, character(1), USE.NAMES = FALSE)
   data.frame(
     .id = as.character(ids),
-    file = basename(x),
-    size = as.numeric(file.size(x)),
-    sha256 = vapply(x, hash_file, character(1), USE.NAMES = FALSE),
+    file = ifelse(is_path, basename(x), x),
+    size = size,
+    sha256 = sha256,
     stringsAsFactors = FALSE
   )
 }
@@ -437,6 +459,14 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
   } else {
     ids <- as.character(ids)
     paths <- inputs_by_id(x, ids)
+  }
+
+  # A URL was never a file on this machine, so there is nothing to verify
+  is_path <- !is_image_url(paths)
+  ids <- ids[is_path]
+  paths <- paths[is_path]
+  if (!length(paths)) {
+    return(invisible(NULL))
   }
 
   recorded <- meta_attr$user$input_files

@@ -8,8 +8,9 @@
 #' [ellmer::parallel_chat_structured()], or [ellmer::batch_chat_structured()]
 #' based on their names.
 #'
-#' @param x character; the input data: texts for a text codebook, or file
-#'   paths for an image or audio codebook (see the section on audio input).
+#' @param x character; the input data: texts for a text codebook, file
+#'   paths or URLs for an image codebook (see the section on image input), or
+#'   file paths for an audio codebook (see the section on audio input).
 #'   Named vectors will use names
 #'   as identifiers in the output; unnamed vectors will use sequential integers.
 #'   The identifiers become the `.id` column, on which every later operation
@@ -91,6 +92,33 @@
 #' function. Set `verbose = TRUE` to see progress messages during coding.
 #' Retry logic for API failures should be configured through ellmer's options;
 #' what a failure does to the rest of a parallel run is `on_error`.
+#'
+#' @section Image input:
+#'
+#' An image codebook codes one image per element of `x`. A file path is read
+#' and sent inline, after being resized as the codebook's `image_file_resize`
+#' says: `"high"` by default, which fits the image within 2000x768 or 768x2000
+#' pixels, `"low"` for 512x512, `"none"` to send the file as it is, or a
+#' magick geometry string. Anything but `"none"` needs the \pkg{magick}
+#' package, which is checked here before any request is sent. The resolution
+#' is part of the codebook because it is part of the measurement: a poster
+#' whose small print is legible at one size is not at another, and a
+#' replication should read the image the original run read. Codebooks saved
+#' before the setting existed are read as `"low"`, which is what they were
+#' coded at. See [qlm_codebook()].
+#'
+#' A URL is passed to the provider as it is, through
+#' [ellmer::content_image_url()], so `image_file_resize` does not apply to
+#' it; what the provider does with a remote image is its own affair, and not
+#' every provider fetches URLs. The codebook's `image_url_detail` asks the
+#' provider for `"low"` or `"high"` detail on such an image, where the
+#' provider reads that field: OpenAI and OpenAI-compatible providers do,
+#' others ignore it, and ellmer forwards it only from the version that
+#' includes <https://github.com/tidyverse/ellmer/pull/1133>. When a value
+#' other than `"auto"` cannot take effect, `qlm_code()` says so before the
+#' run rather than recording a setting that was not applied. A path that
+#' does not exist is refused before anything is sent, so a URL typed without
+#' its scheme fails here with the path named, not inside the request.
 #'
 #' @section Provider-specific parameters:
 #'
@@ -418,8 +446,10 @@ qlm_code <- function(x, codebook, model, ...,
     cli::cli_abort("{.arg json_retries} must be a single non-negative integer.")
   }
 
-  # Accept both qlm_codebook and task objects, converting if needed
-  if (inherits(codebook, "task") && !inherits(codebook, "qlm_codebook")) {
+  # Accept both qlm_codebook and task objects, converting if needed. A
+  # qlm_codebook goes through too: one saved before a field existed is read
+  # with that field filled, see fill_codebook_fields()
+  if (inherits(codebook, "task")) {
     codebook <- as_qlm_codebook(codebook)
   }
 
@@ -440,6 +470,9 @@ qlm_code <- function(x, codebook, model, ...,
   }
   if (codebook$input_type %in% file_input_types()) {
     check_file_inputs(x, codebook$input_type)
+  }
+  if (codebook$input_type == "image") {
+    check_image_resize(codebook, x)
   }
   # Audio is uploaded, and an upload gets a new reference every time, so a
   # batch job could never be resumed against ellmer's prompt-keyed cache.
@@ -825,6 +858,13 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   # locally instead, and say why. `structured = "structured"` remains the way
   # to ask for provider enforcement regardless.
   provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+
+  # A URL detail setting that will not reach the provider is said here,
+  # before anything is sent. Not tied to `cost_message`: supplying `prices`
+  # silences the cost note, and must not silence this (#177)
+  if (codebook$input_type == "image") {
+    say_image_url_detail(codebook, x, chat)
+  }
   undetectable <- allow_skip &&
     !is.null(provider) &&
     !provider_enforces_schema(provider) &&
@@ -847,7 +887,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
 
   # Every upload completes here, before the first request: either all the
   # inputs are ready or nothing is spent. Text and images are built inline.
-  prompts <- as_input_content(x, codebook$input_type, chat)
+  prompts <- as_input_content(x, codebook, chat)
 
   # Whether a response ran into a declared output limit is knowable only from
   # the token counts, which ellmer attaches on request; the finish reason

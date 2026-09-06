@@ -66,6 +66,131 @@ test_that("qlm_codebook validates input_type", {
 })
 
 
+test_that("qlm_codebook stores image_file_resize on image codebooks only (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+
+  # The default is resolved and stored, so every image codebook says what
+  # resolution it codes at
+  cb_image <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")
+  expect_identical(cb_image$image_file_resize, "high")
+
+  cb_low <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                         image_file_resize = "low")
+  expect_identical(cb_low$image_file_resize, "low")
+
+  # A text codebook carries no value at all
+  cb_text <- qlm_codebook("Test", "Prompt", type_obj)
+  expect_false("image_file_resize" %in% names(cb_text))
+  expect_null(cb_text$image_file_resize)
+
+  # and refuses one rather than storing it unused
+  expect_error(
+    qlm_codebook("Test", "Prompt", type_obj, image_file_resize = "high"),
+    "applies to image codebooks only"
+  )
+})
+
+
+test_that("qlm_codebook validates image_file_resize (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  make <- function(resize) {
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                 image_file_resize = resize)
+  }
+
+  for (keyword in c("high", "low", "none")) {
+    expect_identical(make(keyword)$image_file_resize, keyword)
+  }
+  # magick geometry strings, as ellmer accepts
+  for (geometry in c("1024x1024>", "50%", "800x", "x600!", "1024x1024",
+                     "300x200+10+10")) {
+    expect_identical(make(geometry)$image_file_resize, geometry)
+  }
+
+  for (bad in list("medium", "", NA_character_, 512, c("low", "high"),
+                   "big>", TRUE)) {
+    expect_error(make(bad), "must be one of")
+  }
+})
+
+
+test_that("qlm_codebook stores image_url_detail on image codebooks only (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  make <- function(...) {
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "image", ...)
+  }
+
+  # Resolved to "auto" so that every image codebook says what it asks for
+  expect_identical(make()$image_url_detail, "auto")
+  for (detail in c("auto", "low", "high")) {
+    expect_identical(make(image_url_detail = detail)$image_url_detail, detail)
+  }
+  for (bad in list("medium", "", NA_character_, 1, c("low", "high"))) {
+    expect_error(make(image_url_detail = bad), "must be one of")
+  }
+
+  cb_text <- qlm_codebook("Test", "Prompt", type_obj)
+  expect_false("image_url_detail" %in% names(cb_text))
+  expect_error(
+    qlm_codebook("Test", "Prompt", type_obj, image_url_detail = "high"),
+    "applies to image codebooks only"
+  )
+  expect_error(
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "audio",
+                 image_url_detail = "high"),
+    'input_type = "audio"'
+  )
+
+  output <- capture.output(print(make(image_url_detail = "high")))
+  expect_true(any(grepl("URL detail:   high", output, fixed = TRUE)))
+  expect_false(any(grepl("URL detail", capture.output(print(cb_text)))))
+})
+
+
+test_that("codebooks saved before image_file_resize existed read as \"low\" (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+
+  # An image codebook from before the field existed was coded at ellmer's
+  # default, so that is what it is read as, not the current default
+  old_image <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")
+  old_image$image_file_resize <- NULL
+  old_image$image_url_detail <- NULL
+  expect_identical(as_qlm_codebook(old_image)$image_file_resize, "low")
+  # and the provider chose the URL detail, which is what "auto" says
+  expect_identical(as_qlm_codebook(old_image)$image_url_detail, "auto")
+
+  # A value that is present is kept
+  cb_high <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")
+  expect_identical(as_qlm_codebook(cb_high)$image_file_resize, "high")
+
+  # A text codebook gains nothing
+  cb_text <- qlm_codebook("Test", "Prompt", type_obj)
+  expect_null(as_qlm_codebook(cb_text)$image_file_resize)
+
+  # task() objects predate the field too
+  old_task <- suppressWarnings(
+    task("Test", "Prompt", type_obj, input_type = "image")
+  )
+  expect_identical(as_qlm_codebook(old_task)$image_file_resize, "low")
+  old_text_task <- suppressWarnings(task("Test", "Prompt", type_obj))
+  expect_null(as_qlm_codebook(old_text_task)$image_file_resize)
+})
+
+
+test_that("print.qlm_codebook shows the image resize setting (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+
+  cb_image <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                           image_file_resize = "1024x1024>")
+  output <- capture.output(print(cb_image))
+  expect_true(any(grepl("Image resize: 1024x1024>", output, fixed = TRUE)))
+
+  cb_text <- qlm_codebook("Test", "Prompt", type_obj)
+  output <- capture.output(print(cb_text))
+  expect_false(any(grepl("Image resize", output)))
+})
+
+
 test_that("as_qlm_codebook converts task objects", {
   skip_if_not_installed("ellmer")
 

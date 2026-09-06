@@ -464,15 +464,32 @@ generate_trail_report <- function(trail, file) {
   lines <- c(lines, "Codebooks used in this analysis:")
   lines <- c(lines, "")
 
+  # One entry per distinct codebook, not per name: two runs may share a name
+  # and differ in a setting, such as the resolution images were coded at, and
+  # the second must not vanish behind the first (#177)
   codebooks_seen <- list()
+  variants_of <- list()
   for (run in trail$runs) {
     if (!is.null(run$codebook) && !is.null(run$codebook$name)) {
       cb_name <- run$codebook$name
-      if (is.null(codebooks_seen[[cb_name]])) {
-        codebooks_seen[[cb_name]] <- run$codebook
+      cb_key <- digest::digest(fill_codebook_fields(run$codebook))
+      if (is.null(codebooks_seen[[cb_key]])) {
+        codebooks_seen[[cb_key]] <- run$codebook
+        variants_of[[cb_name]] <- (variants_of[[cb_name]] %||% 0L) + 1L
+        heading <- if (variants_of[[cb_name]] > 1L) {
+          paste0(cb_name, " (variant ", variants_of[[cb_name]], ")")
+        } else {
+          cb_name
+        }
 
-        lines <- c(lines, paste0("### ", cb_name))
+        lines <- c(lines, paste0("### ", heading))
         lines <- c(lines, "")
+
+        input_line <- codebook_input_line(run$codebook)
+        if (!is.null(input_line)) {
+          lines <- c(lines, input_line)
+          lines <- c(lines, "")
+        }
 
         if (!is.null(run$codebook$instructions)) {
           lines <- c(lines, "**Instructions:**")
@@ -548,9 +565,14 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, paste0("**Cost (", names(pass_notes)[i], "):** ", pass_notes[[i]]))
     }
 
-    # Codebook reference
+    # Codebook reference, with the image settings this run coded at: they
+    # are per run, since a codebook of the same name may differ between runs
     if (!is.null(run$codebook$name)) {
       lines <- c(lines, paste("**Codebook:**", run$codebook$name))
+      input_line <- codebook_input_line(run$codebook)
+      if (!is.null(input_line)) {
+        lines <- c(lines, input_line)
+      }
     }
 
     # Units coded
@@ -600,7 +622,11 @@ generate_trail_report <- function(trail, file) {
         lines <- c(lines, paste0(
           "| ", f$.id, " | ", f$file, " | ",
           if (is.na(f$size)) "" else format(f$size, big.mark = ",", scientific = FALSE),
-          " | ", if (is.na(f$sha256)) "not recorded" else paste0("`", f$sha256, "`"), " |"
+          " | ",
+          if (is_image_url(f$file)) "fetched by the provider"
+          else if (is.na(f$sha256)) "not recorded"
+          else paste0("`", f$sha256, "`"),
+          " |"
         ))
       }
       lines <- c(lines, "")
@@ -967,6 +993,28 @@ generate_trail_report <- function(trail, file) {
   writeLines(lines, file)
 
   invisible(file)
+}
+
+#' The image settings a codebook codes at, as one report line
+#'
+#' The resolution an image was coded at is part of the instrument; a
+#' codebook saved before the fields existed was coded at "low" with the
+#' provider choosing the URL detail (#177).
+#'
+#' @param codebook A codebook, as stored on a run.
+#' @return A string, or `NULL` for a codebook that takes no images.
+#' @keywords internal
+#' @noRd
+codebook_input_line <- function(codebook) {
+  filled <- fill_codebook_fields(codebook)
+  if (is.null(filled$image_file_resize)) {
+    return(NULL)
+  }
+  paste0(
+    "**Input:** image files, resized with `image_file_resize = \"",
+    filled$image_file_resize, "\"`; image URLs with `image_url_detail = \"",
+    filled$image_url_detail, "\"`"
+  )
 }
 
 

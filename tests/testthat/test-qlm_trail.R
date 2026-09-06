@@ -609,6 +609,76 @@ qlm_code_call <- function(content, run_name = "run1") {
 }
 
 
+test_that("qlm_trail() report records the image resolution a codebook codes at (#177)", {
+  coded <- trail_params_fixture(list(name = "openai/gpt-4o"))
+  attr(coded, "run")$codebook <- list(
+    name = "posters", instructions = "Read the posters",
+    input_type = "image", image_file_resize = "1024x1024>",
+    image_url_detail = "high"
+  )
+  path <- file.path(tempdir(), "test_trail_resize")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  expect_true(any(grepl(
+    '**Input:** image files, resized with `image_file_resize = "1024x1024>"`; image URLs with `image_url_detail = "high"`',
+    content, fixed = TRUE
+  )))
+
+  # A run saved before the field existed was coded at "low", and says so
+  attr(coded, "run")$codebook$image_file_resize <- NULL
+  attr(coded, "run")$codebook$image_url_detail <- NULL
+  qlm_trail(coded, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+  expect_true(any(grepl('`image_file_resize = "low"`; image URLs with `image_url_detail = "auto"`', content, fixed = TRUE)))
+
+  # A text codebook has no such line
+  content <- trail_params_report(list(name = "openai/gpt-4o"))
+  expect_false(any(grepl("**Input:**", content, fixed = TRUE)))
+})
+
+
+test_that("qlm_trail() report keeps apart same-named codebooks that differ in image settings (#177)", {
+  low <- trail_params_fixture(list(name = "openai/gpt-4o"), name = "low_run")
+  attr(low, "run")$codebook <- list(
+    name = "posters", instructions = "Read the posters",
+    input_type = "image", image_file_resize = "low", image_url_detail = "auto"
+  )
+  high <- trail_params_fixture(list(name = "openai/gpt-4o"), name = "high_run")
+  attr(high, "run")$codebook <- list(
+    name = "posters", instructions = "Read the posters",
+    input_type = "image", image_file_resize = "high", image_url_detail = "auto"
+  )
+  path <- file.path(tempdir(), "test_trail_variants")
+  withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
+  qlm_trail(low, high, path = path)
+  content <- readLines(paste0(path, ".qmd"))
+
+  # Both settings are reported, under the instrument and under each run
+  expect_length(grep('image_file_resize = "low"', content, fixed = TRUE), 2L)
+  expect_length(grep('image_file_resize = "high"', content, fixed = TRUE), 2L)
+  expect_true(any(grepl("^### posters$", content)))
+  expect_true(any(grepl("^### posters \\(variant 2\\)$", content)))
+  # and each run's own line follows its codebook reference
+  run_lines <- grep("^\\*\\*Codebook:\\*\\* posters$", content)
+  expect_length(run_lines, 2L)
+  expect_true(grepl('"low"', content[run_lines[1] + 1L], fixed = TRUE))
+  expect_true(grepl('"high"', content[run_lines[2] + 1L], fixed = TRUE))
+
+  # Identical codebooks under two runs are still one entry
+  again <- trail_params_fixture(list(name = "openai/gpt-4o"), name = "low_again")
+  attr(again, "run")$codebook <- attr(low, "run")$codebook
+  path2 <- file.path(tempdir(), "test_trail_same_codebook")
+  withr::defer(unlink(paste0(path2, c(".rds", ".qmd"))))
+  qlm_trail(low, again, path = path2)
+  content <- readLines(paste0(path2, ".qmd"))
+  expect_false(any(grepl("(variant ", content, fixed = TRUE)))
+  expect_length(grep("^### posters$", content), 1L)
+  expect_length(grep("^\\*\\*Codebook:\\*\\* posters$", content), 2L)
+})
+
+
 test_that("qlm_trail() report reads sampling settings from chat_args$params (#127)", {
   content <- trail_params_report(list(
     name = "openai/gpt-4o-mini",

@@ -402,7 +402,7 @@ test_that("the same holds for an image codebook, which used to reach the JSON ha
   )), png)
   image_codebook <- qlm_codebook(
     "Image", "Describe.", ellmer::type_object(x = ellmer::type_string("x")),
-    input_type = "image"
+    input_type = "image", image_file_resize = "none"
   )
   calls <- new.env()
   withr::local_envvar(c(OPENAI_API_KEY = "test"))
@@ -490,9 +490,74 @@ test_that("a run that relied on a registration needs it again in this session", 
 })
 
 
+test_that("check_file_inputs lets an image be a URL, and only an image (#177)", {
+  png <- withr::local_tempfile(fileext = ".png")
+  writeLines("", png)
+  urls <- c("https://example.org/a.jpg", "http://example.org/b.png",
+            "data:image/png;base64,AAAA")
+
+  expect_invisible(check_file_inputs(c(png, urls), "image"))
+  # A URL without its scheme is a path, and is named
+  expect_error(
+    check_file_inputs(c(png, "example.org/a.jpg"), "image"),
+    "1 image file does not exist.*example.org/a.jpg.*or a URL"
+  )
+  expect_error(check_file_inputs(123, "image"), "image file paths or URLs")
+  # Audio is uploaded from disk, so a URL is a missing file there
+  expect_error(check_file_inputs(urls[1], "audio"), "1 audio file does not exist")
+})
+
+
+test_that("file provenance leaves a URL unsized and unhashed (#177)", {
+  png <- withr::local_tempfile(fileext = ".png")
+  writeLines("", png)
+  url <- "https://example.org/a.jpg"
+
+  table <- file_provenance(c(png, url), c("a", "b"))
+  expect_equal(table$file, c(basename(png), url))
+  expect_equal(table$sha256, c(hash_file(png), NA_character_))
+  expect_true(is.na(table$size[2]))
+  expect_false(is.na(table$size[1]))
+})
+
+
+test_that("verify_input_files skips URLs and checks the files beside them (#177)", {
+  png <- withr::local_tempfile(fileext = ".png")
+  writeLines("v1", png)
+  url <- "https://example.org/a.jpg"
+  codebook <- qlm_codebook(
+    "Image", "Describe.", ellmer::type_object(x = ellmer::type_string("x")),
+    input_type = "image", image_file_resize = "none"
+  )
+  coded <- new_qlm_coded(
+    results = data.frame(id = c("a", "b"), x = c("p", "q")),
+    codebook = codebook,
+    data = c(a = png, b = url),
+    input_type = "image",
+    chat_args = list(name = "openai/gpt-4o"),
+    execution_args = list(),
+    metadata = list(
+      timestamp = Sys.time(), n_units = 2,
+      input_files = file_provenance(c(png, url), c("a", "b"))
+    ),
+    name = "posters",
+    call = quote(qlm_code(...))
+  )
+
+  expect_silent(verify_input_files(coded))
+  # Only the URL: nothing to check, nothing said
+  expect_silent(verify_input_files(coded, ids = "b"))
+  # The file beside it is still checked
+  writeLines("v2", png)
+  expect_error(verify_input_files(coded), "differs? from the one")
+})
+
+
 test_that("as_input_content dispatches on the input type", {
-  expect_equal(as_input_content(c("a", "b"), "text", NULL), list("a", "b"))
-  expect_error(as_input_content("a", "video", NULL), "Unknown input type")
+  expect_equal(as_input_content(c("a", "b"), list(input_type = "text"), NULL),
+               list("a", "b"))
+  expect_error(as_input_content("a", list(input_type = "video"), NULL),
+               "Unknown input type")
 })
 
 

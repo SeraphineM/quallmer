@@ -58,8 +58,262 @@ test_that("qlm_code validates input type matches codebook", {
 
   expect_error(
     qlm_code(x = 123, codebook = image_codebook, model = "test"),
-    "expects image file paths.*character vector"
+    "expects image file paths or URLs.*character vector"
   )
+})
+
+
+test_that("qlm_code checks image files exist before any request (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  image_codebook <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                                 image_file_resize = "none")
+  existing <- withr::local_tempfile(fileext = ".png")
+  writeLines("", existing)
+
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", function(...) {
+    stop("a request was sent")
+  })
+
+  # Every missing path is named, and nothing is sent
+  expect_error(
+    f(c(existing, "no/such/poster.jpg", "nor/this.png"), image_codebook,
+      model = "openai/gpt-4o"),
+    "2 image files do not exist.*no/such/poster.jpg.*nor/this.png"
+  )
+  expect_error(
+    f(c(existing, NA), image_codebook, model = "openai/gpt-4o"),
+    "1 image file does not exist"
+  )
+  # A URL typed without its scheme is a path, and is named
+  expect_error(
+    f("example.org/poster.jpg", image_codebook, model = "openai/gpt-4o"),
+    "example.org/poster.jpg"
+  )
+  # A directory is not an image file
+  expect_error(
+    f(dirname(existing), image_codebook, model = "openai/gpt-4o"),
+    "does not exist"
+  )
+
+  # URLs are not checked for existence
+  expect_error(
+    f(c(existing, "https://example.org/poster.jpg", "data:image/png;base64,AAAA"),
+      image_codebook, model = "openai/gpt-4o"),
+    "a request was sent"
+  )
+})
+
+
+test_that("qlm_code tells image paths from URLs (#177)", {
+  aic <- as_image_content
+  mockery::stub(aic, "ellmer::content_image_file", function(path, resize) {
+    list(kind = "file", path = path, resize = resize)
+  })
+  mockery::stub(aic, "ellmer::content_image_url", function(url, detail) {
+    list(kind = "url", url = url, detail = detail)
+  })
+
+  x <- c("posters/a.jpg", "https://example.org/b.jpg",
+         "http://example.org/c.png", "data:image/png;base64,AAAA", "d.png")
+  content <- aic(x, resize = "1024x1024>", detail = "high")
+
+  expect_length(content, 5)
+  expect_equal(vapply(content, `[[`, "", "kind"),
+               c("file", "url", "url", "url", "file"))
+  # The codebook's setting reaches every file, and no URL
+  expect_equal(content[[1]]$resize, "1024x1024>")
+  expect_equal(content[[5]]$resize, "1024x1024>")
+  expect_equal(content[[2]]$url, "https://example.org/b.jpg")
+  # and the detail reaches every URL, and no file
+  expect_equal(content[[2]]$detail, "high")
+  expect_equal(content[[4]]$detail, "high")
+  expect_null(content[[1]]$detail)
+})
+
+
+test_that("as_input_content passes the codebook's URL detail to images (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  cb <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                     image_file_resize = "none", image_url_detail = "low")
+  content <- as_input_content("https://example.org/b.jpg", cb, NULL)
+  expect_identical(content[[1]]@detail, "low")
+
+  # A codebook saved before the field existed asks for nothing
+  cb$image_url_detail <- NULL
+  content <- as_input_content("https://example.org/b.jpg", cb, NULL)
+  expect_true(content[[1]]@detail %in% c("auto", ""))
+})
+
+
+test_that("qlm_code says when image_url_detail cannot take effect (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  make <- function(detail) {
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                 image_file_resize = "none", image_url_detail = detail)
+  }
+  withr::local_envvar(c(OPENAI_API_KEY = "x", GOOGLE_API_KEY = "x"))
+  openai <- ellmer::chat_openai(model = "gpt-4o-mini")$get_provider()
+  gemini <- ellmer::chat_google_gemini(model = "gemini-2.5-flash")$get_provider()
+  chat_with <- function(provider) {
+    list(get_provider = function() provider)
+  }
+  url <- "https://example.org/poster.jpg"
+
+  # An ellmer that forwards it, to a provider that reads it: nothing to say
+  said <- say_image_url_detail
+  mockery::stub(said, "ellmer_forwards_image_detail", TRUE)
+  expect_silent(said(make("high"), url, chat_with(openai)))
+
+  # "auto" asks for nothing, and a file is governed by the resize instead
+  mockery::stub(said, "ellmer_forwards_image_detail", FALSE)
+  expect_silent(said(make("auto"), url, chat_with(openai)))
+  expect_silent(said(make("high"), "poster.jpg", chat_with(openai)))
+  # An ellmer that does not forward it says so, naming the setting
+  expect_message(
+    said(make("high"), url, chat_with(openai)),
+    'image_url_detail = "high".*does not pass it.*1133'
+  )
+
+  # A provider that ignores it says so too, by name
+  mockery::stub(said, "ellmer_forwards_image_detail", TRUE)
+  expect_message(
+    said(make("low"), url, chat_with(gemini)),
+    'image_url_detail = "low".*Google/Gemini ignores it'
+  )
+})
+
+
+test_that("the URL detail notice reaches the user through qlm_code, prices or not (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  cb <- qlm_codebook("Posters", "Describe.", type_obj, input_type = "image",
+                     image_file_resize = "none", image_url_detail = "high")
+  withr::local_envvar(c(OPENAI_API_KEY = "test"))
+
+  said <- say_image_url_detail
+  mockery::stub(said, "ellmer_forwards_image_detail", FALSE)
+  tsc <- try_structured_call
+  mockery::stub(tsc, "say_image_url_detail", said)
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(...) {
+    data.frame(score = 1, input_tokens = 10, output_tokens = 5,
+               cached_input_tokens = 0, cost = NA_real_)
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  url <- "https://example.org/poster.png"
+
+  expect_message(
+    f(url, cb, model = "openai/gpt-4o-mini"),
+    'image_url_detail = "high".*does not pass it'
+  )
+  # Supplying prices silences the cost note; it must not silence this
+  expect_message(
+    f(url, cb, model = "openai/gpt-4o-mini", prices = c(input = 1, output = 2)),
+    'image_url_detail = "high".*does not pass it'
+  )
+})
+
+
+test_that("provider_reads_image_detail knows the OpenAI family (#177)", {
+  withr::local_envvar(c(OPENAI_API_KEY = "x", ANTHROPIC_API_KEY = "x",
+                        GOOGLE_API_KEY = "x"))
+  reads <- function(chat) provider_reads_image_detail(chat$get_provider())
+  expect_true(reads(ellmer::chat_openai(model = "gpt-4o-mini")))
+  expect_true(reads(ellmer::chat_openai_compatible(
+    model = "m", base_url = "https://example.org/v1"
+  )))
+  expect_false(reads(ellmer::chat_anthropic(model = "claude-sonnet-4-5")))
+  expect_false(reads(ellmer::chat_google_gemini(model = "gemini-2.5-flash")))
+})
+
+
+test_that("try_structured_call resizes images as the codebook says (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  image_codebook <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                                 image_file_resize = "1024x1024>")
+
+  resize_seen <- NULL
+  aic <- as_input_content
+  mockery::stub(aic, "as_image_content", function(x, resize, detail) {
+    resize_seen <<- resize
+    as.list(x)
+  })
+  tsc <- try_structured_call
+  mockery::stub(tsc, "as_input_content", aic)
+  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "ellmer_chat"))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured",
+                data.frame(id = 1, score = 0.5))
+
+  tsc(c(a = "poster.jpg"), image_codebook, model = "openai/gpt-4o",
+      chat_args = list(), execution_args = list(), batch = FALSE)
+  expect_identical(resize_seen, "1024x1024>")
+})
+
+
+test_that("qlm_code checks for magick only when a file will be resized (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  make <- function(resize) {
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                 image_file_resize = resize)
+  }
+  existing <- withr::local_tempfile(fileext = ".png")
+  writeLines("", existing)
+
+  asked_for <- NULL
+  cir <- check_image_resize
+  mockery::stub(cir, "rlang::check_installed", function(pkg, ...) {
+    asked_for <<- c(asked_for, pkg)
+  })
+
+  cir(make("high"), existing)
+  cir(make("1024x1024>"), existing)
+  expect_identical(asked_for, c("magick", "magick"))
+
+  # Sending the file as it is needs nothing, and a URL is never resized
+  asked_for <- NULL
+  cir(make("none"), existing)
+  cir(make("high"), "https://example.org/poster.jpg")
+  expect_null(asked_for)
+
+  # The reason names the setting and the way round it, and renders as cli
+  mockery::stub(cir, "rlang::check_installed", function(pkg, reason, ...) {
+    cli::cli_abort(paste("The package {.pkg {pkg}} is required", reason))
+  })
+  expect_error(
+    cir(make("high"), existing),
+    'magick.*image_file_resize = "high".*none'
+  )
+})
+
+
+test_that("qlm_code records the resolution an old image codebook was coded at (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  old_image <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")
+  old_image$image_file_resize <- NULL
+  existing <- withr::local_tempfile(fileext = ".png")
+  writeLines("", existing)
+
+  resize_seen <- NULL
+  aic <- as_input_content
+  mockery::stub(aic, "as_image_content", function(x, resize, detail) {
+    resize_seen <<- resize
+    as.list(x)
+  })
+  tsc <- try_structured_call
+  mockery::stub(tsc, "as_input_content", aic)
+  mockery::stub(tsc, "ellmer::chat", function(...) structure(list(), class = "ellmer_chat"))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured",
+                data.frame(id = 1, score = 0.5))
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  mockery::stub(f, "check_image_resize", function(...) NULL)
+
+  result <- f(c(a = existing), old_image, model = "openai/gpt-4o")
+
+  # Coded at "low", as the original run was, and the run says so
+  expect_identical(resize_seen, "low")
+  expect_identical(attr(result, "codebook")$image_file_resize, "low")
+  expect_identical(qlm_meta(codebook(result), "image_file_resize", type = "object"), "low")
 })
 
 

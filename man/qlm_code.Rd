@@ -20,8 +20,9 @@ qlm_code(
 )
 }
 \arguments{
-\item{x}{character; the input data: texts for a text codebook, or file
-paths for an image or audio codebook (see the section on audio input).
+\item{x}{character; the input data: texts for a text codebook, file
+paths or URLs for an image codebook (see the section on image input), or
+file paths for an audio codebook (see the section on audio input).
 Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the \code{.id} column, on which every later operation
@@ -134,6 +135,35 @@ function. Set \code{verbose = TRUE} to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options;
 what a failure does to the rest of a parallel run is \code{on_error}.
 }
+\section{Image input}{
+
+
+An image codebook codes one image per element of \code{x}. A file path is read
+and sent inline, after being resized as the codebook's \code{image_file_resize}
+says: \code{"high"} by default, which fits the image within 2000x768 or 768x2000
+pixels, \code{"low"} for 512x512, \code{"none"} to send the file as it is, or a
+magick geometry string. Anything but \code{"none"} needs the \pkg{magick}
+package, which is checked here before any request is sent. The resolution
+is part of the codebook because it is part of the measurement: a poster
+whose small print is legible at one size is not at another, and a
+replication should read the image the original run read. Codebooks saved
+before the setting existed are read as \code{"low"}, which is what they were
+coded at. See \code{\link[=qlm_codebook]{qlm_codebook()}}.
+
+A URL is passed to the provider as it is, through
+\code{\link[ellmer:content_image_url]{ellmer::content_image_url()}}, so \code{image_file_resize} does not apply to
+it; what the provider does with a remote image is its own affair, and not
+every provider fetches URLs. The codebook's \code{image_url_detail} asks the
+provider for \code{"low"} or \code{"high"} detail on such an image, where the
+provider reads that field: OpenAI and OpenAI-compatible providers do,
+others ignore it, and ellmer forwards it only from the version that
+includes \url{https://github.com/tidyverse/ellmer/pull/1133}. When a value
+other than \code{"auto"} cannot take effect, \code{qlm_code()} says so before the
+run rather than recording a setting that was not applied. A path that
+does not exist is refused before anything is sent, so a URL typed without
+its scheme fails here with the path named, not inside the request.
+}
+
 \section{Provider-specific parameters}{
 
 

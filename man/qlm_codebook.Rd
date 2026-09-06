@@ -10,7 +10,9 @@ qlm_codebook(
   schema,
   role = NULL,
   input_type = input_types(),
-  levels = NULL
+  levels = NULL,
+  image_file_resize = NULL,
+  image_url_detail = NULL
 )
 }
 \arguments{
@@ -28,7 +30,8 @@ creating the system prompt.}
 \item{input_type}{Type of input data: \code{"text"} (default), \code{"image"} or
 \code{"audio"}. For \code{"image"} and \code{"audio"} the elements of \code{x} in
 \code{\link[=qlm_code]{qlm_code()}} are file paths; see its section "Audio input" for which
-providers accept audio and how the files are handled.}
+providers accept audio and how the files are handled. For \code{"image"}
+the elements may also be URLs; see its section "Image input".}
 
 \item{levels}{Optional named list specifying measurement levels for each
 variable in the schema. Names should match schema property names. Values
@@ -47,6 +50,33 @@ re-wrapped with \code{\link[=as_qlm_coded]{as_qlm_coded()}}, passing this codebo
 for the declared levels to be found. Because \code{levels} is a flat list, a
 name that occurs at more than one place in the schema cannot be declared
 and is an error; rename the properties to make them distinct.}
+
+\item{image_file_resize}{How image files are resized before they are sent,
+for \code{input_type = "image"} only; setting it on any other codebook is an
+error. One of \code{"high"} (the default: fit within 2000x768 or 768x2000
+pixels, whichever suits the orientation), \code{"low"} (fit within 512x512),
+\code{"none"} (send the file as it is), or a \pkg{magick} geometry string
+such as \code{"1024x1024>"}. Anything other than \code{"none"} needs the
+\pkg{magick} package, and \code{\link[=qlm_code]{qlm_code()}} says so if it is missing. The
+value is stored on the codebook, so replications and backfills code at
+the same resolution and \code{\link[=qlm_trail]{qlm_trail()}} records it. It applies to file
+paths only: an element of \code{x} that is a URL is fetched by the provider
+as it is. Codebooks saved before this field existed, including
+\code{\link[=task]{task()}} objects, are read as \code{"low"}, the resolution they were coded
+at, rather than the current default. See \code{\link[ellmer:content_image_file]{ellmer::content_image_file()}}.}
+
+\item{image_url_detail}{How much detail the provider should read from an
+image given as a URL, for \code{input_type = "image"} only: \code{"auto"} (the
+default, the provider chooses), \code{"low"} or \code{"high"}. Passed to
+\code{\link[ellmer:content_image_url]{ellmer::content_image_url()}} for every element of \code{x} that is a URL;
+files are governed by \code{image_file_resize} instead. OpenAI and
+OpenAI-compatible providers use it and other providers ignore it, and
+ellmer forwards it only from the version that includes
+\url{https://github.com/tidyverse/ellmer/pull/1133}; \code{\link[=qlm_code]{qlm_code()}} says so
+before the run when a value other than \code{"auto"} cannot take effect.
+Stored on the codebook and recorded with the run like
+\code{image_file_resize}; codebooks saved before the field existed are read
+as \code{"auto"}.}
 }
 \value{
 A codebook object (a list with class \code{c("qlm_codebook", "task")})
