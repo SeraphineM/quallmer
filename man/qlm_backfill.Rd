@@ -95,8 +95,9 @@ the provider did not report it, not that nothing was billed, so a retry's
 known figure cannot stand in for the whole. The passes are recorded in the
 object metadata as \code{backfill}, one entry per pass with its timestamp, the
 model if it or the endpoint differed from the run's, the overrides, the
-\code{.id}s attempted and recovered, where its cost came from when that was not where the run's
-did, and for a pass that failed outright its error, so the result can say
+\code{.id}s attempted and recovered, where its cost came from when that was not
+where the run's did, and for a pass that failed outright its error, so the
+result can say
 which of its rows came from which pass and which model. A pass whose cost
 came from somewhere else than the run's, other supplied rates, ellmer's
 own table where the run rested on supplied rates, or nowhere where the
