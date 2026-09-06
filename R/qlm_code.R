@@ -315,6 +315,24 @@
 #' total. The run's cost note says so, in `print()`, the trail, and any
 #' backfill pass.
 #'
+#' @section Transcripts:
+#'
+#' A `qlm_transcript` from [qlm_transcribe()] is coded as ordinary text with
+#' a text codebook, on any provider. The run records the provenance of every
+#' transcript, the recording's hash, the transcription model, language,
+#' prompt and usage, in its metadata as `transcription`, and [qlm_trail()]
+#' reports it, so the trail documents the transcription as part of the
+#' instrument rather than starting at the text. [qlm_replicate()] and
+#' [qlm_backfill()] code the stored transcripts again without another
+#' transcription request, and carry the record forward.
+#'
+#' A text unit that is `NA`, whether a transcription that failed or a
+#' missing value in any character vector, is never sent to the model. It is
+#' recorded as a failed unit with the reason, the transcription's own
+#' message where there is one, and [qlm_backfill()] leaves it alone, since
+#' there is nothing to retry. Transcribe the recording again and assign the
+#' text at that position before coding.
+#'
 #' @section Rejected runs:
 #' When the provider rejects every request with a status that will not change
 #' on retry (400, 401, 403, 404 or 422), `qlm_code()` stops rather than
@@ -504,6 +522,27 @@ qlm_code <- function(x, codebook, model, ...,
     check_ids(names(x), what = "{.code names(x)}")
   }
 
+  # A transcript carries the provenance of the recordings it came from; it
+  # is read now and recorded with the run, so that nothing later depends on
+  # the attribute surviving (#178). A text unit that is NA, a transcription
+  # that failed or a missing value, is never sent: it is set aside here and
+  # restored as a failed row, with its reason, once the others are coded.
+  transcription <- if (inherits(x, "qlm_transcript")) transcription_record(x)
+  x_all <- x
+  absent <- if (codebook$input_type == "text") is.na(x) else rep(FALSE, length(x))
+  if (codebook$input_type == "text") {
+    # Plain text from here on, names kept: unclass() rather than
+    # as.character(), which drops the names of a bare vector
+    x <- unclass(x_all)
+    attr(x, "provenance") <- NULL
+    x <- x[!absent]
+  }
+  if (any(absent)) {
+    cli::cli_inform(c(
+      "i" = "{sum(absent)} unit{?s} {?has/have} no text to code and {?is/are} recorded as failed without a request."
+    ))
+  }
+
   # Get valid argument names from ellmer functions
   pcs_arg_names <- names(formals(ellmer::parallel_chat_structured))
   batch_arg_names <- names(formals(ellmer::batch_chat_structured))
@@ -632,8 +671,20 @@ qlm_code <- function(x, codebook, model, ...,
   # than after a paid run in which every unit fails
   check_coding_schema(codebook$schema)
 
+  # ---- nothing to send ------------------------------------------------------
+  if (!length(x)) {
+    # Every unit is absent: the table is built from the schema alone, one
+    # failed row per unit, and no chat is built
+    results <- tabulate_results(
+      vector("list", length(x_all)),
+      lapply(absent_input_reasons(x_all, transcription), absent_input_error),
+      NULL, codebook$schema
+    )
+    absent <- rep(FALSE, length(x_all))
+  }
+
   # ---- schema-constrained structured output -------------------------------
-  if (structured %in% c("auto", "structured")) {
+  if (is.null(results) && structured %in% c("auto", "structured")) {
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
@@ -776,6 +827,15 @@ qlm_code <- function(x, codebook, model, ...,
     backend_meta$fallback_reason <- fallback_reason
   }
 
+  # The units set aside as absent take their place among the coded ones,
+  # each as a failed row carrying its reason
+  if (any(absent)) {
+    results <- restore_absent_rows(
+      results, absent, absent_input_reasons(x_all, transcription)[absent]
+    )
+  }
+  x <- x_all
+
   # Add ID column from input names or sequence
   results$id <- names(x) %||% seq_along(x)
 
@@ -820,6 +880,10 @@ qlm_code <- function(x, codebook, model, ...,
   # uploading the same bytes, and the trail can name the files
   if (!is.null(input_files)) {
     metadata$input_files <- input_files
+  }
+  # How the text came to be, when it was transcribed by qlm_transcribe()
+  if (!is.null(transcription)) {
+    metadata$transcription <- transcription
   }
   if (!is.null(prices)) {
     metadata$prices <- prices

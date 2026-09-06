@@ -37,7 +37,9 @@ Depends:
     ellmer (>= 0.5.0)
 Imports:
     cli,
+    curl,
     digest,
+    httr2,
     jsonlite,
     lifecycle,
     rlang,

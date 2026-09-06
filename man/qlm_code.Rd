@@ -369,6 +369,26 @@ total. The run's cost note says so, in \code{print()}, the trail, and any
 backfill pass.
 }
 
+\section{Transcripts}{
+
+
+A \code{qlm_transcript} from \code{\link[=qlm_transcribe]{qlm_transcribe()}} is coded as ordinary text with
+a text codebook, on any provider. The run records the provenance of every
+transcript, the recording's hash, the transcription model, language,
+prompt and usage, in its metadata as \code{transcription}, and \code{\link[=qlm_trail]{qlm_trail()}}
+reports it, so the trail documents the transcription as part of the
+instrument rather than starting at the text. \code{\link[=qlm_replicate]{qlm_replicate()}} and
+\code{\link[=qlm_backfill]{qlm_backfill()}} code the stored transcripts again without another
+transcription request, and carry the record forward.
+
+A text unit that is \code{NA}, whether a transcription that failed or a
+missing value in any character vector, is never sent to the model. It is
+recorded as a failed unit with the reason, the transcription's own
+message where there is one, and \code{\link[=qlm_backfill]{qlm_backfill()}} leaves it alone, since
+there is nothing to retry. Transcribe the recording again and assign the
+text at that position before coding.
+}
+
 \section{Rejected runs}{
 
 When the provider rejects every request with a status that will not change

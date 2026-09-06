@@ -1249,3 +1249,51 @@ test_that("qlm_replicate needs the registration a run relied on (#124)", {
   suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   expect_s3_class(f(run, name = "rep"), "qlm_coded")
 })
+
+
+# Transcripts (#178) -----------------------------------------------------------
+
+test_that("a replication records the parent's transcription, from the input or the parent", {
+  skip_if_not_installed("mockery")
+  tr <- fake_transcript(c("a", "b"))
+  record <- transcription_record(tr)
+  make_parent <- function(data) {
+    new_qlm_coded(
+      results = data.frame(id = c("a", "b"), score = c(1, 2)),
+      codebook = score_codebook(), data = data, input_type = "text",
+      chat_args = list(name = "openai/gpt-4o-mini"), execution_args = list(),
+      metadata = list(timestamp = Sys.time(), n_units = 2, transcription = record),
+      name = "parent", call = quote(qlm_code(...)), parent = NULL
+    )
+  }
+  # qlm_code() as it behaves for a transcript: records the provenance only
+  # when the input still carries it
+  seen <- new.env()
+  fake_code <- function(x, codebook, model, ...) {
+    seen$x <- x
+    metadata <- list(timestamp = Sys.time(), n_units = length(x))
+    if (inherits(x, "qlm_transcript")) metadata$transcription <- transcription_record(x)
+    new_qlm_coded(
+      results = data.frame(id = names(x), score = c(3, 4)), codebook = codebook,
+      data = x, input_type = "text", chat_args = list(name = model),
+      execution_args = list(), metadata = metadata, name = "child",
+      call = quote(qlm_code(...)), parent = NULL
+    )
+  }
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", fake_code)
+
+  child <- f(make_parent(tr))
+  expect_s3_class(seen$x, "qlm_transcript")
+  expect_equal(qlm_meta(child, "transcription")$sha256, c("hash-a", "hash-b"))
+
+  # The parent's stored input lost its class: the record still travels
+  child <- f(make_parent(as.character(tr)))
+  expect_false(inherits(seen$x, "qlm_transcript"))
+  expect_equal(qlm_meta(child, "transcription")$sha256, c("hash-a", "hash-b"))
+
+  # No transcription on the parent, none on the child
+  plain <- make_parent(c(a = "text a", b = "text b"))
+  attr(plain, "meta")$user$transcription <- NULL
+  expect_null(attr(f(plain), "meta")$user$transcription)
+})

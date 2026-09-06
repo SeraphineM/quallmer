@@ -1118,3 +1118,49 @@ test_that("qlm_backfill keeps an ordinal enum's ordered levels (#165)", {
   expect_identical(filled$sev, factor(c("high", "medium", "low"), levels = lv, ordered = TRUE))
   expect_equal(nrow(qlm_failures(filled)), 0)
 })
+
+
+# Transcripts (#178) -----------------------------------------------------------
+
+test_that("qlm_backfill leaves a unit with no text alone and keeps the transcription record", {
+  skip_if_not_installed("mockery")
+  tr <- fake_transcript(c("a", "b", "c"), failed = "b")
+  results <- data.frame(id = c("a", "b", "c"), score = c(2L, NA, NA), note = c("fine", NA, NA))
+  results$.error <- list(NULL, absent_input_error("no transcript: HTTP 500 Internal Server Error."),
+                         simpleError("HTTP 500 Internal Server Error."))
+  run <- new_qlm_coded(
+    results = results, codebook = qlm_codebook("Test", "Test prompt", backfill_schema),
+    data = tr, input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"), execution_args = list(on_error = "continue"),
+    batch = FALSE,
+    metadata = list(timestamp = Sys.time(), n_units = 3, backend = "structured",
+                    transcription = transcription_record(tr)),
+    name = "run1", call = quote(qlm_code(...)), parent = NULL
+  )
+  expect_equal(qlm_failures(run)$.id, c("b", "c"))
+
+  calls <- new.env()
+  f <- backfill_with(list(data.frame(id = "c", score = 5L, note = NA)), calls)
+  expect_message(filled <- f(run), "Leaving 1 unit alone.*no text to code")
+  # Only the unit that has text was sent, as its transcript
+  expect_equal(calls$n, 1)
+  expect_equal(names(calls$args[[1]]$x), "c")
+  expect_s3_class(calls$args[[1]]$x, "qlm_transcript")
+  expect_equal(filled$score, c(2L, NA, 5L))
+  expect_equal(qlm_failures(filled)$.id, "b")
+  expect_s3_class(filled$.error[[2]], "quallmer_absent_input")
+  expect_equal(qlm_meta(filled, "transcription")$.id, c("a", "b", "c"))
+
+  # With nothing but absent units, no pass is made
+  only_absent <- run[c(1, 2), ]
+  expect_message(f(only_absent), "Nothing recoverable remains")
+  expect_equal(calls$n, 1)
+})
+
+
+test_that("an absent input is terminal whatever the model or limit", {
+  errors <- list(absent_input_error("no transcript: x"), simpleError("HTTP 500"))
+  expect_equal(is_terminal_failure(errors), c(TRUE, FALSE))
+  expect_equal(is_terminal_failure(errors, limit_raised = TRUE), c(TRUE, FALSE))
+  expect_equal(is_terminal_failure(errors, model_changed = TRUE), c(TRUE, FALSE))
+})

@@ -2069,3 +2069,99 @@ test_that("print.qlm_coded reaches tibble's print method", {
   examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
   expect_output(print(examples$example_coded_incomplete), "# A tibble: 8", fixed = TRUE)
 })
+
+
+# Transcripts (#178) -----------------------------------------------------------
+
+test_that("a transcript is coded as text and its provenance recorded with the run", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+  f <- text_runner(function(prompts) data.frame(score = seq_along(prompts)), calls)
+  tr <- fake_transcript(c("a", "b"))
+
+  coded <- f(tr, score_codebook(), model = "openai/gpt-4o-mini", structured = "structured")
+  expect_equal(coded$.id, c("a", "b"))
+  expect_equal(coded$score, c(1, 2))
+  # What was sent is the text, plain
+  expect_equal(unname(calls$prompts), list("transcript of a", "transcript of b"))
+  # What was recorded is the provenance, keyed by .id
+  record <- qlm_meta(coded, "transcription")
+  expect_s3_class(record, "data.frame")
+  expect_equal(record$.id, c("a", "b"))
+  expect_equal(record$sha256, c("hash-a", "hash-b"))
+  expect_equal(record$model, rep("openai/gpt-4o-mini-transcribe", 2))
+  # The inputs are still the transcript
+  expect_s3_class(inputs(coded), "qlm_transcript")
+
+  # A renamed transcript is recorded under its current names
+  names(tr) <- c("x", "y")
+  coded <- f(tr, score_codebook(), model = "openai/gpt-4o-mini", structured = "structured")
+  expect_equal(qlm_meta(coded, "transcription")$.id, c("x", "y"))
+
+  # Plain text records nothing
+  coded <- f(c(a = "text"), score_codebook(), model = "openai/gpt-4o-mini", structured = "structured")
+  expect_null(attr(coded, "meta")$user$transcription)
+})
+
+
+test_that("a missing transcript is never sent and is recorded as failed with its reason", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+  f <- text_runner(function(prompts) data.frame(score = seq_along(prompts)), calls)
+  tr <- fake_transcript(c("a", "b", "c"), failed = "b")
+
+  expect_message(
+    coded <- f(tr, score_codebook(), model = "openai/gpt-4o-mini", structured = "structured"),
+    "1 unit has no text to code"
+  )
+  expect_equal(calls$n, 1L)
+  expect_equal(unname(calls$prompts), list("transcript of a", "transcript of c"))
+  expect_equal(coded$.id, c("a", "b", "c"))
+  expect_equal(coded$score, c(1, NA, 2))
+  expect_equal(qlm_failures(coded)$.id, "b")
+  err <- coded$.error[[2]]
+  expect_s3_class(err, "quallmer_absent_input")
+  expect_equal(conditionMessage(err), "no transcript: HTTP 500 Internal Server Error.")
+  expect_null(coded$.error[[1]])
+  expect_equal(qlm_meta(coded, "n_units", type = "object"), 3)
+  expect_equal(qlm_meta(coded, "transcription")$.id, c("a", "b", "c"))
+})
+
+
+test_that("an NA in any text input is set aside the same way, and an all-NA input sends nothing", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+  f <- text_runner(function(prompts) data.frame(score = seq_along(prompts)), calls)
+
+  suppressMessages(coded <- f(c(a = "text", b = NA), score_codebook(),
+                              model = "openai/gpt-4o-mini", structured = "structured"))
+  expect_equal(unname(calls$prompts), list("text"))
+  expect_equal(coded$score, c(1, NA))
+  expect_equal(conditionMessage(coded$.error[[2]]), "the input text is NA")
+
+  calls$n <- 0L
+  suppressMessages(coded <- f(c(a = NA_character_, b = NA_character_), score_codebook(),
+                              model = "openai/gpt-4o-mini", structured = "structured"))
+  expect_equal(calls$n, 0L)
+  expect_equal(coded$.id, c("a", "b"))
+  expect_true(all(is.na(coded$score)))
+  expect_equal(qlm_failures(coded)$.id, c("a", "b"))
+  expect_s3_class(coded$.error[[1]], "quallmer_absent_input")
+})
+
+
+test_that("the JSON path receives only the units with text", {
+  skip_if_not_installed("mockery")
+  withr::local_envvar(c(OPENAI_API_KEY = "test"))
+  sent <- NULL
+  f <- qlm_code
+  mockery::stub(f, "code_handler_json", function(x, ...) {
+    sent <<- x
+    data.frame(score = seq_along(x))
+  })
+  tr <- fake_transcript(c("a", "b", "c"), failed = "a")
+  suppressMessages(coded <- f(tr, score_codebook(), model = "openai/gpt-4o-mini", structured = "json"))
+  expect_equal(unname(sent), c("transcript of b", "transcript of c"))
+  expect_equal(coded$score, c(NA, 1, 2))
+  expect_s3_class(coded$.error[[1]], "quallmer_absent_input")
+})

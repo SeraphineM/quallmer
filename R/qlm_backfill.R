@@ -239,7 +239,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
 
     if (attempt == 1L && any(terminal)) {
       cli::cli_inform(c(
-        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model} or endpoint, or a higher {.code params(max_tokens = )}, would retry them."
+        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, cut off at {.code max_tokens}, or with no text to code. A different {.arg model} or endpoint, or a higher {.code params(max_tokens = )}, would retry the first two; a missing text needs transcribing again."
       ))
     }
     if (!length(retry)) {
@@ -552,11 +552,15 @@ raises_output_limit <- function(overrides, chat_args) {
 #' @noRd
 is_terminal_failure <- function(errors, limit_raised = FALSE, model_changed = FALSE) {
   if (model_changed) {
-    return(rep(FALSE, length(errors)))
+    return(vapply(errors, is_absent_input, logical(1), USE.NAMES = FALSE))
   }
   vapply(errors, function(e) {
     if (is.null(e)) {
       return(FALSE)
+    }
+    # No text was ever there to send; no model or limit changes that
+    if (is_absent_input(e)) {
+      return(TRUE)
     }
     if (is_output_truncation(e)) {
       return(!limit_raised)

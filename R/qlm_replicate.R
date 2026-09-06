@@ -150,6 +150,12 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
   result_meta$object$call <- current_call
   result_meta$object$parent <- parent_name
   result_meta$object$provider_resolution <- restored$resolution
+  # The text is the parent's, so its transcription record is too; read from
+  # the parent's metadata when the stored input no longer carries it (#178)
+  if (is.null(result_meta$user$transcription) &&
+      !is.null(meta_attr$user$transcription)) {
+    result_meta$user$transcription <- meta_attr$user$transcription
+  }
   attr(result, "meta") <- result_meta
 
   replay_backfill(result, parent = x, backfill = backfill)

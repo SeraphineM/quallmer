@@ -1,0 +1,207 @@
+# The two ways a recording reaches a transcription model. Each backend has a
+# setup step, run before anything is fetched or sent, and a run step that
+# takes local paths and returns one outcome per path: a list with `text`,
+# `usage` and `error`, or `NULL` for a request never submitted.
+
+# OpenAI: the transcription endpoint ------------------------------------------
+
+#' What the OpenAI backend needs before a request: a key and an endpoint
+#' @keywords internal
+#' @noRd
+openai_transcription_setup <- function(api_key, base_url, call = rlang::caller_env()) {
+  key <- api_key %||% Sys.getenv("OPENAI_API_KEY")
+  if (!nzchar(key)) {
+    cli::cli_abort(c(
+      "No API key for the OpenAI transcription endpoint.",
+      "i" = "Set the environment variable {.envvar OPENAI_API_KEY}, or pass {.arg api_key}."
+    ), call = call)
+  }
+  list(
+    api_key = key,
+    base_url = base_url %||% "https://api.openai.com/v1",
+    recorded_base_url = if (!is.null(base_url)) redact_url(base_url),
+    registered = NULL,
+    ellmer_version = NULL
+  )
+}
+
+#' Transcribe local files through `/audio/transcriptions`, in parallel
+#'
+#' One multipart request per file, performed through the same pool ellmer's
+#' parallel calls use, which is also what draws the progress bar.
+#'
+#' @keywords internal
+#' @noRd
+transcribe_openai <- function(paths, model_id, language, prompt, api_key,
+                              base_url, max_active, rpm, on_error) {
+  reqs <- lapply(paths, openai_transcription_request, model_id = model_id,
+                 language = language, prompt = prompt, api_key = api_key,
+                 base_url = base_url, rpm = rpm)
+  resps <- perform_transcription_requests(reqs, max_active = max_active, on_error = on_error)
+  lapply(resps, function(resp) {
+    if (is.null(resp)) {
+      return(NULL)
+    }
+    if (inherits(resp, "error")) {
+      return(list(text = NA_character_, usage = NULL,
+                  error = strip_ansi(conditionMessage(resp))))
+    }
+    parse_openai_transcription(resp)
+  })
+}
+
+#' One transcription request
+#'
+#' The provider's own sentence is read from an error body, so a refusal says
+#' why rather than only its status. A rate-limited request waits as long as
+#' the provider asks and is retried; the throttle keeps the pool under `rpm`.
+#'
+#' @keywords internal
+#' @noRd
+openai_transcription_request <- function(path, model_id, language, prompt,
+                                         api_key, base_url, rpm) {
+  fields <- list(
+    file = curl::form_file(path),
+    model = model_id,
+    response_format = "json",
+    language = language,
+    prompt = prompt
+  )
+  fields <- fields[!vapply(fields, is.null, logical(1))]
+
+  req <- httr2::request(base_url)
+  req <- httr2::req_url_path_append(req, "audio", "transcriptions")
+  req <- httr2::req_auth_bearer_token(req, api_key)
+  req <- do.call(httr2::req_body_multipart, c(list(req), fields))
+  req <- httr2::req_error(req, body = openai_error_body)
+  req <- httr2::req_retry(req, max_tries = 3)
+  httr2::req_throttle(req, capacity = rpm, fill_time_s = 60)
+}
+
+#' The pool, kept apart so that tests can read what was sent
+#' @keywords internal
+#' @noRd
+perform_transcription_requests <- function(reqs, max_active, on_error) {
+  httr2::req_perform_parallel(
+    reqs, on_error = on_error, progress = "Transcribing", max_active = max_active
+  )
+}
+
+#' The message in an OpenAI error body, for httr2 to append to the status
+#' @keywords internal
+#' @noRd
+openai_error_body <- function(resp) {
+  json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
+  message <- json$error$message
+  if (is.character(message) && length(message) == 1L) message else NULL
+}
+
+#' The transcript and usage in a response, or why there is none
+#'
+#' The usage is kept as it came: the `gpt-4o` models report tokens split by
+#' modality, `whisper-1` reports seconds, and a later model may report
+#' something else again.
+#'
+#' @keywords internal
+#' @noRd
+parse_openai_transcription <- function(resp) {
+  json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
+  text <- json$text
+  if (!is.character(text) || length(text) != 1L || is.na(text)) {
+    return(list(
+      text = NA_character_, usage = json$usage,
+      error = "the response carried no transcript text"
+    ))
+  }
+  list(text = text, usage = json$usage, error = NA_character_)
+}
+
+
+# Gemini: a chat model that hears the recording --------------------------------
+
+#' What the Gemini backend needs before an upload: a chat that passes the
+#' same capability check as an audio codebook
+#'
+#' @keywords internal
+#' @noRd
+gemini_transcription_setup <- function(model, language, prompt, api_key,
+                                       base_url, call = rlang::caller_env()) {
+  # ellmer takes a key as a function since 0.4.0; the closure holds the key
+  # and goes nowhere: the chat is not recorded
+  chat_args <- list(
+    credentials = if (!is.null(api_key)) function() api_key,
+    base_url = base_url
+  )
+  chat_args <- chat_args[!vapply(chat_args, is.null, logical(1))]
+  chat <- do.call(ellmer::chat, c(
+    list(name = model, system_prompt = transcription_instruction(language, prompt)),
+    chat_args
+  ))
+  capability <- check_input_capability("audio", chat, model, call = call)
+  list(
+    chat = chat,
+    recorded_base_url = if (!is.null(base_url)) redact_url(base_url),
+    registered = capability$registered,
+    ellmer_version = tryCatch(
+      as.character(utils::packageVersion("ellmer")),
+      error = function(e) NA_character_
+    )
+  )
+}
+
+#' The fixed instruction, with the caller's hints appended
+#' @keywords internal
+#' @noRd
+transcription_instruction <- function(language = NULL, prompt = NULL) {
+  paste(c(
+    "You are a transcription engine. Transcribe the recording verbatim, in the language spoken.",
+    "Output only the transcript: no summary, no speaker labels, no timestamps, no commentary, no translation.",
+    if (!is.null(language)) {
+      paste0("The recording is in the language with ISO 639-1 code \"", language, "\".")
+    },
+    if (!is.null(prompt)) paste0("Context from the caller: ", prompt)
+  ), collapse = "\n")
+}
+
+#' Transcribe local files through a Gemini chat model, in parallel
+#'
+#' Every upload completes before the first request, as for an audio
+#' codebook; a failed upload aborts with the provider's message. Each file
+#' is then one conversation from the system prompt, so no file sees another.
+#'
+#' @keywords internal
+#' @noRd
+transcribe_gemini <- function(paths, chat, max_active, rpm, on_error) {
+  uploaded <- upload_inputs(paths, chat, "audio")
+  chats <- ellmer::parallel_chat(
+    chat, uploaded, max_active = max_active, rpm = rpm, on_error = on_error
+  )
+  lapply(chats, function(result) {
+    if (is.null(result)) {
+      return(NULL)
+    }
+    if (inherits(result, "error")) {
+      return(list(text = NA_character_, usage = NULL,
+                  error = strip_ansi(conditionMessage(result))))
+    }
+    gemini_transcription_outcome(result)
+  })
+}
+
+#' The transcript and usage from a finished conversation
+#' @keywords internal
+#' @noRd
+gemini_transcription_outcome <- function(chat) {
+  turn <- chat$last_turn()
+  text <- trimws(turn@text)
+  usage <- list(
+    tokens = as.list(turn@tokens),
+    cost = tryCatch(as.numeric(chat$get_cost()), error = function(e) NA_real_),
+    note = audio_cost_note()
+  )
+  if (!is.character(text) || length(text) != 1L || is.na(text) || !nzchar(text)) {
+    return(list(text = NA_character_, usage = usage,
+                error = "the model returned no transcript text"))
+  }
+  list(text = text, usage = usage, error = NA_character_)
+}
