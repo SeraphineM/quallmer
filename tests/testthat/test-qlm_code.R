@@ -963,6 +963,36 @@ test_that("structured = 'auto' falls back when every completed response fails va
 })
 
 
+test_that("where no fallback is possible, an all-invalid run is returned with its failures", {
+  skip_if_not_installed("mockery")
+  calls <- new.env()
+  ignored <- list(json_turn(string = "{}"), json_turn(string = '{"score": "high"}'))
+
+  # structured = "structured": no fallback by choice
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", structured_stub(results = ignored))
+  mockery::stub(f, "code_handler_json", json_stub(calls))
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mini",
+                structured = "structured"),
+    'every completed response failed validation.*structured = "auto"'
+  )
+  expect_null(calls$json)
+  expect_equal(qlm_meta(result, type = "object")$backend, "structured")
+  expect_equal(nrow(qlm_failures(result)), 2L)
+  expect_match(qlm_failures(result)$reason[[2]], "\\$\\.score must be a number")
+
+  # batch = TRUE under auto: no batch path to fall back to
+  expect_warning(
+    result <- f(c("a", "b"), structured_test_codebook(), model = "openai/gpt-4o-mini",
+                batch = TRUE),
+    "every completed response failed validation.*no batch path"
+  )
+  expect_null(calls$json)
+  expect_equal(nrow(qlm_failures(result)), 2L)
+})
+
+
 test_that("a response that fails validation is a failed unit, not grounds for a fallback", {
   skip_if_not_installed("mockery")
   calls <- new.env()

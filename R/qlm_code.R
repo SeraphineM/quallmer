@@ -236,6 +236,12 @@
 #'     re-coding the corpus.}
 #' }
 #'
+#' Where every completed response fails validation and nothing can fall
+#' back, under `"structured"`, `batch = TRUE` or a file input, the run is
+#' returned with every unit failed and its reason recorded, and a warning
+#' says why: the failed rows, their reasons and their usage are what the run
+#' has, and [qlm_backfill()] can retry them with another model.
+#'
 #' On either path, [qlm_failures()] lists the units that produced no usable
 #' coding, with the reason for each, and `print()` reports how many there
 #' were. Most such failures are transient, and [qlm_backfill()] re-codes
@@ -618,7 +624,19 @@ qlm_code <- function(x, codebook, model, ...,
 
     unpriced <- attempt$unpriced
 
-    if (isTRUE(attempt$ok)) {
+    # Every completed response failed validation: the endpoint accepted the
+    # schema and ignored it. JSON mode is the cure where it can run; where it
+    # cannot, the table of failures, with their reasons and usage, is what
+    # the run has, and it is returned rather than thrown away
+    can_fall_back <- identical(structured, "auto") && !file_input && !batch
+
+    if (isTRUE(attempt$ok) && isTRUE(attempt$invalid) && can_fall_back) {
+      fallback_reason <- attempt$error
+      cli::cli_warn(c(
+        "Structured output failed; falling back to JSON mode with local validation.",
+        set_bullets(attempt$error)
+      ))
+    } else if (isTRUE(attempt$ok)) {
       results <- attempt$value
       # Every response was checked against the schema before conversion;
       # recorded so a reader of the run can tell it from one coded before
@@ -628,6 +646,20 @@ qlm_code <- function(x, codebook, model, ...,
       # a replay elsewhere knows to ask for it again
       if (!is.null(attempt$registered)) {
         backend_meta$input_model_registered <- attempt$registered
+      }
+      if (isTRUE(attempt$invalid)) {
+        cli::cli_warn(c(
+          "No response from the structured call could be coded: every completed response failed validation against the schema.",
+          set_bullets(attempt$error),
+          "i" = if (identical(structured, "structured")) {
+            "Use {.code structured = \"auto\"} to fall back to JSON mode with local validation."
+          } else if (file_input) {
+            "A {codebook$input_type} input cannot fall back to JSON mode, which sends text."
+          } else {
+            "JSON-mode coding has no batch path, so {.code structured = \"auto\"} cannot fall back here."
+          },
+          "i" = "{.fn qlm_failures} lists the units with the reasons; {.fn qlm_backfill} can retry them."
+        ))
       }
     } else if (isTRUE(attempt$pending)) {
       # Not a failure either: the job is running at the provider, and its
@@ -828,10 +860,11 @@ default_structured_mode <- function(model) {
 #'
 #' @return A list with `ok`, and either `value` (the results, with `usage`
 #'   alongside) or `error`. `rejected` marks a provider that refused every
-#'   request with a status that will not change; `invalid` marks an
-#'   endpoint whose every completed response failed validation, with the
-#'   attempt's `usage` so a fallback can carry it; `pending` marks a batch
-#'   job not yet finished.
+#'   request with a status that will not change. `invalid`, alongside
+#'   `ok = TRUE`, marks an endpoint whose every completed response failed
+#'   validation, with `error` saying so and the table of failures in
+#'   `value`: [qlm_code()] falls back where it can, and keeps the table
+#'   where it cannot. `pending` marks a batch job not yet finished.
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
@@ -983,22 +1016,10 @@ structured_attempt <- function(turns, schema, provider, execution_args) {
   # request or a cut-off response is set aside. If none reached validation,
   # there is nothing to conclude, and the failures stand as recorded.
   assessed <- stage %in% c("ok", "extraction", "schema")
-  if (any(assessed) && !any(stage == "ok")) {
-    return(list(
-      ok = FALSE,
-      invalid = TRUE,
-      usage = records$usage,
-      error = paste0(
-        "the structured call returned no usable values (every completed ",
-        "response failed validation against the schema, for example: ",
-        problems[assessed][[1]],
-        "); the endpoint appears not to honour the JSON schema"
-      )
-    ))
-  }
+  invalid <- any(assessed) && !any(stage == "ok")
 
   failed <- !is.na(stage) & stage != "ok"
-  if (any(failed)) {
+  if (any(failed) && !invalid) {
     cli::cli_warn(c(
       "{sum(failed)} response{?s} from the structured call could not be coded, out of {n}.",
       set_bullets(unique(problems[failed])),
@@ -1006,12 +1027,25 @@ structured_attempt <- function(turns, schema, provider, execution_args) {
     ))
   }
 
+  # The table is built either way: where qlm_code() has nothing to fall back
+  # to, the failed rows, their reasons and their usage are what the run has
   value <- tabulate_results(
     values, errors, records$usage, schema,
     include_tokens = isTRUE(execution_args$include_tokens),
     include_cost = isTRUE(execution_args$include_cost)
   )
-  list(ok = TRUE, value = value, usage = records$usage, n_invalid = sum(failed))
+  attempt <- list(ok = TRUE, value = value, usage = records$usage,
+                  n_invalid = sum(failed))
+  if (invalid) {
+    attempt$invalid <- TRUE
+    attempt$error <- paste0(
+      "the structured call returned no usable values (every completed ",
+      "response failed validation against the schema, for example: ",
+      problems[assessed][[1]],
+      "); the endpoint appears not to honour the JSON schema"
+    )
+  }
+  attempt
 }
 
 

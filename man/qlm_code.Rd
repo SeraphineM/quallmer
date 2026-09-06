@@ -284,6 +284,12 @@ intermittent kind of non-enforcement is caught per unit, not by
 re-coding the corpus.}
 }
 
+Where every completed response fails validation and nothing can fall
+back, under \code{"structured"}, \code{batch = TRUE} or a file input, the run is
+returned with every unit failed and its reason recorded, and a warning
+says why: the failed rows, their reasons and their usage are what the run
+has, and \code{\link[=qlm_backfill]{qlm_backfill()}} can retry them with another model.
+
 On either path, \code{\link[=qlm_failures]{qlm_failures()}} lists the units that produced no usable
 coding, with the reason for each, and \code{print()} reports how many there
 were. Most such failures are transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes

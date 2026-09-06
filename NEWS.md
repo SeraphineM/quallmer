@@ -19,7 +19,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   case, and only for scalar fields. The whole-run fallback of
   `structured = "auto"` to JSON mode is now driven by the validator: it
   fires when every response the provider completed fails validation, and
-  not when some do. The usage of a structured attempt the run fell back
+  not when some do; where no fallback is possible, under
+  `structured = "structured"`, `batch = TRUE` or a file input, such a run
+  is returned with every unit failed and its reason recorded, rather than
+  stopped. The usage of a structured attempt the run fell back
   from is carried into the JSON-mode result. The finish reason is read
   from every structured response, so a response cut off at `max_tokens`,
   withheld by a content filter or finished for an unrecognised reason is

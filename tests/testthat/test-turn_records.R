@@ -277,12 +277,16 @@ test_that("structured_attempt judges the endpoint from completed responses only"
   # Every completed response is invalid: the endpoint ignores the schema
   ignored <- list(json_turn(string = "{}"), text_turn("prose"),
                   request_error("HTTP 500", 500L))
-  attempt <- structured_attempt(ignored, schema, NULL, list())
-  expect_false(attempt$ok)
+  # No per-unit warning here: qlm_code() says what it does about it
+  expect_no_warning(attempt <- structured_attempt(ignored, schema, NULL, list()))
+  expect_true(attempt$ok)
   expect_true(attempt$invalid)
   expect_match(attempt$error, "no usable values")
   expect_match(attempt$error, "\\$\\.score is required but missing")
   expect_equal(dim(attempt$usage), c(3L, 4L))
+  # The table is there for a caller that cannot fall back
+  expect_equal(nrow(attempt$value), 3L)
+  expect_equal(attempt$n_invalid, 3L)
 
   # Nothing completed: no evidence either way, so the failures stand
   unassessed <- list(
