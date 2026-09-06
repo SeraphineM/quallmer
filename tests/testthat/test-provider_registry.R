@@ -99,7 +99,9 @@ test_that("backfill records resolved replacements for replay without a registry"
                    pass$provider_resolution)
 })
 
-test_that("both structured transports receive the actual resolved chat", {
+# This checks argument routing with mocked transports, not batch support.
+# ellmer currently has no batch_submit method for ProviderOpenAICompatible.
+test_that("structured transport dispatch receives the resolved chat", {
   seen <- list()
   local_mocked_bindings(structured_chat_turns = function(chat, prompts, type, batch, execution_args) {
     p <- chat$get_provider()
@@ -166,4 +168,11 @@ test_that("explicit replay credentials replace the recorded credential provenanc
   restored <- restore_run_args(x, overrides = list(credentials = function() "different"))
   expect_null(restored$resolution$api_key_env)
   expect_identical(restored$resolution$requested_model, "moonshot/kimi")
+})
+
+
+test_that("empty provider prefixes retain the readable unknown-provider error", {
+  for (model in c("", "/foo")) {
+    expect_error(qlm_code("text", registry_codebook(), model), "Can't reach provider")
+  }
 })

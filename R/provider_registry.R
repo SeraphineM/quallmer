@@ -18,12 +18,16 @@
 #' Built-in prefixes are `dashscope` (Alibaba Model Studio, Singapore),
 #' `dashscope-cn` (Beijing), `moonshot` (Moonshot's international endpoint),
 #' and `zai` (Z.AI's general API, not its Coding Plan endpoint).
-#' They read `DASHSCOPE_API_KEY`,
-#' `DASHSCOPE_API_KEY`, `MOONSHOT_API_KEY`, and `ZHIPU_API_KEY`, respectively.
+#' Both DashScope prefixes read `DASHSCOPE_API_KEY`; Moonshot reads
+#' `MOONSHOT_API_KEY`, and Z.AI reads `ZHIPU_API_KEY`.
 #' Keys must belong to the endpoint's region. Model names are passed through
 #' unchanged, including any slashes; the registry does not maintain a model
 #' catalogue, capability list or prices. Supply `prices` to [qlm_code()]
 #' when needed.
+#'
+#' Use `batch = FALSE` with registered prefixes: ellmer currently has no
+#' batch submission method for its OpenAI-compatible provider. Registration
+#' supplies routing and credentials, not additional transport capabilities.
 #'
 #' Explicit `credentials` (or ellmer's deprecated `api_key`) overrides the
 #' registered environment variable. Overriding `base_url` to a different URL
@@ -42,6 +46,10 @@
 #' @examples
 #' qlm_register_provider("my_gateway", "https://example.org/v1", "GATEWAY_KEY")
 #' \dontrun{
+#' # Another endpoint, using its own API key
+#' qlm_register_provider(
+#'   "minimax", "https://api.minimax.io/v1", "MINIMAX_API_KEY"
+#' )
 #' qlm_code(texts, codebook, model = "dashscope/qwen-plus")
 #' qlm_code(texts, codebook, model = "my_gateway/organisation/model")
 #' }
@@ -72,6 +80,9 @@ qlm_register_provider <- function(provider, base_url, api_key_env,
 provider_registry <- new.env(parent = emptyenv())
 
 provider_definition <- function(provider) {
+  if (!nzchar(provider)) {
+    return(NULL)
+  }
   custom <- provider_registry[[provider]]
   if (!is.null(custom)) {
     return(custom)

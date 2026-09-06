@@ -32,12 +32,16 @@ Native providers in the installed ellmer always take precedence.
 Built-in prefixes are \code{dashscope} (Alibaba Model Studio, Singapore),
 \code{dashscope-cn} (Beijing), \code{moonshot} (Moonshot's international endpoint),
 and \code{zai} (Z.AI's general API, not its Coding Plan endpoint).
-They read \code{DASHSCOPE_API_KEY},
-\code{DASHSCOPE_API_KEY}, \code{MOONSHOT_API_KEY}, and \code{ZHIPU_API_KEY}, respectively.
+Both DashScope prefixes read \code{DASHSCOPE_API_KEY}; Moonshot reads
+\code{MOONSHOT_API_KEY}, and Z.AI reads \code{ZHIPU_API_KEY}.
 Keys must belong to the endpoint's region. Model names are passed through
 unchanged, including any slashes; the registry does not maintain a model
 catalogue, capability list or prices. Supply \code{prices} to \code{\link[=qlm_code]{qlm_code()}}
 when needed.
+
+Use \code{batch = FALSE} with registered prefixes: ellmer currently has no
+batch submission method for its OpenAI-compatible provider. Registration
+supplies routing and credentials, not additional transport capabilities.
 
 Explicit \code{credentials} (or ellmer's deprecated \code{api_key}) overrides the
 registered environment variable. Overriding \code{base_url} to a different URL
@@ -54,6 +58,10 @@ entries contain environment variable names, never key values.
 \examples{
 qlm_register_provider("my_gateway", "https://example.org/v1", "GATEWAY_KEY")
 \dontrun{
+# Another endpoint, using its own API key
+qlm_register_provider(
+  "minimax", "https://api.minimax.io/v1", "MINIMAX_API_KEY"
+)
 qlm_code(texts, codebook, model = "dashscope/qwen-plus")
 qlm_code(texts, codebook, model = "my_gateway/organisation/model")
 }
