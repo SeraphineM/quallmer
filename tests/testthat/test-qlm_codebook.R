@@ -477,3 +477,70 @@ test_that("nested levels reach qlm_compare through an unnested, re-wrapped table
   expect_true(all(res$level == "ordinal"))
   expect_equal(res$value[res$measure == "percent_agreement"], 2 / 3)
 })
+
+
+# ---- ordinal enums carry their scale order (#165) ----------------------------
+
+test_that("an ordinal type_enum carries its scale order (#165)", {
+  schema <- ellmer::type_object(
+    sev = ellmer::type_enum(c("low", "medium", "high")),
+    tone = ellmer::type_enum(c("pos", "neg")),
+    n = ellmer::type_integer("Count")
+  )
+  # Nominal unless declared
+  expect_equal(ordinal_enum_levels(qlm_codebook("T", "P", schema)), list())
+
+  cb <- qlm_codebook("T", "P", schema, levels = list(sev = "ordinal"))
+  expect_equal(ordinal_enum_levels(cb), list(sev = c("low", "medium", "high")))
+
+  # A plain list, as as_qlm_coded() accepts, works too; without a schema there is nothing
+  expect_equal(
+    ordinal_enum_levels(list(schema = schema, levels = list(sev = "ordinal"))),
+    list(sev = c("low", "medium", "high"))
+  )
+  expect_equal(ordinal_enum_levels(list(schema = NULL, levels = list(sev = "ordinal"))), list())
+
+  # Shown in the print, where the author can see the enum was written in scale order
+  out <- capture.output(print(cb))
+  expect_true(any(grepl("sev: ordinal (low < medium < high)", out, fixed = TRUE)))
+  # A nominal enum shows no order
+  out <- capture.output(print(qlm_codebook("T", "P", schema)))
+  expect_true(any(grepl("sev: nominal$", out)))
+})
+
+
+test_that("apply_ordinal_enums stores ordinal enum columns as ordered factors (#165)", {
+  lv <- c("low", "medium", "high")
+  cb <- qlm_codebook(
+    "T", "P",
+    ellmer::type_object(sev = ellmer::type_enum(lv), tone = ellmer::type_enum(c("pos", "neg"))),
+    levels = list(sev = "ordinal")
+  )
+
+  out <- apply_ordinal_enums(data.frame(sev = c("high", "low", NA), tone = c("pos", "neg", "pos")), cb)
+  expect_identical(out$sev, factor(c("high", "low", NA), levels = lv, ordered = TRUE))
+  # Nominal enums are left alone
+  expect_type(out$tone, "character")
+
+  # A plain factor is read by its values, whatever its (alphabetical) levels say
+  out <- apply_ordinal_enums(data.frame(sev = factor(c("high", "low"))), cb)
+  expect_identical(out$sev, factor(c("high", "low"), levels = lv, ordered = TRUE))
+
+  # An ordered factor that already agrees passes through
+  ok <- factor(c("high", "low"), levels = lv, ordered = TRUE)
+  expect_identical(apply_ordinal_enums(data.frame(sev = ok), cb)$sev, ok)
+
+  # One that disagrees is a conflicting declaration
+  expect_error(
+    apply_ordinal_enums(data.frame(sev = factor(c("high", "low"), levels = rev(lv), ordered = TRUE)), cb),
+    "differs from the codebook"
+  )
+
+  # A value outside the enum is never a silent NA
+  err <- expect_error(apply_ordinal_enums(data.frame(sev = c("low", "severe")), cb),
+                      "not among the codebook")
+  expect_match(conditionMessage(err), "severe")
+
+  # Columns the codebook does not know are untouched
+  expect_equal(apply_ordinal_enums(data.frame(other = 1:2), cb), data.frame(other = 1:2))
+})

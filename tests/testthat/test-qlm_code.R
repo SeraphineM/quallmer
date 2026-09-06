@@ -757,6 +757,57 @@ test_that("qlm_code still uses parallel_chat_structured for other providers", {
 })
 
 
+test_that("qlm_code stores an ordinal enum as an ordered factor in the enum's order (#165)", {
+  skip_if_not_installed("mockery")
+  lv <- c("low", "medium", "high")
+  schema <- ellmer::type_object(
+    sev = ellmer::type_enum(lv),
+    tone = ellmer::type_enum(c("pos", "neg"))
+  )
+  ordinal <- qlm_codebook("Test", "Prompt", schema, levels = list(sev = "ordinal"))
+  nominal <- qlm_codebook("Test", "Prompt", schema)
+
+  # Structured path: ellmer converts an enum to a plain factor in enum order
+  returned <- data.frame(
+    sev = factor(c("high", "low"), levels = lv),
+    tone = factor(c("pos", "neg"), levels = c("pos", "neg"))
+  )
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", returned)
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+
+  res <- f(c("a", "b"), ordinal, model = "openai/gpt-4o-mini")
+  expect_identical(res$sev, factor(c("high", "low"), levels = lv, ordered = TRUE))
+  # Nominal unless declared: left as ellmer returned it
+  expect_false(is.ordered(res$tone))
+  expect_equal(levels(res$tone), c("pos", "neg"))
+  res <- f(c("a", "b"), nominal, model = "openai/gpt-4o-mini")
+  expect_false(is.ordered(res$sev))
+
+  # JSON path, from a handler that returns the values as text
+  fake_handler <- function(x, codebook, model, chat_args, execution_args, batch,
+                           json_retries = 2L, model_hint = NULL, ...) {
+    results <- tibble::tibble(sev = c("high", "low"), tone = c("pos", "neg"))
+    attr(results, "qlm_backend_meta") <- list(backend = "json_mode")
+    results
+  }
+  g <- qlm_code
+  mockery::stub(g, "code_handler_json", fake_handler)
+  res <- g(c("a", "b"), ordinal, model = "deepseek/deepseek-chat")
+  expect_identical(res$sev, factor(c("high", "low"), levels = lv, ordered = TRUE))
+  expect_type(res$tone, "character")
+
+  # The order survives row subsetting and a save/load round trip
+  expect_identical(res[2, ]$sev, factor("low", levels = lv, ordered = TRUE))
+  path <- tempfile(fileext = ".rds")
+  on.exit(unlink(path), add = TRUE)
+  saveRDS(res, path)
+  expect_identical(readRDS(path)$sev, res$sev)
+})
+
+
 test_that("qlm_code errors on json_retries only where JSON mode cannot be reached", {
   skip_if_not_installed("mockery")
 
