@@ -71,16 +71,18 @@ credential it carried redacted.}
 \item{\code{size}, \code{sha256}}{the bytes transcribed and their hash; \code{NA}
 when a download failed.}
 \item{\code{model}}{as given.}
-\item{\code{language}, \code{prompt}, \code{base_url}}{as given, or \code{NA}.}
+\item{\code{language}, \code{prompt}}{as given, or \code{NA}.}
+\item{\code{base_url}}{the host the requests went to, redacted: on the
+endpoint route always, on the chat route when given.}
 \item{\code{timestamp}}{when the response arrived, or \code{NA}.}
 \item{\code{usage}}{a list column holding what the provider reported, or
 on the chat route ellmer's tokens, cost and version.}
 }
 Subsetting with \code{[}, renaming with \verb{names<-} and concatenating with
 \code{c()} keep the table aligned with the elements. Assigning a
-\code{qlm_transcript} with \verb{[<-} replaces rows of the table too, so a retried
-transcription replaces the failure it retries; assigning plain text
-records an edit. \code{as.character()} drops the table.
+\code{qlm_transcript} with \verb{[<-} or \verb{[[<-} replaces rows of the table too,
+so a retried transcription replaces the failure it retries; assigning
+plain text records an edit. \code{as.character()} drops the table.
 }
 \description{
 Transcribes audio files with a speech-to-text model and returns the
@@ -153,9 +155,13 @@ attempted and the result has an element for each, \code{NA} where the
 transcription failed, with the provider's message in the \code{.error} column
 of the provenance table. \code{"return"} stops submitting after the first
 failure and marks the files it never sent as such; \code{"stop"} raises the
-first error. Validation of the arguments, the files and the model all
-happen before anything is downloaded or sent, and abort whatever
-\code{on_error} says.
+first error. A failed download, a failed upload on the chat route, a
+refused request and a response with no transcript in it are all
+failures of the unit, under the same policy. The one limit is on the
+chat route, where an empty answer is known only after every request
+has returned, so \code{"return"} cannot withhold submissions on its account.
+Validation of the arguments, the files and the model all happen before
+anything is downloaded or sent, and abort whatever \code{on_error} says.
 
 A missing transcript passed to \code{\link[=qlm_code]{qlm_code()}} is never sent to the model:
 its unit is recorded as failed with the transcription's reason, and

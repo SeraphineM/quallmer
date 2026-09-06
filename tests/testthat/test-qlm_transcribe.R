@@ -122,7 +122,8 @@ test_that("qlm_transcribe sends one multipart request per file and records what 
   expect_equal(prov$model, rep("openai/gpt-4o-mini-transcribe", 2))
   expect_equal(prov$language, c("en", "en"))
   expect_equal(prov$prompt, rep("Harvard sentences", 2))
-  expect_true(all(is.na(prov$base_url)))
+  # The host is recorded even when it is the provider's own default
+  expect_equal(prov$base_url, rep("https://api.openai.com/v1", 2))
   expect_equal(names(prov), c(".id", "status", "source", ".error", "size", "sha256", "model",
                               "language", "prompt", "base_url", "timestamp", "usage"))
   expect_s3_class(prov$timestamp, "POSIXct")
@@ -210,15 +211,25 @@ test_that("the bytes recorded are the ones sent, whatever happens to the file af
 })
 
 
-test_that("a response without a transcript is a failure of that unit", {
+test_that("a response without a transcript is a failure of that unit, under every policy", {
   a <- audio_file(as.raw(1:8))
   b <- audio_file(as.raw(9:16))
+  c_ <- audio_file(as.raw(17:24))
   seen <- mock_transcription_endpoint(fixture_responder(empty = b))
-  expect_warning(out <- qlm_transcribe(c(a, b)), "carried no transcript text")
+  expect_warning(out <- qlm_transcribe(c(a, b, c_)), "carried no transcript text")
   prov <- attr(out, "provenance")
-  expect_equal(prov$status, c("ok", "failed"))
+  expect_equal(prov$status, c("ok", "failed", "ok"))
+  expect_equal(prov$.error[2], "the response carried no transcript text")
   # The usage it did report is kept
   expect_equal(prov$usage[[2]], list(type = "duration", seconds = 3L))
+
+  # The empty answer is an error of the request, so the pool's policy
+  # applies to it as to a refusal
+  seen <- mock_transcription_endpoint(fixture_responder(empty = b))
+  expect_warning(out <- qlm_transcribe(c(a, b, c_), on_error = "return"), "not submitted")
+  expect_equal(attr(out, "provenance")$status, c("ok", "failed", "unsubmitted"))
+  expect_length(seen$reqs, 2)
+  expect_error(qlm_transcribe(c(a, b, c_), on_error = "stop"), "no transcript text")
 })
 
 
@@ -380,6 +391,18 @@ test_that("assigning plain text records an edit, and NA a failure", {
   prov <- attr(tr, "provenance")
   expect_equal(prov$status[1], "failed")
   expect_equal(prov$.error[1], "set to NA by assignment")
+
+  # [[<- follows the same rules, one element at a time
+  tr[["a"]] <- "by hand"
+  expect_equal(unname(tr[["a"]]), "by hand")
+  expect_equal(attr(tr, "provenance")$status[1], "edited")
+  tr[[2]] <- fake_transcript("b_retry", text = "retried", model = "openai/whisper-1")
+  expect_equal(attr(tr, "provenance")$model[2], "openai/whisper-1")
+  expect_equal(attr(tr, "provenance")$status[2], "ok")
+  expect_equal(names(tr), c("a", "b"))
+  expect_error(tr[[3]] <- "more", "cannot be extended")
+  expect_error(tr[[1:2]] <- "x", "replaces one transcript")
+  expect_error(tr[[1]] <- c("x", "y"), "replaces one transcript")
   expect_error(tr[3] <- "more", "cannot be extended")
   expect_error(tr["zzz"] <- "more", "cannot be extended")
 
@@ -533,7 +556,51 @@ test_that("a registered provider's model goes to its own transcription endpoint"
   expect_equal(bearer_of(req), "Bearer moon-key")
   expect_equal(req$body$data$model, "whisper-large-v3")
   expect_equal(attr(out, "provenance")$model, "moonshot/whisper-large-v3")
-  expect_true(is.na(attr(out, "provenance")$base_url))
+  # The registered host is what distinguishes this run from one against
+  # another registration of the same prefix, so it is recorded
+  expect_equal(attr(out, "provenance")$base_url, "https://api.moonshot.ai/v1")
+})
+
+
+test_that("a failed upload on the chat route follows on_error like a failed request", {
+  paths <- c(audio_file(as.raw(1:8)), audio_file(as.raw(9:16)), audio_file(as.raw(17:24)))
+  bad <- basename(paths[2])
+  failing_upload <- function(chat, path) {
+    if (basename(path) == bad) stop("HTTP 400 Bad Request: unsupported audio.", call. = FALSE)
+    fake_upload(chat, path)
+  }
+
+  seen <- gemini_runner()
+  testthat::local_mocked_bindings(upload_input_file = failing_upload)
+  expect_warning(out <- qlm_transcribe(paths, model = "google_gemini/gemini-2.5-flash"),
+                 "1 of 3 transcriptions failed.*unsupported audio")
+  prov <- attr(out, "provenance")
+  expect_equal(prov$status, c("ok", "failed", "ok"))
+  expect_match(prov$.error[2], "^upload failed: HTTP 400")
+  # The other two were transcribed: one prompt each, the failed one absent
+  expect_length(seen$prompts, 2)
+  expect_equal(unname(as.character(out))[c(1, 3)], c("verbatim words", "verbatim words"))
+
+  seen <- gemini_runner()
+  testthat::local_mocked_bindings(upload_input_file = failing_upload)
+  expect_warning(out <- qlm_transcribe(paths, model = "google_gemini/gemini-2.5-flash", on_error = "return"),
+                 "not submitted")
+  expect_equal(attr(out, "provenance")$status, c("ok", "failed", "unsubmitted"))
+  expect_length(seen$prompts, 1)
+
+  seen <- gemini_runner()
+  testthat::local_mocked_bindings(upload_input_file = failing_upload)
+  expect_error(qlm_transcribe(paths, model = "google_gemini/gemini-2.5-flash", on_error = "stop"),
+               "Uploading.*failed.*unsupported audio")
+  expect_null(seen$prompts)
+})
+
+
+test_that("an empty answer on the chat route is raised under on_error = 'stop'", {
+  seen <- gemini_runner(function(prompts) list(fake_chat("words"), fake_chat("   ")))
+  paths <- c(audio_file(as.raw(1:8)), audio_file(as.raw(9:16)))
+  expect_error(qlm_transcribe(paths, model = "google_gemini/gemini-2.5-flash", on_error = "stop"),
+               "returned no transcript text")
 })
 
 

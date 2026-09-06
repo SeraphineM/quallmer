@@ -63,9 +63,13 @@
 #' transcription failed, with the provider's message in the `.error` column
 #' of the provenance table. `"return"` stops submitting after the first
 #' failure and marks the files it never sent as such; `"stop"` raises the
-#' first error. Validation of the arguments, the files and the model all
-#' happen before anything is downloaded or sent, and abort whatever
-#' `on_error` says.
+#' first error. A failed download, a failed upload on the chat route, a
+#' refused request and a response with no transcript in it are all
+#' failures of the unit, under the same policy. The one limit is on the
+#' chat route, where an empty answer is known only after every request
+#' has returned, so `"return"` cannot withhold submissions on its account.
+#' Validation of the arguments, the files and the model all happen before
+#' anything is downloaded or sent, and abort whatever `on_error` says.
 #'
 #' A missing transcript passed to [qlm_code()] is never sent to the model:
 #' its unit is recorded as failed with the transcription's reason, and
@@ -125,16 +129,18 @@
 #'     \item{`size`, `sha256`}{the bytes transcribed and their hash; `NA`
 #'       when a download failed.}
 #'     \item{`model`}{as given.}
-#'     \item{`language`, `prompt`, `base_url`}{as given, or `NA`.}
+#'     \item{`language`, `prompt`}{as given, or `NA`.}
+#'     \item{`base_url`}{the host the requests went to, redacted: on the
+#'       endpoint route always, on the chat route when given.}
 #'     \item{`timestamp`}{when the response arrived, or `NA`.}
 #'     \item{`usage`}{a list column holding what the provider reported, or
 #'       on the chat route ellmer's tokens, cost and version.}
 #'   }
 #'   Subsetting with `[`, renaming with `names<-` and concatenating with
 #'   `c()` keep the table aligned with the elements. Assigning a
-#'   `qlm_transcript` with `[<-` replaces rows of the table too, so a retried
-#'   transcription replaces the failure it retries; assigning plain text
-#'   records an edit. `as.character()` drops the table.
+#'   `qlm_transcript` with `[<-` or `[[<-` replaces rows of the table too,
+#'   so a retried transcription replaces the failure it retries; assigning
+#'   plain text records an edit. `as.character()` drops the table.
 #'
 #' @examples
 #' \dontrun{
@@ -665,6 +671,26 @@ report_transcription_failures <- function(x, backend = "endpoint") {
     provenance$usage[pos] <- list(NULL)
   }
   new_qlm_transcript(text, provenance)
+}
+
+#' Replace one transcript, by the same rules as `[<-`
+#'
+#' @param x A `qlm_transcript`.
+#' @param i A single position or name.
+#' @param value A `qlm_transcript` of length one, or one string.
+#'
+#' @return A `qlm_transcript`.
+#' @keywords internal
+#' @export
+`[[<-.qlm_transcript` <- function(x, i, value) {
+  if (length(i) != 1L) {
+    cli::cli_abort("{.code [[<-} replaces one transcript; {.arg i} has length {length(i)}.")
+  }
+  if (length(value) != 1L) {
+    cli::cli_abort("{.code [[<-} replaces one transcript; {.arg value} has length {length(value)}.")
+  }
+  x[i] <- value
+  x
 }
 
 #' Rename transcripts, keeping their provenance in step

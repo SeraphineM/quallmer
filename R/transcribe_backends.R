@@ -34,10 +34,13 @@ endpoint_transcription_setup <- function(model, api_key, base_url, call = rlang:
       "i" = "Set the environment variable {.envvar {entry$api_key_env}}, or pass {.arg api_key}."
     ), call = call)
   }
+  # The host is recorded whether given or resolved: a registered provider's
+  # host can be re-registered, so the prefix alone does not name it
+  resolved <- base_url %||% entry$base_url
   list(
     api_key = key,
-    base_url = base_url %||% entry$base_url,
-    recorded_base_url = if (!is.null(base_url)) redact_url(base_url)
+    base_url = resolved,
+    recorded_base_url = redact_url(resolved)
   )
 }
 
@@ -59,7 +62,15 @@ transcribe_endpoint <- function(paths, model_id, language, prompt, api_key,
       return(NULL)
     }
     if (inherits(resp, "error")) {
-      return(list(text = NA_character_, usage = NULL,
+      # A response the request itself declared an error, a 200 with no
+      # transcript, travels on the condition; its usage is still worth
+      # keeping, and its message is the body's, not a misleading status
+      failed <- resp$resp
+      if (!is.null(failed) && !httr2::resp_is_error(failed)) {
+        return(list(text = NA_character_, usage = transcription_usage(failed),
+                    error = transcription_error_body(failed)))
+      }
+      return(list(text = NA_character_, usage = transcription_usage(failed),
                   error = strip_ansi(conditionMessage(resp))))
     }
     parse_transcription_response(resp)
@@ -68,7 +79,10 @@ transcribe_endpoint <- function(paths, model_id, language, prompt, api_key,
 
 #' One transcription request
 #'
-#' The provider's own sentence is read from an error body, so a refusal says
+#' A response without a transcript is an error of the request itself, so
+#' that `on_error` governs it inside the pool as it governs a refusal:
+#' `"stop"` raises it and `"return"` submits nothing after it. The
+#' provider's own sentence is read from an error body, so a refusal says
 #' why rather than only its status. A rate-limited request waits as long as
 #' the provider asks and is retried; the throttle keeps the pool under `rpm`.
 #'
@@ -89,7 +103,8 @@ transcription_request <- function(path, model_id, language, prompt,
   req <- httr2::req_url_path_append(req, "audio", "transcriptions")
   req <- httr2::req_auth_bearer_token(req, api_key)
   req <- do.call(httr2::req_body_multipart, c(list(req), fields))
-  req <- httr2::req_error(req, body = transcription_error_body)
+  req <- httr2::req_error(req, is_error = transcription_response_is_error,
+                          body = transcription_error_body)
   req <- httr2::req_retry(req, max_tries = 3)
   httr2::req_throttle(req, capacity = rpm, fill_time_s = 60)
 }
@@ -103,10 +118,47 @@ perform_transcription_requests <- function(reqs, max_active, on_error) {
   )
 }
 
-#' The message in an OpenAI-shaped error body, for httr2 to append to the status
+#' Is a response one the caller cannot use?
+#'
+#' An HTTP error, or a success that carries no transcript text.
+#'
+#' @keywords internal
+#' @noRd
+transcription_response_is_error <- function(resp) {
+  httr2::resp_is_error(resp) || is.null(transcription_text(resp))
+}
+
+#' The transcript in a response body, or `NULL`
+#' @keywords internal
+#' @noRd
+transcription_text <- function(resp) {
+  json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
+  text <- json$text
+  if (is.character(text) && length(text) == 1L && !is.na(text)) text else NULL
+}
+
+#' The usage in a response body, or `NULL`
+#' @keywords internal
+#' @noRd
+transcription_usage <- function(resp) {
+  if (is.null(resp)) {
+    return(NULL)
+  }
+  json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
+  json$usage
+}
+
+#' The message for a failed response, for httr2 to append to the status
+#'
+#' An OpenAI-shaped error body gives the provider's sentence; a success
+#' without a transcript says so.
+#'
 #' @keywords internal
 #' @noRd
 transcription_error_body <- function(resp) {
+  if (!httr2::resp_is_error(resp)) {
+    return("the response carried no transcript text")
+  }
   json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
   message <- json$error$message
   if (is.character(message) && length(message) == 1L) message else NULL
@@ -121,15 +173,14 @@ transcription_error_body <- function(resp) {
 #' @keywords internal
 #' @noRd
 parse_transcription_response <- function(resp) {
-  json <- tryCatch(httr2::resp_body_json(resp), error = function(e) NULL)
-  text <- json$text
-  if (!is.character(text) || length(text) != 1L || is.na(text)) {
+  text <- transcription_text(resp)
+  if (is.null(text)) {
     return(list(
-      text = NA_character_, usage = json$usage,
+      text = NA_character_, usage = transcription_usage(resp),
       error = "the response carried no transcript text"
     ))
   }
-  list(text = text, usage = json$usage, error = NA_character_)
+  list(text = text, usage = transcription_usage(resp), error = NA_character_)
 }
 
 
@@ -176,18 +227,65 @@ transcription_instruction <- function(language = NULL, prompt = NULL) {
 
 #' Transcribe local files through a chat model, in parallel
 #'
-#' Every upload completes before the first request, as for an audio
-#' codebook; a failed upload aborts with the provider's message. Each file
-#' is then one conversation from the system prompt, so no file sees another.
+#' Every upload completes before the first request. A failed upload follows
+#' `on_error` as a failed request does: recorded on its unit under
+#' `"continue"`, the uploads after it withheld under `"return"`, raised
+#' under `"stop"`. Each file is then one conversation from the system
+#' prompt, so no file sees another. An answer with no transcript in it is
+#' known only after the pool has returned, so it is raised under `"stop"`
+#' and recorded on its unit otherwise; `"return"` cannot withhold what was
+#' already submitted.
 #'
 #' @keywords internal
 #' @noRd
-transcribe_chat <- function(paths, chat, max_active, rpm, on_error) {
-  uploaded <- upload_inputs(paths, chat, "audio")
+transcribe_chat <- function(paths, chat, max_active, rpm, on_error,
+                            call = rlang::caller_env()) {
+  n <- length(paths)
+  uploaded <- vector("list", n)
+  errors <- rep(NA_character_, n)
+  submit <- rep(TRUE, n)
+
+  cli::cli_progress_bar("Uploading audio files", total = n)
+  for (i in seq_len(n)) {
+    if (!submit[[i]]) {
+      cli::cli_progress_update()
+      next
+    }
+    result <- tryCatch(upload_input_file(chat, paths[[i]]), error = function(e) e)
+    if (inherits(result, "error")) {
+      message <- strip_ansi(conditionMessage(result))
+      if (on_error == "stop") {
+        cli::cli_progress_done()
+        cli::cli_abort(c(
+          "Uploading {.path {basename(paths[[i]])}} failed.",
+          "x" = message,
+          "i" = "A failure may be transient, such as a network error, or permanent, such as a file the provider cannot read."
+        ), call = call)
+      }
+      errors[[i]] <- paste0("upload failed: ", message)
+      if (on_error == "return" && i < n) {
+        submit[(i + 1L):n] <- FALSE
+      }
+    } else {
+      uploaded[[i]] <- result
+    }
+    cli::cli_progress_update()
+  }
+  cli::cli_progress_done()
+
+  ready <- submit & is.na(errors)
+  outcomes <- vector("list", n)
+  for (i in which(!is.na(errors))) {
+    outcomes[[i]] <- list(text = NA_character_, usage = NULL, error = errors[[i]])
+  }
+  if (!any(ready)) {
+    return(outcomes)
+  }
+
   chats <- ellmer::parallel_chat(
-    chat, uploaded, max_active = max_active, rpm = rpm, on_error = on_error
+    chat, uploaded[ready], max_active = max_active, rpm = rpm, on_error = on_error
   )
-  lapply(chats, function(result) {
+  outcomes[ready] <- lapply(chats, function(result) {
     if (is.null(result)) {
       return(NULL)
     }
@@ -197,6 +295,17 @@ transcribe_chat <- function(paths, chat, max_active, rpm, on_error) {
     }
     chat_transcription_outcome(result)
   })
+
+  if (on_error == "stop") {
+    empty <- which(vapply(outcomes, function(o) !is.null(o) && !is.na(o$error), logical(1)))
+    if (length(empty)) {
+      cli::cli_abort(c(
+        "Transcribing {.path {basename(paths[[empty[1]]])}} failed.",
+        "x" = outcomes[[empty[1]]]$error
+      ), call = call)
+    }
+  }
+  outcomes
 }
 
 #' The transcript and usage from a finished conversation

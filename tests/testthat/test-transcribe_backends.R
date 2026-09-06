@@ -20,6 +20,12 @@ test_that("transcription_error_body reads the provider's sentence, and nothing e
   expect_equal(transcription_error_body(resp), "The model `no-such-model` does not exist or you do not have access to it.")
   expect_null(transcription_error_body(httr2::response(status_code = 500, body = charToRaw("oops"))))
   expect_null(transcription_error_body(httr2::response_json(status_code = 500, body = list(error = list(code = 1)))))
+  # A success with nothing in it is an error of the request, with its own message
+  empty <- httr2::response_json(body = list(usage = list(type = "duration", seconds = 1)))
+  expect_true(transcription_response_is_error(empty))
+  expect_equal(transcription_error_body(empty), "the response carried no transcript text")
+  expect_false(transcription_response_is_error(httr2::response_json(body = transcription_fixture("whisper_1_cn"))))
+  expect_true(transcription_response_is_error(resp))
 })
 
 
@@ -93,6 +99,7 @@ test_that("the endpoint setup takes the key and host from the provider", {
   expect_equal(endpoint_transcription_setup("openai/whisper-1", NULL, NULL)$api_key, "from-env")
   expect_equal(endpoint_transcription_setup("openai/whisper-1", "given", NULL)$api_key, "given")
   expect_equal(endpoint_transcription_setup("openai/whisper-1", NULL, NULL)$base_url, "https://api.openai.com/v1")
+  expect_equal(endpoint_transcription_setup("openai/whisper-1", NULL, NULL)$recorded_base_url, "https://api.openai.com/v1")
   setup <- endpoint_transcription_setup("openai/whisper-1", NULL, "https://k:s@h.example.org/v1")
   expect_equal(setup$base_url, "https://k:s@h.example.org/v1")
   expect_equal(setup$recorded_base_url, "https://h.example.org/v1")
@@ -104,6 +111,7 @@ test_that("the endpoint setup takes the key and host from the provider", {
   setup <- endpoint_transcription_setup("moonshot/whisper-large-v3", NULL, NULL)
   expect_equal(setup$api_key, "moon")
   expect_equal(setup$base_url, "https://api.moonshot.ai/v1")
+  expect_equal(setup$recorded_base_url, "https://api.moonshot.ai/v1")
   withr::local_envvar(c(MOONSHOT_API_KEY = ""))
   expect_error(endpoint_transcription_setup("moonshot/whisper-large-v3", NULL, NULL), "MOONSHOT_API_KEY")
 })
