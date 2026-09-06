@@ -169,9 +169,6 @@ test_that("qlm_code says when image_url_detail cannot take effect (#177)", {
   mockery::stub(said, "ellmer_forwards_image_detail", FALSE)
   expect_silent(said(make("auto"), url, chat_with(openai)))
   expect_silent(said(make("high"), "poster.jpg", chat_with(openai)))
-  # A later pass of the same run stays quiet
-  expect_silent(said(make("high"), url, chat_with(openai), say = FALSE))
-
   # An ellmer that does not forward it says so, naming the setting
   expect_message(
     said(make("high"), url, chat_with(openai)),
@@ -183,6 +180,36 @@ test_that("qlm_code says when image_url_detail cannot take effect (#177)", {
   expect_message(
     said(make("low"), url, chat_with(gemini)),
     'image_url_detail = "low".*Google/Gemini ignores it'
+  )
+})
+
+
+test_that("the URL detail notice reaches the user through qlm_code, prices or not (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  cb <- qlm_codebook("Posters", "Describe.", type_obj, input_type = "image",
+                     image_file_resize = "none", image_url_detail = "high")
+  withr::local_envvar(c(OPENAI_API_KEY = "test"))
+
+  said <- say_image_url_detail
+  mockery::stub(said, "ellmer_forwards_image_detail", FALSE)
+  tsc <- try_structured_call
+  mockery::stub(tsc, "say_image_url_detail", said)
+  mockery::stub(tsc, "ellmer::parallel_chat_structured", function(...) {
+    data.frame(score = 1, input_tokens = 10, output_tokens = 5,
+               cached_input_tokens = 0, cost = NA_real_)
+  })
+  f <- qlm_code
+  mockery::stub(f, "try_structured_call", tsc)
+  url <- "https://example.org/poster.png"
+
+  expect_message(
+    f(url, cb, model = "openai/gpt-4o-mini"),
+    'image_url_detail = "high".*does not pass it'
+  )
+  # Supplying prices silences the cost note; it must not silence this
+  expect_message(
+    f(url, cb, model = "openai/gpt-4o-mini", prices = c(input = 1, output = 2)),
+    'image_url_detail = "high".*does not pass it'
   )
 })
 

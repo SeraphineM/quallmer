@@ -859,10 +859,11 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   # to ask for provider enforcement regardless.
   provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
 
-  # A URL detail setting that will not reach the provider is said here, once,
-  # on the same terms as the cost message (#177)
+  # A URL detail setting that will not reach the provider is said here,
+  # before anything is sent. Not tied to `cost_message`: supplying `prices`
+  # silences the cost note, and must not silence this (#177)
   if (codebook$input_type == "image") {
-    say_image_url_detail(codebook, x, chat, say = cost_message)
+    say_image_url_detail(codebook, x, chat)
   }
   undetectable <- allow_skip &&
     !is.null(provider) &&

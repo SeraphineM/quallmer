@@ -81,14 +81,13 @@ as_image_content <- function(x, resize, detail = "auto") {
 #' @param codebook An image codebook.
 #' @param x The input vector, already checked.
 #' @param chat The chat the run will use.
-#' @param say Whether to speak; a later pass of the same run stays quiet.
 #'
 #' @return `NULL`, invisibly.
 #' @keywords internal
 #' @noRd
-say_image_url_detail <- function(codebook, x, chat, say = TRUE) {
+say_image_url_detail <- function(codebook, x, chat) {
   detail <- codebook$image_url_detail %||% "auto"
-  if (!say || identical(detail, "auto") || !any(is_image_url(x))) {
+  if (identical(detail, "auto") || !any(is_image_url(x))) {
     return(invisible(NULL))
   }
   provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
