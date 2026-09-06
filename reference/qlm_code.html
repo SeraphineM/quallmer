@@ -201,7 +201,10 @@ results in <code><a href="qlm_trail.html">qlm_trail()</a></code>. Default is <co
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>qlm_coded</code> object (a tibble with additional attributes):</p><dl><dt>Data columns</dt>
-<dd><p>The coded results with a <code>.id</code> column for identifiers.</p></dd>
+<dd><p>The coded results with a <code>.id</code> column for identifiers.
+A <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> declared <code>"ordinal"</code> in the codebook is an ordered
+factor whose levels are the enum's values in the order written; see
+the <code>levels</code> argument of <code><a href="qlm_codebook.html">qlm_codebook()</a></code>.</p></dd>
 
 <dt>Attributes</dt>
 <dd><p><code>data</code>, <code>input_type</code>, and <code>run</code> (list containing name, batch, call, codebook, chat_args, execution_args, metadata, parent).</p></dd>

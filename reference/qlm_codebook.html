@@ -115,6 +115,14 @@ should be one of <code>"nominal"</code>, <code>"ordinal"</code>, <code>"interval
 If <code>NULL</code> (default), levels are auto-detected from schema types using the
 following mapping: <code>type_boolean</code> and <code>type_enum</code> = nominal, <code>type_string</code>
 = nominal, <code>type_integer</code> = ordinal, <code>type_number</code> = interval.</p>
+<p>A <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> is nominal unless declared <code>"ordinal"</code> here. For an
+ordinal enum the values, in the order they are written, are the scale
+order: <code>type_enum(c("low", "medium", "high"))</code> with
+<code>levels = list(severity = "ordinal")</code> ranks low below medium below high.
+<code><a href="qlm_code.html">qlm_code()</a></code> stores such a column as an ordered factor with those levels,
+and <code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> does the same for human-coded data given this
+codebook, so <code><a href="qlm_compare.html">qlm_compare()</a></code> and <code><a href="qlm_validate.html">qlm_validate()</a></code> rank the categories by
+that order rather than alphabetically.</p>
 <p>Names may refer to properties at any depth of the schema, including those
 inside a nested <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object()</a></code> or the items of a <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_array()</a></code>. A level
 declared for a nested variable describes that variable in a table

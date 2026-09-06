@@ -216,8 +216,13 @@ error).</p></li>
 read as numbers, whatever type they are stored as, so a column of digits
 held as text is compared on its values and not on the alphabetical order of
 its strings. A value that does not read as a number is an error at interval
-level. Ordinal categories may instead all be text, in which case they are
-ranked by their sorted labels.</p>
+level. Ordinal categories may instead all be text, in which case both
+columns must be ordered factors with the same levels in the same order, and
+the categories are ranked by those levels; alphabetical order is never
+used. A plain factor or a character column at ordinal level is an error
+that says how to declare the order: <code>factor(x, levels = c(...), ordered = TRUE)</code> for data built by hand, or a <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> written in scale order
+and declared <code>"ordinal"</code> in the codebook, which <code><a href="qlm_code.html">qlm_code()</a></code> and
+<code><a href="as_qlm_coded.html">as_qlm_coded()</a></code> store as that ordered factor.</p>
 <p>For multiclass problems with nominal data, the <code>average</code> parameter controls
 how per-class metrics are aggregated:</p><ul><li><p><strong>Macro averaging</strong> computes metrics for each class independently and takes
 the unweighted mean. This treats all classes equally regardless of size.</p></li>

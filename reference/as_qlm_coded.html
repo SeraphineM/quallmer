@@ -154,7 +154,14 @@ Default is <code>FALSE</code>.</p></dd>
 <dd><p>NULL (not used for human coding)</p></dd>
 
 
-</dl><p>If <code>NULL</code> (default), a minimal placeholder codebook is created.</p></dd>
+</dl><p>If <code>NULL</code> (default), a minimal placeholder codebook is created. Passing
+the <code><a href="qlm_codebook.html">qlm_codebook()</a></code> the LLM coded against gives the human data the same
+measurement levels, and a column that is a <code><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum()</a></code> declared
+<code>"ordinal"</code> there is stored as an ordered factor in the enum's order, so
+<code><a href="qlm_compare.html">qlm_compare()</a></code> and <code><a href="qlm_validate.html">qlm_validate()</a></code> rank it as they rank the LLM's; a
+value outside the enum is an error. Without a codebook, order a text
+scale yourself with <code>factor(x, levels = c(...), ordered = TRUE)</code>. The
+schema itself is not kept.</p></dd>
 
 
 <dt id="arg-texts">texts<a class="anchor" aria-label="anchor" href="#arg-texts"></a></dt>
