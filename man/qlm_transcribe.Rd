@@ -76,8 +76,10 @@ pair when it was accepted by a session registration.}
 \item{\code{usage}}{a list column holding what the provider reported.}
 }
 Subsetting with \code{[}, renaming with \verb{names<-} and concatenating with
-\code{c()} keep the table aligned with the elements; \code{as.character()} drops
-it.
+\code{c()} keep the table aligned with the elements. Assigning a
+\code{qlm_transcript} with \verb{[<-} replaces rows of the table too, so a retried
+transcription replaces the failure it retries; assigning plain text
+records an edit. \code{as.character()} drops the table.
 }
 \description{
 Transcribes audio files with a speech-to-text model and returns the
@@ -149,9 +151,10 @@ happen before anything is downloaded or sent, and abort whatever
 
 A missing transcript passed to \code{\link[=qlm_code]{qlm_code()}} is never sent to the model:
 its unit is recorded as failed with the transcription's reason, and
-\code{\link[=qlm_backfill]{qlm_backfill()}} leaves it alone. Transcribe the file again, by position
-(\code{which(is.na(transcripts))}), and assign the new text and its provenance
-at that position, or concatenate independent runs with \code{c()}.
+\code{\link[=qlm_backfill]{qlm_backfill()}} leaves it alone. Transcribe the file again and assign the
+result at that position, \code{transcripts[failed] <- qlm_transcribe(files[failed])},
+which replaces the record with it; or concatenate independent runs with
+\code{c()}.
 }
 
 \section{URLs}{

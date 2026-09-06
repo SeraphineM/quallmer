@@ -1250,3 +1250,51 @@ test_that("transcription_lines sums usage only when every unit reported the same
   record$usage <- list(NULL, NULL)
   expect_true(any(grepl("usage not reported", transcription_lines(record), fixed = TRUE)))
 })
+
+
+test_that("a key given to an inline qlm_transcribe() reaches neither trail file (#178)", {
+  tr <- fake_transcript(c("a", "b"))
+  run <- new_qlm_coded(
+    results = data.frame(id = c("a", "b"), score = c(1, 2)),
+    codebook = score_codebook(), data = tr, input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"), execution_args = list(),
+    metadata = list(timestamp = Sys.time(), n_units = 2, transcription = transcription_record(tr)),
+    name = "inline",
+    call = quote(qlm_code(qlm_transcribe(files, api_key = "sk-nested-secret"),
+                          codebook, model = "openai/gpt-4o-mini")),
+    parent = NULL
+  )
+  path <- tempfile("trail_nested")
+  withr::defer({
+    unlink(paste0(path, ".rds"))
+    unlink(paste0(path, ".qmd"))
+  })
+  suppressMessages(qlm_trail(run, path = path))
+
+  qmd <- readLines(paste0(path, ".qmd"))
+  expect_false(any(grepl("sk-nested-secret", qmd, fixed = TRUE)))
+  expect_true(any(grepl('qlm_transcribe(files, api_key = "<redacted>")', qmd, fixed = TRUE)))
+  saved <- readRDS(paste0(path, ".rds"))
+  serialised <- rawToChar(serialize(saved, NULL, ascii = TRUE))
+  expect_false(grepl("sk-nested-secret", serialised, fixed = TRUE))
+})
+
+
+test_that("transcription_lines reports each distinct configuration with its units", {
+  tr <- fake_transcript(c("a", "b", "c"))
+  record <- transcription_record(tr)
+  record$prompt <- c("names", "names", NA)
+  record$base_url <- c(NA, NA, "https://proxy.example.org/v1")
+  lines <- transcription_lines(record)
+  models <- grep("^\\*\\*Transcription model", lines, value = TRUE)
+  expect_length(models, 2)
+  expect_match(models[1], 'prompt: "names"; usage: 20 seconds of audio; units: a, b', fixed = TRUE)
+  expect_match(models[2], "endpoint: https://proxy.example.org/v1; usage: 10 seconds of audio; units: c", fixed = TRUE)
+
+  # One configuration names no units
+  record$prompt <- "names"
+  record$base_url <- NA_character_
+  models <- grep("^\\*\\*Transcription model", transcription_lines(record), value = TRUE)
+  expect_length(models, 1)
+  expect_false(grepl("units:", models, fixed = TRUE))
+})

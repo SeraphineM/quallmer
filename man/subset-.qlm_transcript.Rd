@@ -2,7 +2,7 @@
 % Please edit documentation in R/qlm_transcribe.R
 \name{[<-.qlm_transcript}
 \alias{[<-.qlm_transcript}
-\title{Replace the text of transcripts, keeping their provenance}
+\title{Replace transcripts, and their provenance with them}
 \usage{
 \method{[}{qlm_transcript}(x, i) <- value
 }
@@ -11,12 +11,17 @@
 
 \item{i}{An index.}
 
-\item{value}{Replacement text.}
+\item{value}{A \code{qlm_transcript}, or replacement text.}
 }
 \value{
 A \code{qlm_transcript}.
 }
 \description{
-Replace the text of transcripts, keeping their provenance
+Assigning a \code{qlm_transcript} puts its rows in place of the old ones, so a
+retried transcription replaces the failure it retries, record and all.
+Assigning plain text keeps the file and its hash, since the recording is
+the same, and records that the text was edited: \code{status} becomes
+\code{"edited"}, the usage is cleared and the time is now. Assigning \code{NA}
+records a failure set by hand. The vector cannot be extended.
 }
 \keyword{internal}

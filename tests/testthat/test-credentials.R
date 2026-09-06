@@ -254,3 +254,27 @@ test_that("redacted_args_note() reads correctly for one and for several", {
   expect_match(redacted_args_note("api_key"), "^`api_key` carries a value redacted .* it is not sent\\. Supply it in `\\.\\.\\.` if the endpoint needs it\\.$")
   expect_match(redacted_args_note(c("api_key", "base_url")), "^`api_key`, `base_url` carry values .* they are not sent\\. Supply them .* needs them\\.$")
 })
+
+
+test_that("redact_call() reaches credential literals in a nested call (#178)", {
+  call <- quote(qlm_code(
+    qlm_transcribe(files, api_key = "sk-secret", base_url = "https://u:pw@host.example.org/v1"),
+    codebook, model = "openai/gpt-4o-mini", api_key = "sk-outer"
+  ))
+  out <- redact_call(call)
+  inner <- out[[2]]
+  expect_equal(inner$api_key, "<redacted>")
+  expect_equal(inner$base_url, "https://host.example.org/v1")
+  expect_equal(out$api_key, "<redacted>")
+  expect_identical(inner[[2]], quote(files))
+  expect_false(grepl("sk-secret|pw@", paste(deparse(out), collapse = "")))
+
+  # Deeper, and inside a credentials callback given as a literal
+  deep <- quote(f(g(h(api_key = "k"), credentials = function() "sk-x")))
+  out <- redact_call(deep)
+  expect_equal(out[[2]][[2]]$api_key, "<redacted>")
+  expect_equal(out[[2]]$credentials, "<redacted>")
+
+  # An empty argument is stepped over rather than read
+  expect_identical(redact_call(quote(qlm_code(x[1, ], cb))), quote(qlm_code(x[1, ], cb)))
+})

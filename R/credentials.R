@@ -29,7 +29,9 @@ url_arg_names <- c("base_url", "endpoint")
 #'
 #' Only literals are redacted from the call. An argument given as a variable
 #' or an expression, `api_key = key` or `api_key = Sys.getenv("KEY")`, names
-#' where the value came from rather than containing it, and stays.
+#' where the value came from rather than containing it, and stays. A call
+#' nested in an argument, such as `qlm_transcribe(files, api_key = "...")`
+#' as the input of `qlm_code()`, is redacted the same way, at any depth.
 #'
 #' A `credentials` callback is a literal of its own kind: ellmer calls it for
 #' the secret, so `function() "sk-..."` holds the value as surely as
@@ -208,14 +210,12 @@ redact_call <- function(call) {
   if (!is.call(call)) {
     return(call)
   }
-  nms <- names(call)
-  if (is.null(nms)) {
-    return(call)
-  }
+  nms <- names(call) %||% rep("", length(call))
 
   for (i in seq_along(call)[-1]) {
+    # An empty argument, as in `x[1, ]`, cannot be read into a variable
+    if (identical(call[[i]], quote(expr = ))) next
     nm <- nms[i]
-    if (!nzchar(nm)) next
     value <- call[[i]]
 
     if (identical(nm, "api_key") && is.character(value)) {
@@ -226,6 +226,11 @@ redact_call <- function(call) {
       call[[i]] <- redact_credentials_expr(value)
     } else if (nm %in% url_arg_names && is.character(value)) {
       call[[i]] <- redact_url(value)
+    } else if (is.call(value)) {
+      # An argument built by another call carries that call's own
+      # credential arguments: `qlm_code(qlm_transcribe(f, api_key = "..."))`
+      # records the inner call whole (#178)
+      call[[i]] <- redact_call(value)
     }
   }
 

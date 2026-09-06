@@ -1249,8 +1249,9 @@ is_local_endpoint <- function(identity) {
 #' The report block for a run coded from transcripts
 #'
 #' One row per unit with the file, its hash and the model, then one line per
-#' model with the settings and the usage summed where the shapes agree. The
-#' `.rds` keeps the full table; the report need not repeat it.
+#' distinct configuration (model, prompt, endpoint, registration) with the
+#' usage summed where the shapes agree. The `.rds` keeps the full table; the
+#' report need not repeat it.
 #'
 #' @param transcription The `transcription` table of a run, or `NULL`.
 #'
@@ -1285,16 +1286,25 @@ transcription_lines <- function(transcription) {
     ))
   }
   lines <- c(lines, "")
-  for (model in unique(transcription$model)) {
-    rows <- transcription[transcription$model == model, ]
+  # One line per distinct configuration, not per model: the same model with
+  # another prompt or endpoint is another instrument, and a table combined
+  # from two runs can hold both. The units of each are named when there is
+  # more than one.
+  key <- paste(transcription$model, transcription$prompt, transcription$base_url,
+               transcription$registered, sep = "\r")
+  groups <- split(seq_len(n), factor(key, levels = unique(key)))
+  for (idx in groups) {
+    rows <- transcription[idx, ]
+    first <- rows[1, ]
     settings <- c(
-      if (any(!is.na(rows$prompt))) paste0("prompt: \"", rows$prompt[!is.na(rows$prompt)][1], "\""),
-      if (any(!is.na(rows$base_url))) paste0("endpoint: ", rows$base_url[!is.na(rows$base_url)][1]),
-      if (any(!is.na(rows$registered))) paste0("accepted by `qlm_register_model(\"", rows$registered[!is.na(rows$registered)][1], "\")`")
+      if (!is.na(first$prompt)) paste0("prompt: \"", first$prompt, "\""),
+      if (!is.na(first$base_url)) paste0("endpoint: ", first$base_url),
+      if (!is.na(first$registered)) paste0("accepted by `qlm_register_model(\"", first$registered, "\")`")
     )
+    units <- if (length(groups) > 1L) paste0("units: ", paste(rows$.id, collapse = ", "))
     lines <- c(lines, paste0(
-      "**Transcription model `", model, "`:** ",
-      paste(c(settings, transcription_usage_summary(rows$usage)), collapse = "; ")
+      "**Transcription model `", first$model, "`:** ",
+      paste(c(settings, transcription_usage_summary(rows$usage), units), collapse = "; ")
     ))
   }
   c(lines, "")

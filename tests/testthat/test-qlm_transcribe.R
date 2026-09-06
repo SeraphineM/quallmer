@@ -193,6 +193,24 @@ test_that("a failed transcription stays in place as NA with its reason", {
 })
 
 
+test_that("the bytes recorded are the ones sent, whatever happens to the file after", {
+  a <- audio_file(as.raw(1:16))
+  b <- audio_file(as.raw(17:32))
+  original <- c(hash_file(a), hash_file(b))
+  seen <- mock_transcription_endpoint(function(req) {
+    # While the requests run, one file is replaced and the other deleted
+    writeBin(as.raw(99:120), a)
+    unlink(b)
+    httr2::response_json(body = transcription_fixture("whisper_1_us"))
+  })
+  out <- qlm_transcribe(c(a, b))
+  prov <- attr(out, "provenance")
+  expect_equal(prov$status, c("ok", "ok"))
+  expect_equal(prov$sha256, original)
+  expect_equal(prov$size, c(16, 16))
+})
+
+
 test_that("a response without a transcript is a failure of that unit", {
   a <- audio_file(as.raw(1:8))
   b <- audio_file(as.raw(9:16))
@@ -327,13 +345,45 @@ test_that("subsetting keeps each transcript with its provenance", {
 })
 
 
-test_that("assignment and renaming keep the provenance in step", {
+test_that("assigning a transcript replaces the provenance rows with it", {
+  tr <- fake_transcript(c("a", "b", "c"), failed = "b")
+  retry <- fake_transcript("b_again", text = "second try", model = "openai/whisper-1")
+  before <- attr(tr, "provenance")
+  tr[is.na(tr)] <- retry
+  prov <- attr(tr, "provenance")
+  expect_equal(names(tr), c("a", "b", "c"))
+  expect_equal(unname(tr[["b"]]), "second try")
+  expect_equal(prov$.id, c("a", "b", "c"))
+  expect_equal(prov$status, c("ok", "ok", "ok"))
+  expect_equal(prov$model, c("openai/gpt-4o-mini-transcribe", "openai/whisper-1", "openai/gpt-4o-mini-transcribe"))
+  expect_true(is.na(prov$.error[2]))
+  expect_equal(prov$usage[[2]], list(type = "duration", seconds = 10))
+  expect_equal(prov$file[2], "b_again.wav")
+  expect_identical(prov[c(1, 3), ], before[c(1, 3), ])
+  # By name and by position alike, one row per position
+  tr[c("a", "c")] <- fake_transcript(c("x", "y"))
+  expect_equal(attr(tr, "provenance")$file, c("x.wav", "b_again.wav", "y.wav"))
+  expect_error(tr[1:3] <- fake_transcript(c("p", "q")), "one element, or one per position")
+})
+
+
+test_that("assigning plain text records an edit, and NA a failure", {
   tr <- fake_transcript(c("a", "b"))
   tr[2] <- "corrected"
   expect_s3_class(tr, "qlm_transcript")
   expect_equal(unname(tr[[2]]), "corrected")
-  expect_equal(attr(tr, "provenance")$.id, c("a", "b"))
+  prov <- attr(tr, "provenance")
+  expect_equal(prov$.id, c("a", "b"))
+  expect_equal(prov$status, c("ok", "edited"))
+  expect_null(prov$usage[[2]])
+  expect_equal(prov$sha256[2], "hash-b")
+  expect_equal(prov$model[2], "openai/gpt-4o-mini-transcribe")
+  tr["a"] <- NA
+  prov <- attr(tr, "provenance")
+  expect_equal(prov$status[1], "failed")
+  expect_equal(prov$.error[1], "set to NA by assignment")
   expect_error(tr[3] <- "more", "cannot be extended")
+  expect_error(tr["zzz"] <- "more", "cannot be extended")
 
   names(tr) <- c("x", "y")
   expect_equal(names(tr), c("x", "y"))

@@ -62,9 +62,10 @@
 #'
 #' A missing transcript passed to [qlm_code()] is never sent to the model:
 #' its unit is recorded as failed with the transcription's reason, and
-#' [qlm_backfill()] leaves it alone. Transcribe the file again, by position
-#' (`which(is.na(transcripts))`), and assign the new text and its provenance
-#' at that position, or concatenate independent runs with `c()`.
+#' [qlm_backfill()] leaves it alone. Transcribe the file again and assign the
+#' result at that position, `transcripts[failed] <- qlm_transcribe(files[failed])`,
+#' which replaces the record with it; or concatenate independent runs with
+#' `c()`.
 #'
 #' @section URLs:
 #'
@@ -123,8 +124,10 @@
 #'     \item{`usage`}{a list column holding what the provider reported.}
 #'   }
 #'   Subsetting with `[`, renaming with `names<-` and concatenating with
-#'   `c()` keep the table aligned with the elements; `as.character()` drops
-#'   it.
+#'   `c()` keep the table aligned with the elements. Assigning a
+#'   `qlm_transcript` with `[<-` replaces rows of the table too, so a retried
+#'   transcription replaces the failure it retries; assigning plain text
+#'   records an edit. `as.character()` drops the table.
 #'
 #' @examples
 #' \dontrun{
@@ -407,15 +410,21 @@ check_optional_string <- function(value, arg, call = rlang::caller_env()) {
 
 # Fetching ---------------------------------------------------------------------
 
-#' Every file as a local path, with the downloads done
+#' Every file as a local path, with the downloads done and the bytes recorded
 #'
 #' A URL is fetched into `workdir` under its own basename, prefixed by its
 #' position so two URLs with the same basename cannot collide. A download
 #' that fails, or that fetched more than the backend takes, is a failure of
 #' that unit under `"continue"` and `"return"`, and aborts under `"stop"`.
 #'
+#' The size and hash are taken here, before any request, so the record is
+#' of the bytes about to be sent: a file replaced while requests run cannot
+#' be recorded in their place, and one deleted then cannot stop the results
+#' coming back.
+#'
 #' @return A list: `path`, one per element (`NA` where a download failed),
-#'   and `error`, the message or `NA`.
+#'   `error`, the message or `NA`, and `size` and `sha256` of each file
+#'   that is there.
 #' @keywords internal
 #' @noRd
 prepare_transcription_files <- function(x, is_url, workdir, backend, on_error,
@@ -449,7 +458,13 @@ prepare_transcription_files <- function(x, is_url, workdir, backend, on_error,
       error[[i]] <- paste0("download failed: ", outcome)
     }
   }
-  list(path = path, error = error)
+
+  fetched <- !is.na(path)
+  size <- rep(NA_real_, n)
+  sha256 <- rep(NA_character_, n)
+  size[fetched] <- as.numeric(file.size(path[fetched]))
+  sha256[fetched] <- vapply(path[fetched], hash_file, character(1), USE.NAMES = FALSE)
+  list(path = path, error = error, size = size, sha256 = sha256)
 }
 
 #' One download, kept apart so that tests can stand in for the network
@@ -500,20 +515,14 @@ assemble_transcript <- function(ids, x, is_url, prepared, outcomes, model,
     }
   }
 
-  fetched <- !is.na(prepared$path)
-  size <- rep(NA_real_, n)
-  sha256 <- rep(NA_character_, n)
-  size[fetched] <- as.numeric(file.size(prepared$path[fetched]))
-  sha256[fetched] <- vapply(prepared$path[fetched], hash_file, character(1), USE.NAMES = FALSE)
-
   provenance <- data.frame(
     .id = ids,
     status = status,
     file = source_basename(x, is_url),
     source_url = ifelse(is_url, vapply(x, redact_url, character(1), USE.NAMES = FALSE), NA_character_),
     .error = error,
-    size = size,
-    sha256 = sha256,
+    size = prepared$size,
+    sha256 = prepared$sha256,
     model = rep(model, n),
     registered = rep(registered %||% NA_character_, n),
     language = rep(language %||% NA_character_, n),
@@ -589,11 +598,18 @@ report_transcription_failures <- function(x) {
   new_qlm_transcript(text, provenance)
 }
 
-#' Replace the text of transcripts, keeping their provenance
+#' Replace transcripts, and their provenance with them
+#'
+#' Assigning a `qlm_transcript` puts its rows in place of the old ones, so a
+#' retried transcription replaces the failure it retries, record and all.
+#' Assigning plain text keeps the file and its hash, since the recording is
+#' the same, and records that the text was edited: `status` becomes
+#' `"edited"`, the usage is cleared and the time is now. Assigning `NA`
+#' records a failure set by hand. The vector cannot be extended.
 #'
 #' @param x A `qlm_transcript`.
 #' @param i An index.
-#' @param value Replacement text.
+#' @param value A `qlm_transcript`, or replacement text.
 #'
 #' @return A `qlm_transcript`.
 #' @keywords internal
@@ -601,12 +617,36 @@ report_transcription_failures <- function(x) {
 `[<-.qlm_transcript` <- function(x, i, value) {
   provenance <- attr(x, "provenance")
   text <- as.character(x)
-  text[i] <- value
-  if (length(text) != nrow(provenance)) {
+  pos <- if (missing(i)) seq_along(x) else stats::setNames(seq_along(x), names(x))[i]
+  if (anyNA(pos) || any(pos > length(x))) {
     cli::cli_abort(c(
       "A {.cls qlm_transcript} cannot be extended by assignment.",
       "i" = "Every element carries a provenance row; add transcripts with {.code c()} instead."
     ))
+  }
+  if (!length(pos)) {
+    return(x)
+  }
+  if (length(value) != 1L && length(value) != length(pos)) {
+    cli::cli_abort(
+      "{.arg value} must have one element, or one per position replaced: {length(value)} for {length(pos)}."
+    )
+  }
+  take <- rep_len(seq_along(value), length(pos))
+
+  if (inherits(value, "qlm_transcript")) {
+    rows <- attr(value, "provenance")[take, , drop = FALSE]
+    # The position keeps its name: that is the unit's identity here
+    rows$.id <- provenance$.id[pos]
+    provenance[pos, ] <- rows
+    text[pos] <- as.character(value)[take]
+  } else {
+    value <- as.vector(value, "character")[take]
+    text[pos] <- value
+    provenance$status[pos] <- ifelse(is.na(value), "failed", "edited")
+    provenance$.error[pos] <- ifelse(is.na(value), "set to NA by assignment", NA_character_)
+    provenance$timestamp[pos] <- Sys.time()
+    provenance$usage[pos] <- list(NULL)
   }
   new_qlm_transcript(text, provenance)
 }
@@ -685,7 +725,7 @@ as.character.qlm_transcript <- function(x, ...) {
 print.qlm_transcript <- function(x, n = 10, width = getOption("width", 80), ...) {
   prov <- attr(x, "provenance")
   total <- length(x)
-  failed <- sum(prov$status != "ok")
+  failed <- sum(prov$status %in% c("failed", "unsubmitted"))
   models <- unique(prov$model)
   cat(sprintf(
     "<qlm_transcript: %d transcript%s%s; model%s %s>\n",
