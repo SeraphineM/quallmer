@@ -71,7 +71,9 @@ that guide the LLM and the structured output schema.</p>
 <span>  <span class="va">schema</span>,</span>
 <span>  role <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  input_type <span class="op">=</span> <span class="fu">input_types</span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  levels <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  levels <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  image_file_resize <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  image_url_detail <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -102,7 +104,8 @@ creating the system prompt.</p></dd>
 <dd><p>Type of input data: <code>"text"</code> (default), <code>"image"</code> or
 <code>"audio"</code>. For <code>"image"</code> and <code>"audio"</code> the elements of <code>x</code> in
 <code><a href="qlm_code.html">qlm_code()</a></code> are file paths; see its section "Audio input" for which
-providers accept audio and how the files are handled.</p></dd>
+providers accept audio and how the files are handled. For <code>"image"</code>
+the elements may also be URLs; see its section "Image input".</p></dd>
 
 
 <dt id="arg-levels">levels<a class="anchor" aria-label="anchor" href="#arg-levels"></a></dt>
@@ -122,6 +125,37 @@ re-wrapped with <code><a href="as_qlm_coded.html">as_qlm_coded()</a></code>, pas
 for the declared levels to be found. Because <code>levels</code> is a flat list, a
 name that occurs at more than one place in the schema cannot be declared
 and is an error; rename the properties to make them distinct.</p></dd>
+
+
+<dt id="arg-image-file-resize">image_file_resize<a class="anchor" aria-label="anchor" href="#arg-image-file-resize"></a></dt>
+<dd><p>How image files are resized before they are sent,
+for <code>input_type = "image"</code> only; setting it on any other codebook is an
+error. One of <code>"high"</code> (the default: fit within 2000x768 or 768x2000
+pixels, whichever suits the orientation), <code>"low"</code> (fit within 512x512),
+<code>"none"</code> (send the file as it is), or a <span class="pkg">magick</span> geometry string
+such as <code>"1024x1024&gt;"</code>. Anything other than <code>"none"</code> needs the
+<span class="pkg">magick</span> package, and <code><a href="qlm_code.html">qlm_code()</a></code> says so if it is missing. The
+value is stored on the codebook, so replications and backfills code at
+the same resolution and <code><a href="qlm_trail.html">qlm_trail()</a></code> records it. It applies to file
+paths only: an element of <code>x</code> that is a URL is fetched by the provider
+as it is. Codebooks saved before this field existed, including
+<code><a href="task.html">task()</a></code> objects, are read as <code>"low"</code>, the resolution they were coded
+at, rather than the current default. See <code><a href="https://ellmer.tidyverse.org/reference/content_image_url.html" class="external-link">ellmer::content_image_file()</a></code>.</p></dd>
+
+
+<dt id="arg-image-url-detail">image_url_detail<a class="anchor" aria-label="anchor" href="#arg-image-url-detail"></a></dt>
+<dd><p>How much detail the provider should read from an
+image given as a URL, for <code>input_type = "image"</code> only: <code>"auto"</code> (the
+default, the provider chooses), <code>"low"</code> or <code>"high"</code>. Passed to
+<code><a href="https://ellmer.tidyverse.org/reference/content_image_url.html" class="external-link">ellmer::content_image_url()</a></code> for every element of <code>x</code> that is a URL;
+files are governed by <code>image_file_resize</code> instead. OpenAI and
+OpenAI-compatible providers use it and other providers ignore it, and
+ellmer forwards it only from the version that includes
+<a href="https://github.com/tidyverse/ellmer/pull/1133" class="external-link">https://github.com/tidyverse/ellmer/pull/1133</a>; <code><a href="qlm_code.html">qlm_code()</a></code> says so
+before the run when a value other than <code>"auto"</code> cannot take effect.
+Stored on the codebook and recorded with the run like
+<code>image_file_resize</code>; codebooks saved before the field existed are read
+as <code>"auto"</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

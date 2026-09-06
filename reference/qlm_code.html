@@ -86,8 +86,9 @@ metadata for reproducibility.</p>
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>character; the input data: texts for a text codebook, or file
-paths for an image or audio codebook (see the section on audio input).
+<dd><p>character; the input data: texts for a text codebook, file
+paths or URLs for an image codebook (see the section on image input), or
+file paths for an audio codebook (see the section on audio input).
 Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the <code>.id</code> column, on which every later operation
@@ -220,6 +221,35 @@ based on their names.</p>
 function. Set <code>verbose = TRUE</code> to see progress messages during coding.
 Retry logic for API failures should be configured through ellmer's options;
 what a failure does to the rest of a parallel run is <code>on_error</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="image-input">Image input<a class="anchor" aria-label="anchor" href="#image-input"></a></h2>
+
+
+
+<p>An image codebook codes one image per element of <code>x</code>. A file path is read
+and sent inline, after being resized as the codebook's <code>image_file_resize</code>
+says: <code>"high"</code> by default, which fits the image within 2000x768 or 768x2000
+pixels, <code>"low"</code> for 512x512, <code>"none"</code> to send the file as it is, or a
+magick geometry string. Anything but <code>"none"</code> needs the <span class="pkg">magick</span>
+package, which is checked here before any request is sent. The resolution
+is part of the codebook because it is part of the measurement: a poster
+whose small print is legible at one size is not at another, and a
+replication should read the image the original run read. Codebooks saved
+before the setting existed are read as <code>"low"</code>, which is what they were
+coded at. See <code><a href="qlm_codebook.html">qlm_codebook()</a></code>.</p>
+<p>A URL is passed to the provider as it is, through
+<code><a href="https://ellmer.tidyverse.org/reference/content_image_url.html" class="external-link">ellmer::content_image_url()</a></code>, so <code>image_file_resize</code> does not apply to
+it; what the provider does with a remote image is its own affair, and not
+every provider fetches URLs. The codebook's <code>image_url_detail</code> asks the
+provider for <code>"low"</code> or <code>"high"</code> detail on such an image, where the
+provider reads that field: OpenAI and OpenAI-compatible providers do,
+others ignore it, and ellmer forwards it only from the version that
+includes <a href="https://github.com/tidyverse/ellmer/pull/1133" class="external-link">https://github.com/tidyverse/ellmer/pull/1133</a>. When a value
+other than <code>"auto"</code> cannot take effect, <code>qlm_code()</code> says so before the
+run rather than recording a setting that was not applied. A path that
+does not exist is refused before anything is sent, so a URL typed without
+its scheme fails here with the path named, not inside the request.</p>
     </div>
     <div class="section level2">
     <h2 id="provider-specific-parameters">Provider-specific parameters<a class="anchor" aria-label="anchor" href="#provider-specific-parameters"></a></h2>
