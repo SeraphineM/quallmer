@@ -341,6 +341,27 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ### Reliability and validation
 
+* `qlm_compare()` and `qlm_validate()` ranked ordinal text categories
+  alphabetically, so a scale of low / medium / high was ranked
+  high < low < medium, and every statistic that uses the order (ordinal
+  alpha, weighted kappa, Kendall's W, Spearman's rho, tau and MAE) was
+  computed on the wrong ranks with nothing in the output to show it; factor
+  levels were flattened to text before they were read, so ordering the
+  categories in advance changed nothing. Text categories at ordinal level
+  are now ranked by the levels of an ordered factor, which every coder must
+  supply and all must agree on, and a plain factor or character column is
+  an error that says how to declare the order, since alphabetical order is
+  not a ranking and a plain factor's levels are alphabetical by default. A
+  `type_enum()` declared `"ordinal"` in `qlm_codebook()` is that
+  declaration: its values, in the order written, are the scale, `qlm_code()`
+  stores the column as an ordered factor with those levels, `as_qlm_coded()`
+  does the same for human-coded data given the codebook (refusing a value
+  outside the enum), and the codebook print shows the order. An enum not
+  declared ordinal stays nominal. Because the ranks are now numbers, a
+  `tolerance` on ordered text counts rank distance, so `tolerance = 1`
+  means adjacent categories agree; the warning that a tolerance on text
+  categories was being ignored is gone with the reason for it (#165).
+
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as
   text. The ratings were assembled into one matrix before their type was

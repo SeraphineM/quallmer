@@ -850,10 +850,66 @@ test_that("qlm_validate refuses a rating that is not a number at interval level 
 })
 
 
-test_that("qlm_validate ordinal text categories are still ranked by their sorted labels (#150)", {
+# ---- ordinal text categories ranked by their declared order (#165) ----------
+
+test_that("qlm_validate ranks ordinal text categories by their ordered-factor levels (#165)", {
+  lv <- c("low", "medium", "high")
+  truth <- c("low", "low", "medium", "medium", "high", "high")
+  est <- c("low", "medium", "medium", "high", "high", "high")
+  gold <- as_qlm_coded(data.frame(.id = 1:6, g = factor(truth, levels = lv, ordered = TRUE)),
+                       id = .id, name = "gold")
+  pred <- as_qlm_coded(data.frame(.id = 1:6, g = factor(est, levels = lv, ordered = TRUE)),
+                       id = .id, name = "pred")
+
+  v <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal"))
+  t_num <- match(truth, lv)
+  e_num <- match(est, lv)
+  expect_equal(v$value[v$measure == "rho"], cor(t_num, e_num, method = "spearman"))
+  expect_equal(v$value[v$measure == "tau"], cor(t_num, e_num, method = "kendall"))
+  expect_equal(v$value[v$measure == "mae"], mean(abs(t_num - e_num)))
+  # The alphabetical ranking put "high" lowest and made rho negative
+  expect_gt(v$value[v$measure == "rho"], 0.8)
+
+  # Bootstrap CIs resample the same ranks
+  set.seed(165)
+  vb <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal",
+                                   ci = "bootstrap", bootstrap_n = 20))
+  expect_equal(vb$value, v$value)
+  mae <- vb[vb$measure == "mae", ]
+  expect_lte(mae$ci_lower, mae$value)
+  expect_gte(mae$ci_upper, mae$value)
+})
+
+
+test_that("qlm_validate refuses ordinal text with no declared order (#165)", {
   gold <- as_qlm_coded(data.frame(.id = 1:4, g = c("a", "b", "c", "a")), id = .id, name = "gold")
   pred <- as_qlm_coded(data.frame(.id = 1:4, g = c("a", "b", "c", "b")), id = .id, name = "pred")
 
-  v <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal"))
-  expect_equal(v$value[v$measure == "mae"], 0.25)
+  err <- expect_error(qlm_validate(pred, gold = gold, by = "g", level = "ordinal"),
+                      "no declared order")
+  expect_match(conditionMessage(err), "pred")
+  expect_match(conditionMessage(err), "gold")
+  expect_match(conditionMessage(err), "ordered = TRUE")
+
+  # Ordered on the gold side only does not order the predictions
+  lv <- c("a", "b", "c")
+  gold_o <- as_qlm_coded(
+    data.frame(.id = 1:4, g = factor(c("a", "b", "c", "a"), levels = lv, ordered = TRUE)),
+    id = .id, name = "gold"
+  )
+  err <- expect_error(qlm_validate(pred, gold = gold_o, by = "g", level = "ordinal"),
+                      "no declared order")
+  expect_match(conditionMessage(err), '"pred"')
+  expect_no_match(conditionMessage(err), '"gold"')
+
+  # Two orders are two declarations
+  pred_r <- as_qlm_coded(
+    data.frame(.id = 1:4, g = factor(c("a", "b", "c", "b"), levels = rev(lv), ordered = TRUE)),
+    id = .id, name = "pred"
+  )
+  expect_error(qlm_validate(pred_r, gold = gold_o, by = "g", level = "ordinal"),
+               "differ between coders")
+
+  # Nominal level takes the categories as they are
+  expect_no_error(qlm_validate(pred, gold = gold, by = "g", level = "nominal"))
 })
