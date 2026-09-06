@@ -654,14 +654,112 @@ test_that("a failed download stops the run before any upload, naming the URL", {
   # The download that did succeed is cleaned up
   expect_false(any(file.exists(calls$downloads)))
 
-  # A warning from download.file() is a failure too
-  warns <- function(url, dest) { warning("cannot open URL: HTTP status was '403 Forbidden'"); invisible(dest) }
+  # A warning from download.file() is a failure too, and the URL it quotes
+  # is redacted along with the label
+  secret <- c(a = "https://user:hunter2@example.org/ad.mp4?api_key=SECRET123")
+  warns <- function(url, dest) {
+    warning(paste0("cannot open URL '", url, "': HTTP status was '403 Forbidden'"))
+    invisible(dest)
+  }
   g <- audio_runner(download = warns, calls = calls)
-  expect_error(
-    suppressMessages(g(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
-    "403 Forbidden"
+  err <- tryCatch(
+    suppressMessages(g(secret, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    error = function(e) conditionMessage(e)
   )
+  expect_match(err, "403 Forbidden")
+  expect_match(err, "https://example.org/ad.mp4\\?api_key=<redacted>")
+  expect_no_match(err, "SECRET123|hunter2")
 })
+
+
+test_that("redact_urls_in_text redacts every URL a message quotes", {
+  text <- "cannot open URL 'https://k:pw@a.org/x.mp4?token=abc&v=1' after http://b.org/y.mp4; done"
+  expect_equal(
+    redact_urls_in_text(text),
+    "cannot open URL 'https://a.org/x.mp4?token=<redacted>&v=1' after http://b.org/y.mp4; done"
+  )
+  expect_equal(redact_urls_in_text("no url here"), "no url here")
+})
+
+
+test_that("a download that fails the size check is removed", {
+  calls <- new.env()
+  x <- c(a = "https://example.org/big.mp4")
+  f <- audio_runner(calls = calls)
+  testthat::local_mocked_bindings(max_upload_bytes = function() 10)
+  expect_error(
+    suppressMessages(f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    "exceeds the"
+  )
+  expect_length(calls$downloads, 1L)
+  expect_false(file.exists(calls$downloads))
+})
+
+
+test_that("verify_input_files checks files and leaves every URL to the run that downloads it", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+
+  seen <- character()
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    seen <<- c(seen, url)
+    writeBin(as.raw(11:30), dest)
+    invisible(dest)
+  })
+  expect_silent(verify_input_files(run))
+  expect_silent(verify_input_files(run, ids = c("ad", "zoo")))
+  expect_length(seen, 0L)
+
+  writeBin(as.raw(99:110), clip)
+  expect_error(verify_input_files(run), 'differs from the one this run coded: "clip"')
+  expect_silent(verify_input_files(run, ids = "ad"))
+})
+
+
+test_that("the download a run uploads is checked against the hashes it was handed", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+
+  expected <- expected_url_hashes(run)
+  expect_equal(expected$url, "https://example.org/ad.mp4")
+  expect_equal(expected$.id, "ad")
+  expect_equal(expected$sha256, hash_file(downloaded))
+  expect_equal(nrow(expected_url_hashes(run, ids = c("clip", "zoo"))), 0L)
+  expect_equal(nrow(expected_url_hashes(media_run(c(a = audio_file())))), 0L)
+
+  calls <- new.env()
+  # The same bytes: the run proceeds, with one download
+  f <- audio_runner(calls = calls, download = fake_download(as.raw(11:30)))
+  coded <- with_expected_hashes(expected, suppressMessages(
+    f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")
+  ))
+  expect_equal(sum(grepl("^download:", calls$log)), 1L)
+  expect_equal(qlm_meta(coded, "input_files")$sha256[2], hash_file(downloaded))
+
+  # Different bytes: refused after the download and before any upload
+  g <- audio_runner(calls = calls, download = fake_download(as.raw(99:110)))
+  err <- tryCatch(
+    with_expected_hashes(expected, suppressMessages(
+      g(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")
+    )),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, 'The video file of 1 unit differs from the one this run coded: "ad"')
+  expect_match(err, "URL now serves different bytes")
+  expect_false(any(grepl("^upload:", calls$log)))
+  expect_false(any(file.exists(calls$downloads)))
+  # The expectation does not outlive the call
+  expect_null(input_state$expected)
+
+  # With no expectation in force, any bytes are accepted
+  coded2 <- suppressMessages(g(x, video_codebook(), model = "google_gemini/gemini-2.5-flash"))
+  expect_s3_class(coded2, "qlm_coded")
+})
+
 
 
 test_that("a failed upload after a download removes the temporary file, and names the URL", {
@@ -738,39 +836,6 @@ test_that("file provenance records downloaded bytes against the URL, and nothing
   expect_equal(table$sha256, c(hash_file(clip), hash_file(downloaded), NA))
   # Without `local`, a URL has no bytes here (the image case)
   expect_true(all(is.na(file_provenance(x[2:3], c("b", "c"))$sha256)))
-})
-
-
-test_that("verify_input_files downloads a URL again to compare it, and leaves a YouTube link alone", {
-  clip <- video_file(as.raw(1:10))
-  downloaded <- video_file(as.raw(11:30))
-  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
-  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
-
-  seen <- character()
-  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
-    seen <<- c(seen, url)
-    writeBin(as.raw(11:30), dest)
-    invisible(dest)
-  })
-  expect_silent(verify_input_files(run))
-  expect_equal(seen, "https://example.org/ad.mp4")
-  # Only the YouTube unit: nothing to check, nothing said, nothing fetched
-  seen <- character()
-  expect_silent(verify_input_files(run, ids = "zoo"))
-  expect_length(seen, 0L)
-
-  # The URL now serves different bytes
-  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
-    writeBin(as.raw(99:110), dest)
-    invisible(dest)
-  })
-  expect_error(verify_input_files(run), 'differs from the one this run coded: "ad"')
-  expect_error(verify_input_files(run, ids = "ad"), "path or URL now points at different bytes")
-  # The file beside it is still checked on its own
-  expect_silent(verify_input_files(run, ids = "clip"))
-  writeBin(as.raw(99:110), clip)
-  expect_error(verify_input_files(run, ids = "clip"), 'differs.*"clip"')
 })
 
 

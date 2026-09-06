@@ -1239,28 +1239,45 @@ test_that("qlm_replicate of a run without recorded hashes proceeds with a notice
 
 
 
-test_that("qlm_replicate downloads a video URL again and checks its bytes (#179)", {
+
+
+test_that("qlm_replicate checks a video URL against the download it uploads (#179)", {
+  withr::local_envvar(c(GEMINI_API_KEY = "test"))
   clip <- video_file(as.raw(1:10))
   downloaded <- video_file(as.raw(11:30))
-  x <- c(clip = clip, ad = "https://example.org/ad.mp4",
-         zoo = "https://www.youtube.com/watch?v=jNQXAC9IVRw")
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
   run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
-  seen <- character()
+  # The structured call, uploads included, is stood in for; what matters
+  # here is the download and the check that precedes it
+  log <- character()
+  testthat::local_mocked_bindings(
+    try_structured_call = function(x, ...) {
+      log <<- c(log, "inference")
+      list(ok = TRUE, value = data.frame(language = rep("en", length(x))))
+    }
+  )
+
+  # The URL still serves the recorded bytes: one download, then the run
   testthat::local_mocked_bindings(download_input_url = function(url, dest) {
-    seen <<- c(seen, url)
+    log <<- c(log, paste0("download:", url))
     writeBin(as.raw(11:30), dest)
     invisible(dest)
   })
-  f <- qlm_replicate
-  mockery::stub(f, "qlm_code", function(x, ...) run)
+  rep <- suppressMessages(qlm_replicate(run, name = "rep"))
+  expect_s3_class(rep, "qlm_coded")
+  expect_equal(log, c("download:https://example.org/ad.mp4", "inference"))
+  expect_equal(qlm_meta(rep, "input_files")$sha256[2], hash_file(downloaded))
 
-  expect_s3_class(suppressMessages(f(run, name = "rep")), "qlm_coded")
-  # The URL was fetched for the check; the YouTube link has nothing to check
-  expect_equal(seen, "https://example.org/ad.mp4")
-
+  # Different bytes: refused before anything is uploaded
+  log <- character()
   testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    log <<- c(log, paste0("download:", url))
     writeBin(as.raw(99:110), dest)
     invisible(dest)
   })
-  expect_error(f(run, name = "rep2"), 'differs from the one this run coded: "ad"')
+  expect_error(
+    suppressMessages(qlm_replicate(run, name = "rep2")),
+    'differs from the one this run coded: "ad"'
+  )
+  expect_equal(log, "download:https://example.org/ad.mp4")
 })

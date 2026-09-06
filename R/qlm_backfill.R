@@ -249,10 +249,11 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     ))
 
     subset <- inputs_by_id(x, ids[retry])
-    # The files about to be uploaded again must be the ones the run coded
+    # The files about to be uploaded again must be the ones the run coded;
+    # a URL is checked by the pass against the download it uploads
     verify_input_files(x, ids[retry])
     result <- tryCatch(
-      do.call(qlm_code, c(
+      with_expected_hashes(expected_url_hashes(x, ids[retry]), do.call(qlm_code, c(
         list(
           x = subset,
           codebook = codebook(x),
@@ -262,7 +263,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
           backfill = FALSE
         ),
         call_args
-      )),
+      ))),
       error = function(e) e
     )
 

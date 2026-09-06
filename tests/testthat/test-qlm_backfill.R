@@ -1065,21 +1065,6 @@ test_that("a backfill keeps the pass's file hashes (#124)", {
 })
 
 
-test_that("a backfill pass on a video run checks a downloaded URL before re-coding it (#179)", {
-  clip <- video_file(as.raw(1:10))
-  downloaded <- video_file(as.raw(11:30))
-  x <- c(clip = clip, ad = "https://example.org/ad.mp4")
-  run <- media_run(x, input_type = "video", local = c(clip, downloaded), failed = "ad")
-  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
-    writeBin(as.raw(99:110), dest)
-    invisible(dest)
-  })
-  f <- qlm_backfill
-  mockery::stub(f, "qlm_code", function(...) stop("pass reached the model", call. = FALSE))
-  expect_error(suppressMessages(f(run)), 'differs from the one this run coded: "ad"')
-})
-
-
 test_that("qlm_backfill keeps an ordinal enum's ordered levels (#165)", {
   skip_if_not_installed("mockery")
   lv <- c("low", "medium", "high")
@@ -1098,4 +1083,44 @@ test_that("qlm_backfill keeps an ordinal enum's ordered levels (#165)", {
 
   expect_identical(filled$sev, factor(c("high", "medium", "low"), levels = lv, ordered = TRUE))
   expect_equal(nrow(qlm_failures(filled)), 0)
+})
+
+
+test_that("a backfill pass checks a video URL against the download it uploads (#179)", {
+  withr::local_envvar(c(GEMINI_API_KEY = "test"))
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded), failed = "ad")
+  log <- character()
+  testthat::local_mocked_bindings(
+    try_structured_call = function(x, ...) {
+      log <<- c(log, "inference")
+      list(ok = TRUE, value = data.frame(language = rep("en", length(x))))
+    },
+    download_input_url = function(url, dest) {
+      log <<- c(log, paste0("download:", url))
+      writeBin(as.raw(99:110), dest)
+      invisible(dest)
+    }
+  )
+  err <- tryCatch(
+    suppressMessages(qlm_backfill(run, passes = 1L)),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, "failed before recovering anything")
+  expect_match(err, 'differs from the one this run coded: "ad"')
+  expect_equal(log, "download:https://example.org/ad.mp4")
+
+  # The same bytes: the pass re-codes the unit and keeps the hash
+  log <- character()
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    log <<- c(log, "download")
+    writeBin(as.raw(11:30), dest)
+    invisible(dest)
+  })
+  filled <- suppressMessages(qlm_backfill(run, passes = 1L))
+  expect_false(any(failed_units(filled)))
+  expect_equal(log, c("download", "inference"))
+  expect_equal(qlm_meta(filled, "input_files")$sha256, c(hash_file(clip), hash_file(downloaded)))
 })

@@ -129,6 +129,20 @@ redact_urls <- function(x) {
   vapply(x, redact_url, character(1), USE.NAMES = FALSE)
 }
 
+#' Redact every URL that appears in a piece of text
+#'
+#' A download failure quotes the URL it was given, credentials included, so
+#' the provider's or libcurl's message is passed through this before it is
+#' kept or shown.
+#'
+#' @keywords internal
+#' @noRd
+redact_urls_in_text <- function(text) {
+  found <- gregexpr("[A-Za-z][A-Za-z0-9+.-]*://[^[:space:]'\"<>]+", text)
+  regmatches(text, found) <- lapply(regmatches(text, found), redact_urls)
+  text
+}
+
 
 # Checks before anything is downloaded, uploaded or sent -----------------------
 
@@ -294,6 +308,10 @@ resolve_input_files <- function(x, input_type, say = TRUE, call = rlang::caller_
 
   local[is_youtube_url(x)] <- NA_character_
   download <- which(is_input_url(x) & !is_youtube_url(x))
+  # The downloads are this function's until it returns them; an abort in
+  # any check below must not leave them behind
+  done <- FALSE
+  on.exit(if (!done) unlink(temp), add = TRUE)
   if (length(download)) {
     temp <- vapply(x[download], function(url) {
       tempfile("quallmer_video_", fileext = paste0(".", url_extension(url)))
@@ -309,14 +327,13 @@ resolve_input_files <- function(x, input_type, say = TRUE, call = rlang::caller_
         warning = function(w) w
       )
       if (inherits(result, "condition")) {
-        failures[redact_url(url)] <- strip_ansi(conditionMessage(result))
+        failures[redact_url(url)] <- redact_urls_in_text(strip_ansi(conditionMessage(result)))
       }
       cli::cli_progress_update()
     }
     cli::cli_progress_done()
 
     if (length(failures)) {
-      unlink(temp)
       cli::cli_abort(c(
         "Downloading {length(failures)} of {length(download)} video URL{?s} failed, so nothing was uploaded or sent.",
         stats::setNames(
@@ -327,14 +344,104 @@ resolve_input_files <- function(x, input_type, say = TRUE, call = rlang::caller_
       ), call = call)
     }
     local[download] <- temp
+    check_downloaded_hashes(x[download], temp, call = call)
   }
 
   check_upload_sizes(local, x, input_type, call = call)
   if (say) {
     say_video_size(local)
   }
+  done <- TRUE
   list(local = local, temp = temp)
 }
+
+# What a replication or backfill expects a URL to hold ---------------------------
+
+# Set for the duration of a replication or backfill pass, read when the
+# URLs are downloaded for upload
+input_state <- new.env(parent = emptyenv())
+input_state$expected <- NULL
+
+#' The hashes a run recorded for the URLs it downloaded
+#'
+#' A URL is downloaded once, by the run that uploads it, and the bytes that
+#' arrive are the bytes the model receives. So a replication or backfill
+#' cannot check a URL ahead of that download, as it checks a local file;
+#' instead it hands the parent's recorded hashes to the run, and
+#' `resolve_input_files()` compares the download against them before
+#' anything is uploaded. Checking a separate download first would prove
+#' nothing about the one that is sent.
+#'
+#' @param x A `qlm_coded` object.
+#' @param ids The units about to be coded, or `NULL` for all of them.
+#'
+#' @return A data frame with `url`, `.id` and `sha256`, one row per URL unit
+#'   with a recorded hash; zero rows when there is none.
+#' @keywords internal
+#' @noRd
+expected_url_hashes <- function(x, ids = NULL) {
+  none <- data.frame(url = character(), .id = character(), sha256 = character(),
+                     stringsAsFactors = FALSE)
+  meta_attr <- attr(x, "meta")
+  recorded <- meta_attr$user$input_files
+  if (!meta_attr$object$input_type %in% uploaded_input_types() || is.null(recorded)) {
+    return(none)
+  }
+  data <- inputs(x)
+  all_ids <- as.character(names(data) %||% seq_along(data))
+  if (!is.null(ids)) {
+    keep <- all_ids %in% as.character(ids)
+    data <- data[keep]
+    all_ids <- all_ids[keep]
+  }
+  data <- unname(data)
+  sha256 <- recorded$sha256[match(all_ids, recorded$.id)]
+  is_url <- is_input_url(data) & !is_youtube_url(data)
+  keep <- is_url & !is.na(sha256)
+  data.frame(url = data[keep], .id = all_ids[keep], sha256 = sha256[keep],
+             stringsAsFactors = FALSE)
+}
+
+#' Run `code` with these expectations in force
+#' @keywords internal
+#' @noRd
+with_expected_hashes <- function(expected, code) {
+  old <- input_state$expected
+  on.exit(input_state$expected <- old, add = TRUE)
+  input_state$expected <- if (nrow(expected)) expected
+  force(code)
+}
+
+#' Refuse a download whose bytes are not the ones the parent run coded
+#'
+#' @param urls The URLs just downloaded.
+#' @param paths Where each landed.
+#' @param call The calling environment, for the error.
+#' @keywords internal
+#' @noRd
+check_downloaded_hashes <- function(urls, paths, call = rlang::caller_env()) {
+  expected <- input_state$expected
+  if (is.null(expected)) {
+    return(invisible(NULL))
+  }
+  pos <- match(urls, expected$url)
+  known <- !is.na(pos)
+  if (!any(known)) {
+    return(invisible(NULL))
+  }
+  current <- vapply(paths[known], hash_file, character(1), USE.NAMES = FALSE)
+  changed <- current != expected$sha256[pos[known]]
+  if (any(changed)) {
+    ids <- expected$.id[pos[known]][changed]
+    cli::cli_abort(c(
+      "{cli::qty(sum(changed))}The video file{?s} of {sum(changed)} unit{?s} differ{?s/} from the one{?s} this run coded: {.val {ids}}.",
+      "i" = "The recorded hash is from when the run was coded; the URL now serves different bytes.",
+      "i" = "Code the current files as a fresh run with {.fn qlm_code} instead."
+    ), call = call)
+  }
+  invisible(NULL)
+}
+
 
 #' One download, kept as its own function so that tests can stand in for
 #' the network
@@ -608,10 +715,11 @@ hash_file <- function(path) {
 #'
 #' Called before a replication or a backfill pass uploads anything. A run
 #' coded before hashes were recorded is allowed to proceed with a notice,
-#' since nothing can be checked; the new run records hashes of its own. A
-#' URL the run downloaded is downloaded again here and its bytes compared;
-#' one the provider fetched (an image URL, a YouTube link) has no recorded
-#' hash and is reported as unverifiable like any other unit without one.
+#' since nothing can be checked; the new run records hashes of its own.
+#' URLs are not checked here: one the provider fetches (an image URL, a
+#' YouTube link) was never a file on this machine, and one the run
+#' downloaded is checked by the new run against the download it uploads,
+#' through `expected_url_hashes()` and `with_expected_hashes()`.
 #'
 #' @param x A `qlm_coded` object, already checked.
 #' @param ids The units about to be coded, or `NULL` for all of them.
@@ -649,21 +757,17 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
   }
   expected <- recorded$sha256[match(ids, recorded$.id)]
 
-  # A URL the provider fetched was never a file on this machine, so there is
-  # nothing to verify; a URL this run downloaded has a hash to compare, and
-  # is downloaded again for the comparison (the new run downloads it in any
-  # case). Any other URL is a unit without a hash, said below.
+  # A URL is not a file on this machine: the provider fetches it, or the new
+  # run downloads it and checks that download. Only the files are checked here.
   is_url <- is_input_url(paths, data = TRUE)
-  fetched <- is_url & is.na(expected)
-  ids <- ids[!fetched]
-  paths <- paths[!fetched]
-  expected <- expected[!fetched]
+  ids <- ids[!is_url]
+  paths <- paths[!is_url]
+  expected <- expected[!is_url]
   if (!length(paths)) {
     return(invisible(NULL))
   }
 
-  local <- paths
-  missing <- !is_url[!fetched] & (is.na(paths) | !file.exists(paths))
+  missing <- is.na(paths) | !file.exists(paths)
   if (any(missing)) {
     cli::cli_abort(c(
       "{sum(missing)} {input_type} {cli::qty(sum(missing))}file{?s} of this run no longer exist{?s/}: {.path {paths[missing]}}.",
@@ -685,20 +789,14 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
     ))
   }
 
-  check <- !unknown
-  if (any(check)) {
-    resolved <- resolve_input_files(paths[check], input_type, say = FALSE, call = call)
-    on.exit(unlink(resolved$temp), add = TRUE)
-    local[check] <- resolved$local
-    current <- file_provenance(paths[check], ids[check], local = resolved$local)
-    changed <- current$sha256 != expected[check]
-    if (any(changed)) {
-      cli::cli_abort(c(
-        "{cli::qty(sum(changed))}The {input_type} file{?s} of {sum(changed)} unit{?s} differ{?s/} from the one{?s} this run coded: {.val {ids[check][changed]}}.",
-        "i" = "The recorded hash is from when the run was coded; the path or URL now points at different bytes.",
-        "i" = "Code the current files as a fresh run with {.fn qlm_code} instead."
-      ), call = call)
-    }
+  current <- file_provenance(paths, ids)
+  changed <- !unknown & current$sha256 != expected
+  if (any(changed)) {
+    cli::cli_abort(c(
+      "{cli::qty(sum(changed))}The {input_type} file{?s} of {sum(changed)} unit{?s} differ{?s/} from the one{?s} this run coded: {.val {ids[changed]}}.",
+      "i" = "The recorded hash is from when the run was coded; the path now points at different bytes.",
+      "i" = "Code the current files as a fresh run with {.fn qlm_code} instead."
+    ), call = call)
   }
   invisible(NULL)
 }
