@@ -283,8 +283,14 @@ bootstrap_validation_ci <- function(merged, var_level, metrics_to_compute, estim
 #' read as numbers, whatever type they are stored as, so a column of digits
 #' held as text is compared on its values and not on the alphabetical order of
 #' its strings. A value that does not read as a number is an error at interval
-#' level. Ordinal categories may instead all be text, in which case they are
-#' ranked by their sorted labels.
+#' level. Ordinal categories may instead all be text, in which case both
+#' columns must be ordered factors with the same levels in the same order, and
+#' the categories are ranked by those levels; alphabetical order is never
+#' used. A plain factor or a character column at ordinal level is an error
+#' that says how to declare the order: `factor(x, levels = c(...), ordered =
+#' TRUE)` for data built by hand, or a [type_enum()] written in scale order
+#' and declared `"ordinal"` in the codebook, which [qlm_code()] and
+#' [as_qlm_coded()] store as that ordered factor.
 #'
 #' For multiclass problems with nominal data, the `average` parameter controls
 #' how per-class metrics are aggregated:
@@ -754,8 +760,25 @@ qlm_validate <- function(
       n_subjects_total <- nrow(merged)
     }
 
-    # Get unique levels from both columns
-    all_levels <- sort(unique(c(
+    # Numbers for the ordinal and interval measures, read by the declared
+    # level rather than taken as codes of the string-sorted factor levels,
+    # which ranked "10" between "1" and "2" (#150). Ordinal categories that
+    # are all text are ranked by their ordered-factor levels (#165); the
+    # helper refuses text with no declared order.
+    numbers <- NULL
+    if (var_level != "nominal") {
+      numbers <- ratings_matrix(
+        merged[, c("estimate", "truth")], var_level, var,
+        coders = c(if (is.na(x_obj_name)) "x" else x_obj_name,
+                   if (is.na(gold_name)) "gold" else gold_name)
+      )
+      merged$estimate_num <- numbers[, "estimate"]
+      merged$truth_num <- numbers[, "truth"]
+    }
+
+    # Shared levels for both columns: the declared order where there is one,
+    # otherwise the sorted labels, which only nominal statistics then use
+    all_levels <- attr(numbers, "levels") %||% sort(unique(c(
       as.character(merged$estimate),
       as.character(merged$truth)
     )))
@@ -763,31 +786,11 @@ qlm_validate <- function(
     # Convert both to factors with shared levels
     # For ordinal data, use ordered factors for proper weighted kappa
     if (var_level == "ordinal") {
-      merged$estimate <- factor(merged$estimate, levels = all_levels, ordered = TRUE)
-      merged$truth <- factor(merged$truth, levels = all_levels, ordered = TRUE)
+      merged$estimate <- factor(as.character(merged$estimate), levels = all_levels, ordered = TRUE)
+      merged$truth <- factor(as.character(merged$truth), levels = all_levels, ordered = TRUE)
     } else {
-      merged$estimate <- factor(merged$estimate, levels = all_levels)
-      merged$truth <- factor(merged$truth, levels = all_levels)
-    }
-
-    # Numbers for the ordinal and interval measures, read by the declared
-    # level rather than taken as codes of the string-sorted factor levels,
-    # which ranked "10" between "1" and "2" (#150). Ordinal categories that
-    # are all text keep those codes: their sorted labels are the only order
-    # there is.
-    if (var_level != "nominal") {
-      numbers <- ratings_matrix(
-        merged[, c("estimate", "truth")], var_level, var,
-        coders = c(if (is.na(x_obj_name)) "x" else x_obj_name,
-                   if (is.na(gold_name)) "gold" else gold_name)
-      )
-      if (is.numeric(numbers)) {
-        merged$estimate_num <- numbers[, "estimate"]
-        merged$truth_num <- numbers[, "truth"]
-      } else {
-        merged$estimate_num <- as.numeric(merged$estimate)
-        merged$truth_num <- as.numeric(merged$truth)
-      }
+      merged$estimate <- factor(as.character(merged$estimate), levels = all_levels)
+      merged$truth <- factor(as.character(merged$truth), levels = all_levels)
     }
 
     # Map `average` to the estimator label used by the metric_* functions.

@@ -383,7 +383,10 @@
 #'
 #' @return A `qlm_coded` object (a tibble with additional attributes):
 #'   \describe{
-#'     \item{Data columns}{The coded results with a `.id` column for identifiers.}
+#'     \item{Data columns}{The coded results with a `.id` column for identifiers.
+#'       A [type_enum()] declared `"ordinal"` in the codebook is an ordered
+#'       factor whose levels are the enum's values in the order written; see
+#'       the `levels` argument of [qlm_codebook()].}
 #'     \item{Attributes}{`data`, `input_type`, and `run` (list containing name, batch, call, codebook, chat_args, execution_args, metadata, parent).}
 #'   }
 #'   The object prints as a tibble and can be used directly in data manipulation workflows.
@@ -767,6 +770,10 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Add model to chat_args for easy access
   chat_args$name <- model
+
+  # An ordinal enum is stored as an ordered factor in the enum's order, the
+  # shape the reliability statistics read the scale order from (#165)
+  results <- apply_ordinal_enums(results, codebook)
 
   coded <- new_qlm_coded(
     results = results,

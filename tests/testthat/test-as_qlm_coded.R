@@ -460,3 +460,31 @@ test_that("as_qlm_coded rejects a missing .id, and an id= beside an existing .id
   # ... whereas naming the existing column is fine
   expect_equal(as_qlm_coded(x, id = .id)$.id, c("old1", "old2"))
 })
+
+
+test_that("as_qlm_coded orders an ordinal enum column by the codebook (#165)", {
+  lv <- c("low", "medium", "high")
+  cb <- qlm_codebook("Sev", "Rate.", ellmer::type_object(sev = ellmer::type_enum(lv)),
+                     levels = list(sev = "ordinal"))
+
+  x <- as_qlm_coded(data.frame(.id = 1:3, sev = c("high", "low", "medium")),
+                    name = "coder", codebook = cb)
+  expect_identical(x$sev, factor(c("high", "low", "medium"), levels = lv, ordered = TRUE))
+  # The schema is still not kept, but the level is
+  expect_null(codebook(x)$schema)
+  expect_equal(qlm_levels(codebook(x)), list(sev = "ordinal"))
+
+  # A value outside the enum is an error naming it
+  err <- expect_error(
+    as_qlm_coded(data.frame(.id = 1:2, sev = c("low", "severe")), name = "coder", codebook = cb),
+    "not among the codebook"
+  )
+  expect_match(conditionMessage(err), "severe")
+
+  # Without a codebook the column is left as given: an ordered factor is the declaration
+  y <- as_qlm_coded(data.frame(.id = 1:2, sev = c("low", "high")), name = "coder")
+  expect_type(y$sev, "character")
+  ordered <- factor(c("low", "high"), levels = lv, ordered = TRUE)
+  z <- as_qlm_coded(data.frame(.id = 1:2, sev = ordered), name = "coder")
+  expect_identical(z$sev, ordered)
+})

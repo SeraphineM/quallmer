@@ -44,10 +44,10 @@ being compared, so a difference of exactly \code{tolerance} counts as agreement
 and \code{0.1 + 0.2} equals \code{0.3}; it is numerical equality rather than bit
 identity. The allowance is far smaller than any meaningful rating
 difference, so a genuinely different pair is never counted as agreeing.
-Used for percent agreement at ordinal, interval and ratio level, where
-the ratings are numbers. Nominal categories agree only when identical,
-as do ordinal categories given as text, and a positive \code{tolerance} on
-text categories draws a warning since it cannot be applied.}
+Used for percent agreement at ordinal, interval and ratio level. Ordinal
+categories given as text are ranked by their ordered-factor levels, and
+the tolerance then counts rank distance: \code{tolerance = 1} means adjacent
+categories agree. Nominal categories agree only when identical.}
 
 \item{ci}{Confidence interval method:
 \describe{
@@ -132,10 +132,16 @@ coder's ratings are read as numbers, whatever type they are stored as, so a
 column of digits held as text is compared on its values and not on the
 alphabetical order of its strings. A value that does not read as a number
 is an error at interval and ratio level, naming the coder and the values.
-At ordinal level the categories may instead all be text, in which case they
-are ranked by their sorted labels; numbers from one coder and text from
-another cannot be placed on one scale and are an error. Nominal ratings are
-compared as text.
+At ordinal level the categories may instead all be text, in which case
+every coder's column must be an ordered factor with the same levels in the
+same order, and the categories are ranked by those levels; alphabetical
+order is never used, since it is not a ranking. A plain factor or a
+character column at ordinal level is an error that says how to declare the
+order: \code{factor(x, levels = c(...), ordered = TRUE)} for data built by hand,
+or a \code{\link[ellmer:type_enum]{type_enum()}} written in scale order and declared \code{"ordinal"} in the
+codebook, which \code{\link[=qlm_code]{qlm_code()}} and \code{\link[=as_qlm_coded]{as_qlm_coded()}} store as that ordered
+factor. Numbers from one coder and text from another cannot be placed on
+one scale and are an error. Nominal ratings are compared as text.
 
 \strong{Per-category statistics.} When \code{by_category = TRUE} and \code{level = "nominal"},
 the result also includes one row per category for \code{alpha_per_value} (from

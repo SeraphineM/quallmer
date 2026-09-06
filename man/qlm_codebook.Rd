@@ -40,6 +40,15 @@ If \code{NULL} (default), levels are auto-detected from schema types using the
 following mapping: \code{type_boolean} and \code{type_enum} = nominal, \code{type_string}
 = nominal, \code{type_integer} = ordinal, \code{type_number} = interval.
 
+A \code{\link[ellmer:type_enum]{type_enum()}} is nominal unless declared \code{"ordinal"} here. For an
+ordinal enum the values, in the order they are written, are the scale
+order: \code{type_enum(c("low", "medium", "high"))} with
+\code{levels = list(severity = "ordinal")} ranks low below medium below high.
+\code{\link[=qlm_code]{qlm_code()}} stores such a column as an ordered factor with those levels,
+and \code{\link[=as_qlm_coded]{as_qlm_coded()}} does the same for human-coded data given this
+codebook, so \code{\link[=qlm_compare]{qlm_compare()}} and \code{\link[=qlm_validate]{qlm_validate()}} rank the categories by
+that order rather than alphabetically.
+
 Names may refer to properties at any depth of the schema, including those
 inside a nested \code{\link[ellmer:type_object]{type_object()}} or the items of a \code{\link[ellmer:type_array]{type_array()}}. A level
 declared for a nested variable describes that variable in a table

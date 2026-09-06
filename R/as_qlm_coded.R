@@ -145,7 +145,14 @@ as_qlm_coded <- function(x,
 #'     \item{`instructions`}{Text describing coding instructions}
 #'     \item{`schema`}{NULL (not used for human coding)}
 #'   }
-#'   If `NULL` (default), a minimal placeholder codebook is created.
+#'   If `NULL` (default), a minimal placeholder codebook is created. Passing
+#'   the [qlm_codebook()] the LLM coded against gives the human data the same
+#'   measurement levels, and a column that is a [type_enum()] declared
+#'   `"ordinal"` there is stored as an ordered factor in the enum's order, so
+#'   [qlm_compare()] and [qlm_validate()] rank it as they rank the LLM's; a
+#'   value outside the enum is an error. Without a codebook, order a text
+#'   scale yourself with `factor(x, levels = c(...), ordered = TRUE)`. The
+#'   schema itself is not kept.
 #' @param texts Optional vector of original texts or data that were coded.
 #'   Should correspond to the `.id` values in `data`. If provided, enables
 #'   more complete provenance tracking.
@@ -249,6 +256,9 @@ as_qlm_coded.data.frame <- function(
     if (is.null(codebook$instructions)) {
       codebook$instructions <- "Data coded by human annotator"
     }
+    # The schema is dropped below, so the order of an ordinal enum must be
+    # put on the column now or a text scale would have no order later (#165)
+    x <- apply_ordinal_enums(x, codebook)
     codebook$schema <- NULL  # Always NULL for human coding
   }
 

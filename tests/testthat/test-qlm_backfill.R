@@ -9,8 +9,8 @@ backfill_schema <- ellmer::type_object(
 # `id` column; the inputs are named by it so the backfill can subset them.
 make_run <- function(results, schema = backfill_schema, chat_args = list(),
                      execution_args = list(), backend = "structured",
-                     name = "run1", n_units = nrow(results)) {
-  codebook <- qlm_codebook("Test", "Test prompt", schema)
+                     name = "run1", n_units = nrow(results), levels = NULL) {
+  codebook <- qlm_codebook("Test", "Test prompt", schema, levels = levels)
   data <- stats::setNames(paste0("text ", results$id), results$id)
   new_qlm_coded(
     results = results,
@@ -1096,4 +1096,25 @@ test_that("a backfill keeps the pass's file hashes and registration (#124)", {
     suppressMessages(qlm_backfill(filled2, model = "google_gemini/gemini-4-ultra")),
     "qlm_register_input_model"
   )
+})
+
+
+test_that("qlm_backfill keeps an ordinal enum's ordered levels (#165)", {
+  skip_if_not_installed("mockery")
+  lv <- c("low", "medium", "high")
+  schema <- ellmer::type_object(sev = ellmer::type_enum(lv))
+  results <- data.frame(
+    id = c("a", "b", "c"),
+    sev = factor(c("high", NA, "low"), levels = lv, ordered = TRUE)
+  )
+  results$.error <- error_col(NULL, "Invalid JSON", NULL)
+  run <- make_run(results, schema = schema, levels = list(sev = "ordinal"))
+  expect_true(is.ordered(run$sev))
+
+  pass <- data.frame(id = "b", sev = factor("medium", levels = lv, ordered = TRUE))
+  f <- backfill_with(list(pass))
+  expect_message(filled <- f(run), "Recovered 1 unit")
+
+  expect_identical(filled$sev, factor(c("high", "medium", "low"), levels = lv, ordered = TRUE))
+  expect_equal(nrow(qlm_failures(filled)), 0)
 })

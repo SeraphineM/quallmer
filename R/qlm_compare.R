@@ -31,10 +31,10 @@
 #'   and `0.1 + 0.2` equals `0.3`; it is numerical equality rather than bit
 #'   identity. The allowance is far smaller than any meaningful rating
 #'   difference, so a genuinely different pair is never counted as agreeing.
-#'   Used for percent agreement at ordinal, interval and ratio level, where
-#'   the ratings are numbers. Nominal categories agree only when identical,
-#'   as do ordinal categories given as text, and a positive `tolerance` on
-#'   text categories draws a warning since it cannot be applied.
+#'   Used for percent agreement at ordinal, interval and ratio level. Ordinal
+#'   categories given as text are ranked by their ordered-factor levels, and
+#'   the tolerance then counts rank distance: `tolerance = 1` means adjacent
+#'   categories agree. Nominal categories agree only when identical.
 #' @param ci Confidence interval method:
 #'   \describe{
 #'     \item{`"none"`}{No confidence intervals (default)}
@@ -105,10 +105,16 @@
 #' column of digits held as text is compared on its values and not on the
 #' alphabetical order of its strings. A value that does not read as a number
 #' is an error at interval and ratio level, naming the coder and the values.
-#' At ordinal level the categories may instead all be text, in which case they
-#' are ranked by their sorted labels; numbers from one coder and text from
-#' another cannot be placed on one scale and are an error. Nominal ratings are
-#' compared as text.
+#' At ordinal level the categories may instead all be text, in which case
+#' every coder's column must be an ordered factor with the same levels in the
+#' same order, and the categories are ranked by those levels; alphabetical
+#' order is never used, since it is not a ranking. A plain factor or a
+#' character column at ordinal level is an error that says how to declare the
+#' order: `factor(x, levels = c(...), ordered = TRUE)` for data built by hand,
+#' or a [type_enum()] written in scale order and declared `"ordinal"` in the
+#' codebook, which [qlm_code()] and [as_qlm_coded()] store as that ordered
+#' factor. Numbers from one coder and text from another cannot be placed on
+#' one scale and are an error. Nominal ratings are compared as text.
 #'
 #' **Per-category statistics.** When `by_category = TRUE` and `level = "nominal"`,
 #' the result also includes one row per category for `alpha_per_value` (from
@@ -475,8 +481,7 @@ qlm_compare <- function(...,
     # Rating matrix, typed by the level rather than by how each coder stored
     # the values (#150)
     ratings <- ratings_matrix(coder_columns[complete_rows, , drop = FALSE],
-                              var_level, var,
-                              coders = coder_labels, tolerance = tolerance)
+                              var_level, var, coders = coder_labels)
     n_subjects <- nrow(ratings)
 
     # Store n_subjects for first variable (for metadata)
@@ -624,28 +629,43 @@ qlm_compare <- function(...,
 #'
 #' At ordinal, interval and ratio level every column is read as numbers. A
 #' value that does not read as a number is an error at interval and ratio
-#' level, which assert numeric data. Ordinal categories may be text, so when
-#' no column reads as numbers the ratings stay text and are ranked by their
-#' sorted labels, as before; a positive `tolerance` cannot be honoured on
-#' labels and draws a warning rather than being ignored. A mix of numeric and
-#' text columns at ordinal level is an error, since the ranks of one cannot be
-#' placed against the other. Nominal ratings are left as stored: categories
-#' are compared as text and no tolerance applies.
+#' level, which assert numeric data. Ordinal categories may be text, so an
+#' ordered factor is read first, before any numeric probe, as the declared
+#' order: every coder must then supply one and all must agree on the levels
+#' (#165). The ranks are integers, so a tolerance then counts rank distance.
+#' Text with no ordered factor anywhere is refused by the same helper, and a
+#' mix of numeric and text columns at ordinal level is an error, since the
+#' ranks of one cannot be placed against the other. Nominal ratings are left
+#' as stored: categories are compared as text and no tolerance applies.
 #'
 #' @param columns Data frame with one column per coder and no `.id`.
 #' @param level Character; the measurement level.
 #' @param var Character; the variable's name, for messages.
 #' @param coders Character; one label per column, for messages.
-#' @param tolerance Numeric; the tolerance the caller asked for.
 #'
 #' @return A matrix with one column per coder: numeric where the level is
-#'   numeric and every column reads as numbers, otherwise of the stored type.
+#'   numeric and every column reads as numbers; integer ranks, with the shared
+#'   levels in attribute `"levels"`, for ordered text at ordinal level;
+#'   otherwise of the stored type.
 #' @keywords internal
 #' @noRd
-ratings_matrix <- function(columns, level, var, coders = names(columns),
-                           tolerance = 0) {
+ratings_matrix <- function(columns, level, var, coders = names(columns)) {
   if (level == "nominal") {
     return(as.matrix(columns))
+  }
+
+  # An ordered factor is a declared order and wins over anything its labels
+  # look like: reading it as numbers first took "1" < "10" < "2" as 1, 10, 2,
+  # rejected coders on the labels they happened to observe, and let two
+  # conflicting orders pass whenever the observed labels were all digits.
+  # One ordered factor commits the variable to declared order, so a coder
+  # without one is refused by name rather than read as numbers.
+  if (level == "ordinal" && any(vapply(columns, is.ordered, logical(1)))) {
+    lvls <- ordinal_levels(columns, var, coders)
+    ratings <- do.call(cbind, lapply(columns, as.integer))
+    colnames(ratings) <- names(columns)
+    attr(ratings, "levels") <- lvls
+    return(ratings)
   }
 
   numbers <- lapply(columns, function(col) {
@@ -663,14 +683,11 @@ ratings_matrix <- function(columns, level, var, coders = names(columns),
   }
 
   if (level == "ordinal" && all(unreadable)) {
-    if (tolerance > 0) {
-      cli::cli_warn(c(
-        "Ignoring {.arg tolerance} for variable {.var {var}}: its ordinal categories are text.",
-        "i" = "A tolerance applies only to numbers; text categories agree only when identical.",
-        "i" = "Store the categories as numbers to compare them within a tolerance."
-      ))
-    }
-    return(as.matrix(columns))
+    lvls <- ordinal_levels(columns, var, coders)
+    ratings <- do.call(cbind, lapply(columns, as.integer))
+    colnames(ratings) <- names(columns)
+    attr(ratings, "levels") <- lvls
+    return(ratings)
   }
 
   offending <- vapply(which(unreadable), function(i) {
@@ -694,6 +711,51 @@ ratings_matrix <- function(columns, level, var, coders = names(columns),
     offending,
     "i" = hint
   ))
+}
+
+
+#' The declared order of ordinal text categories
+#'
+#' Text categories at ordinal level carry an order only when someone declared
+#' one, and the declaration quallmer reads is an ordered factor: a plain
+#' factor's levels are alphabetical by default and say nothing, which is the
+#' fault of #165. Every coder's column must be an ordered factor and all must
+#' have the same levels in the same order.
+#'
+#' @param columns Data frame with one column per coder and no `.id`.
+#' @param var Character; the variable's name, for messages.
+#' @param coders Character; one label per column, for messages.
+#'
+#' @return The shared character vector of levels, lowest first.
+#' @keywords internal
+#' @noRd
+ordinal_levels <- function(columns, var, coders = names(columns)) {
+  ordered <- vapply(columns, is.ordered, logical(1))
+  if (!all(ordered)) {
+    plain <- coders[!ordered]
+    declare <- paste0("levels = list(", var, " = \"ordinal\")")
+    cli::cli_abort(c(
+      "Ordinal categories for {.var {var}} carry no declared order for coder{?s} {.val {plain}}.",
+      "i" = "Text categories are ranked by the levels of an ordered factor; alphabetical order is not a ranking.",
+      "i" = "For data built by hand, use {.code factor(x, levels = c(...), ordered = TRUE)}.",
+      "i" = "For a codebook, write the {.fn type_enum} values in scale order and declare {.code {declare}}; {.fn qlm_code} and {.fn as_qlm_coded} then store the column as an ordered factor."
+    ))
+  }
+
+  lvls <- lapply(columns, levels)
+  same <- vapply(lvls, identical, logical(1), lvls[[1]])
+  if (!all(same)) {
+    shown <- vapply(seq_along(lvls), function(i) {
+      cli::format_inline("{.val {coders[i]}}: {paste(lvls[[i]], collapse = ' < ')}")
+    }, character(1))
+    names(shown) <- rep("x", length(shown))
+    cli::cli_abort(c(
+      "The ordered categories of {.var {var}} differ between coders:",
+      shown,
+      "i" = "Every coder's ordered factor must have the same levels in the same order."
+    ))
+  }
+  lvls[[1]]
 }
 
 

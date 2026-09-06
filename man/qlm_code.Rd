@@ -112,7 +112,10 @@ results in \code{\link[=qlm_trail]{qlm_trail()}}. Default is \code{NULL}.}
 \value{
 A \code{qlm_coded} object (a tibble with additional attributes):
 \describe{
-\item{Data columns}{The coded results with a \code{.id} column for identifiers.}
+\item{Data columns}{The coded results with a \code{.id} column for identifiers.
+A \code{\link[ellmer:type_enum]{type_enum()}} declared \code{"ordinal"} in the codebook is an ordered
+factor whose levels are the enum's values in the order written; see
+the \code{levels} argument of \code{\link[=qlm_codebook]{qlm_codebook()}}.}
 \item{Attributes}{\code{data}, \code{input_type}, and \code{run} (list containing name, batch, call, codebook, chat_args, execution_args, metadata, parent).}
 }
 The object prints as a tibble and can be used directly in data manipulation workflows.

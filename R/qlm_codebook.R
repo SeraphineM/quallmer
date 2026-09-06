@@ -52,6 +52,15 @@
 #'   following mapping: `type_boolean` and `type_enum` = nominal, `type_string`
 #'   = nominal, `type_integer` = ordinal, `type_number` = interval.
 #'
+#'   A [type_enum()] is nominal unless declared `"ordinal"` here. For an
+#'   ordinal enum the values, in the order they are written, are the scale
+#'   order: `type_enum(c("low", "medium", "high"))` with
+#'   `levels = list(severity = "ordinal")` ranks low below medium below high.
+#'   [qlm_code()] stores such a column as an ordered factor with those levels,
+#'   and [as_qlm_coded()] does the same for human-coded data given this
+#'   codebook, so [qlm_compare()] and [qlm_validate()] rank the categories by
+#'   that order rather than alphabetically.
+#'
 #'   Names may refer to properties at any depth of the schema, including those
 #'   inside a nested [type_object()] or the items of a [type_array()]. A level
 #'   declared for a nested variable describes that variable in a table
@@ -322,11 +331,19 @@ print.qlm_codebook <- function(x, ...) {
       if (nchar(x$instructions) > 60) "..." else "", "\n", sep = "")
   cat("  Output schema:", class(x$schema)[1], "\n", sep = "")
 
-  # Print levels if available
+  # Print levels if available, with the scale order of an ordinal enum, the
+  # one place the author can see the enum was written in scale order (#165)
   if (!is.null(x$levels) && length(x$levels) > 0) {
+    enums <- ordinal_enum_levels(x)
     cat("  Levels:\n")
     for (i in seq_along(x$levels)) {
-      cat("    ", names(x$levels)[i], ": ", x$levels[[i]], "\n", sep = "")
+      nm <- names(x$levels)[i]
+      order <- if (nm %in% names(enums)) {
+        paste0(" (", paste(enums[[nm]], collapse = " < "), ")")
+      } else {
+        ""
+      }
+      cat("    ", nm, ": ", x$levels[[i]], order, "\n", sep = "")
     }
   }
 
@@ -516,3 +533,77 @@ qlm_levels <- function(codebook) {
   # Otherwise auto-detect from schema
   auto_detect_levels(codebook$schema)
 }
+
+
+#' Scale order of the ordinal enums in a codebook
+#'
+#' A `type_enum()` declared `"ordinal"` in the codebook's levels carries its
+#' scale order in its values, in the order they were written. Only top-level
+#' properties are returned: nested enums are list columns, not ratings.
+#'
+#' @param codebook A codebook (a `qlm_codebook` or a plain list with `schema`
+#'   and possibly `levels`).
+#' @return A named list, one character vector of values per ordinal enum;
+#'   empty when the codebook has none.
+#' @keywords internal
+#' @noRd
+ordinal_enum_levels <- function(codebook) {
+  schema <- codebook$schema
+  if (!inherits(schema, "ellmer::TypeObject")) {
+    return(list())
+  }
+  levels <- qlm_levels(codebook)
+  props <- schema@properties
+  out <- list()
+  for (nm in names(props)) {
+    declared <- if (nm %in% names(levels)) levels[[nm]] else NA_character_
+    if (inherits(props[[nm]], "ellmer::TypeEnum") && identical(declared, "ordinal")) {
+      out[[nm]] <- props[[nm]]@values
+    }
+  }
+  out
+}
+
+
+#' Store ordinal enum columns as ordered factors
+#'
+#' Every column of `x` that is an ordinal enum of the codebook becomes
+#' `factor(x, levels = values, ordered = TRUE)`, the shape that carries the
+#' scale order to [qlm_compare()] and [qlm_validate()] (#165). A plain factor
+#' is read by its values, since its levels may be alphabetical and say nothing
+#' about order; an ordered factor must already agree with the codebook. A
+#' value outside the enum is an error, never a silent `NA`: on the coding
+#' paths ellmer has already reduced such a value to `NA`, so this guards the
+#' human-coded path.
+#'
+#' @param x A data frame of coded results.
+#' @param codebook The codebook the results were coded against.
+#' @return `x`, with the ordinal enum columns as ordered factors.
+#' @keywords internal
+#' @noRd
+apply_ordinal_enums <- function(x, codebook) {
+  enums <- ordinal_enum_levels(codebook)
+  for (nm in intersect(names(enums), names(x))) {
+    col <- x[[nm]]
+    values <- enums[[nm]]
+    if (is.ordered(col) && !identical(levels(col), values)) {
+      cli::cli_abort(c(
+        "{.var {nm}} is an ordered factor whose order differs from the codebook.",
+        "x" = "Column: {paste(levels(col), collapse = ' < ')}",
+        "i" = "Codebook: {paste(values, collapse = ' < ')}",
+        "i" = "Store the column as plain text or drop its levels to take the codebook's order."
+      ))
+    }
+    chr <- as.character(col)
+    bad <- setdiff(unique(chr[!is.na(chr)]), values)
+    if (length(bad)) {
+      cli::cli_abort(c(
+        "{.var {nm}} has {length(bad)} value{?s} not among the codebook's categories: {.val {bad}}",
+        "i" = "The codebook declares {.val {values}}."
+      ))
+    }
+    x[[nm]] <- factor(chr, levels = values, ordered = TRUE)
+  }
+  x
+}
+
