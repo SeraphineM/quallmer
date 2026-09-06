@@ -774,7 +774,7 @@ test_that("qlm_code stores an ordinal enum as an ordered factor in the enum's or
   )
   tsc <- try_structured_call
   mockery::stub(tsc, "ellmer::chat", structure(list(), class = "Chat"))
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", returned)
+  mockery::stub(tsc, "structured_chat_turns", rows_as_turns(returned))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
 

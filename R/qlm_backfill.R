@@ -201,6 +201,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
 
   run_model <- meta_attr$object$chat_args$name
   restored <- restore_run_args(x, overrides = overrides, model = model, batch = FALSE)
+  overrides <- restored$overrides
   model_changed <- !identical(restored$model, run_model)
   limit_raised <- raises_output_limit(overrides, meta_attr$object$chat_args)
   call_args <- restored$call_args
@@ -290,6 +291,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
       records[[length(records) + 1L]] <- backfill_pass(
         model = if (model_changed) restored$model else NULL,
         overrides = overrides,
+        resolution = restored$resolution,
         attempted = ids[retry],
         recovered = character(0),
         error = condition_text(result)
@@ -311,6 +313,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     records[[length(records) + 1L]] <- backfill_pass(
       model = if (model_changed) restored$model else NULL,
       overrides = overrides,
+      resolution = restored$resolution,
       attempted = ids[retry],
       recovered = recovered,
       prices = result_meta$user$prices,
@@ -442,12 +445,21 @@ replay_backfill <- function(result, parent, backfill = NULL) {
       meta_attr$object$backfill <- c(meta_attr$object$backfill, list(backfill_pass(
         model = pass$model,
         overrides = pass$overrides,
+        resolution = pass$provider_resolution,
         attempted = replayed$attempted,
         recovered = character(0),
         error = replayed$cause
       )))
       attr(result, "meta") <- meta_attr
       break
+    }
+    if (!is.null(pass$provider_resolution)) {
+      replay_meta <- attr(replayed, "meta")
+      last <- length(replay_meta$object$backfill)
+      if (last > length(attr(result, "meta")$object$backfill)) {
+        replay_meta$object$backfill[[last]]$provider_resolution <- pass$provider_resolution
+      }
+      attr(replayed, "meta") <- replay_meta
     }
     result <- replayed
   }
@@ -661,14 +673,17 @@ backfill_summary <- function(passes) {
 #'   its cost rests on, and one line saying where the cost came from. `NULL`
 #'   when the pass was priced by ellmer, and the elements are absent.
 #' @param registered The `"provider/model"` pair the pass's model was
-#'   accepted on through [qlm_register_input_model()], or `NULL`, and the
+#'   accepted on through [qlm_register_model()], or `NULL`, and the
 #'   element is absent.
 #'
+#' @param resolution Requested and effective model identity for a registered
+#'   provider, if used.
 #' @return A list.
 #' @keywords internal
 #' @noRd
 backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
-                          prices = NULL, cost_note = NULL, registered = NULL) {
+                          prices = NULL, cost_note = NULL, registered = NULL,
+                          resolution = NULL) {
   pass <- list(
     timestamp = Sys.time(),
     model = model,
@@ -676,6 +691,9 @@ backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
     attempted = attempted,
     recovered = recovered
   )
+  if (!is.null(resolution)) {
+    pass$provider_resolution <- resolution
+  }
   if (!is.null(prices)) {
     pass$prices <- prices
   }

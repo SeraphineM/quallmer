@@ -73,7 +73,7 @@ check_model_provider <- function(model, call = rlang::caller_env()) {
   provider <- model_provider(model)
   providers <- ellmer_providers()
 
-  if (provider %in% providers) {
+  if (provider %in% providers || !is.null(provider_definition(provider))) {
     return(invisible(model))
   }
 

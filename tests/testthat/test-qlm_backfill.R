@@ -1056,8 +1056,8 @@ test_that("qlm_backfill needs the registration a run relied on (#124)", {
                    model = "google_gemini/gemini-4-ultra")
   f <- qlm_backfill
   mockery::stub(f, "qlm_code", function(...) stop("pass reached the model", call. = FALSE))
-  expect_error(f(run), "qlm_register_input_model")
-  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  expect_error(f(run), "qlm_register_model")
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   expect_error(f(run), "pass reached the model")
 })
 
@@ -1084,7 +1084,7 @@ test_that("a backfill keeps the pass's file hashes and registration (#124)", {
   mockery::stub(g, "qlm_code", function(x, ...) {
     audio_run(x, registered = "google_gemini/gemini-4-ultra", model = "google_gemini/gemini-4-ultra")
   })
-  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   filled2 <- suppressMessages(g(run, model = "google_gemini/gemini-4-ultra", passes = 1L))
   passes <- qlm_meta(filled2, type = "object")$backfill
   expect_length(passes, 1L)
@@ -1094,7 +1094,7 @@ test_that("a backfill keeps the pass's file hashes and registration (#124)", {
   reset_registered_input_models()
   expect_error(
     suppressMessages(qlm_backfill(filled2, model = "google_gemini/gemini-4-ultra")),
-    "qlm_register_input_model"
+    "qlm_register_model"
   )
 })
 

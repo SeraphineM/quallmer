@@ -19,7 +19,9 @@
 #'   deprecated [task()] objects for backward compatibility.
 #' @param model character; the provider (and optionally model) name in the form
 #'   `"provider/model"` or `"provider"` (which will use the default model for
-#'   that provider). Passed to the `name` argument of [ellmer::chat()].
+#'   that provider). Native prefixes are passed to [ellmer::chat()].
+#'   Registered prefixes, such as `"dashscope/qwen-plus"`, resolve through
+#'   [qlm_register_provider()] and require an explicit model name.
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
 #' @param structured character; how the output schema is obtained.
@@ -282,7 +284,7 @@
 #' which has no file upload. This is a snapshot of what providers accepted on
 #' the date it was written. A model outside the recognised families that
 #' does accept audio can be accepted for the session with
-#' [qlm_register_input_model()]; a run coded that way records it, and
+#' [qlm_register_model()]; a run coded that way records it, and
 #' replicating or backfilling the run in another session needs the
 #' registration again. For any other provider, transcribe the recordings
 #' first and code the transcripts with a text codebook.
@@ -383,6 +385,12 @@
 #' where batch results are cached, `wait` controls whether to wait for completion,
 #' and `ignore_hash` can force reprocessing of cached results. `on_error` does
 #' not apply: the batch API has no equivalent.
+#'
+#' @section Registered providers:
+#' OpenAI-compatible endpoints can also be addressed by a registered prefix,
+#' for example `model = "dashscope/qwen-plus"`. See
+#' [qlm_register_provider()] for built-in endpoints, credential sources,
+#' and adding a private gateway. Native ellmer prefixes take precedence.
 #'
 #' @return A `qlm_coded` object (a tibble with additional attributes):
 #'   \describe{
@@ -516,7 +524,10 @@ qlm_code <- function(x, codebook, model, ...,
   # A prefix ellmer cannot dispatch on is knowable without asking the provider
   # anything, so say so here rather than letting ellmer::chat() abort with
   # "Can't find provider ellmer::chat_qwen()".
-  check_model_provider(model)
+  resolved <- resolve_provider(model, dots)
+  model <- resolved$model
+  dots <- resolved$args
+  dot_names <- names(dots)
 
   # Checked after the model itself, so a bad model and a stray parameter report
   # the model first. `dot_names` is already in hand from the capture above.
@@ -801,6 +812,7 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Fields contributed by a provider-specific handler (backend, json_retries, ...)
   metadata <- c(metadata, backend_meta)
+  metadata$provider_resolution <- resolved$resolution
   if (!is.null(cost_note)) {
     metadata$cost_note <- cost_note
   }
@@ -1260,6 +1272,8 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
     object_meta$validation <- metadata$validation
   }
 
+  object_meta$provider_resolution <- metadata$provider_resolution
+
   # Build user metadata: start with name and notes, then add custom metadata
   user_meta <- list(
     name = name,
@@ -1269,7 +1283,7 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   # Add any custom metadata fields (exclude system, object, and user-handled fields)
   system_fields <- c("timestamp", "ellmer_version", "quallmer_version", "R_version")
   object_fields <- c("n_units", "source", "is_gold", "backend", "structured",
-                     "validation")
+                     "validation", "provider_resolution")
   user_handled <- c("name", "notes")
   exclude_fields <- c(system_fields, object_fields, user_handled)
 
@@ -1371,6 +1385,10 @@ print.qlm_coded <- function(x, ...) {
   } else {
     cat("# Codebook: ", codebook_attr$name, "\n", sep = "")
     cat("# Model:    ", meta_attr$object$chat_args$name %||% "unknown", "\n", sep = "")
+    if (!is.null(meta_attr$object$provider_resolution)) {
+      cat("# Requested model: ",
+          meta_attr$object$provider_resolution$requested_model, "\n", sep = "")
+    }
   }
 
   # Show if this is a gold standard

@@ -141,7 +141,7 @@ test_that("a Gemini model outside the recognised families is refused with the re
   unknown <- ellmer::chat("google_gemini/gemini-4-ultra")
   expect_error(
     check_input_capability("audio", unknown, "google_gemini/gemini-4-ultra"),
-    'qlm_register_input_model\\("google_gemini/gemini-4-ultra", input_type = "audio"\\)'
+    'qlm_register_model\\("google_gemini/gemini-4-ultra", input_type = "audio"\\)'
   )
 })
 
@@ -185,12 +185,12 @@ test_that("a chat whose provider cannot be read is refused rather than trusted",
 
 # Registration -------------------------------------------------------------------
 
-test_that("qlm_register_input_model validates its arguments", {
+test_that("qlm_register_model validates its arguments", {
   withr::defer(reset_registered_input_models())
-  expect_error(qlm_register_input_model("google_gemini/x", input_type = "text"), "must be one of")
-  expect_error(qlm_register_input_model("google_gemini", input_type = "audio"), "provider/model")
-  expect_error(qlm_register_input_model(c("a/b", "c/d")), "single string")
-  expect_error(qlm_register_input_model("qwen/qwen3-max"), "Can't reach provider")
+  expect_error(qlm_register_model("google_gemini/x", input_type = "text"), "must be one of")
+  expect_error(qlm_register_model("google_gemini", input_type = "audio"), "provider/model")
+  expect_error(qlm_register_model(c("a/b", "c/d")), "single string")
+  expect_error(qlm_register_model("qwen/qwen3-max"), "Can't reach provider")
 })
 
 
@@ -202,7 +202,7 @@ test_that("a registration accepts one exact pair for the session, and the run re
   expect_error(check_input_capability("audio", chat, "google_gemini/gemini-4-ultra"))
 
   expect_message(
-    out <- qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"),
+    out <- qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"),
     "Accepting"
   )
   expect_equal(out, "google_gemini/gemini-4-ultra")
@@ -231,7 +231,7 @@ test_that("a registration accepts one exact pair for the session, and the run re
 test_that("a registration bypasses only the model check", {
   withr::defer(reset_registered_input_models())
   withr::local_envvar(c(OPENAI_API_KEY = "test"))
-  suppressMessages(qlm_register_input_model("openai/gpt-audio", input_type = "audio"))
+  suppressMessages(qlm_register_model("openai/gpt-audio", input_type = "audio"))
   chat <- ellmer::chat("openai/gpt-audio")
   expect_error(
     check_input_capability("audio", chat, "openai/gpt-audio"),
@@ -476,12 +476,12 @@ test_that("a run that relied on a registration needs it again in this session", 
 
   expect_error(
     check_registered_input_model(run, "google_gemini/gemini-4-ultra"),
-    'qlm_register_input_model\\("google_gemini/gemini-4-ultra", input_type = "audio"\\)'
+    'qlm_register_model\\("google_gemini/gemini-4-ultra", input_type = "audio"\\)'
   )
   # Another model is checked afresh by qlm_code(), not here
   expect_silent(check_registered_input_model(run, "google_gemini/gemini-2.5-flash"))
 
-  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   expect_silent(check_registered_input_model(run, "google_gemini/gemini-4-ultra"))
 
   # A run that never relied on one is left alone
@@ -650,10 +650,10 @@ test_that("a registration a backfill pass relied on is required again, like the 
   expect_equal(recorded_registrations(run), "google_gemini/gemini-4-ultra")
   expect_error(
     check_registered_input_model(run, "google_gemini/gemini-4-ultra"),
-    "qlm_register_input_model"
+    "qlm_register_model"
   )
   # The run's own model needed no registration
   expect_silent(check_registered_input_model(run, "google_gemini/gemini-2.5-flash"))
-  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   expect_silent(check_registered_input_model(run, "google_gemini/gemini-4-ultra"))
 })

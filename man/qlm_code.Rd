@@ -33,7 +33,9 @@ deprecated \code{\link[=task]{task()}} objects for backward compatibility.}
 
 \item{model}{character; the provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
-that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
+that provider). Native prefixes are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.
+Registered prefixes, such as \code{"dashscope/qwen-plus"}, resolve through
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} and require an explicit model name.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
@@ -335,7 +337,7 @@ transcription models that share a family stem are refused, as is Vertex,
 which has no file upload. This is a snapshot of what providers accepted on
 the date it was written. A model outside the recognised families that
 does accept audio can be accepted for the session with
-\code{\link[=qlm_register_input_model]{qlm_register_input_model()}}; a run coded that way records it, and
+\code{\link[=qlm_register_model]{qlm_register_model()}}; a run coded that way records it, and
 replicating or backfilling the run in another session needs the
 registration again. For any other provider, transcribe the recordings
 first and code the transcripts with a text codebook.
@@ -442,6 +444,14 @@ cost-effective but has longer turnaround times. The \code{path} argument specifi
 where batch results are cached, \code{wait} controls whether to wait for completion,
 and \code{ignore_hash} can force reprocessing of cached results. \code{on_error} does
 not apply: the batch API has no equivalent.
+}
+
+\section{Registered providers}{
+
+OpenAI-compatible endpoints can also be addressed by a registered prefix,
+for example \code{model = "dashscope/qwen-plus"}. See
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} for built-in endpoints, credential sources,
+and adding a private gateway. Native ellmer prefixes take precedence.
 }
 
 \examples{

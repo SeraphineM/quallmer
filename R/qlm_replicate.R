@@ -149,6 +149,7 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
   result_meta <- attr(result, "meta")
   result_meta$object$call <- current_call
   result_meta$object$parent <- parent_name
+  result_meta$object$provider_resolution <- restored$resolution
   attr(result, "meta") <- result_meta
 
   replay_backfill(result, parent = x, backfill = backfill)
@@ -200,7 +201,18 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   if (length(dropped)) {
     cli::cli_inform(c("i" = redacted_args_note(dropped)))
   }
-  use_model <- model %||% original_model
+  # Resolve a replacement before comparing endpoints. Its registered URL and
+  # credential source must not inherit those of the parent run.
+  requested_model <- model %||% original_model
+  prefix <- model_provider(requested_model)
+  resolved <- if (rlang::is_string(model) && !prefix %in% ellmer_providers() &&
+                  !is.null(provider_definition(prefix))) {
+    resolve_provider(model, overrides)
+  } else {
+    list(model = requested_model, args = overrides, resolution = NULL)
+  }
+  use_model <- resolved$model
+  overrides <- resolved$args
 
   # Credentials and endpoint settings belong to an endpoint, not to a model in
   # the abstract. Carrying them across endpoints can send a credential to the
@@ -362,7 +374,15 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
     }
   }
 
-  list(model = use_model, call_args = call_args)
+  resolution <- resolved$resolution
+  if (is.null(model) && !endpoint_changed) {
+    resolution <- meta_attr$object$provider_resolution
+    if (any(c("credentials", "api_key") %in% names(overrides))) {
+      resolution$api_key_env <- NULL
+    }
+  }
+  list(model = use_model, call_args = call_args, resolution = resolution,
+       overrides = overrides)
 }
 
 
