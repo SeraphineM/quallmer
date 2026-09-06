@@ -1249,7 +1249,7 @@ is_local_endpoint <- function(identity) {
 #' The report block for a run coded from transcripts
 #'
 #' One row per unit with the file, its hash and the model, then one line per
-#' distinct configuration (model, prompt, endpoint, registration) with the
+#' distinct configuration (model, prompt and endpoint) with the
 #' usage summed where the shapes agree. The `.rds` keeps the full table; the
 #' report need not repeat it.
 #'
@@ -1269,14 +1269,13 @@ transcription_lines <- function(transcription) {
       ", SHA-256 recorded at transcription time"
     ),
     "",
-    "| .id | File | Bytes | SHA-256 | Model | Language | Status |",
+    "| .id | Source | Bytes | SHA-256 | Model | Language | Status |",
     "|---|---|---|---|---|---|---|"
   )
   for (k in seq_len(n)) {
     f <- transcription[k, ]
     lines <- c(lines, paste0(
-      "| ", f$.id, " | ", f$file,
-      if (!is.na(f$source_url)) paste0(" (", f$source_url, ")") else "", " | ",
+      "| ", f$.id, " | ", f$source, " | ",
       if (is.na(f$size)) "" else format(f$size, big.mark = ",", scientific = FALSE),
       " | ",
       if (is.na(f$sha256)) "not recorded" else paste0("`", f$sha256, "`"),
@@ -1290,16 +1289,14 @@ transcription_lines <- function(transcription) {
   # another prompt or endpoint is another instrument, and a table combined
   # from two runs can hold both. The units of each are named when there is
   # more than one.
-  key <- paste(transcription$model, transcription$prompt, transcription$base_url,
-               transcription$registered, sep = "\r")
+  key <- paste(transcription$model, transcription$prompt, transcription$base_url, sep = "\r")
   groups <- split(seq_len(n), factor(key, levels = unique(key)))
   for (idx in groups) {
     rows <- transcription[idx, ]
     first <- rows[1, ]
     settings <- c(
       if (!is.na(first$prompt)) paste0("prompt: \"", first$prompt, "\""),
-      if (!is.na(first$base_url)) paste0("endpoint: ", first$base_url),
-      if (!is.na(first$registered)) paste0("accepted by `qlm_register_model(\"", first$registered, "\")`")
+      if (!is.na(first$base_url)) paste0("endpoint: ", first$base_url)
     )
     units <- if (length(groups) > 1L) paste0("units: ", paste(rows$.id, collapse = ", "))
     lines <- c(lines, paste0(

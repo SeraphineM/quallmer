@@ -64,7 +64,7 @@ The provenance table has one row per recording. It is what `qlm_code()` will rec
 
 ```{r view-provenance}
 attr(transcripts, "provenance") %>%
-  select(.id, status, file, size, sha256, model) %>%
+  select(.id, status, source, size, sha256, model) %>%
   mutate(sha256 = paste0(substr(sha256, 1, 12), "...")) %>%
   kable(caption = "Provenance of each transcript")
 ```
@@ -101,7 +101,7 @@ web <- readRDS("data/transcript_web.rds")
 ```
 
 ```{r compare-hashes}
-local_row <- attr(transcripts, "provenance") %>% filter(file == "OSR_cn_000_0072_8k.wav")
+local_row <- attr(transcripts, "provenance") %>% filter(source == "OSR_cn_000_0072_8k.wav")
 web_row <- attr(web, "provenance")
 cat("Local copy: ", local_row$sha256, "\n")
 cat("Web copy:   ", web_row$sha256, "\n")
@@ -110,7 +110,7 @@ cat("Same recording:", identical(local_row$sha256, web_row$sha256), "\n")
 
 ### A second transcriber
 
-The transcript is an instrument of its own, and two transcribers can be set beside each other on the same recordings. A Gemini chat model transcribes through the same function: `qlm_transcribe()` uploads each recording and asks the model for a verbatim transcript, and the same names, hashes and provenance come back. Gemini's dedicated transcription model, `gemini-3.5-transcribe`, cannot be reached through ellmer yet (it rejects the system instruction ellmer always sends), so a chat model in the `flash` or `pro` family is the Gemini route.
+The transcript is an instrument of its own, and two transcribers can be set beside each other on the same recordings. A Gemini chat model transcribes through the same function: `qlm_transcribe()` uploads each recording and asks the model for a verbatim transcript, and the same names, hashes and provenance come back. The route is chosen by the provider prefix, not by a list of models known to transcribe: `openai/` and any provider registered with `qlm_register_provider()` go to a transcription endpoint, every other provider gets the recording through a chat, and a model that cannot hear it is refused by its provider at no cost. Gemini's dedicated transcription model, `gemini-3.5-transcribe`, cannot be reached through ellmer yet (it rejects the system instruction ellmer always sends), so a chat model in the `flash` or `pro` family is the Gemini route.
 
 ```{r transcribe-gemini, eval=FALSE}
 transcripts_gemini <- qlm_transcribe(audio_files, model = "google_gemini/gemini-2.5-flash")
@@ -216,7 +216,7 @@ The run records the transcription behind each unit. `qlm_replicate()` and `qlm_b
 
 ```{r transcription-record}
 qlm_meta(coded_transcripts, "transcription") %>%
-  select(.id, file, sha256, model, status) %>%
+  select(.id, source, sha256, model, status) %>%
   mutate(sha256 = paste0(substr(sha256, 1, 12), "...")) %>%
   kable(caption = "Transcription recorded with the coded run")
 ```

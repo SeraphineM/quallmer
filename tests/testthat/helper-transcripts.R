@@ -50,18 +50,15 @@ fake_transcript <- function(ids, text = paste("transcript of", ids), failed = ch
   provenance <- data.frame(
     .id = ids,
     status = ifelse(is_failed, "failed", "ok"),
-    file = paste0(ids, ".wav"),
-    source_url = NA_character_,
+    source = paste0(ids, ".wav"),
     .error = ifelse(is_failed, "HTTP 500 Internal Server Error.", NA_character_),
     size = rep(1000, n),
     sha256 = paste0("hash-", ids),
     model = rep(model, n),
-    registered = NA_character_,
     language = NA_character_,
     prompt = NA_character_,
     base_url = NA_character_,
     timestamp = rep(Sys.time(), n),
-    ellmer_version = NA_character_,
     stringsAsFactors = FALSE
   )
   provenance$usage <- lapply(seq_len(n), function(i) {

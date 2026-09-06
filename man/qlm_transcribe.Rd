@@ -22,7 +22,7 @@ qlm_transcribe(
 optionally named. See the section "Names and identifiers".}
 
 \item{model}{character; the transcription model in \code{"provider/model"}
-form. See the section "Backends".}
+form. See the section "Routes".}
 
 \item{language}{character; the ISO 639-1 code of the language spoken,
 such as \code{"en"} or \code{"zh"}, or \code{NULL} to let the model detect it. Sent to
@@ -35,13 +35,15 @@ wanted. Sent to the OpenAI endpoint as its \code{prompt} field; added to the
 instruction for a Gemini model.}
 
 \item{api_key}{character; the API key. \code{NULL} reads the environment
-variable the provider uses, \code{OPENAI_API_KEY} or \code{GEMINI_API_KEY}. The
-key is never recorded.}
+variable the provider uses, \code{OPENAI_API_KEY}, the variable a registered
+provider was given, or the one ellmer reads for a chat provider. On the
+chat route the value is passed to ellmer as the credential itself,
+which is what Gemini and Anthropic take. The key is never recorded.}
 
-\item{base_url}{character; the endpoint to send the requests to. For the
-OpenAI backend, the prefix before \verb{/audio/transcriptions}; \code{NULL} is
-\verb{https://api.openai.com/v1}. For a Gemini model, passed to ellmer's
-chat constructor. Recorded with any credential it carries redacted.}
+\item{base_url}{character; the endpoint to send the requests to. On the
+endpoint route, the prefix before \verb{/audio/transcriptions}; \code{NULL} is
+the provider's own host. On the chat route, passed to ellmer's chat
+constructor. Recorded with any credential it carries redacted.}
 
 \item{max_active}{integer; the number of requests in flight at once, as
 in \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat()}}.}
@@ -63,17 +65,16 @@ data frame with one row per element:
 \describe{
 \item{\code{.id}}{the element's name.}
 \item{\code{status}}{\code{"ok"}, \code{"failed"} or \code{"unsubmitted"}.}
-\item{\code{file}}{the basename of the file, or of the URL's path.}
-\item{\code{source_url}}{the URL, redacted, or \code{NA} for a local file.}
+\item{\code{source}}{the basename of a local file, or the URL with any
+credential it carried redacted.}
 \item{\code{.error}}{the failure message, or \code{NA}.}
 \item{\code{size}, \code{sha256}}{the bytes transcribed and their hash; \code{NA}
 when a download failed.}
-\item{\code{model}, \code{registered}}{the model, and the \code{"provider/model"}
-pair when it was accepted by a session registration.}
+\item{\code{model}}{as given.}
 \item{\code{language}, \code{prompt}, \code{base_url}}{as given, or \code{NA}.}
 \item{\code{timestamp}}{when the response arrived, or \code{NA}.}
-\item{\code{ellmer_version}}{for the Gemini backend, or \code{NA}.}
-\item{\code{usage}}{a list column holding what the provider reported.}
+\item{\code{usage}}{a list column holding what the provider reported, or
+on the chat route ellmer's tokens, cost and version.}
 }
 Subsetting with \code{[}, renaming with \verb{names<-} and concatenating with
 \code{c()} keep the table aligned with the elements. Assigning a
@@ -99,29 +100,36 @@ with any provider. The single-pass route, a codebook with
 hear it; see the "Audio input" section of \code{\link[=qlm_code]{qlm_code()}} for the providers
 that accept it.
 }
-\section{Backends}{
+\section{Routes}{
 
 
-The backend is chosen from the provider prefix of \code{model}:
+The route is chosen from the provider prefix of \code{model}, not from a list
+of models known to transcribe. Whether a model can is for the provider
+to say, and asking costs nothing: an upload is free and a refused
+request is not billed.
 \itemize{
-\item \verb{openai/}: the transcription endpoint, \verb{/v1/audio/transcriptions},
-which ellmer does not wrap. Models \verb{gpt-4o-mini-transcribe} (the
-default), \verb{gpt-4o-transcribe} and \code{whisper-1}. Each file must be at
-most 25 MB and one of \code{flac}, \code{mp3}, \code{mp4}, \code{mpeg}, \code{mpga}, \code{m4a},
-\code{ogg}, \code{wav} or \code{webm}. The endpoint reports usage as audio and text
-tokens for the \verb{gpt-4o} models and as seconds of audio for \code{whisper-1}.
-\code{base_url} reaches any host that serves the same request shape.
-\item \verb{google_gemini/}: a Gemini chat model asked to transcribe verbatim,
-reached through ellmer with the recording uploaded first. Any model
-\code{\link[=qlm_code]{qlm_code()}} accepts for audio input works; the same capability check
-applies, and a model outside the recognised families can be accepted
-for the session with \code{\link[=qlm_register_model]{qlm_register_model()}}. Usage is the token
-count and the cost ellmer computes, with the qualification that ellmer
-prices audio tokens at the text rate. Gemini's dedicated transcription
-model, \code{gemini-3.5-transcribe}, cannot be reached through ellmer yet.
+\item \strong{The transcription endpoint}, \verb{/audio/transcriptions}, for \verb{openai/}
+and for any provider registered with \code{\link[=qlm_register_provider]{qlm_register_provider()}}, at the
+host it was registered with. OpenAI's models are
+\verb{gpt-4o-mini-transcribe} (the default), \verb{gpt-4o-transcribe} and
+\code{whisper-1}; a registered host serves whatever it serves, such as
+Whisper on Groq. Each file must be at most 25 MB and one of \code{flac},
+\code{mp3}, \code{mp4}, \code{mpeg}, \code{mpga}, \code{m4a}, \code{ogg}, \code{wav} or \code{webm}. OpenAI
+reports usage as audio and text tokens for the \verb{gpt-4o} models and as
+seconds of audio for \code{whisper-1}.
+\item \strong{A chat model that hears the recording}, for every other provider
+ellmer reaches: the file is uploaded through ellmer's file upload and
+the model is asked for a verbatim transcript. Known to work: Google
+Gemini's \code{pro}, \code{flash} and \code{flash-lite} models (\verb{google_gemini/}).
+Anthropic takes no audio, and OpenAI's chat models refuse it; a provider
+that cannot take the recording says so in the failure recorded for each
+unit. Usage is the token count and the cost ellmer computes, with the
+qualification that ellmer prices audio tokens at the text rate.
+Gemini's dedicated transcription model, \code{gemini-3.5-transcribe}, cannot
+be reached through ellmer yet.
 }
 
-No dollar cost is computed for a transcription: ellmer has no rates for
+No dollar cost is computed on the endpoint route: ellmer has no rates for
 transcription models, and per-minute pricing does not fit a per-token
 table. The usage is recorded as reported so it can be costed by hand.
 }
@@ -163,8 +171,7 @@ which replaces the record with it; or concatenate independent runs with
 An element of \code{x} that is an \verb{http://} or \verb{https://} URL is downloaded
 to a temporary file, which is removed when the function returns. The
 hash and size recorded are those of the downloaded bytes, and the URL is
-recorded, with any credential it carried redacted, in the \code{source_url}
-column. The format is read from the URL's path, so a URL with no file
+recorded, with any credential it carried redacted, as the \code{source}. The format is read from the URL's path, so a URL with no file
 extension is refused before anything is fetched.
 }
 
@@ -182,6 +189,10 @@ qlm_trail(coded, path = "sentiment_trail")
 # A Gemini chat model as the transcriber, with a language hint
 transcripts <- qlm_transcribe(files, model = "google_gemini/gemini-2.5-flash",
                               language = "fr")
+
+# Whisper on a registered OpenAI-compatible host
+qlm_register_provider("groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY")
+transcripts <- qlm_transcribe(files, model = "groq/whisper-large-v3")
 
 # A recording on the web, named so the name becomes its .id
 url <- c(harvard = "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0010_8k.wav")

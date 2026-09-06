@@ -15,7 +15,6 @@ test_that("qlm_transcribe checks its arguments before anything is sent", {
   expect_error(qlm_transcribe(wav, rpm = 2.5), "rpm.*at least 1")
   expect_error(qlm_transcribe(wav, on_error = "ignore"), "on_error")
   expect_error(qlm_transcribe(wav, temperature = 0), "must be empty")
-  expect_error(qlm_transcribe(wav, model = "anthropic/claude-sonnet-5"), "no backend for provider.*anthropic")
   expect_error(qlm_transcribe(wav, model = "nosuch/model"), "nosuch")
   expect_length(seen$reqs, 0)
 })
@@ -28,11 +27,11 @@ test_that("qlm_transcribe refuses files the backend could not take, before any r
   aac <- audio_file(ext = "aac")
 
   expect_error(qlm_transcribe(c(wav, "/nowhere/missing.wav")), "1 audio file does not exist.*missing.wav")
-  expect_error(qlm_transcribe(c(wav, txt)), "format this backend does not accept.*\\.txt")
+  expect_error(qlm_transcribe(c(wav, txt)), "format this route does not accept.*\\.txt")
   # The lists differ by backend: aac is a Gemini format, not an OpenAI one
   expect_error(qlm_transcribe(aac), "does not accept.*\\.aac")
-  expect_equal(transcription_extensions("gemini"), audio_extensions())
-  expect_true("webm" %in% transcription_extensions("openai"))
+  expect_equal(transcription_extensions("chat"), audio_extensions())
+  expect_true("webm" %in% transcription_extensions("endpoint"))
 
   testthat::local_mocked_bindings(transcription_size_limit = function(backend) 10)
   expect_error(qlm_transcribe(wav), "over the 0 MB limit")
@@ -67,7 +66,7 @@ test_that("names are settled from the input as given", {
   testthat::local_mocked_bindings(download_audio = function(url, dest) file.copy(a, dest))
   out <- suppressWarnings(qlm_transcribe(c(a, "https://example.org/x.wav", named = b, "https://example.org/y.wav")))
   expect_equal(names(out), c(basename(a), "text2", "named", "text4"))
-  expect_equal(attr(out, "provenance")$file, c(basename(a), "x.wav", basename(b), "y.wav"))
+  expect_equal(attr(out, "provenance")$source, c(basename(a), "https://example.org/x.wav", basename(b), "https://example.org/y.wav"))
 })
 
 
@@ -116,8 +115,7 @@ test_that("qlm_transcribe sends one multipart request per file and records what 
   prov <- attr(out, "provenance")
   expect_equal(prov$.id, basename(c(a, b)))
   expect_equal(prov$status, c("ok", "ok"))
-  expect_equal(prov$file, basename(c(a, b)))
-  expect_true(all(is.na(prov$source_url)))
+  expect_equal(prov$source, basename(c(a, b)))
   expect_true(all(is.na(prov$.error)))
   expect_equal(prov$size, c(64, 64))
   expect_equal(prov$sha256, c(hash_file(a), hash_file(b)))
@@ -125,7 +123,8 @@ test_that("qlm_transcribe sends one multipart request per file and records what 
   expect_equal(prov$language, c("en", "en"))
   expect_equal(prov$prompt, rep("Harvard sentences", 2))
   expect_true(all(is.na(prov$base_url)))
-  expect_true(all(is.na(prov$registered)))
+  expect_equal(names(prov), c(".id", "status", "source", ".error", "size", "sha256", "model",
+                              "language", "prompt", "base_url", "timestamp", "usage"))
   expect_s3_class(prov$timestamp, "POSIXct")
   expect_false(any(is.na(prov$timestamp)))
   expect_equal(prov$usage[[1]]$type, "tokens")
@@ -268,8 +267,7 @@ test_that("a URL is downloaded, hashed, recorded redacted, and the download remo
   prov <- attr(out, "provenance")
   expect_equal(prov$.id, "harvard")
   expect_equal(prov$status, "ok")
-  expect_equal(prov$file, "OSR_us_000_0010_8k.wav")
-  expect_equal(prov$source_url, "https://files.example.org/clips/OSR_us_000_0010_8k.wav?token=<redacted>")
+  expect_equal(prov$source, "https://files.example.org/clips/OSR_us_000_0010_8k.wav?token=<redacted>")
   expect_equal(prov$sha256, hash_file(local))
   expect_equal(prov$size, 32)
   # The request carried the download, under a name that keeps the extension
@@ -286,7 +284,7 @@ test_that("a URL is refused before download when its format cannot be read", {
   seen <- mock_transcription_endpoint()
   called <- FALSE
   testthat::local_mocked_bindings(download_audio = function(url, dest) called <<- TRUE)
-  expect_error(qlm_transcribe("https://example.org/stream?id=1"), "format this backend does not accept")
+  expect_error(qlm_transcribe("https://example.org/stream?id=1"), "format this route does not accept")
   expect_false(called)
   expect_length(seen$reqs, 0)
 })
@@ -330,7 +328,7 @@ test_that("subsetting keeps each transcript with its provenance", {
 
   expect_equal(names(tr[3:1]), c("c", "b", "a"))
   expect_equal(prov(tr[3:1])$.id, c("c", "b", "a"))
-  expect_equal(prov(tr[3:1])$file, c("c.wav", "b.wav", "a.wav"))
+  expect_equal(prov(tr[3:1])$source, c("c.wav", "b.wav", "a.wav"))
   expect_equal(prov(tr[c("b", "c")])$.id, c("b", "c"))
   expect_equal(prov(tr[c(TRUE, FALSE, TRUE)])$.id, c("a", "c"))
   expect_equal(prov(tr[-2])$.id, c("a", "c"))
@@ -358,11 +356,11 @@ test_that("assigning a transcript replaces the provenance rows with it", {
   expect_equal(prov$model, c("openai/gpt-4o-mini-transcribe", "openai/whisper-1", "openai/gpt-4o-mini-transcribe"))
   expect_true(is.na(prov$.error[2]))
   expect_equal(prov$usage[[2]], list(type = "duration", seconds = 10))
-  expect_equal(prov$file[2], "b_again.wav")
+  expect_equal(prov$source[2], "b_again.wav")
   expect_identical(prov[c(1, 3), ], before[c(1, 3), ])
   # By name and by position alike, one row per position
   tr[c("a", "c")] <- fake_transcript(c("x", "y"))
-  expect_equal(attr(tr, "provenance")$file, c("x.wav", "b_again.wav", "y.wav"))
+  expect_equal(attr(tr, "provenance")$source, c("x.wav", "b_again.wav", "y.wav"))
   expect_error(tr[1:3] <- fake_transcript(c("p", "q")), "one element, or one per position")
 })
 
@@ -496,23 +494,46 @@ test_that("a Gemini model transcribes through an upload and a fresh conversation
   expect_equal(prov$usage[[1]]$cost, 0.002)
   expect_equal(prov$usage[[1]]$note, audio_cost_note())
   expect_equal(unname(unlist(prov$usage[[1]]$tokens)), c(600, 40, 0))
-  expect_equal(prov$ellmer_version, rep(as.character(utils::packageVersion("ellmer")), 2))
 })
 
 
-test_that("the Gemini route refuses a model the audio gate refuses, before any upload", {
-  seen <- gemini_runner()
+test_that("the chat route asks the provider rather than a list of what models can do", {
+  seen <- gemini_runner(function(prompts) list(request_error("HTTP 400 Bad Request.", 400L)))
   wav <- audio_file()
-  expect_error(
-    qlm_transcribe(wav, model = "google_gemini/gemini-2.5-flash-tts"),
-    "not recognised as accepting audio input"
+  # No model name is refused up front: the recording goes up and the
+  # provider answers, here with a refusal, recorded and explained
+  expect_warning(
+    out <- qlm_transcribe(wav, model = "google_gemini/gemini-2.5-flash-tts"),
+    "HTTP 400.*chat model must be able to hear"
   )
-  expect_length(seen$uploads, 0)
+  expect_length(seen$uploads, 1)
+  expect_equal(attr(out, "provenance")$status, "failed")
 
-  withr::defer(reset_registered_input_models())
-  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
-  out <- qlm_transcribe(wav, model = "google_gemini/gemini-4-ultra")
-  expect_equal(attr(out, "provenance")$registered, "google_gemini/gemini-4-ultra")
+  # Any other ellmer provider takes the same route
+  withr::local_envvar(c(ANTHROPIC_API_KEY = "test"))
+  seen <- gemini_runner()
+  out <- qlm_transcribe(wav, model = "anthropic/claude-sonnet-4-5")
+  expect_equal(unname(as.character(out)), "verbatim words")
+  expect_equal(seen$chat$get_provider()@name, "Anthropic")
+})
+
+
+test_that("a registered provider's model goes to its own transcription endpoint", {
+  withr::local_envvar(c(MOONSHOT_API_KEY = "moon-key"))
+  seen <- new.env()
+  seen$reqs <- list()
+  httr2::local_mocked_responses(function(req) {
+    seen$reqs[[length(seen$reqs) + 1L]] <- req
+    httr2::response_json(body = transcription_fixture("whisper_1_us"))
+  })
+  wav <- audio_file()
+  out <- qlm_transcribe(wav, model = "moonshot/whisper-large-v3")
+  req <- seen$reqs[[1]]
+  expect_equal(req$url, "https://api.moonshot.ai/v1/audio/transcriptions")
+  expect_equal(bearer_of(req), "Bearer moon-key")
+  expect_equal(req$body$data$model, "whisper-large-v3")
+  expect_equal(attr(out, "provenance")$model, "moonshot/whisper-large-v3")
+  expect_true(is.na(attr(out, "provenance")$base_url))
 })
 
 

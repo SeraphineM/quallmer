@@ -1196,7 +1196,7 @@ test_that("the report discloses a registration a backfill pass relied on, and un
 test_that("qlm_trail() reports the transcription behind a run and keeps its table", {
   tr <- fake_transcript(c("a", "b"))
   record <- transcription_record(tr)
-  record$source_url[2] <- "https://example.org/b.wav"
+  record$source[2] <- "https://example.org/b.wav"
   record$language <- c("en", "en")
   record$prompt <- c("names", "names")
   run <- new_qlm_coded(
@@ -1216,7 +1216,7 @@ test_that("qlm_trail() reports the transcription behind a run and keeps its tabl
   content <- readLines(paste0(path, ".qmd"))
   expect_true(any(grepl("**Transcribed from (audio):** 2 files, SHA-256 recorded at transcription time", content, fixed = TRUE)))
   expect_true(any(grepl("| a | a.wav | 1,000 | `hash-a` | openai/gpt-4o-mini-transcribe | en | ok |", content, fixed = TRUE)))
-  expect_true(any(grepl("| b | b.wav (https://example.org/b.wav) | 1,000 |", content, fixed = TRUE)))
+  expect_true(any(grepl("| b | https://example.org/b.wav | 1,000 |", content, fixed = TRUE)))
   expect_true(any(grepl("**Transcription model `openai/gpt-4o-mini-transcribe`:** prompt: \"names\"; usage: 20 seconds of audio", content, fixed = TRUE)))
 
   # The archive keeps the full table, usage included
@@ -1242,10 +1242,8 @@ test_that("transcription_lines sums usage only when every unit reported the same
 
   record$usage <- list(list(tokens = list(input = 600, output = 40, cached_input = 0), cost = 0.001, note = "n"),
                        list(tokens = list(input = 400, output = 30, cached_input = 0), cost = 0.001, note = "n"))
-  record$registered <- rep("google_gemini/gemini-4-ultra", 2)
   lines <- transcription_lines(record)
   expect_true(any(grepl("usage: 1000 input tokens, 70 output tokens (audio tokens priced at the text rate)", lines, fixed = TRUE)))
-  expect_true(any(grepl('accepted by `qlm_register_model("google_gemini/gemini-4-ultra")`', lines, fixed = TRUE)))
 
   record$usage <- list(NULL, NULL)
   expect_true(any(grepl("usage not reported", transcription_lines(record), fixed = TRUE)))

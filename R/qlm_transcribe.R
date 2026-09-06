@@ -16,27 +16,34 @@
 #' hear it; see the "Audio input" section of [qlm_code()] for the providers
 #' that accept it.
 #'
-#' @section Backends:
+#' @section Routes:
 #'
-#' The backend is chosen from the provider prefix of `model`:
+#' The route is chosen from the provider prefix of `model`, not from a list
+#' of models known to transcribe. Whether a model can is for the provider
+#' to say, and asking costs nothing: an upload is free and a refused
+#' request is not billed.
 #'
-#' - `openai/`: the transcription endpoint, `/v1/audio/transcriptions`,
-#'   which ellmer does not wrap. Models `gpt-4o-mini-transcribe` (the
-#'   default), `gpt-4o-transcribe` and `whisper-1`. Each file must be at
-#'   most 25 MB and one of `flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`,
-#'   `ogg`, `wav` or `webm`. The endpoint reports usage as audio and text
-#'   tokens for the `gpt-4o` models and as seconds of audio for `whisper-1`.
-#'   `base_url` reaches any host that serves the same request shape.
-#' - `google_gemini/`: a Gemini chat model asked to transcribe verbatim,
-#'   reached through ellmer with the recording uploaded first. Any model
-#'   [qlm_code()] accepts for audio input works; the same capability check
-#'   applies, and a model outside the recognised families can be accepted
-#'   for the session with [qlm_register_model()]. Usage is the token
-#'   count and the cost ellmer computes, with the qualification that ellmer
-#'   prices audio tokens at the text rate. Gemini's dedicated transcription
-#'   model, `gemini-3.5-transcribe`, cannot be reached through ellmer yet.
+#' - **The transcription endpoint**, `/audio/transcriptions`, for `openai/`
+#'   and for any provider registered with [qlm_register_provider()], at the
+#'   host it was registered with. OpenAI's models are
+#'   `gpt-4o-mini-transcribe` (the default), `gpt-4o-transcribe` and
+#'   `whisper-1`; a registered host serves whatever it serves, such as
+#'   Whisper on Groq. Each file must be at most 25 MB and one of `flac`,
+#'   `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg`, `wav` or `webm`. OpenAI
+#'   reports usage as audio and text tokens for the `gpt-4o` models and as
+#'   seconds of audio for `whisper-1`.
+#' - **A chat model that hears the recording**, for every other provider
+#'   ellmer reaches: the file is uploaded through ellmer's file upload and
+#'   the model is asked for a verbatim transcript. Known to work: Google
+#'   Gemini's `pro`, `flash` and `flash-lite` models (`google_gemini/`).
+#'   Anthropic takes no audio, and OpenAI's chat models refuse it; a provider
+#'   that cannot take the recording says so in the failure recorded for each
+#'   unit. Usage is the token count and the cost ellmer computes, with the
+#'   qualification that ellmer prices audio tokens at the text rate.
+#'   Gemini's dedicated transcription model, `gemini-3.5-transcribe`, cannot
+#'   be reached through ellmer yet.
 #'
-#' No dollar cost is computed for a transcription: ellmer has no rates for
+#' No dollar cost is computed on the endpoint route: ellmer has no rates for
 #' transcription models, and per-minute pricing does not fit a per-token
 #' table. The usage is recorded as reported so it can be costed by hand.
 #'
@@ -72,14 +79,13 @@
 #' An element of `x` that is an `http://` or `https://` URL is downloaded
 #' to a temporary file, which is removed when the function returns. The
 #' hash and size recorded are those of the downloaded bytes, and the URL is
-#' recorded, with any credential it carried redacted, in the `source_url`
-#' column. The format is read from the URL's path, so a URL with no file
+#' recorded, with any credential it carried redacted, as the `source`. The format is read from the URL's path, so a URL with no file
 #' extension is refused before anything is fetched.
 #'
 #' @param x character; paths of audio files, or `http(s)` URLs of them,
 #'   optionally named. See the section "Names and identifiers".
 #' @param model character; the transcription model in `"provider/model"`
-#'   form. See the section "Backends".
+#'   form. See the section "Routes".
 #' @param language character; the ISO 639-1 code of the language spoken,
 #'   such as `"en"` or `"zh"`, or `NULL` to let the model detect it. Sent to
 #'   the OpenAI endpoint as its `language` field; added to the instruction
@@ -89,12 +95,14 @@
 #'   wanted. Sent to the OpenAI endpoint as its `prompt` field; added to the
 #'   instruction for a Gemini model.
 #' @param api_key character; the API key. `NULL` reads the environment
-#'   variable the provider uses, `OPENAI_API_KEY` or `GEMINI_API_KEY`. The
-#'   key is never recorded.
-#' @param base_url character; the endpoint to send the requests to. For the
-#'   OpenAI backend, the prefix before `/audio/transcriptions`; `NULL` is
-#'   `https://api.openai.com/v1`. For a Gemini model, passed to ellmer's
-#'   chat constructor. Recorded with any credential it carries redacted.
+#'   variable the provider uses, `OPENAI_API_KEY`, the variable a registered
+#'   provider was given, or the one ellmer reads for a chat provider. On the
+#'   chat route the value is passed to ellmer as the credential itself,
+#'   which is what Gemini and Anthropic take. The key is never recorded.
+#' @param base_url character; the endpoint to send the requests to. On the
+#'   endpoint route, the prefix before `/audio/transcriptions`; `NULL` is
+#'   the provider's own host. On the chat route, passed to ellmer's chat
+#'   constructor. Recorded with any credential it carries redacted.
 #' @param max_active integer; the number of requests in flight at once, as
 #'   in [ellmer::parallel_chat()].
 #' @param rpm integer; the request rate in requests per minute. The default
@@ -111,17 +119,16 @@
 #'   \describe{
 #'     \item{`.id`}{the element's name.}
 #'     \item{`status`}{`"ok"`, `"failed"` or `"unsubmitted"`.}
-#'     \item{`file`}{the basename of the file, or of the URL's path.}
-#'     \item{`source_url`}{the URL, redacted, or `NA` for a local file.}
+#'     \item{`source`}{the basename of a local file, or the URL with any
+#'       credential it carried redacted.}
 #'     \item{`.error`}{the failure message, or `NA`.}
 #'     \item{`size`, `sha256`}{the bytes transcribed and their hash; `NA`
 #'       when a download failed.}
-#'     \item{`model`, `registered`}{the model, and the `"provider/model"`
-#'       pair when it was accepted by a session registration.}
+#'     \item{`model`}{as given.}
 #'     \item{`language`, `prompt`, `base_url`}{as given, or `NA`.}
 #'     \item{`timestamp`}{when the response arrived, or `NA`.}
-#'     \item{`ellmer_version`}{for the Gemini backend, or `NA`.}
-#'     \item{`usage`}{a list column holding what the provider reported.}
+#'     \item{`usage`}{a list column holding what the provider reported, or
+#'       on the chat route ellmer's tokens, cost and version.}
 #'   }
 #'   Subsetting with `[`, renaming with `names<-` and concatenating with
 #'   `c()` keep the table aligned with the elements. Assigning a
@@ -143,6 +150,10 @@
 #' # A Gemini chat model as the transcriber, with a language hint
 #' transcripts <- qlm_transcribe(files, model = "google_gemini/gemini-2.5-flash",
 #'                               language = "fr")
+#'
+#' # Whisper on a registered OpenAI-compatible host
+#' qlm_register_provider("groq", "https://api.groq.com/openai/v1", "GROQ_API_KEY")
+#' transcripts <- qlm_transcribe(files, model = "groq/whisper-large-v3")
 #'
 #' # A recording on the web, named so the name becomes its .id
 #' url <- c(harvard = "https://www.voiptroubleshooter.com/open_speech/american/OSR_us_000_0010_8k.wav")
@@ -198,8 +209,8 @@ qlm_transcribe <- function(x, model = "openai/gpt-4o-mini-transcribe",
 
   # Whatever the backend needs to know before a byte is fetched or sent
   setup <- switch(backend,
-    openai = openai_transcription_setup(api_key, base_url),
-    gemini = gemini_transcription_setup(model, language, prompt, api_key, base_url)
+    endpoint = endpoint_transcription_setup(model, api_key, base_url),
+    chat = chat_transcription_setup(model, language, prompt, api_key, base_url)
   )
 
   # URLs are fetched to a directory that goes when the function returns
@@ -218,13 +229,13 @@ qlm_transcribe <- function(x, model = "openai/gpt-4o-mini-transcribe",
   outcomes <- vector("list", length(x))
   if (any(ready)) {
     outcomes[ready] <- switch(backend,
-      openai = transcribe_openai(
+      endpoint = transcribe_endpoint(
         prepared$path[ready], model_id = model_id(model),
         language = language, prompt = prompt, api_key = setup$api_key,
         base_url = setup$base_url, max_active = max_active, rpm = rpm,
         on_error = on_error
       ),
-      gemini = transcribe_gemini(
+      chat = transcribe_chat(
         prepared$path[ready], chat = setup$chat,
         max_active = max_active, rpm = rpm, on_error = on_error
       )
@@ -234,10 +245,9 @@ qlm_transcribe <- function(x, model = "openai/gpt-4o-mini-transcribe",
   result <- assemble_transcript(
     ids = ids, x = x, is_url = is_url, prepared = prepared,
     outcomes = outcomes, model = model, language = language, prompt = prompt,
-    base_url = setup$recorded_base_url, registered = setup$registered,
-    ellmer_version = setup$ellmer_version
+    base_url = setup$recorded_base_url
   )
-  report_transcription_failures(result)
+  report_transcription_failures(result, backend)
   result
 }
 
@@ -288,20 +298,21 @@ transcript_ids <- function(x, is_url, call = rlang::caller_env()) {
   ids
 }
 
-#' Which model string reaches which backend
+#' Which route a model string takes
+#'
+#' `openai/` and every provider registered with [qlm_register_provider()]
+#' have a transcription endpoint; every other provider ellmer reaches gets
+#' the recording through a chat. Nothing here says what a model can do.
+#'
 #' @keywords internal
 #' @noRd
-transcription_backend <- function(model, call = rlang::caller_env()) {
+transcription_backend <- function(model) {
   provider <- model_provider(model)
-  backend <- switch(provider, openai = "openai", google_gemini = "gemini", NULL)
-  if (is.null(backend)) {
-    cli::cli_abort(c(
-      "{.fn qlm_transcribe} has no backend for provider {.val {provider}}.",
-      "i" = "Transcription models are reached through {.val openai/} (the transcription endpoint) or {.val google_gemini/} (a chat model that hears the recording).",
-      "i" = "Transcribe with one of those, then code the text with any provider."
-    ), call = call)
+  if (identical(provider, "openai") || !provider %in% ellmer_providers()) {
+    "endpoint"
+  } else {
+    "chat"
   }
-  backend
 }
 
 #' The model part of a `"provider/model"` string
@@ -311,25 +322,26 @@ model_id <- function(model) {
   sub("^[^/]*/", "", model)
 }
 
-#' The file formats each backend accepts, by extension
+#' The file formats each route accepts, by extension
 #'
-#' OpenAI's list is the endpoint's documented one. Gemini's is ellmer's
-#' MIME table, the same list `qlm_code()` checks for audio input.
+#' The endpoint's list is OpenAI's documented one. The chat route's is
+#' ellmer's MIME table, the same list `qlm_code()` checks for audio input,
+#' since that is what the upload can label.
 #'
 #' @keywords internal
 #' @noRd
 transcription_extensions <- function(backend) {
   switch(backend,
-    openai = c("flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"),
-    gemini = audio_extensions()
+    endpoint = c("flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"),
+    chat = audio_extensions()
   )
 }
 
-#' The size limit each backend enforces, in bytes; `NA` for none checked here
+#' The size limit each route enforces, in bytes; `NA` for none checked here
 #' @keywords internal
 #' @noRd
 transcription_size_limit <- function(backend) {
-  switch(backend, openai = 25 * 1024^2, gemini = NA_real_)
+  switch(backend, endpoint = 25 * 1024^2, chat = NA_real_)
 }
 
 #' The file extension of a path or of a URL's path
@@ -345,6 +357,13 @@ source_extension <- function(x, is_url) {
 #' @noRd
 source_basename <- function(x, is_url) {
   basename(ifelse(is_url, sub("[?#].*$", "", x), x))
+}
+
+#' What a source is recorded as: a basename, or the URL without credentials
+#' @keywords internal
+#' @noRd
+source_label <- function(x, is_url) {
+  ifelse(is_url, vapply(x, redact_url, character(1), USE.NAMES = FALSE), basename(x))
 }
 
 #' Refuse what the backend could not take, before anything is fetched or sent
@@ -371,7 +390,7 @@ check_transcription_sources <- function(x, is_url, backend, call = rlang::caller
   unknown <- !ext %in% accepted
   if (any(unknown)) {
     cli::cli_abort(c(
-      "{sum(unknown)} {cli::qty(sum(unknown))}element{?s} of {.arg x} {?has/have} a format this backend does not accept: {.path {x[unknown]}}.",
+      "{sum(unknown)} {cli::qty(sum(unknown))}element{?s} of {.arg x} {?has/have} a format this route does not accept: {.path {x[unknown]}}.",
       "i" = "The format is read from the file extension, for a URL from its path.",
       "i" = "Accepted: {.val {accepted}}."
     ), call = call)
@@ -485,8 +504,7 @@ download_audio <- function(url, dest) {
 #' @keywords internal
 #' @noRd
 assemble_transcript <- function(ids, x, is_url, prepared, outcomes, model,
-                                language, prompt, base_url, registered,
-                                ellmer_version) {
+                                language, prompt, base_url) {
   n <- length(x)
   text <- rep(NA_character_, n)
   status <- rep("unsubmitted", n)
@@ -518,18 +536,15 @@ assemble_transcript <- function(ids, x, is_url, prepared, outcomes, model,
   provenance <- data.frame(
     .id = ids,
     status = status,
-    file = source_basename(x, is_url),
-    source_url = ifelse(is_url, vapply(x, redact_url, character(1), USE.NAMES = FALSE), NA_character_),
+    source = source_label(x, is_url),
     .error = error,
     size = prepared$size,
     sha256 = prepared$sha256,
     model = rep(model, n),
-    registered = rep(registered %||% NA_character_, n),
     language = rep(language %||% NA_character_, n),
     prompt = rep(prompt %||% NA_character_, n),
     base_url = rep(base_url %||% NA_character_, n),
     timestamp = timestamp,
-    ellmer_version = rep(ellmer_version %||% NA_character_, n),
     stringsAsFactors = FALSE
   )
   provenance$usage <- usage
@@ -555,7 +570,7 @@ new_qlm_transcript <- function(text, provenance) {
 #' Say how a run of transcriptions went, once, as qlm_code() does
 #' @keywords internal
 #' @noRd
-report_transcription_failures <- function(x) {
+report_transcription_failures <- function(x, backend = "endpoint") {
   prov <- attr(x, "provenance")
   failed <- prov$status == "failed"
   unsubmitted <- prov$status == "unsubmitted"
@@ -566,6 +581,7 @@ report_transcription_failures <- function(x) {
     "{sum(failed)} of {nrow(prov)} transcription{?s} failed.",
     set_bullets(unique(prov$.error[failed])),
     if (any(unsubmitted)) c("i" = "{sum(unsubmitted)} file{?s} {?was/were} not submitted after the failure."),
+    if (identical(backend, "chat")) c("i" = "A chat model must be able to hear an uploaded recording; Google Gemini's models are known to. See {.code ?qlm_transcribe}."),
     "i" = "{cli::qty(sum(failed))}{?Its/Their} transcript{?s} {?is/are} {.code NA}; {.code attr(x, \"provenance\")} has the reason for each."
   ))
   invisible(NULL)
