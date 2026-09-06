@@ -298,7 +298,7 @@ print.qlm_trail <- function(x, ...) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
     }
     if (!is.null(run$provider_resolution)) {
-      cat("Requested model: ", run$provider_resolution$requested_model, "\n", sep = "")
+      cat("Requested model: ", provider_request_label(run$provider_resolution), "\n", sep = "")
     }
     if (!is.null(backfill_summary(run$backfill))) {
       cat("Backfill:", backfill_summary(run$backfill), "\n")
@@ -549,7 +549,7 @@ generate_trail_report <- function(trail, file) {
     }
     if (!is.null(run$provider_resolution)) {
       lines <- c(lines, paste("**Requested model:**",
-                              run$provider_resolution$requested_model))
+                              provider_request_label(run$provider_resolution)))
     }
     if (!is.null(backfill_summary(run$backfill))) {
       lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
@@ -606,7 +606,7 @@ generate_trail_report <- function(trail, file) {
       resolution <- run$backfill[[k]]$provider_resolution
       if (!is.null(resolution)) {
         lines <- c(lines, paste0("**Backfill pass ", k, " requested model:** ",
-                                resolution$requested_model))
+                                provider_request_label(resolution)))
       }
       pass_registered <- run$backfill[[k]]$input_model_registered
       if (!is.null(pass_registered)) {

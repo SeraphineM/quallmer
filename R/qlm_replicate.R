@@ -375,14 +375,17 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   }
 
   resolution <- resolved$resolution
-  if (is.null(model) && !endpoint_changed) {
+  if (is.null(model)) {
     resolution <- meta_attr$object$provider_resolution
-    if (any(c("credentials", "api_key") %in% names(overrides))) {
+    if (!is.null(resolution) && endpoint_changed) {
+      resolution$endpoint_overridden <- TRUE
+    }
+    if (endpoint_changed || any(c("credentials", "api_key") %in% names(overrides))) {
       resolution$api_key_env <- NULL
     }
   }
   list(model = use_model, call_args = call_args, resolution = resolution,
-       overrides = overrides)
+       overrides = overrides, endpoint_changed = endpoint_changed)
 }
 
 

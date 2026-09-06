@@ -42,9 +42,9 @@
 #' the outcome:
 #'
 #' * a text the provider rejected as longer than the model's context window,
-#'   unless `model` changes;
-#' * a response cut off at the `max_tokens` limit, unless `model` changes or
-#'   the backfill raises the limit, by passing a `params(max_tokens = )`
+#'   unless the model or endpoint changes;
+#' * a response cut off at the `max_tokens` limit, unless the model or endpoint
+#'   changes or the backfill raises the limit, by passing `params(max_tokens = )`
 #'   higher than the run's own. Other `params` leave the limit where it was,
 #'   and so leave those units alone.
 #'
@@ -77,9 +77,10 @@
 #' the provider did not report it, not that nothing was billed, so a retry's
 #' known figure cannot stand in for the whole. The passes are recorded in the
 #' object metadata as `backfill`, one entry per pass with its timestamp, the
-#' model if it differed from the run's, the overrides, the `.id`s attempted
-#' and recovered, where its cost came from when that was not where the run's
-#' did, and for a pass that failed outright its error, so the result can say
+#' model if it or the endpoint differed from the run's, the overrides, the
+#' `.id`s attempted and recovered, where its cost came from when that was not
+#' where the run's did, and for a pass that failed outright its error, so the
+#' result can say
 #' which of its rows came from which pass and which model. A pass whose cost
 #' came from somewhere else than the run's, other supplied rates, ellmer's
 #' own table where the run rested on supplied rates, or nowhere where the
@@ -202,7 +203,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
   run_model <- meta_attr$object$chat_args$name
   restored <- restore_run_args(x, overrides = overrides, model = model, batch = FALSE)
   overrides <- restored$overrides
-  model_changed <- !identical(restored$model, run_model)
+  route_changed <- !identical(restored$model, run_model) || restored$endpoint_changed
   limit_raised <- raises_output_limit(overrides, meta_attr$object$chat_args)
   call_args <- restored$call_args
   # A backfill is a small parallel call whatever the original run was; the
@@ -232,13 +233,13 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     # Re-derived each pass from the object as it now stands: the previous
     # pass may have recorded a length rejection that was not visible before.
     terminal <- failed & is_terminal_failure(
-      recorded_errors(x), limit_raised = limit_raised, model_changed = model_changed
+      recorded_errors(x), limit_raised = limit_raised, model_changed = route_changed
     )
     retry <- which(failed & !terminal)
 
     if (attempt == 1L && any(terminal)) {
       cli::cli_inform(c(
-        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model}, or a higher {.code params(max_tokens = )}, would retry them."
+        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model} or endpoint, or a higher {.code params(max_tokens = )}, would retry them."
       ))
     }
     if (!length(retry)) {
@@ -289,7 +290,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
       # units it attempted can no longer claim a known usage total.
       x <- unknown_usage(x, ids[retry])
       records[[length(records) + 1L]] <- backfill_pass(
-        model = if (model_changed) restored$model else NULL,
+        model = if (route_changed) restored$model else NULL,
         overrides = overrides,
         resolution = restored$resolution,
         attempted = ids[retry],
@@ -311,7 +312,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     # that the trail discloses it and a replay knows to ask for it again.
     result_meta <- attr(result, "meta")
     records[[length(records) + 1L]] <- backfill_pass(
-      model = if (model_changed) restored$model else NULL,
+      model = if (route_changed) restored$model else NULL,
       overrides = overrides,
       resolution = restored$resolution,
       attempted = ids[retry],
@@ -544,7 +545,7 @@ raises_output_limit <- function(overrides, chat_args) {
 #'
 #' @param errors The list from `recorded_errors()`.
 #' @param limit_raised Whether the backfill raises the output limit.
-#' @param model_changed Whether the backfill uses a different model.
+#' @param model_changed Whether the backfill uses a different model or endpoint.
 #'
 #' @return A logical vector, one element per unit.
 #' @keywords internal

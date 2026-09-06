@@ -458,6 +458,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ### Audit trail and replication
 
+* Backfill treats an endpoint change as a new coding route even when the model
+  name is unchanged. Replication preserves the requested model and labels
+  endpoint overrides in print and trail output (#185).
+
 * `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
   a credential-named `api_headers` entry, or a `base_url` carrying userinfo
   or a credential-named query parameter, given to `qlm_code()` as a literal,

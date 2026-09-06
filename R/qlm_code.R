@@ -1387,7 +1387,7 @@ print.qlm_coded <- function(x, ...) {
     cat("# Model:    ", meta_attr$object$chat_args$name %||% "unknown", "\n", sep = "")
     if (!is.null(meta_attr$object$provider_resolution)) {
       cat("# Requested model: ",
-          meta_attr$object$provider_resolution$requested_model, "\n", sep = "")
+          provider_request_label(meta_attr$object$provider_resolution), "\n", sep = "")
     }
   }
 

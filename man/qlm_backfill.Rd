@@ -58,9 +58,9 @@ failure are left alone, because re-sending the same request cannot change
 the outcome:
 \itemize{
 \item a text the provider rejected as longer than the model's context window,
-unless \code{model} changes;
-\item a response cut off at the \code{max_tokens} limit, unless \code{model} changes or
-the backfill raises the limit, by passing a \code{params(max_tokens = )}
+unless the model or endpoint changes;
+\item a response cut off at the \code{max_tokens} limit, unless the model or endpoint
+changes or the backfill raises the limit, by passing \code{params(max_tokens = )}
 higher than the run's own. Other \code{params} leave the limit where it was,
 and so leave those units alone.
 }
@@ -94,9 +94,10 @@ billed; a total is \code{NA} when any attempt's figure is, because \code{NA} mea
 the provider did not report it, not that nothing was billed, so a retry's
 known figure cannot stand in for the whole. The passes are recorded in the
 object metadata as \code{backfill}, one entry per pass with its timestamp, the
-model if it differed from the run's, the overrides, the \code{.id}s attempted
-and recovered, where its cost came from when that was not where the run's
-did, and for a pass that failed outright its error, so the result can say
+model if it or the endpoint differed from the run's, the overrides, the
+\code{.id}s attempted and recovered, where its cost came from when that was not
+where the run's did, and for a pass that failed outright its error, so the
+result can say
 which of its rows came from which pass and which model. A pass whose cost
 came from somewhere else than the run's, other supplied rates, ellmer's
 own table where the run rested on supplied rates, or nowhere where the

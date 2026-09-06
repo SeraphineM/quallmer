@@ -53,7 +53,10 @@ Runs record the requested prefix and the effective
 \code{openai_compatible/model}, base URL and credential source. Replication and
 backfill reuse the recorded endpoint without consulting the registry.
 Supplying a replacement \code{model} resolves that model afresh. Registry
-entries contain environment variable names, never key values.
+entries contain environment variable names, never key values. A replication
+that overrides only the endpoint retains the original requested model,
+labelled "endpoint overridden" in print and trail output; its recorded
+\code{base_url} is the effective endpoint used for replay.
 }
 \examples{
 qlm_register_provider("my_gateway", "https://example.org/v1", "GATEWAY_KEY")
