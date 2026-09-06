@@ -1237,15 +1237,47 @@ test_that("qlm_replicate of a run without recorded hashes proceeds with a notice
 })
 
 
-test_that("qlm_replicate needs the registration a run relied on (#124)", {
-  withr::defer(reset_registered_input_models())
-  paths <- c(a = audio_file())
-  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
-                   model = "google_gemini/gemini-4-ultra")
-  f <- qlm_replicate
-  mockery::stub(f, "qlm_code", function(x, ...) run)
 
-  expect_error(f(run, name = "rep"), "qlm_register_model")
-  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
-  expect_s3_class(f(run, name = "rep"), "qlm_coded")
+
+
+
+test_that("qlm_replicate checks a video URL against the download it uploads (#179)", {
+  withr::local_envvar(c(GEMINI_API_KEY = "test"))
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+  # The structured call, uploads included, is stood in for; what matters
+  # here is the download and the check that precedes it
+  log <- character()
+  testthat::local_mocked_bindings(
+    try_structured_call = function(x, ...) {
+      log <<- c(log, "inference")
+      list(ok = TRUE, value = data.frame(language = rep("en", length(x))))
+    }
+  )
+
+  # The URL still serves the recorded bytes: one download, then the run
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    log <<- c(log, paste0("download:", url))
+    writeBin(as.raw(11:30), dest)
+    invisible(dest)
+  })
+  rep <- suppressMessages(qlm_replicate(run, name = "rep"))
+  expect_s3_class(rep, "qlm_coded")
+  expect_equal(log, c("download:https://example.org/ad.mp4", "inference"))
+  expect_equal(qlm_meta(rep, "input_files")$sha256[2], hash_file(downloaded))
+
+  # Different bytes: refused before anything is uploaded
+  log <- character()
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    log <<- c(log, paste0("download:", url))
+    writeBin(as.raw(99:110), dest)
+    invisible(dest)
+  })
+  expect_error(
+    suppressMessages(qlm_replicate(run, name = "rep2")),
+    'differs from the one this run coded: "ad"'
+  )
+  expect_equal(log, "download:https://example.org/ad.mp4")
 })

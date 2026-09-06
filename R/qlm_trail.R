@@ -154,12 +154,10 @@ qlm_trail <- function(..., path = NULL) {
       run$execution_args <- meta_attr$object$execution_args
       run$prices <- meta_attr$user$prices
       run$cost_note <- meta_attr$user$cost_note
-      # The files a file-input run coded, by hash, and whether its model was
-      # accepted by a session registration: both are what a reader needs to
-      # reproduce the run, so both belong in the report
+      # The files a file-input run coded, by hash: what a reader needs to
+      # reproduce the run, so it belongs in the report
       run$input_type <- meta_attr$object$input_type
       run$input_files <- meta_attr$user$input_files
-      run$input_model_registered <- meta_attr$user$input_model_registered
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
       # Passes that completed the run, and any other model they used: the
@@ -593,28 +591,11 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, "**Processing:** Batch")
     }
 
-    # A model accepted by registration rather than by the built-in table,
-    # for the run and for any backfill pass
-    if (!is.null(run$input_model_registered)) {
-      lines <- c(lines, paste0(
-        "**Model accepted by:** `qlm_register_model(\"",
-        run$input_model_registered, "\", input_type = \"",
-        run$input_type %||% "audio", "\")` in the coding session"
-      ))
-    }
     for (k in seq_along(run$backfill)) {
       resolution <- run$backfill[[k]]$provider_resolution
       if (!is.null(resolution)) {
         lines <- c(lines, paste0("**Backfill pass ", k, " requested model:** ",
                                 provider_request_label(resolution)))
-      }
-      pass_registered <- run$backfill[[k]]$input_model_registered
-      if (!is.null(pass_registered)) {
-        lines <- c(lines, paste0(
-          "**Backfill pass ", k, " model accepted by:** `qlm_register_model(\"",
-          pass_registered, "\", input_type = \"",
-          run$input_type %||% "audio", "\")` in the coding session"
-        ))
       }
     }
 
@@ -636,9 +617,12 @@ generate_trail_report <- function(trail, file) {
           "| ", f$.id, " | ", f$file, " | ",
           if (is.na(f$size)) "" else format(f$size, big.mark = ",", scientific = FALSE),
           " | ",
-          if (is_image_url(f$file)) "fetched by the provider"
-          else if (is.na(f$sha256)) "not recorded"
-          else paste0("`", f$sha256, "`"),
+          # A hash is recorded for anything that passed through the coding
+          # machine, a downloaded URL included; a URL without one was
+          # fetched by the provider (#177, #179)
+          if (!is.na(f$sha256)) paste0("`", f$sha256, "`")
+          else if (is_input_url(f$file, data = TRUE)) "fetched by the provider"
+          else "not recorded",
           " |"
         ))
       }

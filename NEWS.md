@@ -5,10 +5,6 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## Breaking changes
 
-* `qlm_register_input_model()` is now named `qlm_register_model()`. Both model
-  and provider registration appear under Advanced configuration in the
-  reference index.
-
 * `qlm_code()` now validates every structured response against the codebook
   schema before ellmer converts it to a row, on every provider and both
   paths. A response that does not conform, whether a required field sent
@@ -95,26 +91,37 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   recordings in one pass: each file is uploaded to the provider through
   ellmer's file upload and the model receives a reference to it with the
   codebook, so the schema can ask for a transcript alongside any coding of
-  the content. Which providers accept audio is checked from the chat before
-  anything is uploaded; as of this version that is Google Gemini's pro,
-  flash and flash-lite families, and a newer model that also accepts audio
-  can be accepted for the session with the new `qlm_register_model()`,
-  which the run then records. Every upload completes before the first
-  request is sent, so a failed upload stops the run with the provider's
-  message and nothing spent. The run records the SHA-256 of each file, which
-  `qlm_replicate()` and `qlm_backfill()` check before uploading again and
-  `qlm_trail()` reports. `batch = TRUE` is refused for audio, since an
-  upload gets a new reference every time and ellmer's prompt-keyed batch
-  cache could not resume the job, and the cost note says that an audio cost
-  computed at the text rate is potentially underestimated. Requires ellmer
-  0.5.0 (#124).
+  the content. Which providers accept audio is not checked in advance: a
+  provider that cannot take it refuses with its own message, to which
+  `qlm_code()` adds what is known, as of this version that only Google
+  Gemini does. Every upload completes before the first request is sent, so
+  a failed upload stops the run with the provider's message and nothing
+  spent. The run records the SHA-256 of each file, which `qlm_replicate()`
+  and `qlm_backfill()` check before uploading again and `qlm_trail()`
+  reports. `batch = TRUE` is refused for audio, since an upload gets a new
+  reference every time and ellmer's prompt-keyed batch cache could not
+  resume the job, and the cost note says that an audio cost computed at the
+  text rate is potentially underestimated. Requires ellmer 0.5.0 (#124).
+
+* `qlm_codebook()` accepts `input_type = "video"`, and `qlm_code()` codes
+  picture and sound in one pass. Each element of `x` may be the path of a
+  local video file, which is uploaded; a YouTube link, which the provider
+  fetches itself; or the URL of a video file, which is downloaded and then
+  uploaded like a file. Before uploading, `qlm_code()` says how much video
+  it is about to send, with a token estimate when the av package is
+  installed, and refuses a file over the upload's 2 GB limit. The run
+  records the size and SHA-256 of every file, a downloaded URL included,
+  and the URL alone for a YouTube link; `qlm_replicate()` and
+  `qlm_backfill()` download and upload again after checking the hashes. As
+  of this version only Google Gemini accepts video; any other provider is
+  tried and its refusal reported with that note (#179).
 
 * A file input (image or audio codebook) no longer falls back to JSON mode
   under `structured = "auto"`: that handler sends text, so a failed
   structured call used to end in the misleading error that the model
   "supports text codebooks only". The provider's own error is now reported,
   and `structured = "json"` is refused up front for a file input. `qlm_code()`
-  also checks that every image or audio file exists before building a
+  also checks that every image, audio or video file exists before building a
   request (#124).
 
 * `qlm_codebook()` gains `image_file_resize`, which sets how an image
