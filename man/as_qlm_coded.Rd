@@ -73,7 +73,14 @@ Default is \code{FALSE}.}
 \item{\code{instructions}}{Text describing coding instructions}
 \item{\code{schema}}{NULL (not used for human coding)}
 }
-If \code{NULL} (default), a minimal placeholder codebook is created.}
+If \code{NULL} (default), a minimal placeholder codebook is created. Passing
+the \code{\link[=qlm_codebook]{qlm_codebook()}} the LLM coded against gives the human data the same
+measurement levels, and a column that is a \code{\link[ellmer:type_enum]{type_enum()}} declared
+\code{"ordinal"} there is stored as an ordered factor in the enum's order, so
+\code{\link[=qlm_compare]{qlm_compare()}} and \code{\link[=qlm_validate]{qlm_validate()}} rank it as they rank the LLM's; a
+value outside the enum is an error. Without a codebook, order a text
+scale yourself with \code{factor(x, levels = c(...), ordered = TRUE)}. The
+schema itself is not kept.}
 
 \item{texts}{Optional vector of original texts or data that were coded.
 Should correspond to the \code{.id} values in \code{data}. If provided, enables

@@ -1,5 +1,11 @@
+# tibble is imported by name so that its namespace loads with quallmer's.
+# The print methods of qlm_coded and the other classes reach print.tbl_df()
+# through NextMethod(), and a namespaced tibble::call() loads tibble only
+# once something has made one; before that, print() fell through to
+# print.data.frame(), which cannot format a condition in an .error cell.
 #' @keywords internal
 #' @import ellmer
+#' @importFrom tibble tibble
 #'
 #' @references
 #' Krippendorff, K. (2019). Content Analysis: An Introduction to Its

@@ -23,7 +23,7 @@
 #' - `chat_args`: Arguments passed to the LLM chat
 #' - `execution_args`: Arguments for parallel/batch execution
 #' - `n_units`: Number of coded units
-#' - `input_type`: Type of input ("text", "image", or "human")
+#' - `input_type`: Type of input ("text", "image", "audio", or "human")
 #' - `source`: Coding source ("human" or "llm")
 #' - `is_gold`: Whether this is a gold standard
 #'

@@ -80,6 +80,12 @@ reference:
       - qlm_codebook
       - qlm_segment
 
+  - title: Advanced configuration
+    desc: Optional session configuration for additional models and provider endpoints
+    contents:
+      - qlm_register_model
+      - qlm_register_provider
+
   - title: Human-coded data
     desc: Convert and work with human-coded or externally coded data
     contents:

@@ -17,8 +17,10 @@
 #' @param model Provider (and optionally model) name, as passed to [qlm_code()].
 #' @param chat_args List of arguments for [ellmer::chat()].
 #' @param execution_args List of execution arguments. `max_active`, `rpm` and
-#'   `on_error` are forwarded to [ellmer::parallel_chat()]; `include_tokens` and
-#'   `include_cost` are honoured here, as they are on the default path.
+#'   `on_error` are forwarded to [ellmer::parallel_chat()] as given, so the
+#'   default `on_error = "continue"` is [qlm_code()]'s, not this handler's;
+#'   `include_tokens` and `include_cost` are honoured here, as they are on the
+#'   default path.
 #' @param batch Logical. Must be `FALSE`; JSON-mode coding has no batch path.
 #' @param tools Tools to register on the chat, as checked by `check_tools()`.
 #'   [ellmer::parallel_chat()] runs the tool-calling loop, so on this path a
@@ -40,7 +42,8 @@
 #' @noRd
 code_handler_json <- function(x, codebook, model, chat_args, execution_args,
                               batch = FALSE, tools = NULL, json_retries = 2L,
-                              model_hint = NULL, cost_message = TRUE) {
+                              model_hint = NULL, cost_message = TRUE,
+                              prior_usage = NULL) {
   # The handler is reached via do.call(), so report guard failures against
   # qlm_code() rather than against an anonymous function.
   error_call <- rlang::caller_env()
@@ -100,11 +103,6 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   include_cost <- isTRUE(execution_args$include_cost)
   pc_arg_names <- setdiff(names(formals(ellmer::parallel_chat)), c("chat", "prompts"))
   pc_args <- execution_args[names(execution_args) %in% pc_arg_names]
-  # Continue lets one bad request be retried without discarding the valid
-  # responses from the rest of the parallel call.
-  if (is.null(pc_args$on_error)) {
-    pc_args$on_error <- "continue"
-  }
 
   parsed <- vector("list", length(x))
   problems <- vector("list", length(x))
@@ -118,10 +116,15 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
   cut <- rep(FALSE, length(x))
   pending <- seq_along(x)
 
+  # The stage each unit's last failure belongs to, which classes its error
+  stage <- rep(NA_character_, length(x))
+
   # Token and cost accumulators, summed ACROSS retry attempts: a repair attempt
   # is a real billed request, so reporting only the successful attempt would
-  # understate what the run cost.
-  usage <- matrix(
+  # understate what the run cost. A structured attempt this run fell back
+  # from was billed too, so the count starts from what it spent; an attempt
+  # whose usage was unknown leaves the total unknown.
+  usage <- prior_usage %||% matrix(
     0,
     nrow = length(x), ncol = 4,
     dimnames = list(NULL, c("input_tokens", "output_tokens",
@@ -145,28 +148,23 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     for (j in seq_along(pending)) {
       i <- pending[[j]]
       usage[i, ] <- usage[i, ] + turns$usage[j, ]
-      checked <- parse_and_validate_json(turns$text[[j]], codebook$schema)
-      # Prefer the transport-level reason over the generic "empty response".
-      if (!isTRUE(checked$ok) && !is.na(turns$error[[j]])) {
-        checked$error <- paste0("API request failed: ", turns$error[[j]])
+      # Parse, then validate; then let the request's own failure, or the
+      # provider's word that the response is incomplete, take precedence.
+      # See settle_response() for the order and the reasons.
+      parsed_text <- parse_json_text(turns$text[[j]])
+      checked <- if (isTRUE(parsed_text$ok)) {
+        validate_structured_value(parsed_text$value, codebook$schema)
       }
-      # A response the provider itself reports as incomplete -- cut off at
-      # max_tokens, withheld by a content filter -- is a failure whatever the
-      # text looks like. Cut-off JSON usually fails to parse, and then the
-      # provider's reason is the one to record rather than "Invalid JSON"; an
-      # object that happened to close just before the limit parses cleanly,
-      # and the provider's word still wins, as it does in ellmer's own
-      # check_finish_reason(). `turns$finish` is NA for a request that failed
-      # outright, so this can never override a transport error.
-      truncated <- FALSE
-      reason <- incomplete_response_reason(
-        turns$finish[[j]], turns$usage[j, "output_tokens"]
+      checked <- settle_response(
+        checked,
+        problem = if (isTRUE(parsed_text$ok)) NA_character_ else parsed_text$error,
+        error = turns$error[[j]],
+        finish = turns$finish[[j]],
+        output_tokens = turns$usage[j, "output_tokens"]
       )
-      if (!is.null(reason)) {
-        checked <- list(ok = FALSE, error = reason)
-        truncated <- is_truncation(turns$finish[[j]])
-      }
+      truncated <- checked$truncated
       cut[[i]] <- truncated
+      stage[[i]] <- checked$stage
       if (isTRUE(checked$ok)) {
         parsed[[i]] <- checked$value
         # NB: `problems[[i]] <- NULL` would DELETE the element and shift every
@@ -214,10 +212,6 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     pending <- next_pending
   }
 
-  # Convert after validation, so that nested and array fields get the same R
-  # representations the default parallel_chat_structured() path produces.
-  results <- ellmer_convert_from_type(parsed, ellmer::type_array(codebook$schema))
-
   # Key .error off what actually failed to parse, NOT off `pending`. Terminal
   # failures are deliberately dropped from `pending` so they are not retried,
   # so keying on `pending` would give them a NULL .error and leave them out of
@@ -240,16 +234,14 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     ), call = error_call)
   }
 
+  errors <- lapply(seq_along(x), function(i) {
+    if (!failed[[i]]) {
+      NULL
+    } else {
+      unit_error(problems[[i]], stage[[i]], cut[[i]])
+    }
+  })
   if (any(failed)) {
-    results$.error <- lapply(seq_along(x), function(i) {
-      if (!failed[[i]]) {
-        NULL
-      } else if (cut[[i]]) {
-        truncation_error(problems[[i]])
-      } else {
-        simpleError(problems[[i]] %||% "failed for an unrecorded reason")
-      }
-    })
     cli::cli_warn(c(
       "{sum(failed)} response{?s} could not be coded, out of {length(x)}.",
       set_bullets(unique(unlist(problems[failed]))),
@@ -257,17 +249,13 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
     ))
   }
 
-  # Same column names and order that ellmer produces for
-  # parallel_chat_structured(include_tokens =, include_cost =), so that both
-  # paths yield identical schemas.
-  if (include_tokens) {
-    results$input_tokens <- usage[, "input_tokens"]
-    results$output_tokens <- usage[, "output_tokens"]
-    results$cached_input_tokens <- usage[, "cached_input_tokens"]
-  }
-  if (include_cost) {
-    results$cost <- usage[, "cost"]
-  }
+  # Convert after validation, so that nested and array fields get the same R
+  # representations the structured path produces, with the same column names
+  # and order, so that both paths yield identical schemas.
+  results <- tabulate_results(
+    parsed, errors, usage, codebook$schema,
+    include_tokens = include_tokens, include_cost = include_cost
+  )
 
   attr(results, "qlm_backend_meta") <- list(
     backend = "json_mode",
@@ -283,7 +271,8 @@ code_handler_json <- function(x, codebook, model, chat_args, execution_args,
 #'
 #' [ellmer::parallel_chat_text()] would be the natural call, but it reduces each
 #' chat to its last turn's text and discards the `Turn`, which is where tokens
-#' and cost live. With `on_error = "continue"`, [ellmer::parallel_chat()]
+#' and cost live. With `on_error = "continue"`, which [qlm_code()] sends
+#' unless told otherwise, [ellmer::parallel_chat()]
 #' returns a list whose failed elements are error conditions rather than chats;
 #' the condition carries the real reason (context length, rate limit, timeout),
 #' so it is captured here. Without it every failure reads as a bare "empty
@@ -309,42 +298,7 @@ json_chat_turns <- function(chat, prompts, pc_args) {
     list(chat = chat, prompts = prompts),
     pc_args
   ))
-
-  n <- length(chats)
-  text <- rep(NA_character_, n)
-  error <- rep(NA_character_, n)
-  status <- rep(NA_integer_, n)
-  finish <- rep(NA_character_, n)
-  usage <- matrix(
-    0,
-    nrow = n, ncol = 4,
-    dimnames = list(NULL, c("input_tokens", "output_tokens",
-                            "cached_input_tokens", "cost"))
-  )
-
-  for (i in seq_len(n)) {
-    if (is.null(chats[[i]]) || inherits(chats[[i]], "error")) {
-      error[[i]] <- api_error_message(chats[[i]])
-      status[[i]] <- api_error_status(chats[[i]])
-      next
-    }
-    turn <- tryCatch(chats[[i]]$last_turn(), error = function(e) e)
-    if (is.null(turn) || inherits(turn, "error")) {
-      error[[i]] <- api_error_message(turn)
-      status[[i]] <- api_error_status(turn)
-      next
-    }
-    text[[i]] <- turn@text
-    finish[[i]] <- turn_finish_reason(turn)
-    tokens <- turn@tokens
-    if (length(tokens) >= 3L) {
-      usage[i, 1:3] <- as.numeric(tokens[1:3])
-    }
-    usage[i, 4] <- as.numeric(turn@cost)
-  }
-
-  list(text = text, usage = usage, error = error, status = status,
-       finish = finish)
+  turn_records(chats)
 }
 
 
@@ -507,6 +461,22 @@ json_schema_from_type <- function(type) {
 #' @keywords internal
 #' @noRd
 parse_and_validate_json <- function(text, schema) {
+  parsed <- parse_json_text(text)
+  if (!isTRUE(parsed$ok)) {
+    return(parsed)
+  }
+  validate_structured_value(parsed$value, schema)
+}
+
+
+#' Parse a JSON-mode response into a value
+#'
+#' @param text The raw response text.
+#'
+#' @return A list with `ok`, and either `value` (a named list) or `error`.
+#' @keywords internal
+#' @noRd
+parse_json_text <- function(text) {
   if (!is.character(text) || length(text) != 1L || is.na(text) || !nzchar(trimws(text))) {
     return(list(ok = FALSE, error = "The API returned an empty response."))
   }
@@ -521,106 +491,7 @@ parse_and_validate_json <- function(text, schema) {
   if (!is.list(value) || is.null(names(value))) {
     return(list(ok = FALSE, error = "JSON output must be an object."))
   }
-
-  checked <- tryCatch(
-    validate_against_type(value, schema, path = "$"),
-    error = function(e) e
-  )
-  if (inherits(checked, "error")) {
-    return(list(ok = FALSE, error = conditionMessage(checked)))
-  }
-  list(ok = TRUE, value = checked)
-}
-
-
-#' Validate a parsed JSON value against an ellmer type specification
-#'
-#' Returns the value unchanged; conversion happens once, after every valid
-#' record has passed the same deterministic checks. Signals with `stop()` rather
-#' than `cli::cli_abort()` because the condition is caught by
-#' `parse_and_validate_json()` and reported as a coding failure, not raised to
-#' the user.
-#'
-#' @param value A parsed JSON value.
-#' @param type An ellmer type object.
-#' @param path JSON path of `value`, used in error messages.
-#'
-#' @return `value`, unchanged.
-#' @keywords internal
-#' @noRd
-validate_against_type <- function(value, type, path) {
-  if (is.null(value)) {
-    if (isTRUE(type@required)) {
-      stop(path, " is required and cannot be null.", call. = FALSE)
-    }
-    return(NULL)
-  }
-
-  if (inherits(type, "ellmer::TypeBasic")) {
-    valid <- switch(type@type,
-      string = is.character(value) && length(value) == 1L && !is.na(value),
-      boolean = is.logical(value) && length(value) == 1L && !is.na(value),
-      integer = is.numeric(value) && length(value) == 1L && is.finite(value) &&
-        value == trunc(value) && abs(value) <= .Machine$integer.max,
-      number = is.numeric(value) && length(value) == 1L && is.finite(value),
-      FALSE
-    )
-    if (!isTRUE(valid)) {
-      stop(path, " must be a ", type@type, ".", call. = FALSE)
-    }
-    return(value)
-  }
-
-  if (inherits(type, "ellmer::TypeEnum")) {
-    if (!is.character(value) || length(value) != 1L || is.na(value) ||
-        !value %in% type@values) {
-      stop(path, " must be one of: ", paste(type@values, collapse = ", "), ".",
-           call. = FALSE)
-    }
-    return(value)
-  }
-
-  if (inherits(type, "ellmer::TypeArray")) {
-    if (!is.list(value) || !is.null(names(value))) {
-      stop(path, " must be a JSON array.", call. = FALSE)
-    }
-    return(lapply(seq_along(value), function(i) {
-      validate_against_type(value[[i]], type@items, paste0(path, "[", i, "]"))
-    }))
-  }
-
-  if (inherits(type, "ellmer::TypeObject")) {
-    if (!is.list(value) || is.null(names(value))) {
-      stop(path, " must be a JSON object.", call. = FALSE)
-    }
-    property_names <- names(type@properties)
-    extras <- setdiff(names(value), property_names)
-    if (!isTRUE(type@additional_properties) && length(extras)) {
-      stop(path, " has unexpected propert", if (length(extras) == 1L) "y: " else "ies: ",
-           paste(extras, collapse = ", "), ".", call. = FALSE)
-    }
-    output <- vector("list", length(type@properties))
-    names(output) <- property_names
-    for (property in property_names) {
-      property_type <- type@properties[[property]]
-      if (!property %in% names(value)) {
-        if (isTRUE(property_type@required)) {
-          stop(path, ".", property, " is required but missing.", call. = FALSE)
-        }
-        output[property] <- list(NULL)
-      } else {
-        output[[property]] <- validate_against_type(
-          value[[property]], property_type, paste0(path, ".", property)
-        )
-      }
-    }
-    if (isTRUE(type@additional_properties) && length(extras)) {
-      output[extras] <- value[extras]
-    }
-    return(output)
-  }
-
-  stop(path, " uses an unsupported schema type.", call. = FALSE)
+  list(ok = TRUE, value = value)
 }
 
 
@@ -952,10 +823,12 @@ ellmer_convert_from_type <- function(x, type) {
 
 #' Required properties whose absence is detectable in the result table
 #'
-#' Restricted to required scalar properties, because those are the ones
-#' [ellmer::parallel_chat_structured()] renders as a single column that can be
-#' checked for `NA`. Arrays and nested objects become list-columns, where "the
-#' model returned nothing useful" has no simple representation.
+#' Restricted to required scalar properties, because those are the ones the
+#' converter renders as a single column that can be checked for `NA`. Arrays
+#' and nested objects become list-columns, where "the model returned nothing
+#' useful" has no simple representation. Kept for objects coded before every
+#' response was validated (#140), whose silently missing values carry no
+#' `.error`; see `failed_units()`.
 #'
 #' @param schema An [ellmer::type_object()].
 #'
@@ -974,107 +847,10 @@ required_scalar_fields <- function(schema) {
 }
 
 
-#' Did the structured call return nothing usable at all?
-#'
-#' A structured call can succeed at the HTTP level and still return a table in
-#' which every required field is `NA` in every row: the endpoint accepted the
-#' JSON schema and ignored it, so ellmer had nothing to map onto the type and
-#' emitted `NA` rather than an error. Observed with `qwen3.5-397b-a17b` through
-#' Alibaba Model Studio. Erroring is therefore not a sufficient test of whether
-#' the structured path worked.
-#'
-#' @param results The result of [ellmer::parallel_chat_structured()].
-#' @param schema An [ellmer::type_object()].
-#'
-#' @return `TRUE` when the call produced no usable values.
-#' @keywords internal
-#' @noRd
-all_required_missing <- function(results, schema) {
-  # A user may have passed convert = FALSE, in which case there is no table to
-  # inspect and no basis for calling the attempt a failure.
-  if (!is.data.frame(results) || !nrow(results)) {
-    return(FALSE)
-  }
-  fields <- intersect(required_scalar_fields(schema), names(results))
-  if (!length(fields)) {
-    return(FALSE)
-  }
-  # A row with a recorded error is evidence only if the endpoint answered. A
-  # rejected request, or a response cut off at max_tokens, says nothing about
-  # whether the endpoint honours the schema, so those rows are set aside. A
-  # response ellmer could extract nothing from -- prose where JSON was asked
-  # for -- is exactly what an endpoint that ignored the schema produces, so
-  # those rows are judged alongside the intact ones. If nothing is left to
-  # judge, there is nothing to conclude.
-  judged <- vapply(
-    recorded_errors(results),
-    function(e) is.null(e) || is_extraction_error(e),
-    logical(1)
-  )
-  if (!any(judged)) {
-    return(FALSE)
-  }
-  all(vapply(fields, function(f) all(is.na(results[[f]][judged])), logical(1)))
-}
 
 
-#' How many rows are missing at least one required field?
-#'
-#' Partial failure, which is worth reporting but is not grounds for discarding
-#' the whole attempt and re-coding in JSON mode. Rows carrying an `.error` are
-#' not counted: they are reported as failed already, with their reason.
-#'
-#' @param results The result of [ellmer::parallel_chat_structured()].
-#' @param schema An [ellmer::type_object()].
-#'
-#' @return An integer count.
-#' @keywords internal
-#' @noRd
-n_incomplete <- function(results, schema) {
-  if (!is.data.frame(results) || !nrow(results)) {
-    return(0L)
-  }
-  fields <- intersect(required_scalar_fields(schema), names(results))
-  if (!length(fields)) {
-    return(0L)
-  }
-  missing <- Reduce(`|`, lapply(fields, function(f) is.na(results[[f]])))
-  sum(missing & !errored_rows(results))
-}
 
 
-#' Does this provider enforce the output schema by construction?
-#'
-#' Derived from ellmer's own dispatch rather than from a list of vendors.
-#' These provider classes define their own `chat_body()` method using a
-#' mechanism the provider is documented to enforce: OpenAI's `/responses`
-#' format with `strict = TRUE`, Anthropic's native structured output or a
-#' forced tool call, Gemini's `response_schema`, Bedrock's forced tool call,
-#' Snowflake's typed `response_format`.
-#'
-#' Everything else falls through to `ProviderOpenAICompatible`'s method, which
-#' sends `response_format = {type: "json_schema", strict: true}` and takes the
-#' answer on trust. Whether that is honoured is up to the endpoint, and
-#' measurement shows it often is not.
-#'
-#' Deriving this rather than tabulating it means a provider ellmer adds later
-#' defaults to "cannot vouch for this", which is the safe direction.
-#'
-#' @param provider A provider object from `chat$get_provider()`.
-#'
-#' @return `TRUE` when the schema is enforced by the provider's mechanism.
-#' @keywords internal
-#' @noRd
-provider_enforces_schema <- function(provider) {
-  enforcing <- c(
-    "ellmer::ProviderOpenAI",
-    "ellmer::ProviderAnthropic",
-    "ellmer::ProviderGoogleGemini",
-    "ellmer::ProviderAWSBedrock",
-    "ellmer::ProviderSnowflakeCortex"
-  )
-  any(class(provider) %in% enforcing)
-}
 
 
 #' Is this the DashScope "messages must contain the word json" rejection?

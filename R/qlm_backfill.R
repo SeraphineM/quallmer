@@ -42,9 +42,9 @@
 #' the outcome:
 #'
 #' * a text the provider rejected as longer than the model's context window,
-#'   unless `model` changes;
-#' * a response cut off at the `max_tokens` limit, unless `model` changes or
-#'   the backfill raises the limit, by passing a `params(max_tokens = )`
+#'   unless the model or endpoint changes;
+#' * a response cut off at the `max_tokens` limit, unless the model or endpoint
+#'   changes or the backfill raises the limit, by passing `params(max_tokens = )`
 #'   higher than the run's own. Other `params` leave the limit where it was,
 #'   and so leave those units alone.
 #'
@@ -77,9 +77,10 @@
 #' the provider did not report it, not that nothing was billed, so a retry's
 #' known figure cannot stand in for the whole. The passes are recorded in the
 #' object metadata as `backfill`, one entry per pass with its timestamp, the
-#' model if it differed from the run's, the overrides, the `.id`s attempted
-#' and recovered, where its cost came from when that was not where the run's
-#' did, and for a pass that failed outright its error, so the result can say
+#' model if it or the endpoint differed from the run's, the overrides, the
+#' `.id`s attempted and recovered, where its cost came from when that was not
+#' where the run's did, and for a pass that failed outright its error, so the
+#' result can say
 #' which of its rows came from which pass and which model. A pass whose cost
 #' came from somewhere else than the run's, other supplied rates, ellmer's
 #' own table where the run rested on supplied rates, or nowhere where the
@@ -99,17 +100,26 @@
 #'   [qlm_replicate()] to re-run a whole coding.
 #'
 #' @examples
-#' \dontrun{
-#' coded <- qlm_code(texts, codebook, model = "openai/gpt-4o-mini",
-#'                   on_error = "continue")
-#' qlm_failures(coded)
+#' # A run that came back incomplete, and what qlm_backfill() made of it. Both
+#' # were coded once and saved with the package (see data_creation/ in the
+#' # source), so they can be looked at without a key.
+#' examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+#' incomplete <- examples$example_coded_incomplete
+#' incomplete
+#' qlm_failures(incomplete)
 #'
-#' filled <- qlm_backfill(coded)
+#' # What qlm_backfill(incomplete) returned: the timed-out unit re-coded, the
+#' # responses cut off at max_tokens left alone, and the pass on record
+#' filled <- examples$example_coded_backfilled
+#' filled
 #' qlm_failures(filled)
 #' qlm_meta(filled, "backfill", type = "object")
 #'
+#' \dontrun{
+#' filled <- qlm_backfill(incomplete)
+#'
 #' # Responses cut off at the output limit are retried only with a higher one
-#' filled <- qlm_backfill(coded, params = ellmer::params(max_tokens = 32000))
+#' filled <- qlm_backfill(filled, params = ellmer::params(max_tokens = 2000))
 #'
 #' # Units one model refuses or cannot fit, coded by another; the result
 #' # records which units came from which model
@@ -192,7 +202,8 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
 
   run_model <- meta_attr$object$chat_args$name
   restored <- restore_run_args(x, overrides = overrides, model = model, batch = FALSE)
-  model_changed <- !identical(restored$model, run_model)
+  overrides <- restored$overrides
+  route_changed <- !identical(restored$model, run_model) || restored$endpoint_changed
   limit_raised <- raises_output_limit(overrides, meta_attr$object$chat_args)
   call_args <- restored$call_args
   # A backfill is a small parallel call whatever the original run was; the
@@ -207,6 +218,9 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
   run_name <- meta_attr$user$name
   records <- list()
 
+  # A model the run accepted by registration must be registered here too
+  check_registered_input_model(x, restored$model)
+
   for (attempt in seq_len(passes)) {
     failed <- failed_units(x)
     if (!any(failed)) {
@@ -219,13 +233,13 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     # Re-derived each pass from the object as it now stands: the previous
     # pass may have recorded a length rejection that was not visible before.
     terminal <- failed & is_terminal_failure(
-      recorded_errors(x), limit_raised = limit_raised, model_changed = model_changed
+      recorded_errors(x), limit_raised = limit_raised, model_changed = route_changed
     )
     retry <- which(failed & !terminal)
 
     if (attempt == 1L && any(terminal)) {
       cli::cli_inform(c(
-        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model}, or a higher {.code params(max_tokens = )}, would retry them."
+        "i" = "Leaving {sum(terminal)} unit{?s} alone: rejected on length, or cut off at {.code max_tokens}. A different {.arg model} or endpoint, or a higher {.code params(max_tokens = )}, would retry them."
       ))
     }
     if (!length(retry)) {
@@ -238,6 +252,8 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     ))
 
     subset <- inputs_by_id(x, ids[retry])
+    # The files about to be uploaded again must be the ones the run coded
+    verify_input_files(x, ids[retry])
     result <- tryCatch(
       do.call(qlm_code, c(
         list(
@@ -274,8 +290,9 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
       # units it attempted can no longer claim a known usage total.
       x <- unknown_usage(x, ids[retry])
       records[[length(records) + 1L]] <- backfill_pass(
-        model = if (model_changed) restored$model else NULL,
+        model = if (route_changed) restored$model else NULL,
         overrides = overrides,
+        resolution = restored$resolution,
         attempted = ids[retry],
         recovered = character(0),
         error = condition_text(result)
@@ -284,17 +301,25 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     }
 
     x <- merge_backfill_rows(x, result)
+    # The bytes the pass coded are now the bytes behind its units, so its
+    # hashes replace the run's for those units; a run coded before hashes
+    # were recorded gains them for exactly the units this pass re-coded
+    x <- merge_input_files(x, result)
     recovered <- ids[retry][!failed_units(result)]
     # What the pass was costed on is what qlm_code() settled, not what was
     # asked: rates it was given and did not need are not recorded on it.
+    # A model the pass accepted by registration is recorded on the pass, so
+    # that the trail discloses it and a replay knows to ask for it again.
     result_meta <- attr(result, "meta")
     records[[length(records) + 1L]] <- backfill_pass(
-      model = if (model_changed) restored$model else NULL,
+      model = if (route_changed) restored$model else NULL,
       overrides = overrides,
+      resolution = restored$resolution,
       attempted = ids[retry],
       recovered = recovered,
       prices = result_meta$user$prices,
-      cost_note = result_meta$user$cost_note
+      cost_note = result_meta$user$cost_note,
+      registered = result_meta$user$input_model_registered
     )
 
     remaining <- sum(failed_units(x))
@@ -421,12 +446,21 @@ replay_backfill <- function(result, parent, backfill = NULL) {
       meta_attr$object$backfill <- c(meta_attr$object$backfill, list(backfill_pass(
         model = pass$model,
         overrides = pass$overrides,
+        resolution = pass$provider_resolution,
         attempted = replayed$attempted,
         recovered = character(0),
         error = replayed$cause
       )))
       attr(result, "meta") <- meta_attr
       break
+    }
+    if (!is.null(pass$provider_resolution)) {
+      replay_meta <- attr(replayed, "meta")
+      last <- length(replay_meta$object$backfill)
+      if (last > length(attr(result, "meta")$object$backfill)) {
+        replay_meta$object$backfill[[last]]$provider_resolution <- pass$provider_resolution
+      }
+      attr(replayed, "meta") <- replay_meta
     }
     result <- replayed
   }
@@ -511,7 +545,7 @@ raises_output_limit <- function(overrides, chat_args) {
 #'
 #' @param errors The list from `recorded_errors()`.
 #' @param limit_raised Whether the backfill raises the output limit.
-#' @param model_changed Whether the backfill uses a different model.
+#' @param model_changed Whether the backfill uses a different model or endpoint.
 #'
 #' @return A logical vector, one element per unit.
 #' @keywords internal
@@ -639,12 +673,18 @@ backfill_summary <- function(passes) {
 #' @param prices,cost_note What [qlm_code()] recorded for the pass: the rates
 #'   its cost rests on, and one line saying where the cost came from. `NULL`
 #'   when the pass was priced by ellmer, and the elements are absent.
+#' @param registered The `"provider/model"` pair the pass's model was
+#'   accepted on through [qlm_register_model()], or `NULL`, and the
+#'   element is absent.
 #'
+#' @param resolution Requested and effective model identity for a registered
+#'   provider, if used.
 #' @return A list.
 #' @keywords internal
 #' @noRd
 backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
-                          prices = NULL, cost_note = NULL) {
+                          prices = NULL, cost_note = NULL, registered = NULL,
+                          resolution = NULL) {
   pass <- list(
     timestamp = Sys.time(),
     model = model,
@@ -652,11 +692,17 @@ backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
     attempted = attempted,
     recovered = recovered
   )
+  if (!is.null(resolution)) {
+    pass$provider_resolution <- resolution
+  }
   if (!is.null(prices)) {
     pass$prices <- prices
   }
   if (!is.null(cost_note)) {
     pass$cost_note <- cost_note
+  }
+  if (!is.null(registered)) {
+    pass$input_model_registered <- registered
   }
   if (!is.null(error)) {
     pass$error <- error

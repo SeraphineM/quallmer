@@ -1129,3 +1129,135 @@ test_that("qlm_replicate carries tools on the same endpoint and drops them with 
   expect_true(any(grepl("`tools` carries a value redacted", msgs)))
   expect_null(seen$tools)
 })
+
+
+# on_error and path-specific execution arguments (#171) ------------------------
+
+# A parent coded on `batch` with `execution_args` recorded, and a stub for
+# qlm_code() that records what a replication passes it.
+replicate_parent <- function(execution_args, batch = FALSE) {
+  type_obj <- ellmer::type_object(category = ellmer::type_string("Category"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  new_qlm_coded(
+    results = data.frame(id = 1:2, category = c("A", "B")),
+    codebook = codebook,
+    data = c("text1", "text2"),
+    input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    execution_args = execution_args,
+    batch = batch,
+    metadata = list(timestamp = Sys.time(), n_units = 2),
+    name = "original",
+    call = quote(qlm_code(...)),
+    parent = NULL
+  )
+}
+
+replicate_with <- function(seen) {
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, codebook, model, ..., batch = FALSE,
+                                        name = NULL, notes = NULL) {
+    seen$args <- list(...)
+    seen$batch <- batch
+    replicate_parent(list(), batch = batch)
+  })
+  f
+}
+
+test_that("qlm_replicate replays a recorded on_error; an old parent takes the default (#171)", {
+  skip_if_not_installed("mockery")
+  seen <- new.env()
+  f <- replicate_with(seen)
+
+  # Coded before on_error was recorded: nothing is passed, so qlm_code()'s
+  # own default applies to the replication
+  f(replicate_parent(list()))
+  expect_false("on_error" %in% names(seen$args))
+
+  # Recorded: replayed as it was
+  f(replicate_parent(list(on_error = "return", max_active = 5)))
+  expect_equal(seen$args$on_error, "return")
+  expect_equal(seen$args$max_active, 5)
+
+  # An override in `...` wins
+  f(replicate_parent(list(on_error = "return")), on_error = "stop")
+  expect_equal(seen$args$on_error, "stop")
+})
+
+
+test_that("qlm_replicate drops inherited arguments the other path cannot take (#171)", {
+  skip_if_not_installed("mockery")
+  seen <- new.env()
+  f <- replicate_with(seen)
+
+  # Parallel to batch: the parallel call's arguments stay behind
+  f(replicate_parent(list(on_error = "continue", max_active = 5, include_tokens = TRUE)),
+    batch = TRUE, path = "/tmp/batch")
+  expect_true(seen$batch)
+  expect_false(any(c("on_error", "max_active") %in% names(seen$args)))
+  expect_true(seen$args$include_tokens)
+  expect_equal(seen$args$path, "/tmp/batch")
+
+  # Batch to parallel: the batch API's arguments stay behind
+  f(replicate_parent(list(path = "/tmp/batch", wait = TRUE, include_cost = TRUE), batch = TRUE),
+    batch = FALSE)
+  expect_false(seen$batch)
+  expect_false(any(c("path", "wait") %in% names(seen$args)))
+  expect_true(seen$args$include_cost)
+})
+
+
+test_that("an explicit on_error on a batch replication is refused, not dropped (#171)", {
+  # Only the inherited value is filtered out; the caller's own override goes
+  # through to qlm_code(), which says why it cannot apply, before any request
+  expect_error(
+    qlm_replicate(replicate_parent(list()), batch = TRUE, on_error = "return"),
+    "not supported with `batch = TRUE`"
+  )
+})
+
+
+# File inputs (#124) -----------------------------------------------------------
+
+test_that("qlm_replicate checks a file input's hashes before coding it again (#124)", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run <- audio_run(paths)
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, ...) {
+    seen <<- x
+    run
+  })
+
+  expect_s3_class(f(run, name = "rep"), "qlm_coded")
+  expect_equal(seen, paths)
+
+  # The path now holds different bytes: refused before anything is coded
+  writeBin(as.raw(99:110), paths[["b"]])
+  seen <- NULL
+  expect_error(f(run, name = "rep2"), 'differs from the one this run coded: "b"')
+  expect_null(seen)
+})
+
+
+test_that("qlm_replicate of a run without recorded hashes proceeds with a notice (#124)", {
+  paths <- c(a = audio_file())
+  legacy <- audio_run(paths, with_hashes = FALSE)
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, ...) legacy)
+  expect_message(f(legacy, name = "rep"), "cannot be verified")
+})
+
+
+test_that("qlm_replicate needs the registration a run relied on (#124)", {
+  withr::defer(reset_registered_input_models())
+  paths <- c(a = audio_file())
+  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
+                   model = "google_gemini/gemini-4-ultra")
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(x, ...) run)
+
+  expect_error(f(run, name = "rep"), "qlm_register_model")
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  expect_s3_class(f(run, name = "rep"), "qlm_coded")
+})

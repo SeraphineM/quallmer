@@ -18,7 +18,9 @@ verbatim segment text and is added automatically.}
 
 \item{model}{character; the provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
-that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
+that provider). Native prefixes are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.
+Registered prefixes, such as \code{"dashscope/qwen-plus"}, resolve through
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} and require an explicit model name.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 

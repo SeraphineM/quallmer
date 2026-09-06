@@ -159,9 +159,16 @@ qlm_trail <- function(..., path = NULL) {
       run$codebook <- attr(obj, "codebook")
       run$batch <- meta_attr$object$batch
       run$chat_args <- meta_attr$object$chat_args
+      run$provider_resolution <- meta_attr$object$provider_resolution
       run$execution_args <- meta_attr$object$execution_args
       run$prices <- meta_attr$user$prices
       run$cost_note <- meta_attr$user$cost_note
+      # The files a file-input run coded, by hash, and whether its model was
+      # accepted by a session registration: both are what a reader needs to
+      # reproduce the run, so both belong in the report
+      run$input_type <- meta_attr$object$input_type
+      run$input_files <- meta_attr$user$input_files
+      run$input_model_registered <- meta_attr$user$input_model_registered
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
       # Passes that completed the run, and any other model they used: the
@@ -305,6 +312,9 @@ print.qlm_trail <- function(x, ...) {
     }
     if (!is.null(run$chat_args$name)) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
+    }
+    if (!is.null(run$provider_resolution)) {
+      cat("Requested model: ", provider_request_label(run$provider_resolution), "\n", sep = "")
     }
     if (!is.null(backfill_summary(run$backfill))) {
       cat("Backfill:", backfill_summary(run$backfill), "\n")
@@ -474,15 +484,32 @@ generate_trail_report <- function(trail, file) {
   lines <- c(lines, "Codebooks used in this analysis:")
   lines <- c(lines, "")
 
+  # One entry per distinct codebook, not per name: two runs may share a name
+  # and differ in a setting, such as the resolution images were coded at, and
+  # the second must not vanish behind the first (#177)
   codebooks_seen <- list()
+  variants_of <- list()
   for (run in trail$runs) {
     if (!is.null(run$codebook) && !is.null(run$codebook$name)) {
       cb_name <- run$codebook$name
-      if (is.null(codebooks_seen[[cb_name]])) {
-        codebooks_seen[[cb_name]] <- run$codebook
+      cb_key <- digest::digest(fill_codebook_fields(run$codebook))
+      if (is.null(codebooks_seen[[cb_key]])) {
+        codebooks_seen[[cb_key]] <- run$codebook
+        variants_of[[cb_name]] <- (variants_of[[cb_name]] %||% 0L) + 1L
+        heading <- if (variants_of[[cb_name]] > 1L) {
+          paste0(cb_name, " (variant ", variants_of[[cb_name]], ")")
+        } else {
+          cb_name
+        }
 
-        lines <- c(lines, paste0("### ", cb_name))
+        lines <- c(lines, paste0("### ", heading))
         lines <- c(lines, "")
+
+        input_line <- codebook_input_line(run$codebook)
+        if (!is.null(input_line)) {
+          lines <- c(lines, input_line)
+          lines <- c(lines, "")
+        }
 
         if (!is.null(run$codebook$instructions)) {
           lines <- c(lines, "**Instructions:**")
@@ -542,6 +569,10 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, paste("**Tools:**", format_tools(run$chat_args$tools)))
       lines <- c(lines, "", format_tool_details(run$chat_args$tools), "")
     }
+    if (!is.null(run$provider_resolution)) {
+      lines <- c(lines, paste("**Requested model:**",
+                              provider_request_label(run$provider_resolution)))
+    }
     if (!is.null(backfill_summary(run$backfill))) {
       lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
     }
@@ -564,9 +595,14 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, paste0("**Cost (", names(pass_notes)[i], "):** ", pass_notes[[i]]))
     }
 
-    # Codebook reference
+    # Codebook reference, with the image settings this run coded at: they
+    # are per run, since a codebook of the same name may differ between runs
     if (!is.null(run$codebook$name)) {
       lines <- c(lines, paste("**Codebook:**", run$codebook$name))
+      input_line <- codebook_input_line(run$codebook)
+      if (!is.null(input_line)) {
+        lines <- c(lines, input_line)
+      }
     }
 
     # Units coded
@@ -579,7 +615,57 @@ generate_trail_report <- function(trail, file) {
       lines <- c(lines, "**Processing:** Batch")
     }
 
+    # A model accepted by registration rather than by the built-in table,
+    # for the run and for any backfill pass
+    if (!is.null(run$input_model_registered)) {
+      lines <- c(lines, paste0(
+        "**Model accepted by:** `qlm_register_model(\"",
+        run$input_model_registered, "\", input_type = \"",
+        run$input_type %||% "audio", "\")` in the coding session"
+      ))
+    }
+    for (k in seq_along(run$backfill)) {
+      resolution <- run$backfill[[k]]$provider_resolution
+      if (!is.null(resolution)) {
+        lines <- c(lines, paste0("**Backfill pass ", k, " requested model:** ",
+                                provider_request_label(resolution)))
+      }
+      pass_registered <- run$backfill[[k]]$input_model_registered
+      if (!is.null(pass_registered)) {
+        lines <- c(lines, paste0(
+          "**Backfill pass ", k, " model accepted by:** `qlm_register_model(\"",
+          pass_registered, "\", input_type = \"",
+          run$input_type %||% "audio", "\")` in the coding session"
+        ))
+      }
+    }
+
     lines <- c(lines, "")
+
+    # The files behind each unit, with the hash recorded at coding time
+    if (is.data.frame(run$input_files) && nrow(run$input_files)) {
+      lines <- c(lines, paste0(
+        "**Input files (", run$input_type %||% "file", "):** ",
+        nrow(run$input_files), " file", if (nrow(run$input_files) == 1L) "" else "s",
+        ", SHA-256 recorded at coding time"
+      ))
+      lines <- c(lines, "")
+      lines <- c(lines, "| .id | File | Bytes | SHA-256 |")
+      lines <- c(lines, "|---|---|---|---|")
+      for (k in seq_len(nrow(run$input_files))) {
+        f <- run$input_files[k, ]
+        lines <- c(lines, paste0(
+          "| ", f$.id, " | ", f$file, " | ",
+          if (is.na(f$size)) "" else format(f$size, big.mark = ",", scientific = FALSE),
+          " | ",
+          if (is_image_url(f$file)) "fetched by the provider"
+          else if (is.na(f$sha256)) "not recorded"
+          else paste0("`", f$sha256, "`"),
+          " |"
+        ))
+      }
+      lines <- c(lines, "")
+    }
 
     # Call (materials relating to intentions)
     if (!is.null(run$call)) {
@@ -942,6 +1028,28 @@ generate_trail_report <- function(trail, file) {
   writeLines(lines, file)
 
   invisible(file)
+}
+
+#' The image settings a codebook codes at, as one report line
+#'
+#' The resolution an image was coded at is part of the instrument; a
+#' codebook saved before the fields existed was coded at "low" with the
+#' provider choosing the URL detail (#177).
+#'
+#' @param codebook A codebook, as stored on a run.
+#' @return A string, or `NULL` for a codebook that takes no images.
+#' @keywords internal
+#' @noRd
+codebook_input_line <- function(codebook) {
+  filled <- fill_codebook_fields(codebook)
+  if (is.null(filled$image_file_resize)) {
+    return(NULL)
+  }
+  paste0(
+    "**Input:** image files, resized with `image_file_resize = \"",
+    filled$image_file_resize, "\"`; image URLs with `image_url_detail = \"",
+    filled$image_url_detail, "\"`"
+  )
 }
 
 

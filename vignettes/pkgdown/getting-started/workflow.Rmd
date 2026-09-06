@@ -5,6 +5,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+library(quallmer)
 ```
 
 This tutorial provides a quick overview of the quallmer workflow for LLM-assisted qualitative coding. We'll use US presidential inaugural addresses to demonstrate the core functions.
@@ -68,10 +69,15 @@ coded
 
 ### When a run comes back incomplete
 
-A run over a real corpus rarely comes back complete. Requests time out or hit a rate limit, a provider refuses a text on one pass and codes it on the next, an endpoint accepts the schema and then returns something that does not fit it. The units that failed sit in the object as rows of `NA`, and `qlm_failures()` lists them with the reason:
+A run over a real corpus rarely comes back complete. Requests time out or hit a rate limit, a provider refuses a text on one pass and codes it on the next, an endpoint accepts the schema and then returns something that does not fit it. The units that failed sit in the object as rows of `NA`, `print()` counts them, and `qlm_failures()` lists them with the reason.
 
-```{r}
-qlm_failures(coded)
+The run below ships with the package, so the rest of this section runs without a key. Eight movie reviews were coded with a deliberately short request timeout and a `max_tokens` of 90, and came back with both kinds of failure this section is about: a request that timed out, and responses the model could not fit into the output limit.
+
+```{r, eval = TRUE}
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+incomplete <- examples$example_coded_incomplete
+incomplete
+qlm_failures(incomplete)
 ```
 
 quallmer deals with failures at three points, and it helps to keep them apart.
@@ -81,7 +87,19 @@ quallmer deals with failures at three points, and it helps to keep them apart.
 **Backfilling happens after the run, on the object it produced.** `qlm_backfill()` looks up the units that failed, re-codes just those with the run's own model and settings, and merges what comes back; everything that succeeded the first time is left exactly as it was. Because it works on the finished object, you can run it later, look at the failures first, or give it a different `model` for units the original consistently refuses or cannot fit in its context window. Each pass is recorded in the object's metadata, and `print()` and the audit trail say what was backfilled and by which model, so a result coded by two instruments is disclosed as one.
 
 ```{r}
-filled <- qlm_backfill(coded)
+filled <- qlm_backfill(incomplete)
+#> ℹ Leaving 3 units alone: rejected on length, or cut off at `max_tokens`. A
+#>   different `model`, or a higher `params(max_tokens = )`, would retry them.
+#> ℹ Backfill pass 1 of 2: re-coding 1 unit with "anthropic/claude-haiku-4-5".
+#> ℹ Recovered 1 unit; 3 still failed.
+#> ℹ Nothing recoverable remains.
+```
+
+The object that call returned is saved with the package too. The timed-out unit is coded now, the cut-off ones are still listed, and the header says what was done:
+
+```{r, eval = TRUE}
+filled <- examples$example_coded_backfilled
+filled
 qlm_failures(filled)
 ```
 
@@ -95,7 +113,7 @@ The two are for different failures. Retries catch what a moment's wait fixes, in
 | Input exceeds the model's context window | Backfill with a larger-context model | `qlm_backfill(..., model = )` |
 | Output was cut off at `max_tokens` | Backfill with a higher output limit | `qlm_backfill(..., params = ellmer::params(max_tokens = ))` |
 
-Two settings shape how much there is to backfill. The first is what a failure does to the rest of the run, and it depends on the path. On the structured path ellmer's default applies, `on_error = "return"`: the run stops sending new requests after the first failure and returns what it has, so one timeout can leave most of a corpus uncoded. On the JSON path quallmer sets `on_error = "continue"` unless you say otherwise, so every unit is attempted and only the units that actually failed are left for a backfill. Pass `on_error` yourself to choose either behaviour on either path. The second is `qlm_code(backfill = 2)`, which runs the passes in the same call, if you would rather not make them a separate step. Either way, a replication made with `qlm_replicate()` replays the passes recorded on its parent, so both are complete on the same terms.
+Two settings shape how much there is to backfill. The first is what a failure does to the rest of the run. By default `qlm_code()` runs with `on_error = "continue"` on both paths, so every unit is attempted and only the units that actually failed are left for a backfill, each with its reason in `.error`. Pass `on_error = "return"` to stop sending new requests after the first failure and return what there is, which is ellmer's own default. On the structured path that is the whole run: one timeout can then leave most of a corpus uncoded, and the units never sent carry no `.error`. On the JSON path it is one wave, since `json_retries` sends the units a wave did not reach in later waves, each stopped in turn at its first failure, and whatever is still unsent at the end does carry an `.error`; the run stops after the first wave only with `json_retries = 0`. The second is `qlm_code(backfill = 2)`, which runs the passes in the same call, if you would rather not make them a separate step. Either way, a replication made with `qlm_replicate()` replays the passes recorded on its parent, so both are complete on the same terms.
 
 ## Step 3: Replicate with a different model
 

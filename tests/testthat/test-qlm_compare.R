@@ -722,18 +722,185 @@ test_that("a rating that is not a number is an error at interval level (#150)", 
 })
 
 
-test_that("ordinal text categories rank as before, and a tolerance on them warns (#150)", {
+# ---- ordinal text categories ranked by their declared order (#165) ----------
+
+# Two coders' text ratings as ordered factors on the same scale
+ordered_pair <- function(a, b, lv = c("low", "medium", "high"), ...) {
+  x <- as_qlm_coded(data.frame(.id = seq_along(a), g = factor(a, levels = lv, ordered = TRUE)),
+                    id = .id, name = "A")
+  y <- as_qlm_coded(data.frame(.id = seq_along(b), g = factor(b, levels = lv, ordered = TRUE)),
+                    id = .id, name = "B")
+  as.data.frame(qlm_compare(x, y, by = "g", level = "ordinal", ...))
+}
+
+test_that("ordinal text categories are ranked by their ordered-factor levels (#165)", {
+  # The issue's case: B is always at or one step above A on the scale
+  a <- c("low", "low", "medium", "medium", "high", "high")
+  b <- c("low", "medium", "medium", "high", "high", "high")
+  from_text <- ordered_pair(a, b)
+
+  x <- as_qlm_coded(data.frame(.id = 1:6, g = c(1, 1, 2, 2, 3, 3)), id = .id, name = "A")
+  y <- as_qlm_coded(data.frame(.id = 1:6, g = c(1, 2, 2, 3, 3, 3)), id = .id, name = "B")
+  from_numbers <- as.data.frame(qlm_compare(x, y, by = "g", level = "ordinal"))
+
+  expect_equal(from_text$measure, from_numbers$measure)
+  expect_equal(from_text$value, from_numbers$value)
+  # The alphabetical ranking put "high" lowest and gave 0.45
+  expect_gt(from_text$value[from_text$measure == "rho"], 0.8)
+})
+
+
+test_that("a plain factor or character column has no order at ordinal level (#165)", {
   a <- c("low", "mid", "high", "low")
   b <- c("low", "high", "high", "mid")
 
-  expect_no_warning(pct <- compare_pair(a, b, tolerance = 0, level = "ordinal"))
-  expect_equal(pct, 0.5)
+  err <- expect_error(compare_pair(a, b, tolerance = 0, level = "ordinal"), "no declared order")
+  expect_match(conditionMessage(err), "ordered = TRUE")
+  expect_match(conditionMessage(err), "type_enum")
+  expect_match(conditionMessage(err), 'levels = list(g = "ordinal")', fixed = TRUE)
 
-  expect_warning(
-    pct_tol <- compare_pair(a, b, tolerance = 1, level = "ordinal"),
-    "Ignoring `tolerance`"
+  # A plain factor's levels are alphabetical by default and say nothing
+  err <- expect_error(compare_pair(factor(a), factor(b), tolerance = 0, level = "ordinal"),
+                      "no declared order")
+  expect_match(conditionMessage(err), '"A" and "B"')
+
+  # An ordered factor in one coder does not order the other's text
+  fa <- factor(a, levels = c("low", "mid", "high"), ordered = TRUE)
+  err <- expect_error(compare_pair(fa, b, tolerance = 0, level = "ordinal"), "no declared order")
+  expect_match(conditionMessage(err), '"B"')
+  expect_no_match(conditionMessage(err), '"A"')
+
+  # Nominal level takes the categories as they are
+  expect_equal(compare_pair(a, b, tolerance = 0, level = "nominal"), 0.5)
+})
+
+
+test_that("ordered factors must agree on their levels (#165)", {
+  a <- c("low", "mid", "high", "low")
+  b <- c("low", "high", "high", "mid")
+  fa <- factor(a, levels = c("low", "mid", "high"), ordered = TRUE)
+
+  err <- expect_error(
+    compare_pair(fa, factor(b, levels = c("high", "mid", "low"), ordered = TRUE),
+                 tolerance = 0, level = "ordinal"),
+    "differ between coders"
   )
-  expect_equal(pct_tol, 0.5)
+  expect_match(conditionMessage(err), "low < mid < high")
+  expect_match(conditionMessage(err), "high < mid < low")
+
+  expect_error(
+    compare_pair(fa, factor(b, levels = c("low", "mid", "high", "extreme"), ordered = TRUE),
+                 tolerance = 0, level = "ordinal"),
+    "differ between coders"
+  )
+})
+
+
+test_that("an ordered factor is read as declared, whatever its labels look like (#165)", {
+  # Coders on the same declared scale are not rejected on the labels each
+  # happened to observe: A's ratings all read as numbers, B's do not
+  lv <- c("0", "low", "high")
+  a <- factor(c("0", "0", "0"), levels = lv, ordered = TRUE)
+  b <- factor(c("low", "high", "0"), levels = lv, ordered = TRUE)
+  # (a constant coder has no variance, so the correlations warn)
+  expect_no_error(pct <- suppressWarnings(compare_pair(a, b, tolerance = 0, level = "ordinal")))
+  expect_equal(pct, 1 / 3)
+
+  # Numeric-looking labels take their declared ranks, not their values
+  lv <- c("1", "10", "2")
+  a <- factor(c("1", "10", "2", "1"), levels = lv, ordered = TRUE)
+  b <- factor(c("10", "2", "2", "2"), levels = lv, ordered = TRUE)
+  ranks <- ratings_matrix(data.frame(a = a, b = b), "ordinal", "g")
+  expect_equal(unname(ranks[, "a"]), c(1L, 2L, 3L, 1L))
+  expect_equal(unname(ranks[, "b"]), c(2L, 3L, 3L, 3L))
+  expect_equal(attr(ranks, "levels"), lv)
+  # "1" and "10" are adjacent on the declared scale
+  expect_equal(compare_pair(a, b, tolerance = 1, level = "ordinal"), 0.75)
+
+  # Conflicting orders are caught even when every observed label is digits
+  c_ <- factor(c("10", "2", "2", "2"), levels = rev(lv), ordered = TRUE)
+  expect_error(ratings_matrix(data.frame(a = a, c = c_), "ordinal", "g"), "differ between coders")
+
+  # One ordered factor commits the variable to declared order: numbers from
+  # the other coder are not read against it
+  err <- expect_error(compare_pair(a, c(1, 10, 2, 1), tolerance = 0, level = "ordinal"),
+                      "no declared order")
+  expect_match(conditionMessage(err), '"B"')
+
+  # Interval level still reads a factor by its labels (#150)
+  expect_equal(compare_pair(factor(c("1", "2", "10"), ordered = TRUE), c(1, 2, 10), tolerance = 0), 1)
+})
+
+
+test_that("an enum is ordered only when the codebook declares it ordinal (#165)", {
+  schema <- ellmer::type_object(g = ellmer::type_enum(c("low", "mid", "high")))
+  nominal <- qlm_codebook("Sev", "Rate.", schema)
+  x <- as_qlm_coded(data.frame(.id = 1:3, g = c("low", "mid", "high")), id = .id,
+                    name = "A", codebook = nominal)
+  y <- as_qlm_coded(data.frame(.id = 1:3, g = c("low", "high", "high")), id = .id,
+                    name = "B", codebook = nominal)
+  expect_type(x$g, "character")
+  # Compared as declared, the categories are nominal
+  res <- as.data.frame(qlm_compare(x, y, by = "g"))
+  expect_true(all(res$level == "nominal"))
+  # Asked for an order the codebook did not declare, refused with the declaration to add
+  err <- expect_error(qlm_compare(x, y, by = "g", level = "ordinal"), "no declared order")
+  expect_match(conditionMessage(err), 'levels = list(g = "ordinal")', fixed = TRUE)
+
+  ordinal <- qlm_codebook("Sev", "Rate.", schema, levels = list(g = "ordinal"))
+  x <- as_qlm_coded(data.frame(.id = 1:3, g = c("low", "mid", "high")), id = .id,
+                    name = "A", codebook = ordinal)
+  y <- as_qlm_coded(data.frame(.id = 1:3, g = c("low", "high", "high")), id = .id,
+                    name = "B", codebook = ordinal)
+  expect_true(is.ordered(x$g))
+  res <- as.data.frame(qlm_compare(x, y, by = "g"))
+  expect_true(all(res$level == "ordinal"))
+  expect_equal(res$value[res$measure == "percent_agreement"], 2 / 3)
+})
+
+
+test_that("an unused middle category keeps its rank (#165)", {
+  a <- c("low", "high", "low", "high")
+  b <- c("high", "high", "low", "low")
+  from_text <- ordered_pair(a, b)
+
+  x <- as_qlm_coded(data.frame(.id = 1:4, g = c(1, 3, 1, 3)), id = .id, name = "A")
+  y <- as_qlm_coded(data.frame(.id = 1:4, g = c(3, 3, 1, 1)), id = .id, name = "B")
+  from_numbers <- as.data.frame(qlm_compare(x, y, by = "g", level = "ordinal"))
+  expect_equal(from_text$value, from_numbers$value)
+
+  # low and high are two steps apart, so a tolerance of one does not join them
+  with_tol <- ordered_pair(a, b, tolerance = 1)
+  expect_equal(with_tol$value[with_tol$measure == "percent_agreement"], 0.5)
+})
+
+
+test_that("a tolerance on ordered text categories counts rank distance (#165)", {
+  a <- c("low", "medium", "high", "low")
+  b <- c("medium", "high", "high", "high")
+  pct <- function(res) res$value[res$measure == "percent_agreement"]
+
+  expect_equal(pct(ordered_pair(a, b)), 0.25)
+  expect_no_warning(adjacent <- ordered_pair(a, b, tolerance = 1))
+  expect_equal(pct(adjacent), 0.75)
+  expect_equal(pct(ordered_pair(a, b, tolerance = 2)), 1)
+})
+
+
+test_that("bootstrap CIs on ordered text equal those on the same ranks as numbers (#165)", {
+  a <- c("low", "low", "medium", "medium", "high", "high")
+  b <- c("low", "medium", "medium", "high", "high", "high")
+  set.seed(165)
+  from_text <- ordered_pair(a, b, ci = "bootstrap", bootstrap_n = 20)
+
+  x <- as_qlm_coded(data.frame(.id = 1:6, g = c(1, 1, 2, 2, 3, 3)), id = .id, name = "A")
+  y <- as_qlm_coded(data.frame(.id = 1:6, g = c(1, 2, 2, 3, 3, 3)), id = .id, name = "B")
+  set.seed(165)
+  from_numbers <- as.data.frame(qlm_compare(x, y, by = "g", level = "ordinal",
+                                            ci = "bootstrap", bootstrap_n = 20))
+
+  cols <- c("measure", "value", "ci_lower", "ci_upper")
+  expect_equal(from_text[cols], from_numbers[cols])
 })
 
 

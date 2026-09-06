@@ -13,6 +13,7 @@ qlm_code(
   tools = NULL,
   structured = c("auto", "structured", "json"),
   json_retries = 2L,
+  on_error = c("continue", "return", "stop"),
   backfill = FALSE,
   prices = NULL,
   name = NULL,
@@ -20,8 +21,10 @@ qlm_code(
 )
 }
 \arguments{
-\item{x}{character; the input data, either texts (for text codebooks) or
-file paths to images (for image codebooks). Named vectors will use names
+\item{x}{character; the input data: texts for a text codebook, file
+paths or URLs for an image codebook (see the section on image input), or
+file paths for an audio codebook (see the section on audio input).
+Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the \code{.id} column, on which every later operation
 keys, so names must be unique.}
@@ -31,7 +34,9 @@ deprecated \code{\link[=task]{task()}} objects for backward compatibility.}
 
 \item{model}{character; the provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
-that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
+that provider). Native prefixes are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.
+Registered prefixes, such as \code{"dashscope/qwen-plus"}, resolve through
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} and require an explicit model name.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
@@ -61,19 +66,21 @@ tool belongs to that provider), and kept in the trail as name, type,
 description and configuration rather than as objects.
 
 Three limits. A hosted tool takes effect on both coding paths, but a
-custom tool only on the JSON path: \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}},
-which the structured path uses, sends a custom tool's definition and
-runs no tool-calling loop, so the model may request it and get no
+custom tool only on the JSON path: the structured transport sends a
+custom tool's definition and runs no tool-calling loop, so the model
+may request it and get no
 result. Tools cannot be used with \code{batch = TRUE}, which does not send
 them. And a hosted tool's calls are billed by the provider outside
 token pricing, so the run's cost is tokens only, as its cost note says.}
 
-\item{structured}{character; how the output schema is obtained. \code{"structured"} uses
-\code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} and trusts the provider to enforce
-the schema. \code{"json"} asks for JSON, puts the schema in the system prompt,
-and validates every response against the codebook locally. \code{"auto"} (the
+\item{structured}{character; how the output schema is obtained.
+\code{"structured"} sends it through the provider's structured-output
+mechanism. \code{"json"} asks for JSON, puts the schema in the system prompt,
+and re-prompts a unit whose response does not conform. \code{"auto"} (the
 default) attempts the structured call and falls back to \code{"json"} if it
-fails. See Details for which to use.}
+fails, or if no response it completed matched the schema. On either
+path every response is validated against the codebook locally before it
+is tabulated. See Details for which to use.}
 
 \item{json_retries}{Integer; the number of additional requests \pkg{quallmer}
 may make for a unit on the JSON path after an unusable response. Default
@@ -83,6 +90,23 @@ by \pkg{quallmer} and is not passed to \pkg{ellmer}. Each request separately use
 \code{options(ellmer_max_tries = )}. Applies on the JSON path only, so setting
 it alongside \code{structured = "structured"} is an error. What is still
 unusable after the run is left for \code{backfill}.}
+
+\item{on_error}{character; what a failed request does to the rest of a
+parallel call, passed to \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or, on the
+JSON path, \code{\link[ellmer:parallel_chat]{ellmer::parallel_chat()}}. \code{"continue"} (the default) attempts
+every unit and records each failure in the \code{.error} column, for
+\code{\link[=qlm_failures]{qlm_failures()}} to list and \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code. \code{"return"}
+stops submitting new requests after the first failure, waits for those in
+flight, and returns what the call has. On the structured path that call
+is the run: the units never sent are recorded in \code{.error} as not
+completed, for \code{\link[=qlm_backfill]{qlm_backfill()}} to send. On
+the JSON path the call is one wave: a unit the wave did not reach counts
+as unanswered, so \code{json_retries} sends it again in a later wave, each
+stopped in turn at its first failure, and whatever is still unsent at the
+end is recorded in \code{.error}; \code{json_retries = 0} stops after the first
+wave. \code{"stop"} raises the first failure as an error. Applies to parallel
+runs only: the batch API has no equivalent, so it cannot be set with
+\code{batch = TRUE}.}
 
 \item{backfill}{Logical, integer or \code{NULL}; whether to complete the run
 before it is returned, by re-coding the units still failed with
@@ -112,7 +136,10 @@ results in \code{\link[=qlm_trail]{qlm_trail()}}. Default is \code{NULL}.}
 \value{
 A \code{qlm_coded} object (a tibble with additional attributes):
 \describe{
-\item{Data columns}{The coded results with a \code{.id} column for identifiers.}
+\item{Data columns}{The coded results with a \code{.id} column for identifiers.
+A \code{\link[ellmer:type_enum]{type_enum()}} declared \code{"ordinal"} in the codebook is an ordered
+factor whose levels are the enum's values in the order written; see
+the \code{levels} argument of \code{\link[=qlm_codebook]{qlm_codebook()}}.}
 \item{Attributes}{\code{data}, \code{input_type}, and \code{run} (list containing name, batch, call, codebook, chat_args, execution_args, metadata, parent).}
 }
 The object prints as a tibble and can be used directly in data manipulation workflows.
@@ -132,8 +159,38 @@ based on their names.
 Progress indicators and error handling are provided by the underlying
 \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} or \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 function. Set \code{verbose = TRUE} to see progress messages during coding.
-Retry logic for API failures should be configured through ellmer's options.
+Retry logic for API failures should be configured through ellmer's options;
+what a failure does to the rest of a parallel run is \code{on_error}.
 }
+\section{Image input}{
+
+
+An image codebook codes one image per element of \code{x}. A file path is read
+and sent inline, after being resized as the codebook's \code{image_file_resize}
+says: \code{"high"} by default, which fits the image within 2000x768 or 768x2000
+pixels, \code{"low"} for 512x512, \code{"none"} to send the file as it is, or a
+magick geometry string. Anything but \code{"none"} needs the \pkg{magick}
+package, which is checked here before any request is sent. The resolution
+is part of the codebook because it is part of the measurement: a poster
+whose small print is legible at one size is not at another, and a
+replication should read the image the original run read. Codebooks saved
+before the setting existed are read as \code{"low"}, which is what they were
+coded at. See \code{\link[=qlm_codebook]{qlm_codebook()}}.
+
+A URL is passed to the provider as it is, through
+\code{\link[ellmer:content_image_url]{ellmer::content_image_url()}}, so \code{image_file_resize} does not apply to
+it; what the provider does with a remote image is its own affair, and not
+every provider fetches URLs. The codebook's \code{image_url_detail} asks the
+provider for \code{"low"} or \code{"high"} detail on such an image, where the
+provider reads that field: OpenAI and OpenAI-compatible providers do,
+others ignore it, and ellmer forwards it only from the version that
+includes \url{https://github.com/tidyverse/ellmer/pull/1133}. When a value
+other than \code{"auto"} cannot take effect, \code{qlm_code()} says so before the
+run rather than recording a setting that was not applied. A path that
+does not exist is refused before anything is sent, so a URL typed without
+its scheme fails here with the path named, not inside the request.
+}
+
 \section{Provider-specific parameters}{
 
 
@@ -210,61 +267,128 @@ unchanged, so a cost that rests on entered figures is always labelled as
 such. quallmer bundles no prices of its own.
 }
 
-\section{Schema enforcement}{
+\section{Schema enforcement and validation}{
 
 
-Some providers accept a JSON Schema without enforcing it, so a response can
-come back parseable but non-conforming — and the non-conformance then arrives
-silently as \code{NA}, indistinguishable from missing data. Providers reached
-through ellmer's generic OpenAI-compatible request path are all in this
-position: \code{strict = TRUE} is sent and may simply be ignored. \code{qlm_code()}
-emits a one-time note when it detects one, which
-\code{options(quallmer.quiet_schema_note = TRUE)} silences.
+Some providers accept a JSON Schema without enforcing it, so a response
+can come back parseable but non-conforming: a number as a string, a
+required property missing, an extra one added. Providers reached through
+ellmer's generic OpenAI-compatible request path are all in this position:
+\code{strict = TRUE} is sent and may simply be ignored. Converted straight to
+a table, such a response would arrive silently as \code{NA}, or as an empty
+list-column cell that a valid empty answer also produces.
 
-\code{structured} chooses what to do about it:
+So every response is validated against \code{codebook$schema} before it is
+converted, on either path and whatever the provider: required properties
+present and not null, scalars of the declared type without coercion,
+enum values from the declared set, arrays and nested objects of the
+declared shape, no undeclared properties unless the schema allows them.
+A response that fails is a failed unit: its row is \code{NA}, its \code{.error}
+names the offending JSON path (\verb{$.claims[2].score must be a number}), and
+\code{\link[=qlm_failures]{qlm_failures()}} lists it for \code{\link[=qlm_backfill]{qlm_backfill()}} to re-code. The other
+units keep their coded values. The response's usage is recorded with the
+failure, since the request was billed.
+
+\code{structured} chooses how the schema reaches the model, and what to do
+when the provider ignores it:
 
 \describe{
-\item{\code{"structured"}}{Trust the provider. Fails loudly if the call fails.}
-\item{\code{"json"}}{Never trust it: ask for JSON, put the schema in the system
-prompt, and validate each response against \code{codebook$schema} locally,
-re-prompting with the specific validation error when one does not
-conform. The reliable choice for an endpoint known not to enforce.}
-\item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} if it
-errors, or if it returns a result in which every required field is \code{NA}
-in every row, which is what an endpoint that ignored the schema
-produces. Rows whose request failed, or whose response was cut off
-at \code{max_tokens}, are left out of that judgement, since neither says
-anything about the schema; a row from which ellmer could extract no
-structured data counts, since that is what an endpoint that ignored
-the schema produces.}
+\item{\code{"structured"}}{Send the schema through the provider's
+structured-output mechanism. Fails loudly if the call fails; a
+response that does not conform is a failed unit.}
+\item{\code{"json"}}{Ask for JSON, put the schema in the system prompt, and
+re-prompt with the specific validation error when a response does not
+conform, up to \code{json_retries} times. The reliable choice for an
+endpoint known not to enforce.}
+\item{\code{"auto"}}{Attempt the structured call; fall back to \code{"json"} for
+the whole run if it errors, or if every response the provider
+completed fails validation, which is what an endpoint that ignored
+the schema produces. Requests the provider refused, and responses it
+cut off or filtered, are left out of that judgement, since neither
+says anything about the schema. The fallback re-codes the units JSON
+mode can help: a response cut off at the output limit, or an input
+rejected as longer than the context window, fails the same way on
+any path, so those units keep the row, reason and usage the
+structured attempt gave them. A run in which some responses
+conform keeps them, and records the rest as failed units: the
+intermittent kind of non-enforcement is caught per unit, not by
+re-coding the corpus.}
 }
 
-\code{"auto"} catches wholesale non-enforcement, not the intermittent kind: a
-single non-conforming row among many leaves that check silent. Only
-\code{"json"} catches that, at the cost of putting the schema in the prompt.
+Where every completed response fails validation and nothing can fall
+back, under \code{"structured"}, \code{batch = TRUE} or a file input, the run is
+returned with every unit failed and its reason recorded, and a warning
+says why: the failed rows, their reasons and their usage are what the run
+has, and \code{\link[=qlm_backfill]{qlm_backfill()}} can retry them with another model.
 
-That check also needs something to look at. It reads required scalar
-properties, because those become ordinary columns; required arrays and
-nested objects become list-columns in which a missing value and a
-schema-valid empty one are the same zero-length cell, and cannot be told
-apart. So for a codebook whose required properties are all arrays or nested
-objects, \code{"auto"} on an unverified endpoint validates locally from the
-start rather than making a call it could not check, and says so. Use
-\code{"structured"} to rely on the provider regardless.
+On either path, \code{\link[=qlm_failures]{qlm_failures()}} lists the units that produced no usable
+coding, with the reason for each, and \code{print()} reports how many there
+were. Most such failures are transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes
+just those units and merges them back; \code{backfill} does that before
+returning. Batch processing and file inputs (image and audio codebooks)
+are not supported on the JSON path, so \code{"auto"} will not fall back under
+\code{batch = TRUE} or for a file input: a failed structured call then stops
+with the provider's own error, and \code{structured = "json"} is refused up
+front. The path actually taken is recorded in the run metadata as
+\code{backend}, and a run validated this way carries \code{validation = "local"}.
 
-On the JSON path, units that never validate have \code{NA} coded values and a
-\code{.error} list-column recording the reason, and \code{json_retries} controls how
-many repair attempts each unit gets. On the structured path, a response
-from which ellmer could extract no structured data, which it reports only
-by warning, is likewise given an \code{.error}. On either path, \code{\link[=qlm_failures]{qlm_failures()}}
-lists the units that produced no usable coding, with the reason for each,
-and \code{print()} reports how many there were. Most such failures are
-transient, and \code{\link[=qlm_backfill]{qlm_backfill()}} re-codes just those units and merges them
-back; \code{backfill} does that before returning. Batch processing and
-image codebooks
-are not supported there, so \code{"auto"} will not fall back under
-\code{batch = TRUE}. The path actually taken is recorded in the run metadata as
-\code{backend}.
+The schema itself must be a \code{type_object()} at the root, whose properties
+become the columns of the result, built from \code{type_string()},
+\code{type_boolean()}, \code{type_integer()}, \code{type_number()}, \code{type_enum()},
+\code{type_array()} and \code{type_object()}. Any other type is refused before a
+request is sent, since there would be nothing to validate a response
+against.
+}
+
+\section{Audio input}{
+
+
+A codebook with \code{input_type = "audio"} codes recordings in one pass: each
+file in \code{x} is uploaded to the provider through ellmer's file upload,
+and the model receives a reference to it with the codebook's
+instructions, so the schema can ask for a transcript, a language, a
+summary or any coding of the content. Accepted formats are mp3, wav, ogg,
+m4a, flac and aac.
+
+Which providers accept audio this way is checked before anything is
+uploaded, from the chat the run will use. As of this version only Google
+Gemini does, so \code{model} must be a \verb{google_gemini/} model in the
+\verb{gemini-<version>-pro}, \code{-flash} or \code{-flash-lite} families, with an
+optional preview, date or \code{-latest} suffix; TTS, image, live and
+transcription models that share a family stem are refused, as is Vertex,
+which has no file upload. This is a snapshot of what providers accepted on
+the date it was written. A model outside the recognised families that
+does accept audio can be accepted for the session with
+\code{\link[=qlm_register_model]{qlm_register_model()}}; a run coded that way records it, and
+replicating or backfilling the run in another session needs the
+registration again. For any other provider, transcribe the recordings
+first and code the transcripts with a text codebook.
+
+Every upload completes before the first coding request is sent, so either
+all the inputs are ready or nothing is spent; a failed upload stops the
+run with the provider's message, which says whether the failure was
+transient or the file itself. Uploads expire after 48 hours and storage
+is free, so \code{\link[=qlm_replicate]{qlm_replicate()}} and \code{\link[=qlm_backfill]{qlm_backfill()}} upload the files again
+from the paths in \code{x}. Before they do, they check the files against the
+SHA-256 hashes the run recorded for each unit, and refuse to continue if
+a path now points at different bytes. The hashes are taken before
+anything is uploaded, so they are of the bytes the model received even
+if a file is replaced while the requests run; they are kept in the run's
+metadata as \code{input_files} and reported by \code{\link[=qlm_trail]{qlm_trail()}}. A backfill pass
+records its own hashes for the units it re-coded, so a run coded by an
+earlier version that recorded none gains them unit by unit; units still
+without one are reported as unverifiable, with a notice, rather than as
+changed.
+
+\code{batch = TRUE} is not supported for audio: ellmer's batch cache is keyed
+on the prompts, and an upload gets a new reference every time, so a
+batch run could not be resumed.
+
+With \code{include_cost = TRUE}, or \code{prices}, the cost of an audio run is
+potentially underestimated: providers charge more per audio token than
+per text token, and the figure is computed at the text rate from the
+total. The run's cost note says so, in \code{print()}, the trail, and any
+backfill pass.
 }
 
 \section{Rejected runs}{
@@ -281,6 +405,40 @@ providers whose listing is known to cover every name they will invoke
 (Bedrock, for one, invokes inference profiles its listing omits). Where
 it cannot run, or the name is on the list, the provider's own error is
 reported unchanged.
+
+Under the default \code{on_error = "continue"} the parallel call does not stop
+at the first refusal, so every unit is sent once before the run comes
+back and is diagnosed. Each such request is refused before anything is
+generated, so it is cheap, but on a large corpus there are many of them,
+paced by \code{rpm}. \code{on_error = "return"} stops the structured call after the
+first wave, at the cost described under that argument; on the JSON path,
+whose default has always been \code{"continue"}, \code{json_retries} sends the
+units a wave did not reach in later waves, so \code{"return"} stops after the
+first wave there only with \code{json_retries = 0}.
+}
+
+\section{Incomplete runs}{
+
+
+A run over a corpus of any size rarely comes back complete, and an
+incomplete run is not an error. Under the default \code{on_error = "continue"}
+every unit is attempted, and a unit that produced no usable coding is
+returned as a row of \code{NA} with the reason in its \code{.error} column;
+\code{on_error} says what a failure does to the rest of the run.
+\code{\link[=qlm_failures]{qlm_failures()}} lists the failed units with their reasons, and \code{print()}
+counts them. Trying again happens in layers. ellmer retries each request
+at the transport level, on every path. On the JSON path, \code{json_retries}
+sends a unit again during the run when its response was unusable. After
+the run, \code{backfill}, or \code{\link[=qlm_backfill]{qlm_backfill()}} on the returned object, re-codes
+what is still failed and merges it back, with the same model and
+settings. A backfill leaves alone the two failures that re-sending the
+same request cannot fix, a text rejected as longer than the context
+window and a response cut off at \code{max_tokens} (see below); those need a
+different \code{model} or a higher \code{params(max_tokens = )}. The section "When
+a run comes back incomplete" of the workflow guide
+(\url{https://quallmer.github.io/quallmer/articles/pkgdown/getting-started/workflow.html})
+walks through this on a run that ships with the package, and its table
+matches each kind of failure to the mechanism that handles it.
 }
 
 \section{Truncated responses}{
@@ -290,35 +448,32 @@ A response that runs into the provider's output limit (\code{max_tokens}) is cut
 off mid-JSON, and the request is billed in full. The affected units are
 systematically the longest and richest ones, and for a codebook where an
 empty answer is a legitimate outcome, a cut-off answer that reads as empty
-is the worst kind of silent failure. What arrives depends on the path.
+is the worst kind of silent failure.
 
-On the JSON path the finish reason travels with the response, so a unit cut
-off this way is recorded in \code{.error} with the token count, is listed by
-\code{\link[=qlm_failures]{qlm_failures()}}, and is not retried: a repair prompt cannot supply what the
-limit withheld, and would only press the model into a shorter answer.
-
-On the structured path, \code{\link[ellmer:parallel_chat_structured]{ellmer::parallel_chat_structured()}} returns the
-converted table and discards the turns, and the finish reason with them. A
-truncated response therefore arrives as a row of \code{NA} scalars and
-zero-length arrays. Where the cut leaves unparsable JSON behind, ellmer
-warns that it could extract no data, and that warning becomes an \code{.error}
-naming a parse error rather than the cut. Where it leaves nothing behind,
-as on Anthropic's forced-tool path, there is no warning, and nothing in the
-table distinguishes the row from a unit to which nothing applied. What the
-table can carry is the output token count, so when \code{params(max_tokens = )}
-is set, a row that used the whole budget and has nothing in it is recorded
-in \code{.error} as cut off, with that as the reason in either case. Without a
-declared limit the cap is not known here (ellmer supplies a provider
-default, 4096 for Anthropic, inside its request builder), and the silent
-case stays silent. So set \code{max_tokens} explicitly, high enough for the
-longest answer the codebook can produce: the limit is then both less likely
-to be hit and detectable when it is.
+The provider's finish reason travels with every response, on either path,
+and is read before the response is parsed: a unit cut off this way is
+recorded in \code{.error} with the token count, whether or not the fragment
+happens to parse, is listed by \code{\link[=qlm_failures]{qlm_failures()}}, and is not retried: a
+repair prompt cannot supply what the limit withheld, and would only press
+the model into a shorter answer. A backfill leaves it alone too; raise
+\code{params(max_tokens = )} and backfill again. A response the provider
+withheld under a content filter, or finished for a reason it did not
+recognise, is recorded the same way with that reason.
 
 When \code{batch = TRUE}, the function uses \code{\link[ellmer:batch_chat_structured]{ellmer::batch_chat_structured()}}
 which submits jobs to the provider's batch API. This is typically more
 cost-effective but has longer turnaround times. The \code{path} argument specifies
 where batch results are cached, \code{wait} controls whether to wait for completion,
-and \code{ignore_hash} can force reprocessing of cached results.
+and \code{ignore_hash} can force reprocessing of cached results. \code{on_error} does
+not apply: the batch API has no equivalent.
+}
+
+\section{Registered providers}{
+
+OpenAI-compatible endpoints can also be addressed by a registered prefix,
+for example \code{model = "dashscope/qwen-plus"}. See
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} for built-in endpoints, credential sources,
+and adding a private gateway. Native ellmer prefixes take precedence.
 }
 
 \examples{
@@ -333,6 +488,23 @@ coded
 texts_named <- c(review1 = "Great service!", review2 = "Very disappointing.")
 coded2 <- qlm_code(texts_named, data_codebook_sentiment, model = "openai/gpt-4o-mini")
 coded2
+
+# Audio recordings, coded in one pass by a Gemini model; see the section
+# "Audio input" for which providers accept audio. The model hears the
+# recording, so the schema can ask for the transcript as well as the codes
+speech_codebook <- qlm_codebook(
+  "Speech", "Transcribe the recording, identify the language and summarise what is said.",
+  ellmer::type_object(
+    transcript = ellmer::type_string("Verbatim transcript, in the language spoken"),
+    language = ellmer::type_string("Language spoken"),
+    summary = ellmer::type_string("One-sentence summary in English")
+  ),
+  input_type = "audio"
+)
+coded_audio <- qlm_code(
+  c(interview1 = "interview1.mp3", interview2 = "interview2.wav"),
+  speech_codebook, model = "google_gemini/gemini-2.5-flash"
+)
 }
 
 }

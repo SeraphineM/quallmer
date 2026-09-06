@@ -169,14 +169,11 @@ qlm_segment <- function(x, codebook, model, ..., prices = NULL, name = NULL,
     ))
   }
 
-  # Dispatches by name through ellmer::chat() just as qlm_code() does, so an
-  # unreachable prefix gets the same explanation here. Checked after the input
-  # and codebook, which are the more fundamental problems when both are wrong.
-  check_model_provider(model)
-
-  # Same routing contract as qlm_code(), so the same rejection. Captured once
-  # here and reused by the routing below, rather than forcing `...` twice.
-  dots      <- list(...)
+  # Resolve providers as qlm_code() does, after checking the input and
+  # codebook. Capture `...` once and reuse it for argument routing below.
+  resolved <- resolve_provider(model, list(...))
+  model <- resolved$model
+  dots <- resolved$args
   dot_names <- names(dots)
   check_model_params(dot_names, model)
 
@@ -349,6 +346,11 @@ qlm_segment <- function(x, codebook, model, ..., prices = NULL, name = NULL,
   # Mark as a segmented corpus and store metadata
   quanteda::meta(out, "qlm_segment") <- TRUE
   quanteda::meta(out, "name") <- name
+  if (!is.null(resolved$resolution)) {
+    quanteda::meta(out, "provider_resolution") <- c(
+      resolved$resolution, list(base_url = chat_args$base_url)
+    )
+  }
   continuum_lengths <- stats::setNames(
     nchar(doc_texts),
     doc_names

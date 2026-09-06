@@ -4,16 +4,30 @@
 readme:
 	Rscript -e "rmarkdown::render('README.Rmd', quiet = TRUE)"
 
-# Build all articles locally (with updated README). QUALLMER_LIVE_ARTICLES
-# lets articles that make provider requests run them; unset, they render
-# their code unrun, so a development build of the site bills nothing.
+# pkgdown knits articles in a fresh process against an installed quallmer,
+# not the source tree, so an article that reads inst/extdata through
+# system.file() or prints an object sees whatever version is installed; a
+# stale one gives stale or missing objects. The checkout is therefore
+# installed into a throwaway library first, which R_LIBS puts ahead of the
+# others for both the install and the render, so the developer's own
+# installed quallmer is neither read nor overwritten. (pkgdown::build_site()
+# does this itself, so `site` needs nothing of the kind.)
+define with_checkout_installed
+lib=$$(mktemp -d) && \
+R_LIBS="$$lib" R CMD INSTALL --no-multiarch . && \
+QUALLMER_LIVE_ARTICLES=1 R_LIBS="$$lib" Rscript -e "$(1)"; \
+status=$$?; rm -rf "$$lib"; exit $$status
+endef
+
+# Explicit article builds enable live examples; other renders leave them unrun.
+# Build all articles locally (with updated README)
 articles: readme
-	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_articles()"
+	$(call with_checkout_installed,pkgdown::build_articles())
 
 # Build a specific article
 # Usage: make article NAME=pkgdown/getting-started/workflow
 article:
-	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_article('$(NAME)')"
+	$(call with_checkout_installed,pkgdown::build_article('$(NAME)'))
 
 # Build one article live and deploy it with whatever else is built
 # Usage: make deploy-article NAME=pkgdown/tutorials/tools

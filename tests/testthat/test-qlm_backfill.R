@@ -9,8 +9,8 @@ backfill_schema <- ellmer::type_object(
 # `id` column; the inputs are named by it so the backfill can subset them.
 make_run <- function(results, schema = backfill_schema, chat_args = list(),
                      execution_args = list(), backend = "structured",
-                     name = "run1", n_units = nrow(results)) {
-  codebook <- qlm_codebook("Test", "Test prompt", schema)
+                     name = "run1", n_units = nrow(results), levels = NULL) {
+  codebook <- qlm_codebook("Test", "Test prompt", schema, levels = levels)
   data <- stats::setNames(paste0("text ", results$id), results$id)
   new_qlm_coded(
     results = results,
@@ -986,4 +986,176 @@ test_that("a backfill given a bare tool can be written to a trail (#122)", {
   rds_file <- paste0(stem, ".rds")
   bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
   expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+})
+
+
+# Shipped example objects (#173) ---------------------------------------------
+
+# The workflow guide and the examples of qlm_failures() and qlm_backfill()
+# read these from inst/extdata; the guide's prose depends on the shape
+# checked here, not on the particular units.
+
+shipped_examples <- function() {
+  readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+}
+
+cut_off <- function(errors) {
+  vapply(errors, inherits, logical(1), "quallmer_truncation_error")
+}
+
+test_that("the shipped incomplete run carries a transient failure and a cut-off", {
+  incomplete <- shipped_examples()$example_coded_incomplete
+
+  expect_s3_class(incomplete, "qlm_coded")
+  # Saved in the current metadata layout, not upgraded on read
+  expect_false(is.null(attr(incomplete, "meta")))
+  expect_equal(names(incomplete)[1:4], c(".id", "sentiment", "rating", "evidence"))
+
+  # The mix the workflow guide quotes, in its prose and in the backfill
+  # transcript: one request timed out, three responses cut off. The
+  # generating script accepts only a run with these counts; a regeneration
+  # that changes them has to change the guide too.
+  failures <- qlm_failures(incomplete)
+  expect_equal(nrow(failures), 4L)
+  timed_out <- !cut_off(failures$.error)
+  expect_equal(sum(cut_off(failures$.error)), 3L)
+  expect_equal(sum(timed_out), 1L)
+  expect_s3_class(failures$.error[[which(timed_out)]], "httr2_failure")
+  expect_match(failures$reason[timed_out], "Timeout was reached", fixed = TRUE)
+
+  # A timed-out request records ellmer's condition, which carries the
+  # request; the credential header must not have travelled with it
+  serialised <- rawToChar(serialize(incomplete, NULL, ascii = TRUE))
+  expect_false(grepl("sk-ant-", serialised, fixed = TRUE))
+})
+
+test_that("the shipped backfilled run recovered exactly the transient failures", {
+  examples <- shipped_examples()
+  incomplete <- examples$example_coded_incomplete
+  filled <- examples$example_coded_backfilled
+
+  before <- qlm_failures(incomplete)
+  after <- qlm_failures(filled)
+  transient <- before$.id[!cut_off(before$.error)]
+  terminal <- before$.id[cut_off(before$.error)]
+
+  passes <- qlm_meta(filled, "backfill", type = "object")
+  expect_length(passes, 1L)
+  expect_setequal(passes[[1]]$attempted, transient)
+  expect_setequal(passes[[1]]$recovered, transient)
+  expect_null(passes[[1]]$model)
+
+  # What is left is what a backfill cannot fix, and only that
+  expect_setequal(after$.id, terminal)
+  expect_true(all(cut_off(after$.error)))
+
+  # Everything coded the first time is untouched, in the same order
+  expect_equal(filled$.id, incomplete$.id)
+  untouched <- !incomplete$.id %in% before$.id
+  fields <- c("sentiment", "rating", "evidence")
+  expect_equal(
+    as.data.frame(filled[untouched, fields]),
+    as.data.frame(incomplete[untouched, fields])
+  )
+  expect_false(anyNA(filled$sentiment[filled$.id %in% transient]))
+
+  expect_output(print(filled), "# Backfill: 1 pass, recovered", fixed = TRUE)
+  expect_output(print(qlm_trail(filled)), "Backfill:", fixed = TRUE)
+})
+
+
+# File inputs (#124) -----------------------------------------------------------
+
+test_that("qlm_backfill checks the failed units' files before uploading them again (#124)", {
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run <- audio_run(paths, failed = "b")
+  reached <- 0L
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(...) {
+    reached <<- reached + 1L
+    stop("pass reached the model", call. = FALSE)
+  })
+
+  # A change to the failed unit's file is refused before the pass
+  writeBin(as.raw(99:110), paths[["b"]])
+  expect_error(f(run), 'differs from the one this run coded: "b"')
+  expect_equal(reached, 0L)
+
+  # A change to a unit that is not being re-coded does not block the pass
+  paths2 <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+  run2 <- audio_run(paths2, failed = "b")
+  writeBin(as.raw(99:110), paths2[["a"]])
+  expect_error(f(run2), "pass reached the model")
+  expect_equal(reached, 1L)
+})
+
+
+test_that("qlm_backfill needs the registration a run relied on (#124)", {
+  withr::defer(reset_registered_input_models())
+  paths <- c(a = audio_file(), b = audio_file())
+  run <- audio_run(paths, failed = "b", registered = "google_gemini/gemini-4-ultra",
+                   model = "google_gemini/gemini-4-ultra")
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(...) stop("pass reached the model", call. = FALSE))
+  expect_error(f(run), "qlm_register_model")
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  expect_error(f(run), "pass reached the model")
+})
+
+
+test_that("a backfill keeps the pass's file hashes and registration (#124)", {
+  withr::defer(reset_registered_input_models())
+  paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
+
+  # A legacy run gains hashes for exactly the units the pass re-coded
+  legacy <- audio_run(paths, with_hashes = FALSE, failed = "b")
+  f <- qlm_backfill
+  mockery::stub(f, "qlm_code", function(x, ...) audio_run(x))
+  filled <- suppressMessages(f(legacy, passes = 1L))
+  table <- qlm_meta(filled, "input_files")
+  expect_equal(table$.id, c("a", "b"))
+  expect_equal(table$sha256, c(NA_character_, hash_file(paths[["b"]])))
+  # ... which a later check reports as unverifiable for "a" and passes for "b"
+  expect_message(verify_input_files(filled), 'no recorded file hash.*"a"')
+
+  # A pass on a registered replacement model records the registration on the
+  # pass, and the run then needs it again to be replayed
+  run <- audio_run(paths, failed = "b")
+  g <- qlm_backfill
+  mockery::stub(g, "qlm_code", function(x, ...) {
+    audio_run(x, registered = "google_gemini/gemini-4-ultra", model = "google_gemini/gemini-4-ultra")
+  })
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  filled2 <- suppressMessages(g(run, model = "google_gemini/gemini-4-ultra", passes = 1L))
+  passes <- qlm_meta(filled2, type = "object")$backfill
+  expect_length(passes, 1L)
+  expect_equal(passes[[1]]$input_model_registered, "google_gemini/gemini-4-ultra")
+  expect_equal(recorded_registrations(filled2), "google_gemini/gemini-4-ultra")
+
+  reset_registered_input_models()
+  expect_error(
+    suppressMessages(qlm_backfill(filled2, model = "google_gemini/gemini-4-ultra")),
+    "qlm_register_model"
+  )
+})
+
+
+test_that("qlm_backfill keeps an ordinal enum's ordered levels (#165)", {
+  skip_if_not_installed("mockery")
+  lv <- c("low", "medium", "high")
+  schema <- ellmer::type_object(sev = ellmer::type_enum(lv))
+  results <- data.frame(
+    id = c("a", "b", "c"),
+    sev = factor(c("high", NA, "low"), levels = lv, ordered = TRUE)
+  )
+  results$.error <- error_col(NULL, "Invalid JSON", NULL)
+  run <- make_run(results, schema = schema, levels = list(sev = "ordinal"))
+  expect_true(is.ordered(run$sev))
+
+  pass <- data.frame(id = "b", sev = factor("medium", levels = lv, ordered = TRUE))
+  f <- backfill_with(list(pass))
+  expect_message(filled <- f(run), "Recovered 1 unit")
+
+  expect_identical(filled$sev, factor(c("high", "medium", "low"), levels = lv, ordered = TRUE))
+  expect_equal(nrow(qlm_failures(filled)), 0)
 })

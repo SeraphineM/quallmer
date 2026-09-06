@@ -127,6 +127,14 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
     }
   }
 
+  # A file input is uploaded again from the recorded paths: first check they
+  # still hold the bytes the parent coded, and that a model the parent
+  # accepted by registration is registered in this session too
+  if (use_codebook$input_type %in% file_input_types()) {
+    verify_input_files(x)
+    check_registered_input_model(x, use_model)
+  }
+
   # Call qlm_code with merged arguments, including batch flag
   result <- do.call(qlm_code, c(
     list(
@@ -144,6 +152,7 @@ qlm_replicate <- function(x, ..., codebook = NULL, model = NULL, batch = NULL,
   result_meta <- attr(result, "meta")
   result_meta$object$call <- current_call
   result_meta$object$parent <- parent_name
+  result_meta$object$provider_resolution <- restored$resolution
   attr(result, "meta") <- result_meta
 
   replay_backfill(result, parent = x, backfill = backfill)
@@ -198,7 +207,18 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   if (length(dropped)) {
     cli::cli_inform(c("i" = redacted_args_note(dropped)))
   }
-  use_model <- model %||% original_model
+  # Resolve a replacement before comparing endpoints. Its registered URL and
+  # credential source must not inherit those of the parent run.
+  requested_model <- model %||% original_model
+  prefix <- model_provider(requested_model)
+  resolved <- if (rlang::is_string(model) && !prefix %in% ellmer_providers() &&
+                  !is.null(provider_definition(prefix))) {
+    resolve_provider(model, overrides)
+  } else {
+    list(model = requested_model, args = overrides, resolution = NULL)
+  }
+  use_model <- resolved$model
+  overrides <- resolved$args
 
   # Credentials and endpoint settings belong to an endpoint, not to a model in
   # the abstract. Carrying them across endpoints can send a credential to the
@@ -257,6 +277,23 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
       names(original_chat_args) %in% portable_chat_args
     ]
   }
+
+  # `on_error`, `max_active` and `rpm` belong to the parallel call; `path`,
+  # `wait` and `ignore_hash` to the batch API. Neither function accepts the
+  # other's, so a setting recorded on one path must not travel to a run on the
+  # other. Only the inherited value is dropped, before the overrides are
+  # merged: an override in `...` is the caller's own, and qlm_code() says why
+  # it cannot apply rather than having it vanish here.
+  pcs_names <- names(formals(ellmer::parallel_chat_structured))
+  batch_names <- names(formals(ellmer::batch_chat_structured))
+  incompatible <- if (batch) {
+    setdiff(pcs_names, batch_names)
+  } else {
+    setdiff(batch_names, pcs_names)
+  }
+  original_execution_args[
+    intersect(incompatible, names(original_execution_args))
+  ] <- NULL
 
   # Merge overrides over everything the original run used. chat_args and
   # execution_args are disjoint by construction -- qlm_code() splits `...`
@@ -343,7 +380,18 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
     }
   }
 
-  list(model = use_model, call_args = call_args)
+  resolution <- resolved$resolution
+  if (is.null(model)) {
+    resolution <- meta_attr$object$provider_resolution
+    if (!is.null(resolution) && endpoint_changed) {
+      resolution$endpoint_overridden <- TRUE
+    }
+    if (endpoint_changed || any(c("credentials", "api_key") %in% names(overrides))) {
+      resolution$api_key_env <- NULL
+    }
+  }
+  list(model = use_model, call_args = call_args, resolution = resolution,
+       overrides = overrides, endpoint_changed = endpoint_changed)
 }
 
 

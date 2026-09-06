@@ -5,6 +5,49 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## Breaking changes
 
+* `qlm_register_input_model()` is now named `qlm_register_model()`. Both model
+  and provider registration appear under Advanced configuration in the
+  reference index.
+
+* `qlm_code()` now validates every structured response against the codebook
+  schema before ellmer converts it to a row, on every provider and both
+  paths. A response that does not conform, whether a required field sent
+  as null or left out, a number sent as a string, a value outside its enum,
+  an array sent as an object, or an undeclared property, is now a failed
+  unit: its row is `NA`, its `.error` names the offending JSON path, and
+  `qlm_failures()` lists it for `qlm_backfill()` to re-code. Previously
+  such a response was converted regardless, so a missing scalar became a
+  silent `NA` with no `.error`, an extra property was dropped, and a
+  missing required array became the same empty cell as a valid empty one;
+  the "every required field is `NA`" heuristic caught only the wholesale
+  case, and only for scalar fields. The whole-run fallback of
+  `structured = "auto"` to JSON mode is now driven by the validator: it
+  fires when every response the provider completed fails validation, and
+  not when some do; where no fallback is possible, under
+  `structured = "structured"`, `batch = TRUE` or a file input, such a run
+  is returned with every unit failed and its reason recorded, rather than
+  stopped. The fallback re-codes only the units JSON mode can help: a
+  response cut off at the output limit, or an input rejected as longer
+  than the context window, keeps the row, reason and usage the structured
+  attempt gave it. The usage of a structured attempt the run fell back
+  from is carried into the JSON-mode result, and the usage of a request
+  whose outcome is unknown, a timeout or a server error, is recorded as
+  `NA` rather than zero, so a total that includes one is unknown rather
+  than understated; zero is recorded only for a request never sent or
+  refused before generation. The finish reason is read
+  from every structured response, so a response cut off at `max_tokens`,
+  withheld by a content filter or finished for an unrecognised reason is
+  recorded with that reason whether or not it parses, on any provider and
+  without a declared limit; the inference from token counts, and the
+  `params(max_tokens = )` it needed, are gone. A codebook whose schema
+  has a `type_array()` root or an opaque type such as
+  `type_from_schema()` is refused before a request is sent, since neither
+  can be validated or tabulated. The enforcement note for unverified
+  endpoints, and the `quallmer.quiet_schema_note` option that silenced
+  it, are gone: there is nothing to warn about now that every response is
+  checked. A run validated this way records `validation = "local"` in its
+  metadata (#140).
+
 * The `.id` column of a `qlm_coded` object must now be a key: unique and
   never missing. Every later operation merges on `.id`, and `qlm_compare()`
   and `qlm_validate()` silently formed a Cartesian product of repeated
@@ -27,6 +70,21 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   no columns to reorder, and the call failed later with `incorrect number of
   dimensions` (#134).
 
+* `qlm_code()` now runs with `on_error = "continue"` by default, on the
+  structured path as it already did on the JSON path, and gains `on_error`
+  as a documented argument taking ellmer's three values. A parallel run
+  therefore attempts every unit and leaves the failures for `qlm_failures()`
+  and `qlm_backfill()`, rather than stopping at the first and returning the
+  rest as `NA` rows with no `.error`, which for a codebook of arrays or
+  nested objects could not be told from valid empty answers. Stopping early
+  saved money when the only remedy was to run again from the start; with
+  backfilling it costs more than it saves. The setting is recorded with the
+  run, so a run coded before this change records none and is replicated and
+  backfilled with the new default. `on_error` cannot be set with
+  `batch = TRUE`, which has no equivalent, and `qlm_replicate()` no longer
+  carries a parallel-only or batch-only argument into a replication that
+  switches path (#171).
+
 ## New features
 
 * `qlm_code()` gains a `tools` argument for registering `ellmer` tools,
@@ -42,6 +100,57 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   tools" tutorial, which extracts figures from Wikipedia country pages with
   and without a tool and shows why the tool is what makes the extraction
   repeatable.
+
+* `qlm_code()` and `qlm_segment()` accept registered OpenAI-compatible
+  provider prefixes. `qlm_register_provider()` adds session-specific endpoints;
+  replication and backfill retain the recorded endpoint (#145).
+
+* `qlm_codebook()` accepts `input_type = "audio"`, and `qlm_code()` codes
+  recordings in one pass: each file is uploaded to the provider through
+  ellmer's file upload and the model receives a reference to it with the
+  codebook, so the schema can ask for a transcript alongside any coding of
+  the content. Which providers accept audio is checked from the chat before
+  anything is uploaded; as of this version that is Google Gemini's pro,
+  flash and flash-lite families, and a newer model that also accepts audio
+  can be accepted for the session with the new `qlm_register_model()`,
+  which the run then records. Every upload completes before the first
+  request is sent, so a failed upload stops the run with the provider's
+  message and nothing spent. The run records the SHA-256 of each file, which
+  `qlm_replicate()` and `qlm_backfill()` check before uploading again and
+  `qlm_trail()` reports. `batch = TRUE` is refused for audio, since an
+  upload gets a new reference every time and ellmer's prompt-keyed batch
+  cache could not resume the job, and the cost note says that an audio cost
+  computed at the text rate is potentially underestimated. Requires ellmer
+  0.5.0 (#124).
+
+* A file input (image or audio codebook) no longer falls back to JSON mode
+  under `structured = "auto"`: that handler sends text, so a failed
+  structured call used to end in the misleading error that the model
+  "supports text codebooks only". The provider's own error is now reported,
+  and `structured = "json"` is refused up front for a file input. `qlm_code()`
+  also checks that every image or audio file exists before building a
+  request (#124).
+
+* `qlm_codebook()` gains `image_file_resize`, which sets how an image
+  codebook's files are resized before they are sent: `"high"` (the new
+  default, fitting within 2000x768 or 768x2000 pixels), `"low"` (512x512),
+  `"none"`, or a magick geometry string such as `"1024x1024>"`. Until now
+  every image was sent at ellmer's default of 512x512, with nothing in
+  quallmer saying so, which is a thumbnail for a poster whose small print
+  is what the codebook asks about. The setting lives on the codebook
+  because the resolution is part of the measurement: `qlm_replicate()` and
+  `qlm_backfill()` inherit it, `qlm_trail()` reports it, and a codebook
+  saved before the field existed is read as `"low"`, what it was coded at,
+  so replicating an old run still measures what the original measured.
+  magick, which the resizing needs, is now in Suggests, and `qlm_code()`
+  says so if it is missing. `x` may now also hold image URLs alongside
+  paths: an element beginning with `http://`, `https://` or `data:` is
+  passed to the provider as it is, and every path is checked to exist
+  before any request is sent. A second codebook field, `image_url_detail`,
+  asks the provider for `"low"` or `"high"` detail on such URLs; OpenAI and
+  OpenAI-compatible providers read it, and ellmer forwards it from the
+  version that includes tidyverse/ellmer#1133, so `qlm_code()` says before
+  the run when a value cannot take effect (#177).
 
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
   results into the original object, instead of re-running the whole corpus
@@ -187,6 +296,15 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   cost could be worked out from are being recorded, which needs
   `include_tokens = TRUE` (#135).
 
+## Documentation
+
+* The "Audio transcription and analysis" example article now shows both
+  routes: transcription with Whisper followed by coding of the transcripts,
+  and coding the recordings directly with `input_type = "audio"` on
+  `gemini-2.5-flash`, ending with `qlm_compare()` of the two runs, the
+  model's transcript beside Whisper's, the cost, and the recorded file
+  hashes (#124).
+
 ## Bug fixes
 
 ### Coding runs
@@ -274,7 +392,36 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   generates. Both functions still warn that `qlm_code()` replaces them
   (#141).
 
+* Printing a `qlm_coded` object, or any other quallmer object built on a
+  tibble, in a session that had not yet loaded tibble fell through to
+  `print.data.frame()`, since tibble was in Imports but not in the
+  NAMESPACE and so loaded only on the first namespaced call. For a run with
+  an `.error` column that was an error rather than plain output, since a
+  recorded condition has no `format()` method. tibble now loads with
+  quallmer (#173).
+
 ### Reliability and validation
+
+* `qlm_compare()` and `qlm_validate()` ranked ordinal text categories
+  alphabetically, so a scale of low / medium / high was ranked
+  high < low < medium, and every statistic that uses the order (ordinal
+  alpha, weighted kappa, Kendall's W, Spearman's rho, tau and MAE) was
+  computed on the wrong ranks with nothing in the output to show it; factor
+  levels were flattened to text before they were read, so ordering the
+  categories in advance changed nothing. Text categories at ordinal level
+  are now ranked by the levels of an ordered factor, which every coder must
+  supply and all must agree on, and a plain factor or character column is
+  an error that says how to declare the order, since alphabetical order is
+  not a ranking and a plain factor's levels are alphabetical by default. A
+  `type_enum()` declared `"ordinal"` in `qlm_codebook()` is that
+  declaration: its values, in the order written, are the scale, `qlm_code()`
+  stores the column as an ordered factor with those levels, `as_qlm_coded()`
+  does the same for human-coded data given the codebook (refusing a value
+  outside the enum), and the codebook print shows the order. An enum not
+  declared ordinal stays nominal. Because the ranks are now numbers, a
+  `tolerance` on ordered text counts rank distance, so `tolerance = 1`
+  means adjacent categories agree; the warning that a tolerance on text
+  categories was being ignored is gone with the reason for it (#165).
 
 * `qlm_compare()` now honours `tolerance`, and computes its numeric
   statistics on the ratings' values, when a coder stores the ratings as
@@ -324,6 +471,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   were correct; only the per-class breakdown was affected.
 
 ### Audit trail and replication
+
+* Backfill treats an endpoint change as a new coding route even when the model
+  name is unchanged. Replication preserves the requested model and labels
+  endpoint overrides in print and trail output (#185).
 
 * `qlm_trail()` no longer writes credentials into the trail. An `api_key`,
   a credential-named `api_headers` entry, or a `base_url` carrying userinfo
@@ -415,6 +566,22 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   structure, so they round-trip with their class and metadata intact and
   can be extracted from the trail for replication without modification
   (#93).
+
+## Documentation
+
+* `?qlm_code` gains an "Incomplete runs" section: what a failed unit looks
+  like in the object, the layers at which it can be tried again, what a
+  backfill leaves alone and why, with a pointer to the workflow guide's
+  section and its failure-to-mechanism table (#174).
+
+* The package now ships a coded run that came back incomplete and its
+  backfilled counterpart, in `inst/extdata/example_objects.rds`, coded once
+  with a live model and a deliberately short timeout and low `max_tokens`.
+  The workflow guide's "When a run comes back incomplete" section, the audit
+  trail tutorial, and the examples of `qlm_failures()` and `qlm_backfill()`
+  now show `qlm_failures()`, `print()` and the trail's `Backfill:` line on
+  those objects, evaluated, where before they described the output in prose
+  or sat in `\dontrun{}` (#173).
 
 ## Internal changes
 

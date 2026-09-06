@@ -124,8 +124,13 @@ At ordinal and interval level the predictions and the gold standard are
 read as numbers, whatever type they are stored as, so a column of digits
 held as text is compared on its values and not on the alphabetical order of
 its strings. A value that does not read as a number is an error at interval
-level. Ordinal categories may instead all be text, in which case they are
-ranked by their sorted labels.
+level. Ordinal categories may instead all be text, in which case both
+columns must be ordered factors with the same levels in the same order, and
+the categories are ranked by those levels; alphabetical order is never
+used. A plain factor or a character column at ordinal level is an error
+that says how to declare the order: \code{factor(x, levels = c(...), ordered = TRUE)} for data built by hand, or a \code{\link[ellmer:type_enum]{type_enum()}} written in scale order
+and declared \code{"ordinal"} in the codebook, which \code{\link[=qlm_code]{qlm_code()}} and
+\code{\link[=as_qlm_coded]{as_qlm_coded()}} store as that ordered factor.
 
 For multiclass problems with nominal data, the \code{average} parameter controls
 how per-class metrics are aggregated:

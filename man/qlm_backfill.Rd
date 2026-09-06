@@ -58,9 +58,9 @@ failure are left alone, because re-sending the same request cannot change
 the outcome:
 \itemize{
 \item a text the provider rejected as longer than the model's context window,
-unless \code{model} changes;
-\item a response cut off at the \code{max_tokens} limit, unless \code{model} changes or
-the backfill raises the limit, by passing a \code{params(max_tokens = )}
+unless the model or endpoint changes;
+\item a response cut off at the \code{max_tokens} limit, unless the model or endpoint
+changes or the backfill raises the limit, by passing \code{params(max_tokens = )}
 higher than the run's own. Other \code{params} leave the limit where it was,
 and so leave those units alone.
 }
@@ -94,9 +94,10 @@ billed; a total is \code{NA} when any attempt's figure is, because \code{NA} mea
 the provider did not report it, not that nothing was billed, so a retry's
 known figure cannot stand in for the whole. The passes are recorded in the
 object metadata as \code{backfill}, one entry per pass with its timestamp, the
-model if it differed from the run's, the overrides, the \code{.id}s attempted
-and recovered, where its cost came from when that was not where the run's
-did, and for a pass that failed outright its error, so the result can say
+model if it or the endpoint differed from the run's, the overrides, the
+\code{.id}s attempted and recovered, where its cost came from when that was not
+where the run's did, and for a pass that failed outright its error, so the
+result can say
 which of its rows came from which pass and which model. A pass whose cost
 came from somewhere else than the run's, other supplied rates, ellmer's
 own table where the run rested on supplied rates, or nowhere where the
@@ -108,17 +109,26 @@ value. \code{\link[=qlm_replicate]{qlm_replicate()}} replays these passes on a r
 replication of a completed run is completed on the same terms.
 }
 \examples{
-\dontrun{
-coded <- qlm_code(texts, codebook, model = "openai/gpt-4o-mini",
-                  on_error = "continue")
-qlm_failures(coded)
+# A run that came back incomplete, and what qlm_backfill() made of it. Both
+# were coded once and saved with the package (see data_creation/ in the
+# source), so they can be looked at without a key.
+examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
+incomplete <- examples$example_coded_incomplete
+incomplete
+qlm_failures(incomplete)
 
-filled <- qlm_backfill(coded)
+# What qlm_backfill(incomplete) returned: the timed-out unit re-coded, the
+# responses cut off at max_tokens left alone, and the pass on record
+filled <- examples$example_coded_backfilled
+filled
 qlm_failures(filled)
 qlm_meta(filled, "backfill", type = "object")
 
+\dontrun{
+filled <- qlm_backfill(incomplete)
+
 # Responses cut off at the output limit are retried only with a higher one
-filled <- qlm_backfill(coded, params = ellmer::params(max_tokens = 32000))
+filled <- qlm_backfill(filled, params = ellmer::params(max_tokens = 2000))
 
 # Units one model refuses or cannot fit, coded by another; the result
 # records which units came from which model

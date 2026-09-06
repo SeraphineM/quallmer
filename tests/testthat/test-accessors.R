@@ -155,6 +155,15 @@ test_that("qlm_meta() works for qlm_codebook objects", {
   obj_meta <- qlm_meta(cb, type = "object")
   expect_type(obj_meta, "list")
   expect_true(all(c("schema", "role", "input_type", "levels") %in% names(obj_meta)))
+  # A text codebook has no image resize setting to report (#177)
+  expect_false("image_file_resize" %in% names(obj_meta))
+  cb_image <- qlm_codebook("Posters", "Read them", cb$schema, input_type = "image")
+  expect_identical(qlm_meta(cb_image, type = "object")$image_file_resize, "high")
+  expect_identical(qlm_meta(cb_image, type = "object")$image_url_detail, "auto")
+  cb_image$image_file_resize <- NULL  # saved before the fields existed
+  cb_image$image_url_detail <- NULL
+  expect_identical(qlm_meta(cb_image, type = "object")$image_file_resize, "low")
+  expect_identical(qlm_meta(cb_image, type = "object")$image_url_detail, "auto")
 
   # System metadata (empty for codebooks)
   sys_meta <- qlm_meta(cb, type = "system")
