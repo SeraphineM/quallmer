@@ -110,9 +110,15 @@
 #' A URL is passed to the provider as it is, through
 #' [ellmer::content_image_url()], so `image_file_resize` does not apply to
 #' it; what the provider does with a remote image is its own affair, and not
-#' every provider fetches URLs. A path that does not exist is refused before
-#' anything is sent, so a URL typed without its scheme fails here with the
-#' path named, not inside the request.
+#' every provider fetches URLs. The codebook's `image_url_detail` asks the
+#' provider for `"low"` or `"high"` detail on such an image, where the
+#' provider reads that field: OpenAI and OpenAI-compatible providers do,
+#' others ignore it, and ellmer forwards it only from the version that
+#' includes <https://github.com/tidyverse/ellmer/pull/1133>. When a value
+#' other than `"auto"` cannot take effect, `qlm_code()` says so before the
+#' run rather than recording a setting that was not applied. A path that
+#' does not exist is refused before anything is sent, so a URL typed without
+#' its scheme fails here with the path named, not inside the request.
 #'
 #' @section Provider-specific parameters:
 #'
@@ -852,6 +858,12 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   # locally instead, and say why. `structured = "structured"` remains the way
   # to ask for provider enforcement regardless.
   provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+
+  # A URL detail setting that will not reach the provider is said here, once,
+  # on the same terms as the cost message (#177)
+  if (codebook$input_type == "image") {
+    say_image_url_detail(codebook, x, chat, say = cost_message)
+  }
   undetectable <- allow_skip &&
     !is.null(provider) &&
     !provider_enforces_schema(provider) &&

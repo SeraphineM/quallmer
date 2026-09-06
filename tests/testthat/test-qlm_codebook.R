@@ -114,6 +114,39 @@ test_that("qlm_codebook validates image_file_resize (#177)", {
 })
 
 
+test_that("qlm_codebook stores image_url_detail on image codebooks only (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  make <- function(...) {
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "image", ...)
+  }
+
+  # Resolved to "auto" so that every image codebook says what it asks for
+  expect_identical(make()$image_url_detail, "auto")
+  for (detail in c("auto", "low", "high")) {
+    expect_identical(make(image_url_detail = detail)$image_url_detail, detail)
+  }
+  for (bad in list("medium", "", NA_character_, 1, c("low", "high"))) {
+    expect_error(make(image_url_detail = bad), "must be one of")
+  }
+
+  cb_text <- qlm_codebook("Test", "Prompt", type_obj)
+  expect_false("image_url_detail" %in% names(cb_text))
+  expect_error(
+    qlm_codebook("Test", "Prompt", type_obj, image_url_detail = "high"),
+    "applies to image codebooks only"
+  )
+  expect_error(
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "audio",
+                 image_url_detail = "high"),
+    'input_type = "audio"'
+  )
+
+  output <- capture.output(print(make(image_url_detail = "high")))
+  expect_true(any(grepl("URL detail:   high", output, fixed = TRUE)))
+  expect_false(any(grepl("URL detail", capture.output(print(cb_text)))))
+})
+
+
 test_that("codebooks saved before image_file_resize existed read as \"low\" (#177)", {
   type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
 
@@ -121,7 +154,10 @@ test_that("codebooks saved before image_file_resize existed read as \"low\" (#17
   # default, so that is what it is read as, not the current default
   old_image <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")
   old_image$image_file_resize <- NULL
+  old_image$image_url_detail <- NULL
   expect_identical(as_qlm_codebook(old_image)$image_file_resize, "low")
+  # and the provider chose the URL detail, which is what "auto" says
+  expect_identical(as_qlm_codebook(old_image)$image_url_detail, "auto")
 
   # A value that is present is kept
   cb_high <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image")

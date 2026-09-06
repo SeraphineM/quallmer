@@ -613,7 +613,8 @@ test_that("qlm_trail() report records the image resolution a codebook codes at (
   coded <- trail_params_fixture(list(name = "openai/gpt-4o"))
   attr(coded, "run")$codebook <- list(
     name = "posters", instructions = "Read the posters",
-    input_type = "image", image_file_resize = "1024x1024>"
+    input_type = "image", image_file_resize = "1024x1024>",
+    image_url_detail = "high"
   )
   path <- file.path(tempdir(), "test_trail_resize")
   withr::defer(unlink(paste0(path, c(".rds", ".qmd"))))
@@ -621,15 +622,16 @@ test_that("qlm_trail() report records the image resolution a codebook codes at (
   content <- readLines(paste0(path, ".qmd"))
 
   expect_true(any(grepl(
-    '**Input:** image files, resized with `image_file_resize = "1024x1024>"`',
+    '**Input:** image files, resized with `image_file_resize = "1024x1024>"`; image URLs with `image_url_detail = "high"`',
     content, fixed = TRUE
   )))
 
   # A run saved before the field existed was coded at "low", and says so
   attr(coded, "run")$codebook$image_file_resize <- NULL
+  attr(coded, "run")$codebook$image_url_detail <- NULL
   qlm_trail(coded, path = path)
   content <- readLines(paste0(path, ".qmd"))
-  expect_true(any(grepl('`image_file_resize = "low"`', content, fixed = TRUE)))
+  expect_true(any(grepl('`image_file_resize = "low"`; image URLs with `image_url_detail = "auto"`', content, fixed = TRUE)))
 
   # A text codebook has no such line
   content <- trail_params_report(list(name = "openai/gpt-4o"))

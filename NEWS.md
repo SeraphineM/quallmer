@@ -85,7 +85,11 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   says so if it is missing. `x` may now also hold image URLs alongside
   paths: an element beginning with `http://`, `https://` or `data:` is
   passed to the provider as it is, and every path is checked to exist
-  before any request is sent (#177).
+  before any request is sent. A second codebook field, `image_url_detail`,
+  asks the provider for `"low"` or `"high"` detail on such URLs; OpenAI and
+  OpenAI-compatible providers read it, and ellmer forwards it from the
+  version that includes tidyverse/ellmer#1133, so `qlm_code()` says before
+  the run when a value cannot take effect (#177).
 
 * New `qlm_backfill()` re-codes only the units a run failed on and merges the
   results into the original object, instead of re-running the whole corpus

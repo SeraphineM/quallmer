@@ -11,7 +11,8 @@ qlm_codebook(
   role = NULL,
   input_type = input_types(),
   levels = NULL,
-  image_file_resize = NULL
+  image_file_resize = NULL,
+  image_url_detail = NULL
 )
 }
 \arguments{
@@ -63,6 +64,19 @@ paths only: an element of \code{x} that is a URL is fetched by the provider
 as it is. Codebooks saved before this field existed, including
 \code{\link[=task]{task()}} objects, are read as \code{"low"}, the resolution they were coded
 at, rather than the current default. See \code{\link[ellmer:content_image_file]{ellmer::content_image_file()}}.}
+
+\item{image_url_detail}{How much detail the provider should read from an
+image given as a URL, for \code{input_type = "image"} only: \code{"auto"} (the
+default, the provider chooses), \code{"low"} or \code{"high"}. Passed to
+\code{\link[ellmer:content_image_url]{ellmer::content_image_url()}} for every element of \code{x} that is a URL;
+files are governed by \code{image_file_resize} instead. OpenAI and
+OpenAI-compatible providers use it and other providers ignore it, and
+ellmer forwards it only from the version that includes
+\url{https://github.com/tidyverse/ellmer/pull/1133}; \code{\link[=qlm_code]{qlm_code()}} says so
+before the run when a value other than \code{"auto"} cannot take effect.
+Stored on the codebook and recorded with the run like
+\code{image_file_resize}; codebooks saved before the field existed are read
+as \code{"auto"}.}
 }
 \value{
 A codebook object (a list with class \code{c("qlm_codebook", "task")})

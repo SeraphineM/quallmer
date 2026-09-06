@@ -110,13 +110,13 @@ test_that("qlm_code tells image paths from URLs (#177)", {
   mockery::stub(aic, "ellmer::content_image_file", function(path, resize) {
     list(kind = "file", path = path, resize = resize)
   })
-  mockery::stub(aic, "ellmer::content_image_url", function(url) {
-    list(kind = "url", url = url)
+  mockery::stub(aic, "ellmer::content_image_url", function(url, detail) {
+    list(kind = "url", url = url, detail = detail)
   })
 
   x <- c("posters/a.jpg", "https://example.org/b.jpg",
          "http://example.org/c.png", "data:image/png;base64,AAAA", "d.png")
-  content <- aic(x, resize = "1024x1024>")
+  content <- aic(x, resize = "1024x1024>", detail = "high")
 
   expect_length(content, 5)
   expect_equal(vapply(content, `[[`, "", "kind"),
@@ -125,6 +125,78 @@ test_that("qlm_code tells image paths from URLs (#177)", {
   expect_equal(content[[1]]$resize, "1024x1024>")
   expect_equal(content[[5]]$resize, "1024x1024>")
   expect_equal(content[[2]]$url, "https://example.org/b.jpg")
+  # and the detail reaches every URL, and no file
+  expect_equal(content[[2]]$detail, "high")
+  expect_equal(content[[4]]$detail, "high")
+  expect_null(content[[1]]$detail)
+})
+
+
+test_that("as_input_content passes the codebook's URL detail to images (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  cb <- qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                     image_file_resize = "none", image_url_detail = "low")
+  content <- as_input_content("https://example.org/b.jpg", cb, NULL)
+  expect_identical(content[[1]]@detail, "low")
+
+  # A codebook saved before the field existed asks for nothing
+  cb$image_url_detail <- NULL
+  content <- as_input_content("https://example.org/b.jpg", cb, NULL)
+  expect_true(content[[1]]@detail %in% c("auto", ""))
+})
+
+
+test_that("qlm_code says when image_url_detail cannot take effect (#177)", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  make <- function(detail) {
+    qlm_codebook("Test", "Prompt", type_obj, input_type = "image",
+                 image_file_resize = "none", image_url_detail = detail)
+  }
+  withr::local_envvar(c(OPENAI_API_KEY = "x", GOOGLE_API_KEY = "x"))
+  openai <- ellmer::chat_openai(model = "gpt-4o-mini")$get_provider()
+  gemini <- ellmer::chat_google_gemini(model = "gemini-2.5-flash")$get_provider()
+  chat_with <- function(provider) {
+    list(get_provider = function() provider)
+  }
+  url <- "https://example.org/poster.jpg"
+
+  # An ellmer that forwards it, to a provider that reads it: nothing to say
+  said <- say_image_url_detail
+  mockery::stub(said, "ellmer_forwards_image_detail", TRUE)
+  expect_silent(said(make("high"), url, chat_with(openai)))
+
+  # "auto" asks for nothing, and a file is governed by the resize instead
+  mockery::stub(said, "ellmer_forwards_image_detail", FALSE)
+  expect_silent(said(make("auto"), url, chat_with(openai)))
+  expect_silent(said(make("high"), "poster.jpg", chat_with(openai)))
+  # A later pass of the same run stays quiet
+  expect_silent(said(make("high"), url, chat_with(openai), say = FALSE))
+
+  # An ellmer that does not forward it says so, naming the setting
+  expect_message(
+    said(make("high"), url, chat_with(openai)),
+    'image_url_detail = "high".*does not pass it.*1133'
+  )
+
+  # A provider that ignores it says so too, by name
+  mockery::stub(said, "ellmer_forwards_image_detail", TRUE)
+  expect_message(
+    said(make("low"), url, chat_with(gemini)),
+    'image_url_detail = "low".*Google/Gemini ignores it'
+  )
+})
+
+
+test_that("provider_reads_image_detail knows the OpenAI family (#177)", {
+  withr::local_envvar(c(OPENAI_API_KEY = "x", ANTHROPIC_API_KEY = "x",
+                        GOOGLE_API_KEY = "x"))
+  reads <- function(chat) provider_reads_image_detail(chat$get_provider())
+  expect_true(reads(ellmer::chat_openai(model = "gpt-4o-mini")))
+  expect_true(reads(ellmer::chat_openai_compatible(
+    model = "m", base_url = "https://example.org/v1"
+  )))
+  expect_false(reads(ellmer::chat_anthropic(model = "claude-sonnet-4-5")))
+  expect_false(reads(ellmer::chat_google_gemini(model = "gemini-2.5-flash")))
 })
 
 
@@ -135,7 +207,7 @@ test_that("try_structured_call resizes images as the codebook says (#177)", {
 
   resize_seen <- NULL
   aic <- as_input_content
-  mockery::stub(aic, "as_image_content", function(x, resize) {
+  mockery::stub(aic, "as_image_content", function(x, resize, detail) {
     resize_seen <<- resize
     as.list(x)
   })
@@ -196,7 +268,7 @@ test_that("qlm_code records the resolution an old image codebook was coded at (#
 
   resize_seen <- NULL
   aic <- as_input_content
-  mockery::stub(aic, "as_image_content", function(x, resize) {
+  mockery::stub(aic, "as_image_content", function(x, resize, detail) {
     resize_seen <<- resize
     as.list(x)
   })

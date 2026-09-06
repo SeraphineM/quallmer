@@ -315,7 +315,8 @@ check_input_capability <- function(input_type, chat, model, call = rlang::caller
 #'
 #' @param x The input vector, already checked.
 #' @param codebook The codebook: its `input_type` chooses the route, and for
-#'   images its `image_file_resize` is applied to each file.
+#'   images its `image_file_resize` is applied to each file and its
+#'   `image_url_detail` to each URL.
 #' @param chat The chat the run will use; its provider receives the uploads.
 #' @param call The calling environment, for the error.
 #'
@@ -326,7 +327,8 @@ as_input_content <- function(x, codebook, chat, call = rlang::caller_env()) {
   input_type <- codebook$input_type
   switch(input_type,
     text = as.list(x),
-    image = as_image_content(x, codebook$image_file_resize),
+    image = as_image_content(x, codebook$image_file_resize,
+                             codebook$image_url_detail %||% "auto"),
     audio = upload_inputs(x, chat, input_type, call = call),
     cli::cli_abort("Unknown input type {.val {input_type}}.", .internal = TRUE)
   )

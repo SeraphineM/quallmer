@@ -153,9 +153,15 @@ coded at. See \code{\link[=qlm_codebook]{qlm_codebook()}}.
 A URL is passed to the provider as it is, through
 \code{\link[ellmer:content_image_url]{ellmer::content_image_url()}}, so \code{image_file_resize} does not apply to
 it; what the provider does with a remote image is its own affair, and not
-every provider fetches URLs. A path that does not exist is refused before
-anything is sent, so a URL typed without its scheme fails here with the
-path named, not inside the request.
+every provider fetches URLs. The codebook's \code{image_url_detail} asks the
+provider for \code{"low"} or \code{"high"} detail on such an image, where the
+provider reads that field: OpenAI and OpenAI-compatible providers do,
+others ignore it, and ellmer forwards it only from the version that
+includes \url{https://github.com/tidyverse/ellmer/pull/1133}. When a value
+other than \code{"auto"} cannot take effect, \code{qlm_code()} says so before the
+run rather than recording a setting that was not applied. A path that
+does not exist is refused before anything is sent, so a URL typed without
+its scheme fails here with the path named, not inside the request.
 }
 
 \section{Provider-specific parameters}{

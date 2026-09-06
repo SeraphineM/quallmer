@@ -159,8 +159,11 @@ test_that("qlm_meta() works for qlm_codebook objects", {
   expect_false("image_file_resize" %in% names(obj_meta))
   cb_image <- qlm_codebook("Posters", "Read them", cb$schema, input_type = "image")
   expect_identical(qlm_meta(cb_image, type = "object")$image_file_resize, "high")
-  cb_image$image_file_resize <- NULL  # saved before the field existed
+  expect_identical(qlm_meta(cb_image, type = "object")$image_url_detail, "auto")
+  cb_image$image_file_resize <- NULL  # saved before the fields existed
+  cb_image$image_url_detail <- NULL
   expect_identical(qlm_meta(cb_image, type = "object")$image_file_resize, "low")
+  expect_identical(qlm_meta(cb_image, type = "object")$image_url_detail, "auto")
 
   # System metadata (empty for codebooks)
   sys_meta <- qlm_meta(cb, type = "system")

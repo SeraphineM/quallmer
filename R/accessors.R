@@ -378,9 +378,10 @@ qlm_meta.qlm_codebook <- function(x, field = NULL, type = c("user", "object", "s
       levels = x$levels
     )
     # Filled for an image codebook saved before the field existed (#177)
-    resize <- fill_codebook_fields(x)$image_file_resize
-    if (!is.null(resize)) {
-      metadata$image_file_resize <- resize
+    filled <- fill_codebook_fields(x)
+    if (!is.null(filled$image_file_resize)) {
+      metadata$image_file_resize <- filled$image_file_resize
+      metadata$image_url_detail <- filled$image_url_detail
     }
   } else if (type == "system") {
     # Codebooks don't have system metadata
