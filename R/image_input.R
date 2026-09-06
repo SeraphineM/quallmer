@@ -1,16 +1,17 @@
-#' Is an element of `x` a URL rather than a file path?
+#' Is an element of `x` an image URL rather than a file path?
 #'
 #' The rule ellmer applies inside [ellmer::content_image_url()] for data
 #' URIs, extended to http and https: a scheme means a URL, and everything
 #' else is a path. A URL typed without its scheme is therefore a path, and
 #' fails the existence check with its value named, before anything is sent.
+#' The general form is `is_input_url()` in `R/input_content.R`.
 #'
 #' @param x A character vector.
 #' @return A logical vector.
 #' @keywords internal
 #' @noRd
 is_image_url <- function(x) {
-  !is.na(x) & grepl("^(https?|data):", x)
+  is_input_url(x, data = TRUE)
 }
 
 

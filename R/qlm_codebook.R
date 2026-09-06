@@ -15,11 +15,13 @@
 #' @param role Optional role description for the model (e.g., "You are an expert
 #'   annotator"). If provided, this will be prepended to the instructions when
 #'   creating the system prompt.
-#' @param input_type Type of input data: `"text"` (default), `"image"` or
-#'   `"audio"`. For `"image"` and `"audio"` the elements of `x` in
-#'   [qlm_code()] are file paths; see its section "Audio input" for which
-#'   providers accept audio and how the files are handled. For `"image"`
-#'   the elements may also be URLs; see its section "Image input".
+#' @param input_type Type of input data: `"text"` (default), `"image"`,
+#'   `"audio"` or `"video"`. For the other three the elements of `x` in
+#'   [qlm_code()] are file paths; for `"image"` they may also be URLs, and
+#'   for `"video"` YouTube links or URLs of video files. See the sections
+#'   "Image input", "Audio input" and "Video input" of [qlm_code()] for how
+#'   the files are handled and what is known about which providers accept
+#'   them.
 #' @param image_file_resize How image files are resized before they are sent,
 #'   for `input_type = "image"` only; setting it on any other codebook is an
 #'   error. One of `"high"` (the default: fit within 2000x768 or 768x2000

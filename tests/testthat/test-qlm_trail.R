@@ -1120,10 +1120,9 @@ test_that("qlm_trail() report says why a cost is NA (#135)", {
 
 # File inputs (#124) -----------------------------------------------------------
 
-test_that("the report names a file-input run's files by hash, and any registration (#124)", {
+test_that("the report names a file-input run's files by hash (#124)", {
   paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
-  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
-                   model = "google_gemini/gemini-4-ultra")
+  run <- audio_run(paths)
   temp_path <- tempfile("trail_audio")
   withr::defer({
     unlink(paste0(temp_path, ".rds"))
@@ -1136,10 +1135,7 @@ test_that("the report names a file-input run's files by hash, and any registrati
   expect_true(any(grepl("**Input files (audio):** 2 files, SHA-256 recorded", content, fixed = TRUE)))
   expect_true(any(grepl(hash_file(paths[["a"]]), content, fixed = TRUE)))
   expect_true(any(grepl(paste0("| b | ", basename(paths[["b"]]), " | 10 | `"), content, fixed = TRUE)))
-  expect_true(any(grepl(
-    'qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio")',
-    content, fixed = TRUE
-  )))
+  expect_false(any(grepl("accepted by", content, fixed = TRUE)))
 
   # The trail object keeps what the report was built from
   expect_equal(trail$runs[["audio_run"]]$input_files$.id, c("a", "b"))
@@ -1163,7 +1159,7 @@ test_that("the report names a file-input run's files by hash, and any registrati
 })
 
 
-test_that("the report discloses a registration a backfill pass relied on, and unrecorded hashes (#124)", {
+test_that("the report marks unrecorded hashes, and a backfill pass's model (#124)", {
   paths <- c(a = audio_file(as.raw(1:10)), b = audio_file(as.raw(11:20)))
   run <- audio_run(paths, failed = "b")
   meta_attr <- attr(run, "meta")
@@ -1171,7 +1167,7 @@ test_that("the report discloses a registration a backfill pass relied on, and un
   meta_attr$user$input_files$size[1] <- NA_real_
   meta_attr$object$backfill <- list(backfill_pass(
     model = "google_gemini/gemini-4-ultra", overrides = list(), attempted = "b",
-    recovered = "b", registered = "google_gemini/gemini-4-ultra"
+    recovered = "b"
   ))
   attr(run, "meta") <- meta_attr
   temp_path <- tempfile("trail_pass")
@@ -1182,10 +1178,28 @@ test_that("the report discloses a registration a backfill pass relied on, and un
 
   suppressMessages(qlm_trail(run, path = temp_path))
   content <- readLines(paste0(temp_path, ".qmd"))
-  expect_true(any(grepl(
-    '**Backfill pass 1 model accepted by:** `qlm_register_model("google_gemini/gemini-4-ultra"',
-    content, fixed = TRUE
-  )))
+  expect_true(any(grepl("gemini-4-ultra", content, fixed = TRUE)))
   expect_true(any(grepl("| a | ", content, fixed = TRUE) & grepl("not recorded", content, fixed = TRUE)))
   expect_true(any(grepl(hash_file(paths[["b"]]), content, fixed = TRUE)))
+})
+
+
+test_that("the report shows a video run's three kinds of input (#179)", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://user:pw@archive.org/download/ad/ad.mp4",
+         zoo = "https://www.youtube.com/watch?v=jNQXAC9IVRw")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+  temp_path <- tempfile("trail_video")
+  withr::defer(unlink(paste0(temp_path, c(".rds", ".qmd"))))
+
+  suppressMessages(qlm_trail(run, path = temp_path))
+  content <- readLines(paste0(temp_path, ".qmd"))
+
+  expect_true(any(grepl("**Input files (video):** 3 files", content, fixed = TRUE)))
+  expect_true(any(grepl(paste0("| clip | ", basename(clip), " | 10 | `", hash_file(clip)), content, fixed = TRUE)))
+  # The downloaded URL is recorded without its credentials, with the hash of its bytes
+  expect_true(any(grepl(paste0("| ad | https://archive.org/download/ad/ad.mp4 | 20 | `", hash_file(downloaded)), content, fixed = TRUE)))
+  expect_false(any(grepl("user:pw", content, fixed = TRUE)))
+  expect_true(any(grepl("| zoo | https://www.youtube.com/watch?v=jNQXAC9IVRw |  | fetched by the provider |", content, fixed = TRUE)))
 })

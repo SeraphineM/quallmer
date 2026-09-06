@@ -259,7 +259,7 @@ print(table(coded_transcripts$sentiment))
 
 The two-step route has a cost beyond Whisper's fee: the coding model only ever sees the transcript, so anything the transcriber dropped is gone, and the transcript itself is a second instrument whose errors are invisible to the coder. Since quallmer 0.5, a codebook can declare `input_type = "audio"`, and `qlm_code()` then uploads each recording to the provider and sends the model a reference to it alongside the instructions. The model listens to the audio itself, so the schema can ask for a transcript as one field among the others.
 
-Which providers accept audio this way is checked before anything is uploaded. As of this writing only Google Gemini does, in its pro, flash and flash-lite families; OpenAI's audio models refuse a schema-constrained request and Anthropic takes no audio at all, so for those providers the two-step route above remains the way. See the section "Audio input" in `?qlm_code` for the details, including how a newer Gemini model can be accepted with `qlm_register_model()`.
+Which providers accept audio this way is not checked in advance: the recordings are uploaded and the model is asked, and a provider that cannot take them refuses with its own message. As of this writing only Google Gemini accepts an uploaded recording alongside a schema-constrained request; OpenAI's audio models refuse such a request and Anthropic takes no audio at all, so for those providers the two-step route above remains the way. See the section "Audio input" in `?qlm_code` for the details.
 
 The codebook is the one used on the transcripts with one field added, so that the two routes can be compared field by field:
 

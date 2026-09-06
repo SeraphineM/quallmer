@@ -218,9 +218,6 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
   run_name <- meta_attr$user$name
   records <- list()
 
-  # A model the run accepted by registration must be registered here too
-  check_registered_input_model(x, restored$model)
-
   for (attempt in seq_len(passes)) {
     failed <- failed_units(x)
     if (!any(failed)) {
@@ -308,8 +305,6 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
     recovered <- ids[retry][!failed_units(result)]
     # What the pass was costed on is what qlm_code() settled, not what was
     # asked: rates it was given and did not need are not recorded on it.
-    # A model the pass accepted by registration is recorded on the pass, so
-    # that the trail discloses it and a replay knows to ask for it again.
     result_meta <- attr(result, "meta")
     records[[length(records) + 1L]] <- backfill_pass(
       model = if (route_changed) restored$model else NULL,
@@ -318,8 +313,7 @@ qlm_backfill <- function(x, ..., model = NULL, passes = 2L) {
       attempted = ids[retry],
       recovered = recovered,
       prices = result_meta$user$prices,
-      cost_note = result_meta$user$cost_note,
-      registered = result_meta$user$input_model_registered
+      cost_note = result_meta$user$cost_note
     )
 
     remaining <- sum(failed_units(x))
@@ -673,18 +667,13 @@ backfill_summary <- function(passes) {
 #' @param prices,cost_note What [qlm_code()] recorded for the pass: the rates
 #'   its cost rests on, and one line saying where the cost came from. `NULL`
 #'   when the pass was priced by ellmer, and the elements are absent.
-#' @param registered The `"provider/model"` pair the pass's model was
-#'   accepted on through [qlm_register_model()], or `NULL`, and the
-#'   element is absent.
-#'
 #' @param resolution Requested and effective model identity for a registered
 #'   provider, if used.
 #' @return A list.
 #' @keywords internal
 #' @noRd
 backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
-                          prices = NULL, cost_note = NULL, registered = NULL,
-                          resolution = NULL) {
+                          prices = NULL, cost_note = NULL, resolution = NULL) {
   pass <- list(
     timestamp = Sys.time(),
     model = model,
@@ -700,9 +689,6 @@ backfill_pass <- function(model, overrides, attempted, recovered, error = NULL,
   }
   if (!is.null(cost_note)) {
     pass$cost_note <- cost_note
-  }
-  if (!is.null(registered)) {
-    pass$input_model_registered <- registered
   }
   if (!is.null(error)) {
     pass$error <- error

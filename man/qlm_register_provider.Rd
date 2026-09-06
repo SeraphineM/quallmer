@@ -70,5 +70,5 @@ qlm_code(texts, codebook, model = "my_gateway/organisation/model")
 }
 }
 \seealso{
-\code{\link[=qlm_register_model]{qlm_register_model()}} for accepting a model for a file input type.
+\code{\link[=qlm_code]{qlm_code()}}, whose \code{model} argument takes a registered prefix.
 }

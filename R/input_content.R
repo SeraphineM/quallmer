@@ -2,22 +2,34 @@
 #'
 #' One place for the values `input_type` may take, so that [qlm_codebook()],
 #' [qlm_code()] and the documentation agree. `"text"` sends each element as a
-#' string; `"image"` sends each file inline; `"audio"` uploads each file to
-#' the provider and sends a reference to it. See `as_input_content()` for
-#' the dispatch and `input_capabilities()` for which providers accept what.
+#' string; `"image"` sends each file inline; `"audio"` and `"video"` upload
+#' each file to the provider and send a reference to it. See
+#' `as_input_content()` for the dispatch.
 #'
 #' @return A character vector.
 #' @keywords internal
 #' @noRd
 input_types <- function() {
-  c("text", "image", "audio")
+  c("text", "image", "audio", "video")
 }
 
-#' The input types whose elements are file paths
+#' The input types whose elements are file paths (or URLs)
 #' @keywords internal
 #' @noRd
 file_input_types <- function() {
-  c("image", "audio")
+  c("image", "audio", "video")
+}
+
+#' The input types whose files are uploaded to the provider
+#'
+#' An upload gets a new reference every time, which is what rules out
+#' `batch = TRUE` for these types, and what makes a replication upload the
+#' files again.
+#'
+#' @keywords internal
+#' @noRd
+uploaded_input_types <- function() {
+  c("audio", "video")
 }
 
 #' Audio file extensions ellmer knows the MIME type of
@@ -32,12 +44,101 @@ audio_extensions <- function() {
   c("mp3", "wav", "ogg", "m4a", "flac", "aac")
 }
 
-
-#' Check file inputs before any upload or request
+#' Video file extensions ellmer labels and Gemini lists as accepted
 #'
-#' Each element must be the path of an existing file, and for audio the
-#' extension must be one the upload can label. Checked in one pass so that
-#' every problem is reported at once.
+#' The intersection of the two, as of 2026-09-06. ellmer also labels `mkv`,
+#' which Gemini does not list, and Gemini also accepts `mpeg`, `mpg`, `flv`
+#' and `3gp`, which ellmer cannot label without being told the MIME type.
+#'
+#' @keywords internal
+#' @noRd
+video_extensions <- function() {
+  c("mp4", "mov", "avi", "wmv", "webm")
+}
+
+#' The file extensions a file input type accepts, or `NULL` for no check
+#' @keywords internal
+#' @noRd
+input_extensions <- function(input_type) {
+  switch(input_type,
+    audio = audio_extensions(),
+    video = video_extensions(),
+    NULL
+  )
+}
+
+#' The largest file the provider's upload takes, in bytes
+#'
+#' Gemini's Files API: 2 GB per file. Audio has never come near it; video
+#' can, so it is checked before an upload that would fail after the bytes
+#' were sent.
+#'
+#' @keywords internal
+#' @noRd
+max_upload_bytes <- function() {
+  2 * 1024^3
+}
+
+
+# URLs -------------------------------------------------------------------------
+
+#' Is an element of `x` an http(s) URL rather than a file path?
+#'
+#' A scheme means a URL, and everything else is a path, so a URL typed
+#' without its scheme fails the existence check with its value named. With
+#' `data = TRUE` a `data:` URI counts too, which is the rule ellmer applies
+#' inside [ellmer::content_image_url()] and the one image inputs use.
+#'
+#' @param x A character vector.
+#' @param data Whether a `data:` URI counts as a URL.
+#' @return A logical vector.
+#' @keywords internal
+#' @noRd
+is_input_url <- function(x, data = FALSE) {
+  pattern <- if (data) "^(https?:|data:)" else "^https?://"
+  !is.na(x) & grepl(pattern, x)
+}
+
+#' Is an element of `x` a YouTube link?
+#'
+#' Gemini fetches a public YouTube video by its URL, so such a link is sent
+#' as a reference and never passes through this machine. Recognised forms:
+#' `youtube.com/watch?v=`, `youtu.be/`, `youtube.com/shorts/` and
+#' `youtube.com/live/`, with or without `www.` or `m.`.
+#'
+#' @keywords internal
+#' @noRd
+is_youtube_url <- function(x) {
+  !is.na(x) & grepl(
+    "^https?://(www\\.|m\\.)?(youtube\\.com/(watch\\?|shorts/|live/)|youtu\\.be/)",
+    x
+  )
+}
+
+#' The file extension of a URL's path, ignoring any query or fragment
+#' @keywords internal
+#' @noRd
+url_extension <- function(url) {
+  tolower(tools::file_ext(sub("[?#].*$", "", url)))
+}
+
+#' `redact_url()` over a vector
+#' @keywords internal
+#' @noRd
+redact_urls <- function(x) {
+  vapply(x, redact_url, character(1), USE.NAMES = FALSE)
+}
+
+
+# Checks before anything is downloaded, uploaded or sent -----------------------
+
+#' Check file inputs before any download, upload or request
+#'
+#' Each element must be the path of an existing file or, for images and
+#' video, a URL. Audio and video paths must carry an extension the upload can
+#' label; a video URL that is not a YouTube link must too, since it is
+#' downloaded and uploaded like a file. Checked in one pass so that every
+#' problem is reported at once.
 #'
 #' @param x The input vector.
 #' @param input_type One of `file_input_types()`.
@@ -47,21 +148,44 @@ audio_extensions <- function() {
 #' @keywords internal
 #' @noRd
 check_file_inputs <- function(x, input_type, call = rlang::caller_env()) {
+  urls_ok <- input_type %in% c("image", "video")
   if (!is.character(x)) {
     cli::cli_abort(
-      "This codebook expects {input_type} file paths{if (input_type == 'image') ' or URLs' else ''} (a character vector).",
+      "This codebook expects {input_type} file paths{if (urls_ok) ' or URLs' else ''} (a character vector).",
       call = call
     )
   }
-  # An image may be given as a URL, which the provider fetches; a URL is
-  # recognised by its scheme and is not a file here (#177)
-  is_path <- if (input_type == "image") !is_image_url(x) else rep(TRUE, length(x))
-  missing <- is_path & (is.na(x) | !file.exists(x) | dir.exists(x))
+
+  # A data: URI carries an image inline; there is no such thing for video
+  if (input_type == "video") {
+    data_uri <- !is.na(x) & grepl("^data:", x)
+    if (any(data_uri)) {
+      cli::cli_abort(c(
+        "{sum(data_uri)} element{?s} of {.arg x} {?is a/are} {.code data:} URI{?s}, which video input does not accept.",
+        "i" = "Give each video as a file path, a YouTube link or an {.code http(s)://} URL."
+      ), call = call)
+    }
+  }
+
+  # An image may be given as a URL, which the provider fetches (#177); a
+  # video may be given as a YouTube link, which the provider fetches, or as
+  # a URL that is downloaded here (#179). A URL is recognised by its scheme
+  # and is not a file here.
+  is_url <- switch(input_type,
+    image = is_input_url(x, data = TRUE),
+    video = is_input_url(x),
+    rep(FALSE, length(x))
+  )
+  missing <- !is_url & (is.na(x) | !file.exists(x) | dir.exists(x))
   if (any(missing)) {
-    hint <- if (input_type == "image") {
+    hint <- if (urls_ok) {
       c(
         "i" = "Every element of {.arg x} must be the path of an existing file or a URL.",
-        "i" = "A URL is recognised by its scheme: {.code http://}, {.code https://} or {.code data:}."
+        "i" = if (input_type == "image") {
+          "A URL is recognised by its scheme: {.code http://}, {.code https://} or {.code data:}."
+        } else {
+          "A URL is recognised by its scheme: {.code http://} or {.code https://}."
+        }
       )
     } else {
       c("i" = "Every element of {.arg x} must be the path of an existing file.")
@@ -71,236 +195,235 @@ check_file_inputs <- function(x, input_type, call = rlang::caller_env()) {
       hint
     ), call = call)
   }
-  if (input_type == "audio") {
-    ext <- tolower(tools::file_ext(x))
-    unknown <- !ext %in% audio_extensions()
+
+  extensions <- input_extensions(input_type)
+  if (!is.null(extensions)) {
+    ext <- ifelse(is_url, url_extension(x), tolower(tools::file_ext(x)))
+    # A YouTube link is fetched by the provider, so it has no file to label
+    checked <- !is_youtube_url(x)
+    unknown <- checked & !ext %in% extensions
     if (any(unknown)) {
       cli::cli_abort(c(
-        "{sum(unknown)} file{?s} {?has/have} an extension the upload cannot label: {.path {x[unknown]}}.",
-        "i" = "Audio files must be one of {.val {audio_extensions()}}."
+        "{sum(unknown)} {cli::qty(sum(unknown))}{if (any(unknown & is_url)) 'file or URL' else 'file'}{?s} {?has/have} an extension the upload cannot label: {.path {x[unknown]}}.",
+        "i" = "{cli::qty(2)}{stringr_title(input_type)} files must be one of {.val {extensions}}.",
+        if (input_type == "video") c(
+          "i" = "A video URL other than a YouTube link is downloaded and uploaded like a file, so its path must end in one of these extensions too."
+        )
       ), call = call)
     }
   }
   invisible(x)
 }
 
-
-# Which provider/model combinations accept a file input type ------------------
-
-#' Capability table for gated input types
-#'
-#' A snapshot of what providers accepted through ellmer on the date given,
-#' written down rather than discovered, because the failure it prevents is an
-#' upload followed by a refused request. Text and image inputs are not gated:
-#' images travel inline and every provider ellmer reaches takes them.
-#'
-#' Audio: only Gemini chat models accept an uploaded audio file alongside a
-#' schema-constrained request. The provider is matched on the name ellmer
-#' gives its provider object, which separates Gemini from Vertex, which has
-#' no Files API. The model is matched on recognised families rather than
-#' enumerated, so a later release in a known family passes; the suffixes are
-#' anchored so that a TTS, image, live or transcription model that shares
-#' the family stem never does. `models_google_gemini()` returns only names
-#' and prices, so there is no capability metadata to consult at run time.
-#'
-#' A model outside the recognised families is accepted for the session by
-#' [qlm_register_model()].
-#'
-#' @return A named list, one entry per gated input type, each with
-#'   `providers` (accepted provider names), `families` (a regular expression
-#'   over the model name) and `describe` (the families in words, for
-#'   messages).
+#' Capitalise the first letter, for a message
 #' @keywords internal
 #' @noRd
-input_capabilities <- function() {
-  list(
-    # As of 2026-09-05
-    audio = list(
-      providers = "Google/Gemini",
-      families = paste0(
-        "^gemini-[0-9]+(\\.[0-9]+)?-(pro|flash|flash-lite)",
-        "(-preview)?(-[0-9]{2}-[0-9]{2}|-[0-9]{3}|-latest)?$"
-      ),
-      describe = paste0(
-        "gemini-<version>-pro, -flash and -flash-lite, with an optional ",
-        "-preview, date or -latest suffix"
-      )
-    )
+stringr_title <- function(x) {
+  paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x)))
+}
+
+
+#' What is known to accept a file input type, said when a provider refuses
+#'
+#' There is no gate in advance: a provider is tried, and if it cannot take
+#' the input its own refusal is what the run reports (decided 2026-09-06,
+#' #179). What quallmer knows about who accepts the type is a snapshot, so
+#' it is offered as a hint alongside that refusal, where it can help, rather
+#' than as a rule that would refuse a newer model.
+#'
+#' @param input_type The codebook's input type.
+#'
+#' @return A named character vector for a cli bullet, or `NULL` for a type
+#'   every provider accepts.
+#' @keywords internal
+#' @noRd
+known_input_providers_hint <- function(input_type) {
+  if (!input_type %in% uploaded_input_types()) {
+    return(NULL)
+  }
+  version <- tryCatch(
+    as.character(utils::packageVersion("quallmer")),
+    error = function(e) "this version"
   )
-}
-
-# Session registry of provider/model pairs accepted beyond the table
-the <- new.env(parent = emptyenv())
-the$registered_input_models <- list()
-
-#' Accept a model for a file input type in this session
-#'
-#' `r lifecycle::badge("experimental")`
-#'
-#' `qlm_code()` refuses to upload a file to a provider/model combination it
-#' does not know to accept that kind of input, because the refusal would
-#' otherwise arrive only after the upload, as a failed request. The
-#' combinations it knows are a snapshot (see `?qlm_code`, section "Audio
-#' input"), so a model released after this version of quallmer may be
-#' refused although it works. This function accepts one exact
-#' `"provider/model"` pair for one input type, for the rest of the R session.
-#'
-#' Only the model check is bypassed. The provider must still be one that
-#' takes the input type through ellmer's file upload, `batch = TRUE` is still
-#' refused for audio, and the files are still checked. Registering a model of
-#' a provider that cannot take the input therefore changes nothing.
-#'
-#' A run whose model was accepted this way records that fact, and
-#' [qlm_trail()] reports it. Replicating or backfilling such a run in another
-#' session requires registering the model again, and the error says so.
-#'
-#' @param model character; the model in `"provider/model"` form, exactly as
-#'   passed to [qlm_code()], for example `"google_gemini/gemini-4-ultra"`.
-#'   The model part is required: a bare provider is resolved to a default
-#'   model by ellmer, which cannot be registered ahead of time.
-#' @param input_type character; the input type to accept the model for.
-#'   Currently only `"audio"` is gated.
-#'
-#' @return `model`, invisibly.
-#'
-#' @examples
-#' \dontrun{
-#' qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio")
-#' coded <- qlm_code(audio_files, audio_codebook, model = "google_gemini/gemini-4-ultra")
-#' }
-#'
-#' @seealso [qlm_register_provider()] for configuring an endpoint;
-#'   [qlm_code()], whose "Audio input" section says what is accepted
-#'   without registration.
-#' @export
-qlm_register_model <- function(model, input_type = "audio") {
-  gated <- names(input_capabilities())
-  if (!is.character(input_type) || length(input_type) != 1L ||
-      !input_type %in% gated) {
-    cli::cli_abort(c(
-      "{.arg input_type} must be one of {.val {gated}}.",
-      "i" = "Only these input types are gated by provider and model."
-    ))
-  }
-  if (!is.character(model) || length(model) != 1L || is.na(model) ||
-      !grepl("^[^/]+/[^/]+$", model)) {
-    cli::cli_abort(c(
-      "{.arg model} must be a single string of the form {.val provider/model}.",
-      "i" = "For example {.val google_gemini/gemini-4-ultra}."
-    ))
-  }
-  check_model_provider(model)
-
-  current <- the$registered_input_models[[input_type]]
-  the$registered_input_models[[input_type]] <- unique(c(current, model))
-  cli::cli_inform(c(
-    "i" = "Accepting {.val {model}} for {input_type} input in this session."
+  c("i" = paste0(
+    "As of quallmer ", version, ", only Google Gemini ({.code google_gemini/}) ",
+    "is known to accept ", input_type, " input; see the \"",
+    stringr_title(input_type), " input\" section of {.code ?qlm_code}."
   ))
-  invisible(model)
 }
 
-#' Is a provider/model pair registered for an input type?
+
+# Resolving URLs to local files ------------------------------------------------
+
+#' Bring every element that has bytes onto this machine
+#'
+#' A path is already here. A YouTube link never is: the provider fetches it.
+#' Any other URL is downloaded to a temporary file, so that it can be hashed
+#' and uploaded exactly as a file would be. Downloads are all-or-nothing, in
+#' the style of `upload_inputs()`: a failure aborts before anything is
+#' uploaded, with the URL and the reason. Only video has URLs to download;
+#' for audio every element is a path, and for images a URL is fetched by the
+#' provider.
+#'
+#' After the downloads, video files are checked against the upload's size
+#' limit and their total is said once, with a token estimate when the
+#' durations can be read.
+#'
+#' @param x The input vector, already checked.
+#' @param input_type One of `file_input_types()`.
+#' @param say Whether to say what is about to be uploaded; `FALSE` when the
+#'   downloads are for a check rather than an upload.
+#' @param call The calling environment, for the error.
+#'
+#' @return A list: `local`, a character vector with the local path of each
+#'   element or `NA` for one the provider fetches; `temp`, the paths of the
+#'   temporary downloads, for the caller to remove.
 #' @keywords internal
 #' @noRd
-is_registered_input_model <- function(input_type, provider, model_id) {
-  paste0(provider, "/", model_id) %in% the$registered_input_models[[input_type]]
+resolve_input_files <- function(x, input_type, say = TRUE, call = rlang::caller_env()) {
+  local <- unname(x)
+  temp <- character()
+
+  if (input_type == "image") {
+    local[is_input_url(x, data = TRUE)] <- NA_character_
+    return(list(local = local, temp = temp))
+  }
+  if (input_type != "video") {
+    return(list(local = local, temp = temp))
+  }
+
+  local[is_youtube_url(x)] <- NA_character_
+  download <- which(is_input_url(x) & !is_youtube_url(x))
+  if (length(download)) {
+    temp <- vapply(x[download], function(url) {
+      tempfile("quallmer_video_", fileext = paste0(".", url_extension(url)))
+    }, character(1), USE.NAMES = FALSE)
+    failures <- character()
+
+    cli::cli_progress_bar("Downloading video files", total = length(download))
+    for (i in seq_along(download)) {
+      url <- x[[download[[i]]]]
+      result <- tryCatch(
+        download_input_url(url, temp[[i]]),
+        error = function(e) e,
+        warning = function(w) w
+      )
+      if (inherits(result, "condition")) {
+        failures[redact_url(url)] <- strip_ansi(conditionMessage(result))
+      }
+      cli::cli_progress_update()
+    }
+    cli::cli_progress_done()
+
+    if (length(failures)) {
+      unlink(temp)
+      cli::cli_abort(c(
+        "Downloading {length(failures)} of {length(download)} video URL{?s} failed, so nothing was uploaded or sent.",
+        stats::setNames(
+          paste0(names(failures), ": ", failures),
+          rep("x", length(failures))
+        ),
+        "i" = "The provider fetches YouTube links itself; any other URL is downloaded here first."
+      ), call = call)
+    }
+    local[download] <- temp
+  }
+
+  check_upload_sizes(local, x, input_type, call = call)
+  if (say) {
+    say_video_size(local)
+  }
+  list(local = local, temp = temp)
 }
 
-#' Forget every registration, for tests
+#' One download, kept as its own function so that tests can stand in for
+#' the network
+#'
+#' `download.file()` signals a warning as well as an error when the server
+#' refuses, and its caller treats either as failure.
+#'
 #' @keywords internal
 #' @noRd
-reset_registered_input_models <- function() {
-  the$registered_input_models <- list()
+download_input_url <- function(url, dest) {
+  utils::download.file(url, dest, mode = "wb", quiet = TRUE)
+  invisible(dest)
+}
+
+#' Refuse a file the upload would refuse after sending it
+#' @keywords internal
+#' @noRd
+check_upload_sizes <- function(local, x, input_type, call = rlang::caller_env()) {
+  here <- !is.na(local)
+  size <- rep(NA_real_, length(local))
+  size[here] <- as.numeric(file.size(local[here]))
+  over <- here & size > max_upload_bytes()
+  if (any(over)) {
+    cli::cli_abort(c(
+      "{sum(over)} {input_type} file{?s} exceed{?s/} the {format_bytes(max_upload_bytes())} the provider's upload accepts: {.path {x[over]}}.",
+      "i" = "{cli::qty(sum(over))}Trim or re-encode {?it/them} before coding."
+    ), call = call)
+  }
   invisible(NULL)
 }
 
-
-#' The endpoint a run will use, read from the chat it built
+#' Say what is about to be uploaded, once, before it is
 #'
-#' The provider name and model are taken from the chat object, not from the
-#' string the user typed, so that `model = "google_gemini"` is checked
-#' against the default model ellmer filled in, and a Vertex endpoint is told
-#' from a Gemini one. The provider prefix is kept from the string, since that
-#' is how a registration names it.
+#' Video is priced by the second, at about 300 input tokens per second at
+#' the provider's default resolution, so the durations are what the cost
+#' turns on. They can be read only with the \pkg{av} package, which is
+#' optional; without it the total size is said instead. A YouTube link has
+#' neither here.
 #'
-#' @param chat An ellmer `Chat`.
-#' @param model The model string, as passed to [qlm_code()].
-#'
-#' @return A list: `prefix`, `provider` (ellmer's name for it, or `NA`),
-#'   `model_id`.
 #' @keywords internal
 #' @noRd
-resolve_endpoint <- function(chat, model) {
-  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
-  provider_name <- if (is.null(provider)) NA_character_ else attr(provider, "name")
-  model_id <- tryCatch(chat$get_model(), error = function(e) NULL)
-  if (is.null(model_id)) {
-    model_id <- if (grepl("/", model, fixed = TRUE)) sub("^[^/]*/", "", model) else NA_character_
-  }
-  list(
-    prefix = model_provider(model),
-    provider = provider_name %||% NA_character_,
-    model_id = model_id
-  )
-}
-
-
-#' Refuse a provider/model combination that cannot take the input type
-#'
-#' Run after the chat is built and before anything is uploaded or sent. Two
-#' gates: the provider must accept the input type through ellmer's file
-#' upload, and the model must be in a recognised family or registered for the
-#' session. Only the second is bypassed by a registration.
-#'
-#' @param input_type The codebook's input type.
-#' @param chat The chat the run will use.
-#' @param model The model string, as passed to [qlm_code()].
-#' @param call The calling environment, for the error.
-#'
-#' @return Invisibly, `NULL` for an ungated input type; otherwise a list with
-#'   `registered`, the `"provider/model"` string the acceptance rested on
-#'   when it came from a registration, or `NULL`.
-#' @keywords internal
-#' @noRd
-check_input_capability <- function(input_type, chat, model, call = rlang::caller_env()) {
-  caps <- input_capabilities()[[input_type]]
-  if (is.null(caps)) {
+say_video_size <- function(local) {
+  here <- local[!is.na(local)]
+  if (!length(here)) {
     return(invisible(NULL))
   }
-  endpoint <- resolve_endpoint(chat, model)
-  transcribe <- paste0(
-    "For any other provider, transcribe the recordings first and code the ",
-    "transcripts with a text codebook."
-  )
-
-  if (is.na(endpoint$provider) || !endpoint$provider %in% caps$providers) {
-    reached <- if (is.na(endpoint$provider)) "a provider" else endpoint$provider
-    cli::cli_abort(c(
-      "{input_type} input needs a provider that accepts {input_type} files through ellmer's file upload.",
-      "x" = "{.val {model}} is reached through {reached}, which does not.",
-      "i" = "Accepted today: {.val {caps$providers}} (a {.code google_gemini/} model).",
-      "i" = transcribe
-    ), call = call)
+  bytes <- sum(file.size(here))
+  n <- length(here)
+  if (has_av()) {
+    seconds <- sum(vapply(here, video_duration, numeric(1)))
+    cli::cli_inform(c("i" = paste0(
+      "Uploading {n} video file{?s}, {format_seconds(seconds)} in all ",
+      "({format_bytes(bytes)}); at the provider's default sampling that is ",
+      "roughly {format(round(seconds * 300), big.mark = ',')} input tokens."
+    )))
+  } else {
+    cli::cli_inform(c("i" = paste0(
+      "Uploading {n} video file{?s}, {format_bytes(bytes)} in all. Video costs ",
+      "roughly 300 input tokens per second at the provider's default sampling; ",
+      "install the {.pkg av} package to see the durations before uploading."
+    )))
   }
+  invisible(NULL)
+}
 
-  registered <- is_registered_input_model(input_type, endpoint$prefix, endpoint$model_id)
-  if (!registered && !isTRUE(grepl(caps$families, endpoint$model_id))) {
-    pair <- paste0(endpoint$prefix, "/", endpoint$model_id)
-    cli::cli_abort(c(
-      "Model {.val {endpoint$model_id}} is not recognised as accepting {input_type} input.",
-      "i" = "Recognised families: {caps$describe}.",
-      "i" = paste0(
-        "If it does accept {input_type}, register it for this session with ",
-        "{.code qlm_register_model(\"", pair, "\", input_type = \"",
-        input_type, "\")}."
-      ),
-      "i" = transcribe
-    ), call = call)
-  }
+#' Whether durations can be read, and one duration; both replaceable in tests
+#' @keywords internal
+#' @noRd
+has_av <- function() {
+  requireNamespace("av", quietly = TRUE)
+}
 
-  invisible(list(
-    registered = if (registered) paste0(endpoint$prefix, "/", endpoint$model_id)
-  ))
+video_duration <- function(path) {
+  info <- av::av_media_info(path)
+  as.numeric(info$duration %||% NA_real_)
+}
+
+format_bytes <- function(bytes) {
+  if (is.na(bytes)) return("an unknown size")
+  if (bytes >= 1024^3) return(paste0(format(round(bytes / 1024^3, 2), nsmall = 1), " GB"))
+  if (bytes >= 1024^2) return(paste0(round(bytes / 1024^2, 1), " MB"))
+  paste0(format(round(bytes / 1024, 1), nsmall = 1), " KB")
+}
+
+format_seconds <- function(seconds) {
+  if (is.na(seconds)) return("of unknown duration")
+  if (seconds >= 3600) return(paste0(round(seconds / 3600, 1), " hours"))
+  if (seconds >= 60) return(paste0(round(seconds / 60, 1), " minutes"))
+  paste0(round(seconds), " seconds")
 }
 
 
@@ -309,30 +432,64 @@ check_input_capability <- function(input_type, chat, model, call = rlang::caller
 #' Turn the input vector into what the structured call sends
 #'
 #' Text goes as strings. Images go inline through
-#' [ellmer::content_image_file()], which every provider accepts. Audio is
-#' uploaded to the provider and sent as a reference; every upload completes
-#' before this returns, so either all the inputs are ready or no coding
-#' request is made.
+#' [ellmer::content_image_file()], which every provider accepts. Audio and
+#' video are uploaded to the provider and sent as a reference; every upload
+#' completes before this returns, so either all the inputs are ready or no
+#' coding request is made. A YouTube link is sent as a reference without an
+#' upload, since the provider fetches it.
 #'
 #' @param x The input vector, already checked.
 #' @param codebook The codebook: its `input_type` chooses the route, and for
 #'   images its `image_file_resize` is applied to each file and its
 #'   `image_url_detail` to each URL.
 #' @param chat The chat the run will use; its provider receives the uploads.
+#' @param local The local path of each element, from `resolve_input_files()`,
+#'   or `NULL` when every element is what `x` says.
 #' @param call The calling environment, for the error.
 #'
 #' @return A list of prompts, one per element of `x`.
 #' @keywords internal
 #' @noRd
-as_input_content <- function(x, codebook, chat, call = rlang::caller_env()) {
+as_input_content <- function(x, codebook, chat, local = NULL, call = rlang::caller_env()) {
   input_type <- codebook$input_type
   switch(input_type,
     text = as.list(x),
     image = as_image_content(x, codebook$image_file_resize,
                              codebook$image_url_detail %||% "auto"),
     audio = upload_inputs(x, chat, input_type, call = call),
+    video = as_video_content(x, local %||% unname(x), chat, call = call),
     cli::cli_abort("Unknown input type {.val {input_type}}.", .internal = TRUE)
   )
+}
+
+
+#' Video: YouTube by reference, everything else uploaded
+#'
+#' A YouTube link becomes an [ellmer::ContentUploaded] carrying the URL
+#' itself, which Gemini's serializer sends as the file URI; the MIME type is
+#' nominal, and ignored by the provider for such a link (probe of
+#' 2026-09-06). Every other element has a local path by now and goes through
+#' `upload_inputs()`, all or nothing.
+#'
+#' @keywords internal
+#' @noRd
+as_video_content <- function(x, local, chat, call = rlang::caller_env()) {
+  n <- length(x)
+  content <- vector("list", n)
+  by_reference <- is.na(local)
+  provider <- tryCatch(chat$get_provider()@name, error = function(e) NA_character_)
+  for (i in which(by_reference)) {
+    content[[i]] <- ellmer::ContentUploaded(
+      uri = x[[i]], mime_type = "video/mp4",
+      provider = if (is.na(provider)) "Google/Gemini" else provider
+    )
+  }
+  if (any(!by_reference)) {
+    content[!by_reference] <- upload_inputs(
+      local[!by_reference], chat, "video", names = x[!by_reference], call = call
+    )
+  }
+  content
 }
 
 
@@ -340,27 +497,33 @@ as_input_content <- function(x, codebook, chat, call = rlang::caller_env()) {
 #'
 #' Uploads cost nothing, so a failed one aborts before a single coding
 #' request is spent. The provider's message is kept for each failure: it may
-#' be transient (a network error) or permanent (a file the provider cannot
-#' read), and only that message says which.
+#' be transient (a network error), permanent (a file the provider cannot
+#' read), or the provider having no file upload at all through ellmer, and
+#' only that message says which. What is known to accept the input type is
+#' added as a hint, since a refusal is where it helps.
 #'
-#' @param x Paths, already checked.
+#' @param x Paths, already checked and on this machine.
 #' @param chat The chat whose provider receives the files.
 #' @param input_type For the messages.
+#' @param names What to call each file in a message: the element as the user
+#'   gave it, so that a downloaded URL is named by its URL rather than by its
+#'   temporary file. Defaults to the basenames of `x`.
 #' @param call The calling environment, for the error.
 #'
 #' @return A list of [ellmer::ContentUploaded] objects, one per path.
 #' @keywords internal
 #' @noRd
-upload_inputs <- function(x, chat, input_type, call = rlang::caller_env()) {
+upload_inputs <- function(x, chat, input_type, names = basename(x), call = rlang::caller_env()) {
   n <- length(x)
   uploaded <- vector("list", n)
   failures <- character()
+  labels <- ifelse(is_input_url(names), redact_urls(names), basename(names))
 
   cli::cli_progress_bar(paste("Uploading", input_type, "files"), total = n)
   for (i in seq_len(n)) {
     result <- tryCatch(upload_input_file(chat, x[[i]]), error = function(e) e)
     if (inherits(result, "error")) {
-      failures[basename(x[[i]])] <- strip_ansi(conditionMessage(result))
+      failures[labels[[i]]] <- strip_ansi(conditionMessage(result))
     } else {
       uploaded[[i]] <- result
     }
@@ -378,7 +541,8 @@ upload_inputs <- function(x, chat, input_type, call = rlang::caller_env()) {
       "i" = paste0(
         "A failure may be transient, such as a network error, or permanent, ",
         "such as a file the provider cannot read; the message above says which."
-      )
+      ),
+      known_input_providers_hint(input_type)
     ), call = call)
   }
   uploaded
@@ -399,29 +563,36 @@ upload_input_file <- function(chat, path) {
 
 #' What was coded: the files behind each unit, with a content hash
 #'
-#' A path can point at different bytes later. Recording a hash at coding time
-#' lets [qlm_replicate()] and [qlm_backfill()] check that the files they are
-#' about to upload are the ones the run coded, and lets [qlm_trail()] say
-#' which recordings the results rest on.
+#' A path can point at different bytes later, and so can a URL. Recording a
+#' hash at coding time lets [qlm_replicate()] and [qlm_backfill()] check that
+#' the files they are about to upload are the ones the run coded, and lets
+#' [qlm_trail()] say which recordings the results rest on.
 #'
-#' @param x The paths, in input order.
+#' @param x The elements of the input, in order: paths and URLs.
 #' @param ids The `.id` of each, as character.
+#' @param local The local path holding each element's bytes, or `NA` for an
+#'   element the provider fetches (an image URL, a YouTube link). Defaults
+#'   to `x` for paths and `NA` for URLs, the case with nothing downloaded.
 #'
-#' @return A data frame with `.id`, `file` (the basename), `size` (bytes)
-#'   and `sha256`.
+#' @return A data frame with `.id`, `file` (the basename, or the URL with any
+#'   credential redacted), `size` (bytes) and `sha256`; the last two `NA`
+#'   for an element with no bytes here.
 #' @keywords internal
 #' @noRd
-file_provenance <- function(x, ids) {
-  # A URL has no bytes here to size or hash: the provider fetches it, so
-  # the record keeps the URL itself and leaves both NA (#177)
-  is_path <- !is_image_url(x)
+file_provenance <- function(x, ids, local = NULL) {
+  x <- unname(x)
+  is_url <- is_input_url(x, data = TRUE)
+  if (is.null(local)) {
+    local <- ifelse(is_url, NA_character_, x)
+  }
+  here <- !is.na(local)
   size <- rep(NA_real_, length(x))
-  size[is_path] <- as.numeric(file.size(x[is_path]))
+  size[here] <- as.numeric(file.size(local[here]))
   sha256 <- rep(NA_character_, length(x))
-  sha256[is_path] <- vapply(x[is_path], hash_file, character(1), USE.NAMES = FALSE)
+  sha256[here] <- vapply(local[here], hash_file, character(1), USE.NAMES = FALSE)
   data.frame(
     .id = as.character(ids),
-    file = ifelse(is_path, basename(x), x),
+    file = ifelse(is_url, redact_urls(x), basename(x)),
     size = size,
     sha256 = sha256,
     stringsAsFactors = FALSE
@@ -437,7 +608,10 @@ hash_file <- function(path) {
 #'
 #' Called before a replication or a backfill pass uploads anything. A run
 #' coded before hashes were recorded is allowed to proceed with a notice,
-#' since nothing can be checked; the new run records hashes of its own.
+#' since nothing can be checked; the new run records hashes of its own. A
+#' URL the run downloaded is downloaded again here and its bytes compared;
+#' one the provider fetched (an image URL, a YouTube link) has no recorded
+#' hash and is reported as unverifiable like any other unit without one.
 #'
 #' @param x A `qlm_coded` object, already checked.
 #' @param ids The units about to be coded, or `NULL` for all of them.
@@ -461,14 +635,7 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
     ids <- as.character(ids)
     paths <- inputs_by_id(x, ids)
   }
-
-  # A URL was never a file on this machine, so there is nothing to verify
-  is_path <- !is_image_url(paths)
-  ids <- ids[is_path]
-  paths <- paths[is_path]
-  if (!length(paths)) {
-    return(invisible(NULL))
-  }
+  paths <- unname(paths)
 
   recorded <- meta_attr$user$input_files
   if (is.null(recorded)) {
@@ -480,8 +647,23 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
     ))
     return(invisible(NULL))
   }
+  expected <- recorded$sha256[match(ids, recorded$.id)]
 
-  missing <- is.na(paths) | !file.exists(paths)
+  # A URL the provider fetched was never a file on this machine, so there is
+  # nothing to verify; a URL this run downloaded has a hash to compare, and
+  # is downloaded again for the comparison (the new run downloads it in any
+  # case). Any other URL is a unit without a hash, said below.
+  is_url <- is_input_url(paths, data = TRUE)
+  fetched <- is_url & is.na(expected)
+  ids <- ids[!fetched]
+  paths <- paths[!fetched]
+  expected <- expected[!fetched]
+  if (!length(paths)) {
+    return(invisible(NULL))
+  }
+
+  local <- paths
+  missing <- !is_url[!fetched] & (is.na(paths) | !file.exists(paths))
   if (any(missing)) {
     cli::cli_abort(c(
       "{sum(missing)} {input_type} {cli::qty(sum(missing))}file{?s} of this run no longer exist{?s/}: {.path {paths[missing]}}.",
@@ -492,7 +674,6 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
   # A unit with no hash was coded before hashes were recorded, or by a run
   # that was later backfilled with hashes for other units only. Nothing can
   # be checked for it, which is said; it is not called changed.
-  expected <- recorded$sha256[match(ids, recorded$.id)]
   unknown <- is.na(expected)
   if (any(unknown)) {
     cli::cli_inform(c(
@@ -504,14 +685,20 @@ verify_input_files <- function(x, ids = NULL, call = rlang::caller_env()) {
     ))
   }
 
-  current <- file_provenance(paths, ids)
-  changed <- !unknown & current$sha256 != expected
-  if (any(changed)) {
-    cli::cli_abort(c(
-      "{cli::qty(sum(changed))}The {input_type} file{?s} of {sum(changed)} unit{?s} differ{?s/} from the one{?s} this run coded: {.val {ids[changed]}}.",
-      "i" = "The recorded hash is from when the run was coded; the path now points at different bytes.",
-      "i" = "Code the current files as a fresh run with {.fn qlm_code} instead."
-    ), call = call)
+  check <- !unknown
+  if (any(check)) {
+    resolved <- resolve_input_files(paths[check], input_type, say = FALSE, call = call)
+    on.exit(unlink(resolved$temp), add = TRUE)
+    local[check] <- resolved$local
+    current <- file_provenance(paths[check], ids[check], local = resolved$local)
+    changed <- current$sha256 != expected[check]
+    if (any(changed)) {
+      cli::cli_abort(c(
+        "{cli::qty(sum(changed))}The {input_type} file{?s} of {sum(changed)} unit{?s} differ{?s/} from the one{?s} this run coded: {.val {ids[check][changed]}}.",
+        "i" = "The recorded hash is from when the run was coded; the path or URL now points at different bytes.",
+        "i" = "Code the current files as a fresh run with {.fn qlm_code} instead."
+      ), call = call)
+    }
   }
   invisible(NULL)
 }
@@ -544,11 +731,11 @@ merge_input_files <- function(x, new) {
 
   table <- meta_attr$user$input_files
   if (is.null(table)) {
-    data <- inputs(x)
-    ids <- as.character(names(data) %||% seq_along(data))
+    data <- unname(inputs(x))
+    ids <- as.character(names(inputs(x)) %||% seq_along(data))
     table <- data.frame(
       .id = ids,
-      file = basename(unname(data)),
+      file = ifelse(is_input_url(data, data = TRUE), redact_urls(data), basename(data)),
       size = NA_real_,
       sha256 = NA_character_,
       stringsAsFactors = FALSE
@@ -564,71 +751,6 @@ merge_input_files <- function(x, new) {
 }
 
 
-#' Every registration a run and its backfill passes relied on
-#'
-#' @param x A `qlm_coded` object.
-#'
-#' @return A character vector of `"provider/model"` pairs, possibly empty.
-#' @keywords internal
-#' @noRd
-recorded_registrations <- function(x) {
-  meta_attr <- attr(x, "meta")
-  from_passes <- unlist(lapply(
-    meta_attr$object$backfill,
-    function(pass) pass$input_model_registered
-  ))
-  unique(c(meta_attr$user$input_model_registered, from_passes))
-}
-
-
-#' Refuse to replay a run whose model was accepted by registration, unless
-#' this session has registered it too
-#'
-#' The registration is session state by design, and a run records when it
-#' relied on one. A fresh session that replicates or backfills such a run
-#' must register the model again, and the error gives the call.
-#'
-#' @param x A `qlm_coded` object, already checked.
-#' @param model The model the new run will use.
-#' @param call The calling environment, for the error.
-#'
-#' @return Invisibly `NULL`.
-#' @keywords internal
-#' @noRd
-check_registered_input_model <- function(x, model, call = rlang::caller_env()) {
-  meta_attr <- attr(x, "meta")
-  pairs <- recorded_registrations(x)
-  if (!length(pairs)) {
-    return(invisible(NULL))
-  }
-  input_type <- meta_attr$object$input_type
-  # The run's own model needed the run-level registration; a pass's model
-  # needed the pass's. Any other model is checked afresh by qlm_code().
-  needed <- character()
-  if (identical(model, meta_attr$object$chat_args$name)) {
-    needed <- meta_attr$user$input_model_registered
-  }
-  if (model %in% pairs) {
-    needed <- c(needed, model)
-  }
-  needed <- unique(needed)
-  for (registered in needed) {
-    pair <- strsplit(registered, "/", fixed = TRUE)[[1]]
-    if (is_registered_input_model(input_type, pair[1], pair[2])) {
-      next
-    }
-    cli::cli_abort(c(
-      "This run accepted {.val {registered}} for {input_type} input through {.fn qlm_register_model}, and this session has not registered it.",
-      "i" = paste0(
-        "Run {.code qlm_register_model(\"", registered, "\", input_type = \"",
-        input_type, "\")} and try again."
-      )
-    ), call = call)
-  }
-  invisible(NULL)
-}
-
-
 # Cost -------------------------------------------------------------------------
 
 #' The qualification every audio cost carries
@@ -636,7 +758,8 @@ check_registered_input_model <- function(x, model, call = rlang::caller_env()) {
 #' ellmer prices a run from its total token count at the model's text rate.
 #' Gemini reports audio tokens separately and charges more for them, and
 #' `prices` supplied by the caller are per token too, so on either basis the
-#' figure can only be low.
+#' figure can only be low. Video tokens are charged at the text rate, so a
+#' video run carries no such note.
 #'
 #' @keywords internal
 #' @noRd

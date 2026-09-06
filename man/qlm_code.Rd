@@ -22,7 +22,9 @@ qlm_code(
 \arguments{
 \item{x}{character; the input data: texts for a text codebook, file
 paths or URLs for an image codebook (see the section on image input), or
-file paths for an audio codebook (see the section on audio input).
+file paths for an audio codebook (see the section on audio input), or
+file paths, YouTube links and URLs of video files for a video codebook
+(see the section on video input).
 Named vectors will use names
 as identifiers in the output; unnamed vectors will use sequential integers.
 The identifiers become the \code{.id} column, on which every later operation
@@ -328,19 +330,14 @@ instructions, so the schema can ask for a transcript, a language, a
 summary or any coding of the content. Accepted formats are mp3, wav, ogg,
 m4a, flac and aac.
 
-Which providers accept audio this way is checked before anything is
-uploaded, from the chat the run will use. As of this version only Google
-Gemini does, so \code{model} must be a \verb{google_gemini/} model in the
-\verb{gemini-<version>-pro}, \code{-flash} or \code{-flash-lite} families, with an
-optional preview, date or \code{-latest} suffix; TTS, image, live and
-transcription models that share a family stem are refused, as is Vertex,
-which has no file upload. This is a snapshot of what providers accepted on
-the date it was written. A model outside the recognised families that
-does accept audio can be accepted for the session with
-\code{\link[=qlm_register_model]{qlm_register_model()}}; a run coded that way records it, and
-replicating or backfilling the run in another session needs the
-registration again. For any other provider, transcribe the recordings
-first and code the transcripts with a text codebook.
+Which providers accept audio this way is not checked in advance: the
+recordings are uploaded and the model is asked, and a provider that
+cannot take them refuses with its own message, to which \code{qlm_code()} adds
+what is known. As of this version only Google Gemini (\verb{google_gemini/})
+is known to accept an uploaded recording alongside a schema-constrained
+request; OpenAI's and Anthropic's endpoints refuse, and Vertex has no
+file upload. For those providers, transcribe the recordings first and
+code the transcripts with a text codebook.
 
 Every upload completes before the first coding request is sent, so either
 all the inputs are ready or nothing is spent; a failed upload stops the
@@ -367,6 +364,45 @@ potentially underestimated: providers charge more per audio token than
 per text token, and the figure is computed at the text rate from the
 total. The run's cost note says so, in \code{print()}, the trail, and any
 backfill pass.
+}
+
+\section{Video input}{
+
+
+A codebook with \code{input_type = "video"} codes picture and sound in one
+pass. Each element of \code{x} is one of: the path of a local video file
+(\code{mp4}, \code{mov}, \code{avi}, \code{wmv} or \code{webm}), which is uploaded to the
+provider; a YouTube link, which the provider fetches itself, so nothing
+is uploaded; or the URL of a video file, which is downloaded here and then
+uploaded like a file, and must end in one of those extensions. The model
+receives a reference to each with the codebook's instructions, so the
+schema can ask for a transcript, a description of what is shown, or any
+coding of the content. A video carries its audio track, so speech and
+picture are coded together.
+
+As with audio, which providers accept video is not checked in advance; a
+provider that cannot take it refuses with its own message, and
+\code{qlm_code()} adds what is known. As of this version only Google Gemini
+(\verb{google_gemini/}) accepts video, and all its chat models do. Gemini
+samples one frame a second and, at its default resolution, spends
+roughly 300 input tokens per second of video, so a ten-minute clip is
+about 175,000 tokens and a model with a million tokens of context takes
+about an hour of video per request. Before uploading, \code{qlm_code()} says
+how much it is about to send: the total duration and a token estimate
+when the \pkg{av} package is installed, the total size otherwise. A file
+over 2 GB, the upload's limit, is refused. Video tokens are charged at
+the text rate, so a cost from \code{include_cost} or \code{prices} needs no
+qualification here, unlike audio. A YouTube video must be public; the
+free tier caps YouTube input at eight hours of video a day. Gemini's own
+video settings (frame rate, clip offsets, media resolution) are not
+exposed by ellmer, so whole clips are coded at the defaults.
+
+Provenance and replication work as for audio. The run records each
+file's size and SHA-256 hash; for a downloaded URL those are of the
+downloaded bytes, and for a YouTube link the URL alone is recorded, since
+nothing passed through this machine. \code{\link[=qlm_replicate]{qlm_replicate()}} and
+\code{\link[=qlm_backfill]{qlm_backfill()}} download and upload again, checking the hashes first,
+and \code{batch = TRUE} is refused as for audio.
 }
 
 \section{Rejected runs}{
@@ -482,6 +518,24 @@ speech_codebook <- qlm_codebook(
 coded_audio <- qlm_code(
   c(interview1 = "interview1.mp3", interview2 = "interview2.wav"),
   speech_codebook, model = "google_gemini/gemini-2.5-flash"
+)
+
+# A video codebook takes local files, YouTube links and URLs of video
+# files in one vector; see "Video input" for what is uploaded and what
+# the provider fetches itself
+codebook_video <- qlm_codebook(
+  name = "Video description",
+  instructions = "Describe what is shown and transcribe what is said.",
+  schema = ellmer::type_object(
+    transcript = ellmer::type_string("Verbatim transcript of the speech"),
+    setting = ellmer::type_string("Where the video is filmed, in a few words")
+  ),
+  input_type = "video"
+)
+coded_video <- qlm_code(
+  c(clip = "clip.mp4", zoo = "https://www.youtube.com/watch?v=jNQXAC9IVRw"),
+  codebook = codebook_video,
+  model = "google_gemini/gemini-2.5-flash"
 )
 }
 

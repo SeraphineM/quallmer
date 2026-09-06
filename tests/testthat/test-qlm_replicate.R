@@ -1237,15 +1237,30 @@ test_that("qlm_replicate of a run without recorded hashes proceeds with a notice
 })
 
 
-test_that("qlm_replicate needs the registration a run relied on (#124)", {
-  withr::defer(reset_registered_input_models())
-  paths <- c(a = audio_file())
-  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
-                   model = "google_gemini/gemini-4-ultra")
+
+
+test_that("qlm_replicate downloads a video URL again and checks its bytes (#179)", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4",
+         zoo = "https://www.youtube.com/watch?v=jNQXAC9IVRw")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+  seen <- character()
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    seen <<- c(seen, url)
+    writeBin(as.raw(11:30), dest)
+    invisible(dest)
+  })
   f <- qlm_replicate
   mockery::stub(f, "qlm_code", function(x, ...) run)
 
-  expect_error(f(run, name = "rep"), "qlm_register_model")
-  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
-  expect_s3_class(f(run, name = "rep"), "qlm_coded")
+  expect_s3_class(suppressMessages(f(run, name = "rep")), "qlm_coded")
+  # The URL was fetched for the check; the YouTube link has nothing to check
+  expect_equal(seen, "https://example.org/ad.mp4")
+
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    writeBin(as.raw(99:110), dest)
+    invisible(dest)
+  })
+  expect_error(f(run, name = "rep2"), 'differs from the one this run coded: "ad"')
 })
