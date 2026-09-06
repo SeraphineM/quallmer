@@ -42,3 +42,69 @@ offline_chat <- function(model = "openai/gpt-4.1-mini", ...) {
   ellmer::chat(model, credentials = function() list(Authorization = "Bearer x"),
                ...)
 }
+
+# Turns from a table of expected rows, for tests written against the table
+# ellmer used to hand back. Each row becomes a JSON turn carrying the schema
+# columns, with the usage columns as its tokens and cost when they are
+# there, and a row whose `.error` is set becomes that condition in the
+# turn's place. An NA scalar is sent as JSON null, which is what a
+# provider that left the field out would produce.
+rows_as_turns <- function(rows) {
+  usage_cols <- c("input_tokens", "output_tokens", "cached_input_tokens")
+  meta <- c(".error", usage_cols, "cost")
+  errors <- if (".error" %in% names(rows)) {
+    as.list(rows$.error)
+  } else {
+    vector("list", nrow(rows))
+  }
+  fields <- setdiff(names(rows), meta)
+  lapply(seq_len(nrow(rows)), function(i) {
+    if (!is.null(errors[[i]])) {
+      return(errors[[i]])
+    }
+    data <- lapply(fields, function(col) row_value(rows[[col]], i))
+    names(data) <- fields
+    tokens <- if (all(usage_cols %in% names(rows))) {
+      as.numeric(c(rows$input_tokens[[i]], rows$output_tokens[[i]],
+                   rows$cached_input_tokens[[i]]))
+    } else {
+      c(10, 5, 0)
+    }
+    cost <- if ("cost" %in% names(rows)) as.numeric(rows$cost[[i]]) else 0.001
+    json_turn(data, tokens = tokens, cost = cost)
+  })
+}
+
+row_value <- function(column, i) {
+  if (is.data.frame(column)) {
+    return(lapply(column, row_value, i = i))
+  }
+  if (is.list(column)) {
+    v <- column[[i]]
+    if (is.data.frame(v)) {
+      return(lapply(seq_len(nrow(v)), function(r) lapply(v, row_value, i = r)))
+    }
+    return(as.list(v))
+  }
+  v <- column[[i]]
+  if (is.na(v)) {
+    return(NULL)
+  }
+  if (is.factor(v)) as.character(v) else v
+}
+
+# A stand-in for structured_chat_turns(): answers with `results`, which may
+# be a list of turns, a table for rows_as_turns(), or a function of the
+# execution arguments returning either. Records each call in `calls`.
+turns_stub <- function(results, calls = NULL) {
+  function(chat, prompts, type, batch = FALSE, execution_args = list()) {
+    if (!is.null(calls)) {
+      calls$n <- (calls$n %||% 0L) + 1L
+      calls$dots <- execution_args
+      calls$n_prompts <- length(prompts)
+      calls$batch <- batch
+    }
+    out <- if (is.function(results)) results(execution_args) else results
+    if (is.data.frame(out)) rows_as_turns(out) else out
+  }
+}

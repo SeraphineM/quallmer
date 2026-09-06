@@ -22,17 +22,17 @@ audio_runner <- function(results = function(prompts) data.frame(language = rep("
   )
   tsc <- try_structured_call
   i <- 0L
-  ellmer_call <- function(chat, prompts, type, ...) {
+  adapter <- function(chat, prompts, type, batch = FALSE, execution_args = list()) {
     i <<- i + 1L
     calls$log <- c(calls$log, "inference")
     calls$prompts <- prompts
-    calls$dots <- list(...)
+    calls$dots <- execution_args
     err <- if (!is.null(errors) && i <= length(errors)) errors[[i]] else NA_character_
     if (!is.na(err)) stop(err, call. = FALSE)
-    if (is.function(results)) results(prompts) else results
+    out <- if (is.function(results)) results(prompts) else results
+    if (is.data.frame(out)) rows_as_turns(out) else out
   }
-  mockery::stub(tsc, "ellmer::parallel_chat_structured", ellmer_call)
-  mockery::stub(tsc, "ellmer::batch_chat_structured", ellmer_call)
+  mockery::stub(tsc, "structured_chat_turns", adapter)
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)
   f
@@ -413,7 +413,7 @@ test_that("the same holds for an image codebook, which used to reach the JSON ha
     .package = "ellmer"
   )
   tsc <- try_structured_call
-  mockery::stub(tsc, "ellmer::parallel_chat_structured",
+  mockery::stub(tsc, "structured_chat_turns",
                 function(...) stop("HTTP 400 Bad Request. Image too large.", call. = FALSE))
   f <- qlm_code
   mockery::stub(f, "try_structured_call", tsc)

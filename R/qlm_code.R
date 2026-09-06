@@ -620,7 +620,6 @@ qlm_code <- function(x, codebook, model, ...,
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
-      allow_skip = identical(structured, "auto") && !batch && !file_input,
       cost_message = is.null(prices)
     )
 
@@ -628,27 +627,22 @@ qlm_code <- function(x, codebook, model, ...,
 
     if (isTRUE(attempt$ok)) {
       results <- attempt$value
-      backend_meta <- list(backend = "structured")
+      # Every response was checked against the schema before conversion;
+      # recorded so a reader of the run can tell it from one coded before
+      # that was so (#140)
+      backend_meta <- list(backend = "structured", validation = "local")
       # The model was accepted by a session registration: recorded, so that
       # a replay elsewhere knows to ask for it again
       if (!is.null(attempt$registered)) {
         backend_meta$input_model_registered <- attempt$registered
       }
-      incomplete <- n_incomplete(results, codebook$schema)
-      if (incomplete) {
-        cli::cli_warn(
-          "{incomplete} row{?s} from the structured call {?is/are} missing at least one required field."
-        )
-      }
-    } else if (isTRUE(attempt$undetectable)) {
-      # Not a failure: no request was made. Informational, because the choice
-      # is a consequence of the codebook and the endpoint, not of anything
-      # going wrong.
-      fallback_reason <- attempt$error
-      cli::cli_inform(c(
-        "i" = "Coding {.val {model}} in JSON mode with local validation.",
-        "i" = attempt$error,
-        "i" = "Use {.code structured = \"structured\"} to rely on the provider instead."
+    } else if (isTRUE(attempt$pending)) {
+      # Not a failure either: the job is running at the provider, and its
+      # state is on disk. Nothing to fall back to, and nothing to tabulate.
+      cli::cli_abort(c(
+        "The batch job has not finished.",
+        "i" = "Re-run the same call with the same {.arg path} to resume it; ellmer keeps the job's state there.",
+        "i" = "Or set {.code wait = TRUE} to wait for it."
       ))
     } else if (isTRUE(attempt$rejected) &&
                length(model_hint <- model_name_hint(model, chat_args))) {
@@ -707,7 +701,9 @@ qlm_code <- function(x, codebook, model, ...,
       batch = batch,
       json_retries = json_retries,
       model_hint = model_hint,
-      cost_message = is.null(attempt) && is.null(prices)
+      cost_message = is.null(attempt) && is.null(prices),
+      # What the structured attempt spent is part of what the run cost
+      prior_usage = attempt$usage
     )
     backend_meta <- attr(results, "qlm_backend_meta") %||% list()
     attr(results, "qlm_backend_meta") <- NULL
@@ -821,19 +817,32 @@ default_structured_mode <- function(model) {
 
 #' Attempt schema-constrained structured output
 #'
-#' Wraps the [ellmer::parallel_chat_structured()] path so that [qlm_code()] can
-#' decide what to do when it does not work. Two things count as failure: the
-#' call throwing, and the call returning a table in which every required field
-#' is `NA` in every row, which is what an endpoint that accepted the schema and
-#' ignored it produces.
+#' Runs the structured call through [structured_chat_turns()] and validates
+#' every response against the codebook before conversion (#140), so that
+#' [qlm_code()] can decide what to do with what came back. A unit whose
+#' response failed -- refused by the provider, cut off, without JSON, or
+#' with JSON that is not the schema -- keeps its row, its reason in `.error`
+#' and its usage; the other units keep their coded values.
+#'
+#' Two things count as failure of the attempt as a whole: the call throwing,
+#' and every response that reached validation failing it, which is what an
+#' endpoint that accepted the schema and ignored it produces. Only responses
+#' the provider completed are judged: a refused request or a cut-off
+#' response says nothing about whether the endpoint honours the schema.
 #'
 #' @param x,codebook,model,chat_args,execution_args,batch As in [qlm_code()].
+#' @param cost_message Whether to say now why the cost will be `NA`.
 #'
-#' @return A list with `ok`, and either `value` (the results) or `error`.
+#' @return A list with `ok`, and either `value` (the results, with `usage`
+#'   alongside) or `error`. `rejected` marks a provider that refused every
+#'   request with a status that will not change; `invalid` marks an
+#'   endpoint whose every completed response failed validation, with the
+#'   attempt's `usage` so a fallback can carry it; `pending` marks a batch
+#'   job not yet finished.
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
-                                allow_skip = FALSE, cost_message = TRUE) {
+                                cost_message = TRUE) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -852,77 +861,32 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   # From the chat the run will use, before anything is sent (#135)
   unpriced <- cost_diagnosis(chat, model, execution_args, say = cost_message)
 
-  # Whether a failed structured call would even be visible depends on the
-  # codebook. Failure is detected from required scalar fields coming back all
-  # NA; a codebook whose required properties are all arrays or nested objects
-  # offers no such signal, because ellmer renders those as list-columns where a
-  # missing value and a schema-valid empty one are the same zero-length cell.
-  #
-  # So on an endpoint whose enforcement cannot be verified, a structured call
-  # over such a codebook would be trusted with no way to check it. Validate
-  # locally instead, and say why. `structured = "structured"` remains the way
-  # to ask for provider enforcement regardless.
-  provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
-
   # A URL detail setting that will not reach the provider is said here,
   # before anything is sent. Not tied to `cost_message`: supplying `prices`
   # silences the cost note, and must not silence this (#177)
   if (codebook$input_type == "image") {
     say_image_url_detail(codebook, x, chat)
   }
-  undetectable <- allow_skip &&
-    !is.null(provider) &&
-    !provider_enforces_schema(provider) &&
-    !length(required_scalar_fields(codebook$schema))
 
-  if (undetectable) {
-    return(list(
-      ok = FALSE,
-      unpriced = unpriced,
-      undetectable = TRUE,
-      error = paste0(
-        "this endpoint's schema enforcement cannot be verified, and the ",
-        "codebook has no required scalar field whose absence would reveal a ",
-        "failed structured call"
-      )
-    ))
-  }
-
-  warn_unenforced_schema(chat, model)
+  # What the run depends on in ellmer, checked before any upload or request
+  ellmer_structured_internals()
 
   # Every upload completes here, before the first request: either all the
   # inputs are ready or nothing is spent. Text and images are built inline.
   prompts <- as_input_content(x, codebook, chat)
 
-  # Whether a response ran into a declared output limit is knowable only from
-  # the token counts, which ellmer attaches on request; the finish reason
-  # itself does not survive parallel_chat_structured(). See
-  # mark_truncated_rows() for what is inferred from them, and why.
-  cap <- declared_max_tokens(chat_args)
-  keep_tokens <- isTRUE(execution_args$include_tokens)
-  if (!is.null(cap)) {
-    execution_args$include_tokens <- TRUE
-  }
-
   run <- function(chat) {
-    if (batch) {
-      with_extraction_errors(do.call(ellmer::batch_chat_structured, c(
-        list(chat = chat, prompts = prompts, type = codebook$schema),
-        execution_args
-      )))
-    } else {
-      with_extraction_errors(do.call(ellmer::parallel_chat_structured, c(
-        list(chat = chat, prompts = prompts, type = codebook$schema),
-        execution_args
-      )))
-    }
+    structured_chat_turns(
+      chat, prompts, codebook$schema, batch = batch,
+      execution_args = execution_args
+    )
   }
 
   # `rejected` records whether the provider refused the run with a status
   # that will not change on retry, so qlm_code() can ask about the model
   # name when it reports; the message alone rarely says.
   attempt <- tryCatch(
-    list(ok = TRUE, value = run(chat)),
+    list(ok = TRUE, turns = run(chat)),
     error = function(e) list(
       ok = FALSE, error = strip_ansi(conditionMessage(e)),
       rejected = is_fatal_status(api_error_status(e))
@@ -945,7 +909,7 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
       sep = "\n\n"
     )
     attempt <- tryCatch(
-      list(ok = TRUE, value = run(build_chat(retry_prompt))),
+      list(ok = TRUE, turns = run(build_chat(retry_prompt))),
       error = function(e) list(
         ok = FALSE, error = strip_ansi(conditionMessage(e)),
         rejected = is_fatal_status(api_error_status(e))
@@ -954,41 +918,107 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   if (isTRUE(attempt$ok)) {
-    attempt$value <- mark_truncated_rows(
-      attempt$value, codebook$schema, cap, keep_tokens = keep_tokens
+    if (is.null(attempt$turns)) {
+      # A batch job told not to wait, and not finished: nothing to tabulate
+      attempt <- list(ok = FALSE, pending = TRUE,
+                      error = "the batch job has not finished")
+    } else {
+      provider <- tryCatch(chat$get_provider(), error = function(e) NULL)
+      attempt <- structured_attempt(
+        attempt$turns, codebook$schema, provider, execution_args
+      )
+    }
+  }
+
+  attempt$unpriced <- unpriced
+  attempt$registered <- capability$registered
+  attempt
+}
+
+
+#' Validate and tabulate the turns of a structured call
+#'
+#' @param turns What [structured_chat_turns()] returned.
+#' @param schema The codebook schema.
+#' @param provider The chat's provider, for ellmer's wrapper rule.
+#' @param execution_args As in [qlm_code()]; read for the usage columns.
+#'
+#' @return An attempt, as [try_structured_call()] documents it.
+#' @keywords internal
+#' @noRd
+structured_attempt <- function(turns, schema, provider, execution_args) {
+  records <- add_structured_values(
+    turn_records(turns),
+    needs_wrapper = structured_needs_wrapper(schema, provider)
+  )
+  n <- length(turns)
+  values <- vector("list", n)
+  errors <- vector("list", n)
+  stage <- rep(NA_character_, n)
+  problems <- rep(NA_character_, n)
+
+  for (i in seq_len(n)) {
+    checked <- if (!is.null(records$value[[i]])) {
+      validate_structured_value(records$value[[i]], schema)
+    }
+    settled <- settle_response(
+      checked, problem = records$problem[[i]], error = records$error[[i]],
+      finish = records$finish[[i]],
+      output_tokens = records$usage[i, "output_tokens"]
     )
+    stage[[i]] <- settled$stage
+    if (isTRUE(settled$ok)) {
+      values[i] <- list(settled$value)
+    } else {
+      problems[[i]] <- settled$error
+      errors[i] <- list(unit_error(settled$error, settled$stage, settled$truncated))
+    }
   }
 
   # Every request refused with a status that will not change on retry is
   # misconfiguration, most often a model name the provider does not have.
   # Returned as a failed attempt, with the reasons, so that qlm_code() can ask
   # the provider about the name rather than hand back a table of NAs.
-  if (isTRUE(attempt$ok) && all_rejected(attempt$value)) {
-    attempt <- list(
-      ok = FALSE,
-      rejected = TRUE,
-      error = unique(failure_reasons(
-        recorded_errors(attempt$value), errored_rows(attempt$value)
-      ))
-    )
+  fatal <- vapply(records$status, is_fatal_status, logical(1))
+  if (n && all(stage == "transport" & fatal)) {
+    return(list(ok = FALSE, rejected = TRUE, error = unique(problems)))
   }
 
-  if (isTRUE(attempt$ok) && all_required_missing(attempt$value, codebook$schema)) {
-    attempt <- list(
+  # Whether the endpoint honours the schema is judged from the responses it
+  # completed: JSON that is not the schema, or no JSON at all, is what an
+  # endpoint that accepted the schema and ignored it produces. A refused
+  # request or a cut-off response is set aside. If none reached validation,
+  # there is nothing to conclude, and the failures stand as recorded.
+  assessed <- stage %in% c("ok", "extraction", "schema")
+  if (any(assessed) && !any(stage == "ok")) {
+    return(list(
       ok = FALSE,
+      invalid = TRUE,
+      usage = records$usage,
       error = paste0(
-        "the structured call returned no usable values (every required field ",
-        "was NA in all ", nrow(attempt$value),
-        if (nrow(attempt$value) == 1L) " row" else " rows",
-        "); the endpoint appears ",
-        "not to honour the JSON schema"
+        "the structured call returned no usable values (every completed ",
+        "response failed validation against the schema, for example: ",
+        problems[assessed][[1]],
+        "); the endpoint appears not to honour the JSON schema"
       )
-    )
+    ))
   }
 
-  attempt$unpriced <- unpriced
-  attempt$registered <- capability$registered
-  attempt
+  failed <- !is.na(stage) & stage != "ok"
+  if (any(failed)) {
+    cli::cli_warn(c(
+      "{sum(failed)} response{?s} from the structured call could not be coded, out of {n}.",
+      set_bullets(unique(problems[failed])),
+      "i" = "Their coded values are missing; {.fn qlm_failures} lists them with the reasons."
+    ))
+  }
+
+  value <- tabulate_results(
+    values, errors, records$usage, schema,
+    include_tokens = isTRUE(execution_args$include_tokens),
+    include_cost = isTRUE(execution_args$include_cost)
+  )
+  list(ok = TRUE, value = value, usage = records$usage, n_invalid = sum(failed))
 }
 
 
@@ -1406,6 +1436,9 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
   if (!is.null(metadata$structured)) {
     object_meta$structured <- metadata$structured
   }
+  if (!is.null(metadata$validation)) {
+    object_meta$validation <- metadata$validation
+  }
 
   # Build user metadata: start with name and notes, then add custom metadata
   user_meta <- list(
@@ -1415,7 +1448,8 @@ new_qlm_coded <- function(results, codebook, data, input_type, chat_args,
 
   # Add any custom metadata fields (exclude system, object, and user-handled fields)
   system_fields <- c("timestamp", "ellmer_version", "quallmer_version", "R_version")
-  object_fields <- c("n_units", "source", "is_gold", "backend", "structured")
+  object_fields <- c("n_units", "source", "is_gold", "backend", "structured",
+                     "validation")
   user_handled <- c("name", "notes")
   exclude_fields <- c(system_fields, object_fields, user_handled)
 
