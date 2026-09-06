@@ -597,7 +597,7 @@ generate_trail_report <- function(trail, file) {
     # for the run and for any backfill pass
     if (!is.null(run$input_model_registered)) {
       lines <- c(lines, paste0(
-        "**Model accepted by:** `qlm_register_input_model(\"",
+        "**Model accepted by:** `qlm_register_model(\"",
         run$input_model_registered, "\", input_type = \"",
         run$input_type %||% "audio", "\")` in the coding session"
       ))
@@ -611,7 +611,7 @@ generate_trail_report <- function(trail, file) {
       pass_registered <- run$backfill[[k]]$input_model_registered
       if (!is.null(pass_registered)) {
         lines <- c(lines, paste0(
-          "**Backfill pass ", k, " model accepted by:** `qlm_register_input_model(\"",
+          "**Backfill pass ", k, " model accepted by:** `qlm_register_model(\"",
           pass_registered, "\", input_type = \"",
           run$input_type %||% "audio", "\")` in the coding session"
         ))

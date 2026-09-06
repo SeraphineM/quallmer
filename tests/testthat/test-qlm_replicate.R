@@ -1245,7 +1245,7 @@ test_that("qlm_replicate needs the registration a run relied on (#124)", {
   f <- qlm_replicate
   mockery::stub(f, "qlm_code", function(x, ...) run)
 
-  expect_error(f(run, name = "rep"), "qlm_register_input_model")
-  suppressMessages(qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio"))
+  expect_error(f(run, name = "rep"), "qlm_register_model")
+  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
   expect_s3_class(f(run, name = "rep"), "qlm_coded")
 })

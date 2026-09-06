@@ -41,6 +41,7 @@
 #' Supplying a replacement `model` resolves that model afresh. Registry
 #' entries contain environment variable names, never key values.
 #'
+#' @seealso [qlm_register_model()] for accepting a model for a file input type.
 #' @return The endpoint definition, invisibly.
 #' @export
 #' @examples

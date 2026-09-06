@@ -104,7 +104,7 @@ check_file_inputs <- function(x, input_type, call = rlang::caller_env()) {
 #' and prices, so there is no capability metadata to consult at run time.
 #'
 #' A model outside the recognised families is accepted for the session by
-#' [qlm_register_input_model()].
+#' [qlm_register_model()].
 #'
 #' @return A named list, one entry per gated input type, each with
 #'   `providers` (accepted provider names), `families` (a regular expression
@@ -165,14 +165,15 @@ the$registered_input_models <- list()
 #'
 #' @examples
 #' \dontrun{
-#' qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio")
+#' qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio")
 #' coded <- qlm_code(audio_files, audio_codebook, model = "google_gemini/gemini-4-ultra")
 #' }
 #'
-#' @seealso [qlm_code()], whose "Audio input" section says what is accepted
+#' @seealso [qlm_register_provider()] for configuring an endpoint;
+#'   [qlm_code()], whose "Audio input" section says what is accepted
 #'   without registration.
 #' @export
-qlm_register_input_model <- function(model, input_type = "audio") {
+qlm_register_model <- function(model, input_type = "audio") {
   gated <- names(input_capabilities())
   if (!is.character(input_type) || length(input_type) != 1L ||
       !input_type %in% gated) {
@@ -290,7 +291,7 @@ check_input_capability <- function(input_type, chat, model, call = rlang::caller
       "i" = "Recognised families: {caps$describe}.",
       "i" = paste0(
         "If it does accept {input_type}, register it for this session with ",
-        "{.code qlm_register_input_model(\"", pair, "\", input_type = \"",
+        "{.code qlm_register_model(\"", pair, "\", input_type = \"",
         input_type, "\")}."
       ),
       "i" = transcribe
@@ -617,9 +618,9 @@ check_registered_input_model <- function(x, model, call = rlang::caller_env()) {
       next
     }
     cli::cli_abort(c(
-      "This run accepted {.val {registered}} for {input_type} input through {.fn qlm_register_input_model}, and this session has not registered it.",
+      "This run accepted {.val {registered}} for {input_type} input through {.fn qlm_register_model}, and this session has not registered it.",
       "i" = paste0(
-        "Run {.code qlm_register_input_model(\"", registered, "\", input_type = \"",
+        "Run {.code qlm_register_model(\"", registered, "\", input_type = \"",
         input_type, "\")} and try again."
       )
     ), call = call)

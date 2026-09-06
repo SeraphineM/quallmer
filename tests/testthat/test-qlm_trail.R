@@ -1137,7 +1137,7 @@ test_that("the report names a file-input run's files by hash, and any registrati
   expect_true(any(grepl(hash_file(paths[["a"]]), content, fixed = TRUE)))
   expect_true(any(grepl(paste0("| b | ", basename(paths[["b"]]), " | 10 | `"), content, fixed = TRUE)))
   expect_true(any(grepl(
-    'qlm_register_input_model("google_gemini/gemini-4-ultra", input_type = "audio")',
+    'qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio")',
     content, fixed = TRUE
   )))
 
@@ -1183,7 +1183,7 @@ test_that("the report discloses a registration a backfill pass relied on, and un
   suppressMessages(qlm_trail(run, path = temp_path))
   content <- readLines(paste0(temp_path, ".qmd"))
   expect_true(any(grepl(
-    '**Backfill pass 1 model accepted by:** `qlm_register_input_model("google_gemini/gemini-4-ultra"',
+    '**Backfill pass 1 model accepted by:** `qlm_register_model("google_gemini/gemini-4-ultra"',
     content, fixed = TRUE
   )))
   expect_true(any(grepl("| a | ", content, fixed = TRUE) & grepl("not recorded", content, fixed = TRUE)))
