@@ -33,7 +33,9 @@ deprecated \code{\link[=task]{task()}} objects for backward compatibility.}
 
 \item{model}{character; the provider (and optionally model) name in the form
 \code{"provider/model"} or \code{"provider"} (which will use the default model for
-that provider). Passed to the \code{name} argument of \code{\link[ellmer:chat]{ellmer::chat()}}.
+that provider). Native prefixes are passed to \code{\link[ellmer:chat]{ellmer::chat()}}.
+Registered prefixes, such as \code{"dashscope/qwen-plus"}, resolve through
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} and require an explicit model name.
 Examples: \code{"openai/gpt-4o-mini"}, \code{"anthropic/claude-3-5-sonnet-20241022"},
 \code{"ollama/llama3.2"}, \code{"openai"} (uses default OpenAI model).}
 
@@ -442,6 +444,14 @@ cost-effective but has longer turnaround times. The \code{path} argument specifi
 where batch results are cached, \code{wait} controls whether to wait for completion,
 and \code{ignore_hash} can force reprocessing of cached results. \code{on_error} does
 not apply: the batch API has no equivalent.
+}
+
+\section{Registered providers}{
+
+OpenAI-compatible endpoints can also be addressed by a registered prefix,
+for example \code{model = "dashscope/qwen-plus"}. See
+\code{\link[=qlm_register_provider]{qlm_register_provider()}} for built-in endpoints, credential sources,
+and adding a private gateway. Native ellmer prefixes take precedence.
 }
 
 \examples{

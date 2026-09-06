@@ -78,6 +78,7 @@ reference:
       - qlm_codebook
       - qlm_segment
       - qlm_register_input_model
+      - qlm_register_provider
 
   - title: Human-coded data
     desc: Convert and work with human-coded or externally coded data

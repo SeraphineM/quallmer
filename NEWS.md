@@ -83,6 +83,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## New features
 
+* `qlm_code()` and `qlm_segment()` accept registered OpenAI-compatible
+  provider prefixes. `qlm_register_provider()` adds session-specific endpoints;
+  replication and backfill retain the recorded endpoint (#145).
+
 * `qlm_codebook()` accepts `input_type = "audio"`, and `qlm_code()` codes
   recordings in one pass: each file is uploaded to the provider through
   ellmer's file upload and the model receives a reference to it with the

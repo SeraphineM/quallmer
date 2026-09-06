@@ -150,6 +150,7 @@ qlm_trail <- function(..., path = NULL) {
       run$codebook <- attr(obj, "codebook")
       run$batch <- meta_attr$object$batch
       run$chat_args <- meta_attr$object$chat_args
+      run$provider_resolution <- meta_attr$object$provider_resolution
       run$execution_args <- meta_attr$object$execution_args
       run$prices <- meta_attr$user$prices
       run$cost_note <- meta_attr$user$cost_note
@@ -295,6 +296,9 @@ print.qlm_trail <- function(x, ...) {
     }
     if (!is.null(run$chat_args$name)) {
       cat("Model:   ", run$chat_args$name, "\n", sep = "")
+    }
+    if (!is.null(run$provider_resolution)) {
+      cat("Requested model: ", run$provider_resolution$requested_model, "\n", sep = "")
     }
     if (!is.null(backfill_summary(run$backfill))) {
       cat("Backfill:", backfill_summary(run$backfill), "\n")
@@ -543,6 +547,10 @@ generate_trail_report <- function(trail, file) {
     if (!is.null(run$chat_args$name)) {
       lines <- c(lines, paste("**Model:**", run$chat_args$name))
     }
+    if (!is.null(run$provider_resolution)) {
+      lines <- c(lines, paste("**Requested model:**",
+                              run$provider_resolution$requested_model))
+    }
     if (!is.null(backfill_summary(run$backfill))) {
       lines <- c(lines, paste("**Backfill:**", backfill_summary(run$backfill)))
     }
@@ -595,6 +603,11 @@ generate_trail_report <- function(trail, file) {
       ))
     }
     for (k in seq_along(run$backfill)) {
+      resolution <- run$backfill[[k]]$provider_resolution
+      if (!is.null(resolution)) {
+        lines <- c(lines, paste0("**Backfill pass ", k, " requested model:** ",
+                                resolution$requested_model))
+      }
       pass_registered <- run$backfill[[k]]$input_model_registered
       if (!is.null(pass_registered)) {
         lines <- c(lines, paste0(
