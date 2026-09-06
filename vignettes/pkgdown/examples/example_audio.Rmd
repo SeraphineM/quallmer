@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This example demonstrates two ways of analyzing audio content. The first is a two-step process: (1) transcribing audio to text using OpenAI's Whisper model, and (2) extracting structured information from the transcripts using `qlm_code()`. The second, added in quallmer 0.5, codes the recordings directly: a codebook with `input_type = "audio"` sends each file to a multimodal model, which transcribes and codes it in one pass. Both workflows enable large-scale analysis of speeches, interviews, and other audio content, and the final section compares their results.
+This example demonstrates two ways of analyzing audio content. The first is a two-step process: (1) transcribing audio to text with `qlm_transcribe()`, and (2) extracting structured information from the transcripts using `qlm_code()`, which records how the transcripts were made. The second, added in quallmer 0.5, codes the recordings directly: a codebook with `input_type = "audio"` sends each file to a multimodal model, which transcribes and codes it in one pass. Both workflows enable large-scale analysis of speeches, interviews, and other audio content, and the final section compares their results.
 
 ## Loading packages and data
 
@@ -36,59 +36,76 @@ for (f in audio_files) {
 
 These audio files contain speech samples in multiple languages from the Open Speech Repository and other sources.
 
-## Step 1: Transcribing audio with Whisper
+## Step 1: Transcribing the recordings
 
-OpenAI's Whisper model provides high-quality, multilingual transcription. We use the `openai` package to transcribe each audio file:
+`qlm_transcribe()` sends each recording to a speech-to-text model and returns the transcripts as a character vector that carries its own provenance: the file each transcript came from and its SHA-256 hash, the model, the time, and the usage the provider reported. The default model is OpenAI's `gpt-4o-mini-transcribe`; `whisper-1` and `gpt-4o-transcribe` are reached the same way, and a Gemini chat model can transcribe too (`model = "google_gemini/gemini-2.5-flash"`). The requests run in parallel with a progress bar. Unnamed files are named by their basenames, and those names become the `.id` of each unit when the transcripts are coded.
 
 ```{r transcribe-audio, eval=FALSE}
-library(openai)
+transcripts <- qlm_transcribe(audio_files)
 
-# Transcribe all audio files
-transcriptions <- map_chr(audio_files, function(file_path) {
-  cat("Transcribing:", basename(file_path), "\n")
-
-  transcription <- create_transcription(
-    file = file_path,
-    model = "whisper-1"
-  )
-
-  transcription$text
-})
-
-# Name the transcriptions by filename
-names(transcriptions) <- basename(audio_files)
-
-# Save transcriptions
-saveRDS(transcriptions, "data/transcriptions_whisper.rds")
+# Save transcripts, provenance included
+saveRDS(transcripts, "data/transcripts.rds")
 ```
 
-```{r load-transcriptions, echo=FALSE}
-# Load pre-computed transcriptions
-transcriptions <- readRDS("data/transcriptions_whisper.rds")
+```{r load-transcripts, echo=FALSE}
+# Load pre-computed transcripts
+transcripts <- readRDS("data/transcripts.rds")
 ```
 
-## Viewing the transcriptions
+## Viewing the transcripts
 
-Let's examine the transcribed content:
+Printing the object shows the first line of each transcript under its name:
 
-```{r view-transcriptions}
-# Display each transcription (truncated for readability)
-for (i in seq_along(transcriptions)) {
-  cat("=== File:", names(transcriptions)[i], "===\n")
+```{r view-transcripts}
+transcripts
+```
 
-  # Show first 200 characters
-  text_preview <- substr(transcriptions[i], 1, 200)
-  if (nchar(transcriptions[i]) > 200) {
-    text_preview <- paste0(text_preview, "...")
-  }
-  cat(text_preview, "\n\n")
-}
+The provenance table has one row per recording. It is what `qlm_code()` will record with the coded run, so that the audit trail says which transcription process produced the text:
 
-# Word counts
-word_counts <- map_int(transcriptions, ~length(strsplit(.x, "\\s+")[[1]]))
-cat("Word count statistics:\n")
-cat("  Range:", min(word_counts), "-", max(word_counts), "words\n")
-cat("  Mean:", round(mean(word_counts)), "words\n")
+```{r view-provenance}
+attr(transcripts, "provenance") %>%
+  select(.id, status, file, size, sha256, model) %>%
+  mutate(sha256 = paste0(substr(sha256, 1, 12), "...")) %>%
+  kable(caption = "Provenance of each transcript")
+```
+
+The usage column holds what the endpoint reported, here audio and text tokens; `whisper-1` reports seconds of audio instead. No dollar cost is computed for a transcription, since ellmer has no rates for transcription models, but the usage is there to cost by hand:
+
+```{r view-usage}
+usage <- attr(transcripts, "provenance")$usage
+cat("Audio tokens transcribed:",
+    sum(sapply(usage, function(u) u$input_token_details$audio_tokens)), "\n")
+```
+
+A count of words per transcript, for a sense of scale:
+
+```{r transcript-lengths}
+word_counts <- map_int(transcripts, ~length(strsplit(.x, "\\s+")[[1]]))
+data.frame(file = names(transcripts), words = word_counts, row.names = NULL) %>%
+  kable(caption = "Transcript length")
+```
+
+### Recordings on the web
+
+`qlm_transcribe()` also takes a URL, which it downloads to a temporary file, transcribes, and removes. The hash recorded is of the downloaded bytes, so a transcript is tied to the recording itself rather than to a path. The Chinese clip above is a copy of one in the Open Speech Repository; transcribing the web copy records the same hash as the local file:
+
+```{r transcribe-web, eval=FALSE}
+web <- qlm_transcribe(
+  c(web_copy = "https://www.voiptroubleshooter.com/open_speech/chinese/OSR_cn_000_0072_8k.wav")
+)
+saveRDS(web, "data/transcript_web.rds")
+```
+
+```{r load-web, echo=FALSE}
+web <- readRDS("data/transcript_web.rds")
+```
+
+```{r compare-hashes}
+local_row <- attr(transcripts, "provenance") %>% filter(file == "OSR_cn_000_0072_8k.wav")
+web_row <- attr(web, "provenance")
+cat("Local copy: ", local_row$sha256, "\n")
+cat("Web copy:   ", web_row$sha256, "\n")
+cat("Same recording:", identical(local_row$sha256, web_row$sha256), "\n")
 ```
 
 ## Step 2: Defining the transcript analysis codebook
@@ -149,16 +166,13 @@ We use Gemini 2.5 Flash to analyze the transcripts. This model is fast and cost-
 ```{r code-transcripts, eval=FALSE}
 # Apply transcript analysis using qlm_code()
 coded_transcripts <- qlm_code(
-  transcriptions,
+  transcripts,
   codebook = codebook_transcripts,
   model = "google_gemini/gemini-2.5-flash",
   name = "audio_transcripts_gemini",
   notes = "Analysis of multilingual speech transcripts",
   include_cost = TRUE
 )
-
-# Add filenames to results
-coded_transcripts$.filename <- names(transcriptions)
 
 # Save results
 saveRDS(coded_transcripts, "data/coded_transcripts_gemini.rds")
@@ -167,7 +181,15 @@ saveRDS(coded_transcripts, "data/coded_transcripts_gemini.rds")
 ```{r load-results, echo=FALSE}
 # Load pre-computed results
 coded_transcripts <- readRDS("data/coded_transcripts_gemini.rds")
-coded_transcripts$.filename <- names(transcriptions)
+```
+
+The run records the transcription behind each unit. `qlm_replicate()` and `qlm_backfill()` code these stored transcripts again without another transcription request, and `qlm_trail()` reports the table below as part of the instrument:
+
+```{r transcription-record}
+qlm_meta(coded_transcripts, "transcription") %>%
+  select(.id, file, sha256, model, status) %>%
+  mutate(sha256 = paste0(substr(sha256, 1, 12), "...")) %>%
+  kable(caption = "Transcription recorded with the coded run")
 ```
 
 ## Examining the results
@@ -177,7 +199,7 @@ Let's view the extracted information:
 ```{r display-results}
 # Display key results
 coded_transcripts %>%
-  select(.filename, language, language_confidence, speech_type,
+  select(.id, language, language_confidence, speech_type,
          tone, sentiment) %>%
   kable(
     col.names = c("File", "Language", "Confidence", "Type", "Tone", "Sentiment"),
@@ -185,10 +207,8 @@ coded_transcripts %>%
   )
 ```
 
-Total cost for analyzing `r length(transcriptions)` transcripts:
+The coding cost for `r length(transcripts)` transcripts, kept separate from the transcription usage above:
 ```{r display-cost}
-cat("Transcription cost (Whisper): ~$",
-    round(sum(word_counts) * 0.006 / 100, 4), " (estimated)\n", sep = "")
 cat("Analysis cost (Gemini): $",
     round(sum(coded_transcripts$cost, na.rm = TRUE), 4), "\n", sep = "")
 ```
@@ -209,7 +229,7 @@ print(table(coded_transcripts$language_confidence))
 ```{r topics}
 # Display topics for each transcript
 coded_transcripts %>%
-  select(.filename, main_topics) %>%
+  select(.id, main_topics) %>%
   kable(
     col.names = c("File", "Main Topics"),
     caption = "Topics Identified in Each Transcript"
@@ -225,7 +245,7 @@ Let's examine the complete analysis for one transcript:
 transcript_detail <- coded_transcripts[1, ]
 
 cat("=== Detailed Analysis ===\n\n")
-cat("File:", transcript_detail$.filename, "\n\n")
+cat("File:", transcript_detail$.id, "\n\n")
 cat("Language:", transcript_detail$language,
     "(", transcript_detail$language_confidence, "confidence )\n")
 cat("Speech type:", transcript_detail$speech_type, "\n")
@@ -235,8 +255,8 @@ cat("Main topics:", transcript_detail$main_topics, "\n\n")
 cat("Key phrases:", transcript_detail$key_phrases, "\n\n")
 cat("Summary:", transcript_detail$summary, "\n\n")
 
-cat("=== Original Transcription (first 300 chars) ===\n")
-cat(substr(transcriptions[1], 1, 300), "...\n")
+cat("=== Transcript (first 300 chars) ===\n")
+cat(substr(transcripts[[transcript_detail$.id]], 1, 300), "...\n")
 ```
 
 ## Summary statistics
@@ -257,7 +277,7 @@ print(table(coded_transcripts$sentiment))
 
 ## Coding the recordings directly
 
-The two-step route has a cost beyond Whisper's fee: the coding model only ever sees the transcript, so anything the transcriber dropped is gone, and the transcript itself is a second instrument whose errors are invisible to the coder. Since quallmer 0.5, a codebook can declare `input_type = "audio"`, and `qlm_code()` then uploads each recording to the provider and sends the model a reference to it alongside the instructions. The model listens to the audio itself, so the schema can ask for a transcript as one field among the others.
+The two-step route has a cost beyond the transcription fee: the coding model only ever sees the transcript, so anything the transcriber dropped is gone, and the transcript itself is a second instrument whose errors are invisible to the coder. Since quallmer 0.5, a codebook can declare `input_type = "audio"`, and `qlm_code()` then uploads each recording to the provider and sends the model a reference to it alongside the instructions. The model listens to the audio itself, so the schema can ask for a transcript as one field among the others.
 
 Which providers accept audio this way is checked before anything is uploaded. As of this writing only Google Gemini does, in its pro, flash and flash-lite families; OpenAI's audio models refuse a schema-constrained request and Anthropic takes no audio at all, so for those providers the two-step route above remains the way. See the section "Audio input" in `?qlm_code` for the details, including how a newer Gemini model can be accepted with `qlm_register_model()`.
 
@@ -345,8 +365,8 @@ The model's transcript can be set beside Whisper's for the same recording. Here 
 
 ```{r compare-transcripts}
 first <- coded_audio$.id[1]
-cat("=== Whisper ===\n")
-cat(transcriptions[[first]], "\n\n")
+cat("=== gpt-4o-mini-transcribe, through qlm_transcribe() ===\n")
+cat(transcripts[[first]], "\n\n")
 cat("=== gemini-2.5-flash, in the same pass as the coding ===\n")
 cat(coded_audio$transcript[coded_audio$.id == first], "\n")
 ```
@@ -396,11 +416,11 @@ This creates two files:
 
 This example demonstrates:
 
-1. **Two-step workflow**: Transcription (Whisper) → Analysis (LLM), which works with any coding model
+1. **Two-step workflow**: Transcription (`qlm_transcribe()`) → Analysis (LLM), which works with any coding model, and records the transcription with the coded run
 2. **Direct workflow**: `input_type = "audio"` sends the recordings themselves to a multimodal model, currently Gemini, which transcribes and codes in one pass
 3. **Multilingual capability**: Both routes handle multiple languages automatically
 4. **Structured extraction**: The same codebook fields serve both routes, so `qlm_compare()` measures their agreement
 5. **Scalability**: Process multiple audio files in batch
-6. **Reproducibility**: Transcripts are cached, file hashes are recorded, and both runs go into the audit trail
+6. **Reproducibility**: Transcripts carry their provenance, file hashes are recorded on both routes, and both runs go into the audit trail
 
 Both workflows enable researchers to analyze audio content at scale, from political speeches to interviews to podcast episodes. The two-step route keeps transcription as a separate, cacheable instrument that any coding model can read; the direct route lets the model hear the recording, at the price of being tied to the providers that accept audio.
