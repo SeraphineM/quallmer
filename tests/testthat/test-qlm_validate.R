@@ -881,6 +881,28 @@ test_that("qlm_validate ranks ordinal text categories by their ordered-factor le
 })
 
 
+test_that("qlm_validate reads an ordered factor as declared, whatever its labels look like (#165)", {
+  lv <- c("1", "10", "2")
+  gold <- as_qlm_coded(
+    data.frame(.id = 1:4, g = factor(c("1", "10", "2", "1"), levels = lv, ordered = TRUE)),
+    id = .id, name = "gold"
+  )
+  pred <- as_qlm_coded(
+    data.frame(.id = 1:4, g = factor(c("10", "2", "2", "2"), levels = lv, ordered = TRUE)),
+    id = .id, name = "pred"
+  )
+  v <- as.data.frame(qlm_validate(pred, gold = gold, by = "g", level = "ordinal"))
+  # Declared ranks 1, 2, 3, 1 against 2, 3, 3, 3, not the values 1, 10, 2
+  expect_equal(v$value[v$measure == "mae"], mean(abs(c(1, 2, 3, 1) - c(2, 3, 3, 3))))
+
+  pred_r <- as_qlm_coded(
+    data.frame(.id = 1:4, g = factor(c("10", "2", "2", "2"), levels = rev(lv), ordered = TRUE)),
+    id = .id, name = "pred"
+  )
+  expect_error(qlm_validate(pred_r, gold = gold, by = "g", level = "ordinal"), "differ between coders")
+})
+
+
 test_that("qlm_validate refuses ordinal text with no declared order (#165)", {
   gold <- as_qlm_coded(data.frame(.id = 1:4, g = c("a", "b", "c", "a")), id = .id, name = "gold")
   pred <- as_qlm_coded(data.frame(.id = 1:4, g = c("a", "b", "c", "b")), id = .id, name = "pred")

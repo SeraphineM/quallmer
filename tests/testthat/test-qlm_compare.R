@@ -796,6 +796,42 @@ test_that("ordered factors must agree on their levels (#165)", {
 })
 
 
+test_that("an ordered factor is read as declared, whatever its labels look like (#165)", {
+  # Coders on the same declared scale are not rejected on the labels each
+  # happened to observe: A's ratings all read as numbers, B's do not
+  lv <- c("0", "low", "high")
+  a <- factor(c("0", "0", "0"), levels = lv, ordered = TRUE)
+  b <- factor(c("low", "high", "0"), levels = lv, ordered = TRUE)
+  # (a constant coder has no variance, so the correlations warn)
+  expect_no_error(pct <- suppressWarnings(compare_pair(a, b, tolerance = 0, level = "ordinal")))
+  expect_equal(pct, 1 / 3)
+
+  # Numeric-looking labels take their declared ranks, not their values
+  lv <- c("1", "10", "2")
+  a <- factor(c("1", "10", "2", "1"), levels = lv, ordered = TRUE)
+  b <- factor(c("10", "2", "2", "2"), levels = lv, ordered = TRUE)
+  ranks <- ratings_matrix(data.frame(a = a, b = b), "ordinal", "g")
+  expect_equal(unname(ranks[, "a"]), c(1L, 2L, 3L, 1L))
+  expect_equal(unname(ranks[, "b"]), c(2L, 3L, 3L, 3L))
+  expect_equal(attr(ranks, "levels"), lv)
+  # "1" and "10" are adjacent on the declared scale
+  expect_equal(compare_pair(a, b, tolerance = 1, level = "ordinal"), 0.75)
+
+  # Conflicting orders are caught even when every observed label is digits
+  c_ <- factor(c("10", "2", "2", "2"), levels = rev(lv), ordered = TRUE)
+  expect_error(ratings_matrix(data.frame(a = a, c = c_), "ordinal", "g"), "differ between coders")
+
+  # One ordered factor commits the variable to declared order: numbers from
+  # the other coder are not read against it
+  err <- expect_error(compare_pair(a, c(1, 10, 2, 1), tolerance = 0, level = "ordinal"),
+                      "no declared order")
+  expect_match(conditionMessage(err), '"B"')
+
+  # Interval level still reads a factor by its labels (#150)
+  expect_equal(compare_pair(factor(c("1", "2", "10"), ordered = TRUE), c(1, 2, 10), tolerance = 0), 1)
+})
+
+
 test_that("an enum is ordered only when the codebook declares it ordinal (#165)", {
   schema <- ellmer::type_object(g = ellmer::type_enum(c("low", "mid", "high")))
   nominal <- qlm_codebook("Sev", "Rate.", schema)

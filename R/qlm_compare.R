@@ -629,13 +629,14 @@ qlm_compare <- function(...,
 #'
 #' At ordinal, interval and ratio level every column is read as numbers. A
 #' value that does not read as a number is an error at interval and ratio
-#' level, which assert numeric data. Ordinal categories may be text, so when
-#' no column reads as numbers the ratings are ranked by their ordered-factor
-#' levels, which every coder must supply and all must agree on (#165); the
-#' ranks are integers, so a tolerance then counts rank distance. A mix of
-#' numeric and text columns at ordinal level is an error, since the ranks of
-#' one cannot be placed against the other. Nominal ratings are left as
-#' stored: categories are compared as text and no tolerance applies.
+#' level, which assert numeric data. Ordinal categories may be text, so an
+#' ordered factor is read first, before any numeric probe, as the declared
+#' order: every coder must then supply one and all must agree on the levels
+#' (#165). The ranks are integers, so a tolerance then counts rank distance.
+#' Text with no ordered factor anywhere is refused by the same helper, and a
+#' mix of numeric and text columns at ordinal level is an error, since the
+#' ranks of one cannot be placed against the other. Nominal ratings are left
+#' as stored: categories are compared as text and no tolerance applies.
 #'
 #' @param columns Data frame with one column per coder and no `.id`.
 #' @param level Character; the measurement level.
@@ -651,6 +652,20 @@ qlm_compare <- function(...,
 ratings_matrix <- function(columns, level, var, coders = names(columns)) {
   if (level == "nominal") {
     return(as.matrix(columns))
+  }
+
+  # An ordered factor is a declared order and wins over anything its labels
+  # look like: reading it as numbers first took "1" < "10" < "2" as 1, 10, 2,
+  # rejected coders on the labels they happened to observe, and let two
+  # conflicting orders pass whenever the observed labels were all digits.
+  # One ordered factor commits the variable to declared order, so a coder
+  # without one is refused by name rather than read as numbers.
+  if (level == "ordinal" && any(vapply(columns, is.ordered, logical(1)))) {
+    lvls <- ordinal_levels(columns, var, coders)
+    ratings <- do.call(cbind, lapply(columns, as.integer))
+    colnames(ratings) <- names(columns)
+    attr(ratings, "levels") <- lvls
+    return(ratings)
   }
 
   numbers <- lapply(columns, function(col) {
