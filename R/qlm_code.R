@@ -610,6 +610,11 @@ qlm_code <- function(x, codebook, model, ...,
   fallback_reason <- NULL
   model_hint <- NULL
 
+  # Every response is checked against the schema before it is tabulated, so
+  # a schema the validator cannot check is refused now, in one error, rather
+  # than after a paid run in which every unit fails
+  check_coding_schema(codebook$schema)
+
   # ---- schema-constrained structured output -------------------------------
   if (structured %in% c("auto", "structured")) {
     attempt <- try_structured_call(
