@@ -484,8 +484,9 @@ check_upload_sizes <- function(local, x, input_type, call = rlang::caller_env())
 #' Video is priced by the second, at about 300 input tokens per second at
 #' the provider's default resolution, so the durations are what the cost
 #' turns on. They can be read only with the \pkg{av} package, which is
-#' optional; without it the total size is said instead. A YouTube link has
-#' neither here.
+#' optional; without it the total size is said instead, as it is for a file
+#' whose duration cannot be read. A YouTube link has neither here. This is
+#' a notice: nothing in it may stop the run.
 #'
 #' @keywords internal
 #' @noRd
@@ -496,24 +497,35 @@ say_video_size <- function(local) {
   }
   bytes <- sum(file.size(here))
   n <- length(here)
-  if (has_av()) {
-    seconds <- sum(vapply(here, video_duration, numeric(1)))
+  seconds <- if (has_av()) vapply(here, video_duration, numeric(1)) else rep(NA_real_, n)
+  known <- !is.na(seconds)
+  if (any(known)) {
+    total <- sum(seconds[known])
+    unread <- sum(!known)
     cli::cli_inform(c("i" = paste0(
-      "Uploading {n} video file{?s}, {format_seconds(seconds)} in all ",
+      "Uploading {n} video file{?s}, {format_seconds(total)} in all ",
       "({format_bytes(bytes)}); at the provider's default sampling that is ",
-      "roughly {format(round(seconds * 300), big.mark = ',')} input tokens."
+      "roughly {format(round(total * 300), big.mark = ',')} input tokens",
+      if (unread) ", not counting {unread} file{?s} whose duration could not be read" else "",
+      "."
     )))
   } else {
     cli::cli_inform(c("i" = paste0(
       "Uploading {n} video file{?s}, {format_bytes(bytes)} in all. Video costs ",
       "roughly 300 input tokens per second at the provider's default sampling; ",
-      "install the {.pkg av} package to see the durations before uploading."
+      if (has_av()) "the durations could not be read." else
+        "install the {.pkg av} package to see the durations before uploading."
     )))
   }
   invisible(NULL)
 }
 
 #' Whether durations can be read, and one duration; both replaceable in tests
+#'
+#' A file av cannot open (a wrong container, a truncated download) gives
+#' `NA` rather than an error: the duration is for a notice, and the upload
+#' is where the provider's verdict on the file belongs.
+#'
 #' @keywords internal
 #' @noRd
 has_av <- function() {
@@ -521,8 +533,13 @@ has_av <- function() {
 }
 
 video_duration <- function(path) {
-  info <- av::av_media_info(path)
-  as.numeric(info$duration %||% NA_real_)
+  tryCatch(
+    {
+      info <- av::av_media_info(path)
+      as.numeric(info$duration %||% NA_real_)
+    },
+    error = function(e) NA_real_
+  )
 }
 
 format_bytes <- function(bytes) {

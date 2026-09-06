@@ -25,6 +25,9 @@ audio_runner <- function(results = function(prompts) data.frame(language = rep("
       calls$downloads <- c(calls$downloads, dest)
       download(url, dest)
     },
+    # The fixtures are not real video, so the durations notice takes the
+    # no-av branch whether or not av is installed; the notice has its own test
+    has_av = function() FALSE,
     .env = env
   )
   tsc <- try_structured_call
@@ -797,7 +800,23 @@ test_that("what is about to be uploaded is said once, with durations when av can
   testthat::local_mocked_bindings(has_av = function() TRUE, video_duration = function(path) 12.4)
   expect_message(
     f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
-    "12 seconds in all.*roughly 3,720 input tokens"
+    "12 seconds in all.*roughly 3,720 input tokens\\.$"
+  )
+
+  # A duration av cannot read is left out of the estimate and said
+  y <- c(a = video_file(as.raw(1:50)), b = video_file(as.raw(51:100)))
+  testthat::local_mocked_bindings(
+    has_av = function() TRUE,
+    video_duration = function(path) if (basename(path) == basename(y[["a"]])) 10 else NA_real_
+  )
+  expect_message(
+    f(y, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "Uploading 2 video files, 10 seconds in all.*3,000 input tokens, not counting 1 file whose duration could not be read"
+  )
+  testthat::local_mocked_bindings(has_av = function() TRUE, video_duration = function(path) NA_real_)
+  expect_message(
+    f(y, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "Uploading 2 video files, 0.1 KB in all.*the durations could not be read"
   )
 
   # A YouTube-only run has nothing to upload, and says nothing
@@ -895,4 +914,20 @@ test_that("two units sharing a URL are each held to their own recorded bytes", {
     error = function(e) conditionMessage(e)
   )
   expect_match(err2, 'differs from the one this run coded: "1"')
+})
+
+
+test_that("video_duration gives NA for a file av cannot read, and never an error", {
+  skip_if_not_installed("av")
+  garbage <- video_file(as.raw(1:64))
+  expect_identical(video_duration(garbage), NA_real_)
+  # And so a run over such a file is not stopped by the notice
+  calls <- new.env()
+  f <- audio_runner(calls = calls)
+  testthat::local_mocked_bindings(has_av = function() TRUE)
+  expect_message(
+    coded <- f(c(a = garbage), video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "durations could not be read"
+  )
+  expect_s3_class(coded, "qlm_coded")
 })
