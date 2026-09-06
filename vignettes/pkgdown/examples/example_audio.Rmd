@@ -108,6 +108,35 @@ cat("Web copy:   ", web_row$sha256, "\n")
 cat("Same recording:", identical(local_row$sha256, web_row$sha256), "\n")
 ```
 
+### A second transcriber
+
+The transcript is an instrument of its own, and two transcribers can be set beside each other on the same recordings. A Gemini chat model transcribes through the same function: `qlm_transcribe()` uploads each recording and asks the model for a verbatim transcript, and the same names, hashes and provenance come back. Gemini's dedicated transcription model, `gemini-3.5-transcribe`, cannot be reached through ellmer yet (it rejects the system instruction ellmer always sends), so a chat model in the `flash` or `pro` family is the Gemini route.
+
+```{r transcribe-gemini, eval=FALSE}
+transcripts_gemini <- qlm_transcribe(audio_files, model = "google_gemini/gemini-2.5-flash")
+saveRDS(transcripts_gemini, "data/transcripts_gemini.rds")
+```
+
+```{r load-transcripts-gemini, echo=FALSE}
+transcripts_gemini <- readRDS("data/transcripts_gemini.rds")
+```
+
+The two transcribers heard the same Mandarin clip differently: one writes Simplified characters and the other Traditional, and in the fourth sentence one hears 鲸鱼 (whale) where the other hears 金魚 (goldfish), a homophone. Either transcript can be coded; the point is that the coded run says which one was.
+
+```{r compare-transcribers}
+clip <- "OSR_cn_000_0072_8k.wav"
+cat("gpt-4o-mini-transcribe:\n", transcripts[[clip]], "\n\n")
+cat("gemini-2.5-flash:\n", transcripts_gemini[[clip]], "\n")
+```
+
+For the Gemini route the usage is ellmer's token count and cost, with the qualification that ellmer prices audio tokens at the text rate:
+
+```{r gemini-usage}
+usage_gemini <- attr(transcripts_gemini, "provenance")$usage
+cat("Input tokens:", sum(sapply(usage_gemini, function(u) u$tokens$input)),
+    " Cost at the text rate: $", round(sum(sapply(usage_gemini, function(u) u$cost)), 4), "\n")
+```
+
 ## Step 2: Defining the transcript analysis codebook
 
 Now we create a codebook to extract structured information from the transcripts. This codebook analyzes language, topics, tone, and content:
