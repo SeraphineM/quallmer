@@ -103,7 +103,9 @@ deprecated <code><a href="task.html">task()</a></code> objects for backward comp
 <dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
 <dd><p>character; the provider (and optionally model) name in the form
 <code>"provider/model"</code> or <code>"provider"</code> (which will use the default model for
-that provider). Passed to the <code>name</code> argument of <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.
+that provider). Native prefixes are passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.
+Registered prefixes, such as <code>"dashscope/qwen-plus"</code>, resolve through
+<code><a href="qlm_register_provider.html">qlm_register_provider()</a></code> and require an explicit model name.
 Examples: <code>"openai/gpt-4o-mini"</code>, <code>"anthropic/claude-3-5-sonnet-20241022"</code>,
 <code>"ollama/llama3.2"</code>, <code>"openai"</code> (uses default OpenAI model).</p></dd>
 
@@ -420,7 +422,7 @@ transcription models that share a family stem are refused, as is Vertex,
 which has no file upload. This is a snapshot of what providers accepted on
 the date it was written. A model outside the recognised families that
 does accept audio can be accepted for the session with
-<code><a href="qlm_register_input_model.html">qlm_register_input_model()</a></code>; a run coded that way records it, and
+<code><a href="qlm_register_model.html">qlm_register_model()</a></code>; a run coded that way records it, and
 replicating or backfilling the run in another session needs the
 registration again. For any other provider, transcribe the recordings
 first and code the transcripts with a text codebook.</p>
@@ -524,6 +526,15 @@ cost-effective but has longer turnaround times. The <code>path</code> argument s
 where batch results are cached, <code>wait</code> controls whether to wait for completion,
 and <code>ignore_hash</code> can force reprocessing of cached results. <code>on_error</code> does
 not apply: the batch API has no equivalent.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="registered-providers">Registered providers<a class="anchor" aria-label="anchor" href="#registered-providers"></a></h2>
+
+
+<p>OpenAI-compatible endpoints can also be addressed by a registered prefix,
+for example <code>model = "dashscope/qwen-plus"</code>. See
+<code><a href="qlm_register_provider.html">qlm_register_provider()</a></code> for built-in endpoints, credential sources,
+and adding a private gateway. Native ellmer prefixes take precedence.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

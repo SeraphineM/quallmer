@@ -88,7 +88,9 @@ verbatim segment text and is added automatically.</p></dd>
 <dt id="arg-model">model<a class="anchor" aria-label="anchor" href="#arg-model"></a></dt>
 <dd><p>character; the provider (and optionally model) name in the form
 <code>"provider/model"</code> or <code>"provider"</code> (which will use the default model for
-that provider). Passed to the <code>name</code> argument of <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.
+that provider). Native prefixes are passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>.
+Registered prefixes, such as <code>"dashscope/qwen-plus"</code>, resolve through
+<code><a href="qlm_register_provider.html">qlm_register_provider()</a></code> and require an explicit model name.
 Examples: <code>"openai/gpt-4o-mini"</code>, <code>"anthropic/claude-3-5-sonnet-20241022"</code>,
 <code>"ollama/llama3.2"</code>, <code>"openai"</code> (uses default OpenAI model).</p></dd>
 
