@@ -169,11 +169,8 @@ qlm_segment <- function(x, codebook, model, ..., prices = NULL, name = NULL,
     ))
   }
 
-  # Dispatches by name through ellmer::chat() just as qlm_code() does, so an
-  # unreachable prefix gets the same explanation here. Checked after the input
-  # and codebook, which are the more fundamental problems when both are wrong.
-  # Same routing contract as qlm_code(), so the same rejection. Captured once
-  # here and reused by the routing below, rather than forcing `...` twice.
+  # Resolve providers as qlm_code() does, after checking the input and
+  # codebook. Capture `...` once and reuse it for argument routing below.
   resolved <- resolve_provider(model, list(...))
   model <- resolved$model
   dots <- resolved$args
