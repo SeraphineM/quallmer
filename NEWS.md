@@ -289,6 +289,10 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
 
 ## Bug fixes
 
+* Backfill treats an endpoint change as a new coding route even when the model
+  name is unchanged. Replication preserves the requested model and labels
+  endpoint overrides in print and trail output (#185).
+
 ### Coding runs
 
 * `qlm_segment()` now records token counts and cost when asked, and takes

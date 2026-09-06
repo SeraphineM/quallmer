@@ -39,7 +39,10 @@
 #' `openai_compatible/model`, base URL and credential source. Replication and
 #' backfill reuse the recorded endpoint without consulting the registry.
 #' Supplying a replacement `model` resolves that model afresh. Registry
-#' entries contain environment variable names, never key values.
+#' entries contain environment variable names, never key values. A replication
+#' that overrides only the endpoint retains the original requested model,
+#' labelled "endpoint overridden" in print and trail output; its recorded
+#' `base_url` is the effective endpoint used for replay.
 #'
 #' @return The endpoint definition, invisibly.
 #' @export
@@ -144,4 +147,11 @@ resolve_provider <- function(model, args = list()) {
     requested_model = model, effective_model = effective_model,
     api_key_env = if (!explicit_credentials) entry$api_key_env else NULL
   ))
+}
+
+# Keep the original request visible without implying its prefix still names
+# the effective endpoint. The URL remains in chat_args for replay/redaction.
+provider_request_label <- function(resolution) {
+  paste0(resolution$requested_model,
+         if (isTRUE(resolution$endpoint_overridden)) " (endpoint overridden)")
 }
