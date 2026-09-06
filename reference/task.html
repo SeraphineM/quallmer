@@ -71,11 +71,13 @@
 
 
 <dt id="arg-input-type">input_type<a class="anchor" aria-label="anchor" href="#arg-input-type"></a></dt>
-<dd><p>Type of input data: <code>"text"</code> (default), <code>"image"</code> or
-<code>"audio"</code>. For <code>"image"</code> and <code>"audio"</code> the elements of <code>x</code> in
-<code><a href="qlm_code.html">qlm_code()</a></code> are file paths; see its section "Audio input" for which
-providers accept audio and how the files are handled. For <code>"image"</code>
-the elements may also be URLs; see its section "Image input".</p></dd>
+<dd><p>Type of input data: <code>"text"</code> (default), <code>"image"</code>,
+<code>"audio"</code> or <code>"video"</code>. For the other three the elements of <code>x</code> in
+<code><a href="qlm_code.html">qlm_code()</a></code> are file paths; for <code>"image"</code> they may also be URLs, and
+for <code>"video"</code> YouTube links or URLs of video files. See the sections
+"Image input", "Audio input" and "Video input" of <code><a href="qlm_code.html">qlm_code()</a></code> for how
+the files are handled and what is known about which providers accept
+them.</p></dd>
 
 </dl></div>
     <div class="section level2">
