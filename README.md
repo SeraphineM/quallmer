@@ -173,7 +173,8 @@ tutorials](https://quallmer.github.io/quallmer/articles/getting-started.html).
 Development of this package was assisted by [Claude
 Code](https://claude.com/claude-code), an AI coding assistant by
 Anthropic, for code refactoring, documentation updates, and package
-restructuring.
+restructuring. We also found OpenAI’s [Codex](https://openai.com/codex/)
+good for planning solutions to issues and for reviewing pull requests.
 
 ## References
 

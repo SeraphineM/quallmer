@@ -116,7 +116,7 @@ To learn more about how to use the package, please refer to our [step-by-step tu
 
 ## Acknowledgments
 
-Development of this package was assisted by [Claude Code](https://claude.com/claude-code), an AI coding assistant by Anthropic, for code refactoring, documentation updates, and package restructuring.
+Development of this package was assisted by [Claude Code](https://claude.com/claude-code), an AI coding assistant by Anthropic, for code refactoring, documentation updates, and package restructuring. We also found OpenAI's [Codex](https://openai.com/codex/) good for planning solutions to issues and for reviewing pull requests.
 
 ## References
 
