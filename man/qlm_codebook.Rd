@@ -27,11 +27,13 @@ qlm_codebook(
 annotator"). If provided, this will be prepended to the instructions when
 creating the system prompt.}
 
-\item{input_type}{Type of input data: \code{"text"} (default), \code{"image"} or
-\code{"audio"}. For \code{"image"} and \code{"audio"} the elements of \code{x} in
-\code{\link[=qlm_code]{qlm_code()}} are file paths; see its section "Audio input" for which
-providers accept audio and how the files are handled. For \code{"image"}
-the elements may also be URLs; see its section "Image input".}
+\item{input_type}{Type of input data: \code{"text"} (default), \code{"image"},
+\code{"audio"} or \code{"video"}. For the other three the elements of \code{x} in
+\code{\link[=qlm_code]{qlm_code()}} are file paths; for \code{"image"} they may also be URLs, and
+for \code{"video"} YouTube links or URLs of video files. See the sections
+"Image input", "Audio input" and "Video input" of \code{\link[=qlm_code]{qlm_code()}} for how
+the files are handled and what is known about which providers accept
+them.}
 
 \item{levels}{Optional named list specifying measurement levels for each
 variable in the schema. Names should match schema property names. Values
