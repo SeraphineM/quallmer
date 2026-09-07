@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../../../favicon.ico">
 <link rel="manifest" href="../../../site.webmanifest">
 <script src="../../../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../../../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../../../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../../../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../../../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../../../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../../../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../../../deps/headroom-0.11.0/headroom.min.js"></script><script src="../../../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../../../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../../../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../../../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../../../deps/search-1.0.0/fuse.min.js"></script><script src="../../../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../../../pkgdown.js"></script><meta property="og:title" content="Example: Audio transcription and analysis">
 </head>
@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../../../index.html">quallmer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,6 +47,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials">
 <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
+    <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/tools.html">Coding with web-search tools</a></li>
     <li><a class="dropdown-item" href="../../../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul>
 </li>
@@ -90,11 +91,16 @@
 
     
     
-<p>This example demonstrates a two-step process for analyzing audio
-content: (1) transcribing audio to text using OpenAI’s Whisper model,
-and (2) extracting structured information from the transcripts using
-<code><a href="../../../reference/qlm_code.html">qlm_code()</a></code>. This workflow enables large-scale analysis of
-speeches, interviews, and other audio content.</p>
+<p>This example demonstrates two ways of analyzing audio content. The
+first is a two-step process: (1) transcribing audio to text with
+<code><a href="../../../reference/qlm_transcribe.html">qlm_transcribe()</a></code>, and (2) extracting structured information
+from the transcripts using <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code>, which records how
+the transcripts were made. The second, added in quallmer 0.5, codes the
+recordings directly: a codebook with <code>input_type = "audio"</code>
+sends each file to a multimodal model, which transcribes and codes it in
+one pass. Both workflows enable large-scale analysis of speeches,
+interviews, and other audio content, and the final section compares
+their results.</p>
 <div class="section level2">
 <h2 id="loading-packages-and-data">Loading packages and data<a class="anchor" aria-label="anchor" href="#loading-packages-and-data"></a>
 </h2>
@@ -128,76 +134,232 @@ speeches, interviews, and other audio content.</p>
 the Open Speech Repository and other sources.</p>
 </div>
 <div class="section level2">
-<h2 id="step-1-transcribing-audio-with-whisper">Step 1: Transcribing audio with Whisper<a class="anchor" aria-label="anchor" href="#step-1-transcribing-audio-with-whisper"></a>
+<h2 id="step-1-transcribing-the-recordings">Step 1: Transcribing the recordings<a class="anchor" aria-label="anchor" href="#step-1-transcribing-the-recordings"></a>
 </h2>
-<p>OpenAI’s Whisper model provides high-quality, multilingual
-transcription. We use the <code>openai</code> package to transcribe each
-audio file:</p>
+<p><code><a href="../../../reference/qlm_transcribe.html">qlm_transcribe()</a></code> sends each recording to a
+speech-to-text model and returns the transcripts as a character vector
+that carries its own provenance: the file each transcript came from and
+its SHA-256 hash, the model, the time, and the usage the provider
+reported. The default model is OpenAI’s
+<code>gpt-4o-mini-transcribe</code>; <code>whisper-1</code> and
+<code>gpt-4o-transcribe</code> are reached the same way, and a Gemini
+chat model can transcribe too
+(<code>model = "google_gemini/gemini-2.5-flash"</code>). The requests
+run in parallel with a progress bar. Unnamed files are named by their
+basenames, and those names become the <code>.id</code> of each unit when
+the transcripts are coded.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/irudnyts/openai" class="external-link">openai</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">transcripts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_transcribe.html">qlm_transcribe</a></span><span class="op">(</span><span class="va">audio_files</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Transcribe all audio files</span></span>
-<span><span class="va">transcriptions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_chr</a></span><span class="op">(</span><span class="va">audio_files</span>, <span class="kw">function</span><span class="op">(</span><span class="va">file_path</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Transcribing:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="va">file_path</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">transcription</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://irudnyts.github.io/openai/reference/create_transcription.html" class="external-link">create_transcription</a></span><span class="op">(</span></span>
-<span>    file <span class="op">=</span> <span class="va">file_path</span>,</span>
-<span>    model <span class="op">=</span> <span class="st">"whisper-1"</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">transcription</span><span class="op">$</span><span class="va">text</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Name the transcriptions by filename</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="va">audio_files</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Save transcriptions</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">transcriptions</span>, <span class="st">"data/transcriptions_whisper.rds"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Save transcripts, provenance included</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">transcripts</span>, <span class="st">"data/transcripts.rds"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="viewing-the-transcriptions">Viewing the transcriptions<a class="anchor" aria-label="anchor" href="#viewing-the-transcriptions"></a>
+<h2 id="viewing-the-transcripts">Viewing the transcripts<a class="anchor" aria-label="anchor" href="#viewing-the-transcripts"></a>
 </h2>
-<p>Let’s examine the transcribed content:</p>
+<p>Printing the object shows the first line of each transcript under its
+name:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Display each transcription (truncated for readability)</span></span>
-<span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== File:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">)</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="st">"===\n"</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># Show first 200 characters</span></span>
-<span>  <span class="va">text_preview</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">[</span><span class="va">i</span><span class="op">]</span>, <span class="fl">1</span>, <span class="fl">200</span><span class="op">)</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nchar</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">200</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">text_preview</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">text_preview</span>, <span class="st">"..."</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">text_preview</span>, <span class="st">"\n\n"</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<pre><code><span><span class="co">## === File: F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3 ===</span></span>
-<span><span class="co">## And this is such an important topic because I'm sure you've felt it. There's tension in the air, right? Everywhere you go. I don't know if it's the headlines or the fact that everybody is so stressed ... </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## === File: harvard.wav ===</span></span>
-<span><span class="co">## The stale smell of old beer lingers. It takes heat to bring out the odor. A cold dip restores health and zest. A salt pickle tastes fine with ham. Tacos al pastor are my favorite. A zestful food is th... </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## === File: OSR_cn_000_0072_8k.wav ===</span></span>
-<span><span class="co">## 院子门口不远处就是一个地铁站,这是一个美丽而神奇的景象,树上长满了又大又甜的桃子,海豚和鲸鱼的表演是很好看的节目。 邮局门前的人行道上有一个蓝色的邮箱。 </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## === File: OSR_cn_000_0075_8k.wav ===</span></span>
-<span><span class="co">## 天文望远镜可以用来观察天空 它到过很多地方观光旅游 山间的小道蜿蜒曲折 春天来了,山上开满了樱花 下雪以后,田野里白矮矮的一片 </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## === File: OSR_fr_000_0041_8k.wav ===</span></span>
-<span><span class="co">## Pourrais-je avoir un verre d'eau ? La SNCF assurera un train sur trois. Les coupoles de l'immense palais s'écroulèrent. On apercevait la voile blanche du petit bateau. Il ne sentit ni douleur ni secou... </span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## === File: OSR_in_000_0064_8k.wav ===</span></span>
-<span><span class="co">## शालिनी के पास सौ रुपए हैं। सीता और सुनील का लड़का बहुत होशयार है। तुम्हारी कविता लिठने का शौक कब से शुरू हुआ। सोते हुए शेर को जगाना उच्चित नहीं है। शोर मत करो नहीं तो सुहासिनी जाग जाएगी। काम शुरू होने...</span></span></code></pre>
+<code class="sourceCode R"><span><span class="va">transcripts</span></span></code></pre></div>
+<pre><code><span><span class="co">## &lt;qlm_transcript: 6 transcripts; model openai/gpt-4o-mini-transcribe&gt;</span></span>
+<span><span class="co">## F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3: And this is such an important topic...</span></span>
+<span><span class="co">## harvard.wav: The stale smell of old beer lingers. It takes heat to bring out ...</span></span>
+<span><span class="co">## OSR_cn_000_0072_8k.wav: 院子门口不远处就是一个地铁站,这是一个美丽而神奇的景象,树上长满了又大又甜的桃子,海豚和鲸鱼的表演是很好看...</span></span>
+<span><span class="co">## OSR_cn_000_0075_8k.wav: 天文望远镜可以用来观察天空。他到过很多地方观光旅游,山间的小道蜿蜒曲折。春天来了,山上开满了樱花;下雪以后...</span></span>
+<span><span class="co">## OSR_fr_000_0041_8k.wav: Pourrais-je avoir un verre d'eau ? La SNCF assurera u...</span></span>
+<span><span class="co">## OSR_in_000_0064_8k.wav: शालिनी के पास सौ रुपये हैं। सीता और सुनील का लड़का बह...</span></span></code></pre>
+<p>The provenance table has one row per recording. It is what
+<code><a href="../../../reference/qlm_code.html">qlm_code()</a></code> will record with the coded run, so that the
+audit trail says which transcription process produced the text:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Word counts</span></span>
-<span><span class="va">word_counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_int</a></span><span class="op">(</span><span class="va">transcriptions</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">.x</span>, <span class="st">"\\s+"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Word count statistics:\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Word count statistics:</span></span></code></pre>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Range:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">word_counts</span><span class="op">)</span>, <span class="st">"-"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">word_counts</span><span class="op">)</span>, <span class="st">"words\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   Range: 2 - 119 words</span></span></code></pre>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">transcripts</span>, <span class="st">"provenance"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.id</span>, <span class="va">status</span>, <span class="va">source</span>, <span class="va">size</span>, <span class="va">sha256</span>, <span class="va">model</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>sha256 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">sha256</span>, <span class="fl">1</span>, <span class="fl">12</span><span class="op">)</span>, <span class="st">"..."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Provenance of each transcript"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Provenance of each transcript</caption>
+<colgroup>
+<col width="28%">
+<col width="4%">
+<col width="28%">
+<col width="5%">
+<col width="11%">
+<col width="20%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">.id</th>
+<th align="left">status</th>
+<th align="left">source</th>
+<th align="right">size</th>
+<th align="left">sha256</th>
+<th align="left">model</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="left">ok</td>
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="right">524288</td>
+<td align="left">4a7f23c350e0…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+</tr>
+<tr class="even">
+<td align="left">harvard.wav</td>
+<td align="left">ok</td>
+<td align="left">harvard.wav</td>
+<td align="right">3249924</td>
+<td align="left">971b41636704…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="left">ok</td>
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="right">319526</td>
+<td align="left">a7e2e6c7a047…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="left">ok</td>
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="right">398442</td>
+<td align="left">3fd3b56518d3…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="left">ok</td>
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="right">1275156</td>
+<td align="left">381d49ce7f50…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="left">ok</td>
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="right">599896</td>
+<td align="left">24955a6fcaa4…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+</tr>
+</tbody>
+</table>
+<p>The usage column holds what the endpoint reported, here audio and
+text tokens; <code>whisper-1</code> reports seconds of audio instead. No
+dollar cost is computed for a transcription, since ellmer has no rates
+for transcription models, but the usage is there to cost by hand:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">usage</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">transcripts</span>, <span class="st">"provenance"</span><span class="op">)</span><span class="op">$</span><span class="va">usage</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Audio tokens transcribed:"</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">usage</span>, <span class="kw">function</span><span class="op">(</span><span class="va">u</span><span class="op">)</span> <span class="va">u</span><span class="op">$</span><span class="va">input_token_details</span><span class="op">$</span><span class="va">audio_tokens</span><span class="op">)</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Audio tokens transcribed: 1964</span></span></code></pre>
+<p>A count of words per transcript, for a sense of scale:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">word_counts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">map_int</a></span><span class="op">(</span><span class="va">transcripts</span>, <span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">.x</span>, <span class="st">"\\s+"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">transcripts</span><span class="op">)</span>, words <span class="op">=</span> <span class="va">word_counts</span>, row.names <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Transcript length"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Transcript length</caption>
+<thead><tr class="header">
+<th align="left">file</th>
+<th align="right">words</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="right">52</td>
+</tr>
+<tr class="even">
+<td align="left">harvard.wav</td>
+<td align="right">43</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="right">2</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="right">1</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="right">119</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="right">74</td>
+</tr>
+</tbody>
+</table>
+<div class="section level3">
+<h3 id="recordings-on-the-web">Recordings on the web<a class="anchor" aria-label="anchor" href="#recordings-on-the-web"></a>
+</h3>
+<p><code><a href="../../../reference/qlm_transcribe.html">qlm_transcribe()</a></code> also takes a URL, which it downloads to
+a temporary file, transcribes, and removes. The hash recorded is of the
+downloaded bytes, so a transcript is tied to the recording itself rather
+than to a path. The Chinese clip above is a copy of one in the Open
+Speech Repository; transcribing the web copy records the same hash as
+the local file:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"  Mean:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">word_counts</span><span class="op">)</span><span class="op">)</span>, <span class="st">"words\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">##   Mean: 49 words</span></span></code></pre>
+<code class="sourceCode R"><span><span class="va">web</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_transcribe.html">qlm_transcribe</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>web_copy <span class="op">=</span> <span class="st">"https://www.voiptroubleshooter.com/open_speech/chinese/OSR_cn_000_0072_8k.wav"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">web</span>, <span class="st">"data/transcript_web.rds"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">local_row</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">transcripts</span>, <span class="st">"provenance"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="va">source</span> <span class="op">==</span> <span class="st">"OSR_cn_000_0072_8k.wav"</span><span class="op">)</span></span>
+<span><span class="va">web_row</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">web</span>, <span class="st">"provenance"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Local copy: "</span>, <span class="va">local_row</span><span class="op">$</span><span class="va">sha256</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Local copy:  a7e2e6c7a0476d0286c6b1df92d15ab938888dfecd73efb29e4a0b82740fa761</span></span></code></pre>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Web copy:   "</span>, <span class="va">web_row</span><span class="op">$</span><span class="va">sha256</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Web copy:    a7e2e6c7a0476d0286c6b1df92d15ab938888dfecd73efb29e4a0b82740fa761</span></span></code></pre>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Same recording:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">local_row</span><span class="op">$</span><span class="va">sha256</span>, <span class="va">web_row</span><span class="op">$</span><span class="va">sha256</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Same recording: TRUE</span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="a-second-transcriber">A second transcriber<a class="anchor" aria-label="anchor" href="#a-second-transcriber"></a>
+</h3>
+<p>The transcript is an instrument of its own, and two transcribers can
+be set beside each other on the same recordings. A Gemini chat model
+transcribes through the same function: <code><a href="../../../reference/qlm_transcribe.html">qlm_transcribe()</a></code>
+uploads each recording and asks the model for a verbatim transcript, and
+the same names, hashes and provenance come back. The route is chosen by
+the provider prefix, not by a list of models known to transcribe:
+<code>openai/</code> and any provider registered with
+<code><a href="../../../reference/qlm_register_provider.html">qlm_register_provider()</a></code> go to a transcription endpoint,
+every other provider gets the recording through a chat, and a model that
+cannot hear it is refused by its provider at no cost. Gemini’s dedicated
+transcription model, <code>gemini-3.5-transcribe</code>, cannot be
+reached through ellmer yet (it rejects the system instruction ellmer
+always sends), so a chat model in the <code>flash</code> or
+<code>pro</code> family is the Gemini route.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">transcripts_gemini</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_transcribe.html">qlm_transcribe</a></span><span class="op">(</span><span class="va">audio_files</span>, model <span class="op">=</span> <span class="st">"google_gemini/gemini-2.5-flash"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">transcripts_gemini</span>, <span class="st">"data/transcripts_gemini.rds"</span><span class="op">)</span></span></code></pre></div>
+<p>The two transcribers heard the same Mandarin clip differently: one
+writes Simplified characters and the other Traditional, and in the
+fourth sentence one hears 鲸鱼 (whale) where the other hears 金魚
+(goldfish), a homophone. Either transcript can be coded; the point is
+that the coded run says which one was.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">clip</span> <span class="op">&lt;-</span> <span class="st">"OSR_cn_000_0072_8k.wav"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"gpt-4o-mini-transcribe:\n"</span>, <span class="va">transcripts</span><span class="op">[[</span><span class="va">clip</span><span class="op">]</span><span class="op">]</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## gpt-4o-mini-transcribe:</span></span>
+<span><span class="co">##  院子门口不远处就是一个地铁站,这是一个美丽而神奇的景象,树上长满了又大又甜的桃子,海豚和鲸鱼的表演是很好看的节目。 邮局门前的人行道上有一个蓝色的邮箱。</span></span></code></pre>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"gemini-2.5-flash:\n"</span>, <span class="va">transcripts_gemini</span><span class="op">[[</span><span class="va">clip</span><span class="op">]</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## gemini-2.5-flash:</span></span>
+<span><span class="co">##  院子門口不遠處就是一個地鐵站。 這是一個美麗而神奇的景象。 樹上長滿了又大又甜的桃子。 海豚和金魚的表演是很好看的節目。 郵局門前的人行道上有一個藍色的郵箱。</span></span></code></pre>
+<p>For the Gemini route the usage is ellmer’s token count and cost, with
+the qualification that ellmer prices audio tokens at the text rate:</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">usage_gemini</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">transcripts_gemini</span>, <span class="st">"provenance"</span><span class="op">)</span><span class="op">$</span><span class="va">usage</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Input tokens:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">usage_gemini</span>, <span class="kw">function</span><span class="op">(</span><span class="va">u</span><span class="op">)</span> <span class="va">u</span><span class="op">$</span><span class="va">tokens</span><span class="op">$</span><span class="va">input</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="st">" Cost at the text rate: $"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">usage_gemini</span>, <span class="kw">function</span><span class="op">(</span><span class="va">u</span><span class="op">)</span> <span class="va">u</span><span class="op">$</span><span class="va">cost</span><span class="op">)</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Input tokens: 6540  Cost at the text rate: $ 0.0035</span></span></code></pre>
+</div>
 </div>
 <div class="section level2">
 <h2 id="step-2-defining-the-transcript-analysis-codebook">Step 2: Defining the transcript analysis codebook<a class="anchor" aria-label="anchor" href="#step-2-defining-the-transcript-analysis-codebook"></a>
@@ -205,7 +367,7 @@ audio file:</p>
 <p>Now we create a codebook to extract structured information from the
 transcripts. This codebook analyzes language, topics, tone, and
 content:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Define a comprehensive transcript analysis codebook</span></span>
 <span><span class="va">codebook_transcripts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="st">"Speech Transcript Analysis"</span>,</span>
@@ -270,10 +432,10 @@ content:</p>
 </h2>
 <p>We use Gemini 2.5 Flash to analyze the transcripts. This model is
 fast and cost-effective for text analysis:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Apply transcript analysis using qlm_code()</span></span>
 <span><span class="va">coded_transcripts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
-<span>  <span class="va">transcriptions</span>,</span>
+<span>  <span class="va">transcripts</span>,</span>
 <span>  codebook <span class="op">=</span> <span class="va">codebook_transcripts</span>,</span>
 <span>  model <span class="op">=</span> <span class="st">"google_gemini/gemini-2.5-flash"</span>,</span>
 <span>  name <span class="op">=</span> <span class="st">"audio_transcripts_gemini"</span>,</span>
@@ -281,20 +443,88 @@ fast and cost-effective for text analysis:</p>
 <span>  include_cost <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Add filenames to results</span></span>
-<span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">.filename</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">)</span></span>
-<span></span>
 <span><span class="co"># Save results</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">coded_transcripts</span>, <span class="st">"data/coded_transcripts_gemini.rds"</span><span class="op">)</span></span></code></pre></div>
+<p>The run records the transcription behind each unit.
+<code><a href="../../../reference/qlm_replicate.html">qlm_replicate()</a></code> and <code><a href="../../../reference/qlm_backfill.html">qlm_backfill()</a></code> code these
+stored transcripts again without another transcription request, and
+<code><a href="../../../reference/qlm_trail.html">qlm_trail()</a></code> reports the table below as part of the
+instrument:</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded_transcripts</span>, <span class="st">"transcription"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.id</span>, <span class="va">source</span>, <span class="va">sha256</span>, <span class="va">model</span>, <span class="va">status</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>sha256 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">sha256</span>, <span class="fl">1</span>, <span class="fl">12</span><span class="op">)</span>, <span class="st">"..."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Transcription recorded with the coded run"</span><span class="op">)</span></span></code></pre></div>
+<table style="width:100%;" class="table">
+<caption>Transcription recorded with the coded run</caption>
+<colgroup>
+<col width="30%">
+<col width="30%">
+<col width="11%">
+<col width="22%">
+<col width="5%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">.id</th>
+<th align="left">source</th>
+<th align="left">sha256</th>
+<th align="left">model</th>
+<th align="left">status</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="left">4a7f23c350e0…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+<td align="left">ok</td>
+</tr>
+<tr class="even">
+<td align="left">harvard.wav</td>
+<td align="left">harvard.wav</td>
+<td align="left">971b41636704…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+<td align="left">ok</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="left">a7e2e6c7a047…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+<td align="left">ok</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="left">3fd3b56518d3…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+<td align="left">ok</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="left">381d49ce7f50…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+<td align="left">ok</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="left">24955a6fcaa4…</td>
+<td align="left">openai/gpt-4o-mini-transcribe</td>
+<td align="left">ok</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="section level2">
 <h2 id="examining-the-results">Examining the results<a class="anchor" aria-label="anchor" href="#examining-the-results"></a>
 </h2>
 <p>Let’s view the extracted information:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display key results</span></span>
 <span><span class="va">coded_transcripts</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.filename</span>, <span class="va">language</span>, <span class="va">language_confidence</span>, <span class="va">speech_type</span>,</span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.id</span>, <span class="va">language</span>, <span class="va">language_confidence</span>, <span class="va">speech_type</span>,</span>
 <span>         <span class="va">tone</span>, <span class="va">sentiment</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
 <span>    col.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"File"</span>, <span class="st">"Language"</span>, <span class="st">"Confidence"</span>, <span class="st">"Type"</span>, <span class="st">"Tone"</span>, <span class="st">"Sentiment"</span><span class="op">)</span>,</span>
@@ -303,12 +533,12 @@ fast and cost-effective for text analysis:</p>
 <table class="table">
 <caption>Transcript Analysis Results</caption>
 <colgroup>
-<col width="40%">
-<col width="8%">
-<col width="10%">
-<col width="14%">
-<col width="14%">
+<col width="41%">
 <col width="9%">
+<col width="11%">
+<col width="12%">
+<col width="15%">
+<col width="10%">
 </colgroup>
 <thead><tr class="header">
 <th align="left">File</th>
@@ -323,7 +553,7 @@ fast and cost-effective for text analysis:</p>
 <td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
 <td align="left">English</td>
 <td align="left">high</td>
-<td align="left">conversational</td>
+<td align="left">spontaneous</td>
 <td align="left">conversational</td>
 <td align="left">negative</td>
 </tr>
@@ -333,21 +563,21 @@ fast and cost-effective for text analysis:</p>
 <td align="left">high</td>
 <td align="left">other</td>
 <td align="left">neutral</td>
-<td align="left">neutral</td>
+<td align="left">mixed</td>
 </tr>
 <tr class="odd">
 <td align="left">OSR_cn_000_0072_8k.wav</td>
 <td align="left">Mandarin</td>
 <td align="left">high</td>
-<td align="left">spontaneous</td>
+<td align="left">other</td>
 <td align="left">neutral</td>
 <td align="left">positive</td>
 </tr>
 <tr class="even">
 <td align="left">OSR_cn_000_0075_8k.wav</td>
-<td align="left">Mandarin</td>
+<td align="left">Chinese</td>
 <td align="left">high</td>
-<td align="left">other</td>
+<td align="left">spontaneous</td>
 <td align="left">neutral</td>
 <td align="left">neutral</td>
 </tr>
@@ -355,7 +585,7 @@ fast and cost-effective for text analysis:</p>
 <td align="left">OSR_fr_000_0041_8k.wav</td>
 <td align="left">French</td>
 <td align="left">high</td>
-<td align="left">spontaneous</td>
+<td align="left">other</td>
 <td align="left">neutral</td>
 <td align="left">mixed</td>
 </tr>
@@ -365,36 +595,33 @@ fast and cost-effective for text analysis:</p>
 <td align="left">high</td>
 <td align="left">spontaneous</td>
 <td align="left">neutral</td>
-<td align="left">mixed</td>
+<td align="left">neutral</td>
 </tr>
 </tbody>
 </table>
-<p>Total cost for analyzing 6 transcripts:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Transcription cost (Whisper): ~$"</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">word_counts</span><span class="op">)</span> <span class="op">*</span> <span class="fl">0.006</span> <span class="op">/</span> <span class="fl">100</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">" (estimated)\n"</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Transcription cost (Whisper): ~$0.0177 (estimated)</span></span></code></pre>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<p>The coding cost for 6 transcripts, kept separate from the
+transcription usage above:</p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Analysis cost (Gemini): $"</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">cost</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Analysis cost (Gemini): $0.0128</span></span></code></pre>
+<pre><code><span><span class="co">## Analysis cost (Gemini): $0.0119</span></span></code></pre>
 <div class="section level3">
 <h3 id="language-distribution">Language distribution<a class="anchor" aria-label="anchor" href="#language-distribution"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Languages detected:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Languages detected:</span></span></code></pre>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">language_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">language</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">language_table</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
-<span><span class="co">##  English   French    Hindi Mandarin </span></span>
-<span><span class="co">##        2        1        1        2</span></span></code></pre>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<span><span class="co">##  Chinese  English   French    Hindi Mandarin </span></span>
+<span><span class="co">##        1        2        1        1        1</span></span></code></pre>
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nLanguage confidence levels:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Language confidence levels:</span></span></code></pre>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">language_confidence</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">##   high medium    low </span></span>
@@ -403,10 +630,10 @@ fast and cost-effective for text analysis:</p>
 <div class="section level3">
 <h3 id="topics-and-themes">Topics and themes<a class="anchor" aria-label="anchor" href="#topics-and-themes"></a>
 </h3>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Display topics for each transcript</span></span>
 <span><span class="va">coded_transcripts</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.filename</span>, <span class="va">main_topics</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.id</span>, <span class="va">main_topics</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
 <span>    col.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"File"</span>, <span class="st">"Main Topics"</span><span class="op">)</span>,</span>
 <span>    caption <span class="op">=</span> <span class="st">"Topics Identified in Each Transcript"</span></span>
@@ -414,8 +641,8 @@ fast and cost-effective for text analysis:</p>
 <table class="table">
 <caption>Topics Identified in Each Transcript</caption>
 <colgroup>
-<col width="31%">
-<col width="68%">
+<col width="34%">
+<col width="65%">
 </colgroup>
 <thead><tr class="header">
 <th align="left">File</th>
@@ -429,27 +656,26 @@ impatience</td>
 </tr>
 <tr class="even">
 <td align="left">harvard.wav</td>
-<td align="left">Smells, Food flavors, Health benefits, Culinary
-preferences</td>
+<td align="left">Sensory experiences, Food and beverages, Health
+benefits, Temperature effects</td>
 </tr>
 <tr class="odd">
 <td align="left">OSR_cn_000_0072_8k.wav</td>
-<td align="left">local observations, scenery, urban features,
-entertainment, nature</td>
+<td align="left">daily life scenes,nature,animals,urban environment</td>
 </tr>
 <tr class="even">
 <td align="left">OSR_cn_000_0075_8k.wav</td>
-<td align="left">astronomy, nature, travel, seasons, landscapes</td>
+<td align="left">astronomy, travel, natural scenery, seasons</td>
 </tr>
 <tr class="odd">
 <td align="left">OSR_fr_000_0041_8k.wav</td>
-<td align="left">daily observations, human emotions, nature, idiomatic
-expressions, everyday situations</td>
+<td align="left">Daily observations, Emotions, Actions, Idioms,
+Transportation</td>
 </tr>
 <tr class="even">
 <td align="left">OSR_in_000_0064_8k.wav</td>
-<td align="left">personal characteristics, daily observations, advice,
-interpersonal interactions, hobbies</td>
+<td align="left">personal attributes, possessions, hobbies, advice,
+interpersonal relations</td>
 </tr>
 </tbody>
 </table>
@@ -458,84 +684,383 @@ interpersonal interactions, hobbies</td>
 <h3 id="detailed-view-of-one-transcript">Detailed view of one transcript<a class="anchor" aria-label="anchor" href="#detailed-view-of-one-transcript"></a>
 </h3>
 <p>Let’s examine the complete analysis for one transcript:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Select the first transcript for detailed view</span></span>
 <span><span class="va">transcript_detail</span> <span class="op">&lt;-</span> <span class="va">coded_transcripts</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== Detailed Analysis ===\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## === Detailed Analysis ===</span></span></code></pre>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"File:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">.filename</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"File:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">.id</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## File: F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</span></span></code></pre>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Language:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">language</span>,</span>
 <span>    <span class="st">"("</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">language_confidence</span>, <span class="st">"confidence )\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Language: English ( 1 confidence )</span></span></code></pre>
-<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb49"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Speech type:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">speech_type</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Speech type: 1</span></span></code></pre>
-<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">## Speech type: 4</span></span></code></pre>
+<div class="sourceCode" id="cb51"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Tone:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">tone</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Tone: 5</span></span></code></pre>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb53"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Sentiment:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">sentiment</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Sentiment: 2</span></span></code></pre>
-<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb55"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Main topics:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">main_topics</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Main topics: societal tension, stress, negative news, impatience</span></span></code></pre>
-<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb57"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Key phrases:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">key_phrases</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Key phrases: tension in the air, stressed out, negative news, impatience of people</span></span></code></pre>
-<div class="sourceCode" id="cb48"><pre class="downlit sourceCode r">
+<pre><code><span><span class="co">## Key phrases: tension in the air, stressed out, news is so negative, impatience of people</span></span></code></pre>
+<div class="sourceCode" id="cb59"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Summary:"</span>, <span class="va">transcript_detail</span><span class="op">$</span><span class="va">summary</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Summary: The speaker observes a pervasive tension in society, suggesting it stems from headlines, general stress, or negative news. This tension is evident in the impatience displayed by people.</span></span></code></pre>
-<div class="sourceCode" id="cb50"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== Original Transcription (first 300 chars) ===\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## === Original Transcription (first 300 chars) ===</span></span></code></pre>
-<div class="sourceCode" id="cb52"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">transcriptions</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">1</span>, <span class="fl">300</span><span class="op">)</span>, <span class="st">"...\n"</span><span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## And this is such an important topic because I'm sure you've felt it. There's tension in the air, right? Everywhere you go. I don't know if it's the headlines or the fact that everybody is so stressed out or the news is so negative, but the impatience of people when they're waiting. ...</span></span></code></pre>
+<pre><code><span><span class="co">## Summary: The speaker observes a significant amount of tension and impatience in the current societal atmosphere. They attribute this to potential factors like negative headlines, widespread stress, or general negativity in the news. The overall sentiment conveyed is one of concern regarding the pervasive impatience experienced in daily life.</span></span></code></pre>
+<div class="sourceCode" id="cb61"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== Transcript (first 300 chars) ===\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## === Transcript (first 300 chars) ===</span></span></code></pre>
+<div class="sourceCode" id="cb63"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">transcripts</span><span class="op">[[</span><span class="va">transcript_detail</span><span class="op">$</span><span class="va">.id</span><span class="op">]</span><span class="op">]</span>, <span class="fl">1</span>, <span class="fl">300</span><span class="op">)</span>, <span class="st">"...\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## And this is such an important topic because I'm sure you felt it. There's tension in the air, right? Everywhere you go. I don't know if it's the headlines or the fact that everybody is so stressed out or the news is so negative, but the impatience of people when they're waiting. ...</span></span></code></pre>
 </div>
 </div>
 <div class="section level2">
 <h2 id="summary-statistics">Summary statistics<a class="anchor" aria-label="anchor" href="#summary-statistics"></a>
 </h2>
-<div class="sourceCode" id="cb54"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb65"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Speech type distribution</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Speech types:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## Speech types:</span></span></code></pre>
-<div class="sourceCode" id="cb56"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb67"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">speech_type</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## conversational  formal_speech        reading    spontaneous          other </span></span>
-<span><span class="co">##              1              0              0              3              2</span></span></code></pre>
-<div class="sourceCode" id="cb58"><pre class="downlit sourceCode r">
+<span><span class="co">##              0              0              0              3              3</span></span></code></pre>
+<div class="sourceCode" id="cb69"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Tone distribution</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nTone distribution:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Tone distribution:</span></span></code></pre>
-<div class="sourceCode" id="cb60"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb71"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">tone</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">##         formal       informal        neutral      technical conversational </span></span>
 <span><span class="co">##              0              0              5              0              1</span></span></code></pre>
-<div class="sourceCode" id="cb62"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb73"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Sentiment distribution</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"\nSentiment distribution:\n"</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## Sentiment distribution:</span></span></code></pre>
-<div class="sourceCode" id="cb64"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb75"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">coded_transcripts</span><span class="op">$</span><span class="va">sentiment</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## positive negative  neutral    mixed </span></span>
 <span><span class="co">##        1        1        2        2</span></span></code></pre>
 </div>
 <div class="section level2">
+<h2 id="coding-the-recordings-directly">Coding the recordings directly<a class="anchor" aria-label="anchor" href="#coding-the-recordings-directly"></a>
+</h2>
+<p>The two-step route has a cost beyond the transcription fee: the
+coding model only ever sees the transcript, so anything the transcriber
+dropped is gone, and the transcript itself is a second instrument whose
+errors are invisible to the coder. Since quallmer 0.5, a codebook can
+declare <code>input_type = "audio"</code>, and <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code>
+then uploads each recording to the provider and sends the model a
+reference to it alongside the instructions. The model listens to the
+audio itself, so the schema can ask for a transcript as one field among
+the others.</p>
+<p>Which providers accept audio this way is not checked in advance: the
+recordings are uploaded and the model is asked, and a provider that
+cannot take them refuses with its own message. As of this writing only
+Google Gemini accepts an uploaded recording alongside a
+schema-constrained request; OpenAI’s audio models refuse such a request
+and Anthropic takes no audio at all, so for those providers the two-step
+route above remains the way. See the section “Audio input” in
+<code><a href="../../../reference/qlm_code.html">?qlm_code</a></code> for the details.</p>
+<p>The codebook is the one used on the transcripts with one field added,
+so that the two routes can be compared field by field:</p>
+<div class="sourceCode" id="cb77"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">codebook_audio</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_codebook.html">qlm_codebook</a></span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"Speech Audio Analysis"</span>,</span>
+<span>  instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
+<span>    <span class="st">"You are a research assistant analyzing a speech recording."</span>,</span>
+<span>    <span class="st">"Listen to the recording, transcribe it, and provide structured analysis"</span>,</span>
+<span>    <span class="st">"of the speech based on its content. Be objective and accurate in your assessments."</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  schema <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
+<span>    transcript <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Verbatim transcript of the speech, in the language spoken"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    language <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Primary language of the speech, in English (e.g., 'English', 'Mandarin', 'French', 'Indonesian')"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    language_confidence <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"medium"</span>, <span class="st">"low"</span><span class="op">)</span>,</span>
+<span>      <span class="st">"Confidence in language identification"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    speech_type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"conversational"</span>, <span class="st">"formal_speech"</span>, <span class="st">"reading"</span>, <span class="st">"spontaneous"</span>, <span class="st">"other"</span><span class="op">)</span>,</span>
+<span>      <span class="st">"Type or style of speech"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    main_topics <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Main topics or themes discussed in the speech (comma-separated, max 5 topics)"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    key_phrases <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Important phrases or keywords mentioned (comma-separated, max 5 phrases)"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    tone <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"formal"</span>, <span class="st">"informal"</span>, <span class="st">"neutral"</span>, <span class="st">"technical"</span>, <span class="st">"conversational"</span><span class="op">)</span>,</span>
+<span>      <span class="st">"Overall tone of the speech"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    sentiment <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"positive"</span>, <span class="st">"negative"</span>, <span class="st">"neutral"</span>, <span class="st">"mixed"</span><span class="op">)</span>,</span>
+<span>      <span class="st">"Overall sentiment expressed in the speech"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    summary <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Brief 2-3 sentence summary of the speech content"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  role <span class="op">=</span> <span class="st">"You are an expert linguist and discourse analyst."</span>,</span>
+<span>  input_type <span class="op">=</span> <span class="st">"audio"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>The input is the vector of file paths rather than the transcripts.
+Naming it by file name gives the same <code>.id</code> values as the
+transcript run, which is what the comparison below merges on. Every file
+is uploaded before the first coding request is sent, so a failed upload
+stops the run with nothing spent.</p>
+<div class="sourceCode" id="cb78"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">audio_files</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/basename.html" class="external-link">basename</a></span><span class="op">(</span><span class="va">audio_files</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">coded_audio</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../../reference/qlm_code.html">qlm_code</a></span><span class="op">(</span></span>
+<span>  <span class="va">audio_files</span>,</span>
+<span>  codebook <span class="op">=</span> <span class="va">codebook_audio</span>,</span>
+<span>  model <span class="op">=</span> <span class="st">"google_gemini/gemini-2.5-flash"</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"audio_direct_gemini"</span>,</span>
+<span>  notes <span class="op">=</span> <span class="st">"Single-pass coding of the recordings, no transcription step"</span>,</span>
+<span>  include_cost <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">coded_audio</span>, <span class="st">"data/coded_audio_gemini.rds"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb79"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">coded_audio</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">.id</span>, <span class="va">language</span>, <span class="va">language_confidence</span>, <span class="va">speech_type</span>, <span class="va">tone</span>, <span class="va">sentiment</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span></span>
+<span>    col.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"File"</span>, <span class="st">"Language"</span>, <span class="st">"Confidence"</span>, <span class="st">"Type"</span>, <span class="st">"Tone"</span>, <span class="st">"Sentiment"</span><span class="op">)</span>,</span>
+<span>    caption <span class="op">=</span> <span class="st">"Direct Audio Analysis Results"</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Direct Audio Analysis Results</caption>
+<colgroup>
+<col width="41%">
+<col width="9%">
+<col width="11%">
+<col width="12%">
+<col width="15%">
+<col width="10%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">File</th>
+<th align="left">Language</th>
+<th align="left">Confidence</th>
+<th align="left">Type</th>
+<th align="left">Tone</th>
+<th align="left">Sentiment</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="left">English</td>
+<td align="left">high</td>
+<td align="left">spontaneous</td>
+<td align="left">conversational</td>
+<td align="left">negative</td>
+</tr>
+<tr class="even">
+<td align="left">harvard.wav</td>
+<td align="left">English</td>
+<td align="left">high</td>
+<td align="left">reading</td>
+<td align="left">neutral</td>
+<td align="left">neutral</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="left">Mandarin</td>
+<td align="left">high</td>
+<td align="left">spontaneous</td>
+<td align="left">neutral</td>
+<td align="left">neutral</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="left">Mandarin</td>
+<td align="left">high</td>
+<td align="left">reading</td>
+<td align="left">neutral</td>
+<td align="left">neutral</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="left">French</td>
+<td align="left">high</td>
+<td align="left">reading</td>
+<td align="left">neutral</td>
+<td align="left">neutral</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="left">Hindi</td>
+<td align="left">high</td>
+<td align="left">reading</td>
+<td align="left">neutral</td>
+<td align="left">neutral</td>
+</tr>
+</tbody>
+</table>
+<div class="section level3">
+<h3 id="transcripts-from-two-instruments">Transcripts from two instruments<a class="anchor" aria-label="anchor" href="#transcripts-from-two-instruments"></a>
+</h3>
+<p>The model’s transcript can be set beside Whisper’s for the same
+recording. Here is the first clip:</p>
+<div class="sourceCode" id="cb80"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">first</span> <span class="op">&lt;-</span> <span class="va">coded_audio</span><span class="op">$</span><span class="va">.id</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== gpt-4o-mini-transcribe, through qlm_transcribe() ===\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## === gpt-4o-mini-transcribe, through qlm_transcribe() ===</span></span></code></pre>
+<div class="sourceCode" id="cb82"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">transcripts</span><span class="op">[[</span><span class="va">first</span><span class="op">]</span><span class="op">]</span>, <span class="st">"\n\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## And this is such an important topic because I'm sure you felt it. There's tension in the air, right? Everywhere you go. I don't know if it's the headlines or the fact that everybody is so stressed out or the news is so negative, but the impatience of people when they're waiting.</span></span></code></pre>
+<div class="sourceCode" id="cb84"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"=== gemini-2.5-flash, in the same pass as the coding ===\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## === gemini-2.5-flash, in the same pass as the coding ===</span></span></code></pre>
+<div class="sourceCode" id="cb86"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">coded_audio</span><span class="op">$</span><span class="va">transcript</span><span class="op">[</span><span class="va">coded_audio</span><span class="op">$</span><span class="va">.id</span> <span class="op">==</span> <span class="va">first</span><span class="op">]</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## And this is such an important topic because I'm sure you've felt it. There's tension in the air, right? Everywhere you go. I don't know if it's the headlines or the fact that everybody is so stressed out or the news is so negative, but the impatience of people when they're waiting</span></span></code></pre>
+</div>
+<div class="section level3">
+<h3 id="agreement-between-the-two-routes">Agreement between the two routes<a class="anchor" aria-label="anchor" href="#agreement-between-the-two-routes"></a>
+</h3>
+<p>Both runs are <code>qlm_coded</code> objects keyed by file name, so
+<code><a href="../../../reference/qlm_compare.html">qlm_compare()</a></code> measures their agreement on the categorical
+fields exactly as it would for two coders:</p>
+<div class="sourceCode" id="cb88"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_compare.html">qlm_compare</a></span><span class="op">(</span><span class="va">coded_transcripts</span>, <span class="va">coded_audio</span>,</span>
+<span>            by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"language"</span>, <span class="st">"speech_type"</span>, <span class="st">"tone"</span>, <span class="st">"sentiment"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── <span style="font-weight: bold;">Inter-rater reliability</span> ──</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## Subjects: 6</span></span></code></pre>
+<pre><code><span><span class="co">## Raters: 2</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── language (nominal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement     0.8333 </span></span>
+<span><span class="co">## Krippendorff's alpha  0.8000 </span></span>
+<span><span class="co">## Kappa                 0.7857</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── speech_type (nominal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement     0.1667 </span></span>
+<span><span class="co">## Krippendorff's alpha -0.1702 </span></span>
+<span><span class="co">## Kappa                 0.0000</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── tone (nominal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement     1.0000 </span></span>
+<span><span class="co">## Krippendorff's alpha  1.0000 </span></span>
+<span><span class="co">## Kappa                 1.0000</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<pre><code><span><span class="co">## ── sentiment (nominal)</span></span></code></pre>
+<pre><code><span><span class="co">## Percent agreement     0.5000 </span></span>
+<span><span class="co">## Krippendorff's alpha  0.2326 </span></span>
+<span><span class="co">## Kappa                 0.2800</span></span></code></pre>
+<pre><code><span><span class="co">## </span></span></code></pre>
+<p>Disagreement here is not simply error in one route: the two models
+heard different things (one a transcript, one the audio) and were asked
+the same questions. A gold-standard subset coded by hand, checked with
+<code><a href="../../../reference/qlm_validate.html">qlm_validate()</a></code>, is what settles which route is closer to
+the truth for a given corpus.</p>
+</div>
+<div class="section level3">
+<h3 id="cost-and-provenance">Cost and provenance<a class="anchor" aria-label="anchor" href="#cost-and-provenance"></a>
+</h3>
+<p>The cost of the direct run is reported by <code><a href="../../../reference/qlm_code.html">qlm_code()</a></code>,
+with a qualification: providers price audio tokens above text tokens,
+and ellmer prices the total at the text rate, so the figure is
+potentially underestimated. The note travels with the object and appears
+when it is printed and in the audit trail.</p>
+<div class="sourceCode" id="cb110"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Direct coding cost (Gemini, at the text rate): $"</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">coded_audio</span><span class="op">$</span><span class="va">cost</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="fl">4</span><span class="op">)</span>, <span class="st">"\n"</span>, sep <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span></code></pre></div>
+<pre><code><span><span class="co">## Direct coding cost (Gemini, at the text rate): $0.0159</span></span></code></pre>
+<p>A run on files also records what it coded. Each unit’s file name,
+size and SHA-256 hash are kept in the run’s metadata;
+<code><a href="../../../reference/qlm_replicate.html">qlm_replicate()</a></code> and <code><a href="../../../reference/qlm_backfill.html">qlm_backfill()</a></code> check them
+before uploading the files again, and refuse to continue if a path now
+points at different bytes.</p>
+<div class="sourceCode" id="cb112"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_meta.html">qlm_meta</a></span><span class="op">(</span><span class="va">coded_audio</span>, <span class="st">"input_files"</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>sha256 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substr.html" class="external-link">substr</a></span><span class="op">(</span><span class="va">sha256</span>, <span class="fl">1</span>, <span class="fl">12</span><span class="op">)</span>, <span class="st">"..."</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span>caption <span class="op">=</span> <span class="st">"Files behind each coded unit"</span><span class="op">)</span></span></code></pre></div>
+<table class="table">
+<caption>Files behind each coded unit</caption>
+<colgroup>
+<col width="38%">
+<col width="38%">
+<col width="7%">
+<col width="15%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">.id</th>
+<th align="left">file</th>
+<th align="right">size</th>
+<th align="left">sha256</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="left">F1523643-7930-4FCA-B0E1-1CB5AEBE6BF2.mp3</td>
+<td align="right">524288</td>
+<td align="left">4a7f23c350e0…</td>
+</tr>
+<tr class="even">
+<td align="left">harvard.wav</td>
+<td align="left">harvard.wav</td>
+<td align="right">3249924</td>
+<td align="left">971b41636704…</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="left">OSR_cn_000_0072_8k.wav</td>
+<td align="right">319526</td>
+<td align="left">a7e2e6c7a047…</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="left">OSR_cn_000_0075_8k.wav</td>
+<td align="right">398442</td>
+<td align="left">3fd3b56518d3…</td>
+</tr>
+<tr class="odd">
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="left">OSR_fr_000_0041_8k.wav</td>
+<td align="right">1275156</td>
+<td align="left">381d49ce7f50…</td>
+</tr>
+<tr class="even">
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="left">OSR_in_000_0064_8k.wav</td>
+<td align="right">599896</td>
+<td align="left">24955a6fcaa4…</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="section level2">
 <h2 id="creating-an-audit-trail">Creating an audit trail<a class="anchor" aria-label="anchor" href="#creating-an-audit-trail"></a>
 </h2>
 <p>Document the complete analysis:</p>
-<div class="sourceCode" id="cb66"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded_transcripts</span>, path <span class="op">=</span> <span class="st">"audio_analysis"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb113"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../../../reference/qlm_trail.html">qlm_trail</a></span><span class="op">(</span><span class="va">coded_transcripts</span>, <span class="va">coded_audio</span>, path <span class="op">=</span> <span class="st">"audio_analysis"</span><span class="op">)</span></span></code></pre></div>
 <p>This creates two files:</p>
 <ul>
 <li>
@@ -552,28 +1077,34 @@ trail documentation</li>
 <p>This example demonstrates:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Two-step workflow</strong>: Transcription (Whisper) →
-Analysis (LLM)</li>
+<strong>Two-step workflow</strong>: Transcription
+(<code><a href="../../../reference/qlm_transcribe.html">qlm_transcribe()</a></code>) → Analysis (LLM), which works with any
+coding model, and records the transcription with the coded run</li>
 <li>
-<strong>Multilingual capability</strong>: Whisper handles multiple
-languages automatically</li>
+<strong>Direct workflow</strong>: <code>input_type = "audio"</code>
+sends the recordings themselves to a multimodal model, currently Gemini,
+which transcribes and codes in one pass</li>
 <li>
-<strong>Structured extraction</strong>: Codebooks define what to
-extract from transcripts</li>
+<strong>Multilingual capability</strong>: Both routes handle
+multiple languages automatically</li>
+<li>
+<strong>Structured extraction</strong>: The same codebook fields
+serve both routes, so <code><a href="../../../reference/qlm_compare.html">qlm_compare()</a></code> measures their
+agreement</li>
 <li>
 <strong>Scalability</strong>: Process multiple audio files in
 batch</li>
 <li>
-<strong>Cost efficiency</strong>: Whisper is significantly cheaper
-than human transcription</li>
-<li>
-<strong>Reproducibility</strong>: All steps are documented and can
-be replicated</li>
+<strong>Reproducibility</strong>: Transcripts carry their
+provenance, file hashes are recorded on both routes, and both runs go
+into the audit trail</li>
 </ol>
-<p>This workflow enables researchers to analyze audio content at scale,
-from political speeches to interviews to podcast episodes. The
-combination of Whisper for transcription and LLMs for analysis provides
-both accuracy and interpretability.</p>
+<p>Both workflows enable researchers to analyze audio content at scale,
+from political speeches to interviews to podcast episodes. The two-step
+route keeps transcription as a separate, cacheable instrument that any
+coding model can read; the direct route lets the model hear the
+recording, at the price of being tied to the providers that accept
+audio.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -586,7 +1117,7 @@ both accuracy and interpretability.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
