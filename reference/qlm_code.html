@@ -509,6 +509,26 @@ nothing passed through this machine. <code><a href="qlm_replicate.html">qlm_repl
 and <code>batch = TRUE</code> is refused as for audio.</p>
     </div>
     <div class="section level2">
+    <h2 id="transcripts">Transcripts<a class="anchor" aria-label="anchor" href="#transcripts"></a></h2>
+
+
+
+<p>A <code>qlm_transcript</code> from <code><a href="qlm_transcribe.html">qlm_transcribe()</a></code> is coded as ordinary text with
+a text codebook, on any provider. The run records the provenance of every
+transcript, the recording's hash, the transcription model, language,
+prompt and usage, in its metadata as <code>transcription</code>, and <code><a href="qlm_trail.html">qlm_trail()</a></code>
+reports it, so the trail documents the transcription as part of the
+instrument rather than starting at the text. <code><a href="qlm_replicate.html">qlm_replicate()</a></code> and
+<code><a href="qlm_backfill.html">qlm_backfill()</a></code> code the stored transcripts again without another
+transcription request, and carry the record forward.</p>
+<p>A text unit that is <code>NA</code>, whether a transcription that failed or a
+missing value in any character vector, is never sent to the model. It is
+recorded as a failed unit with the reason, the transcription's own
+message where there is one, and <code><a href="qlm_backfill.html">qlm_backfill()</a></code> leaves it alone, since
+there is nothing to retry. Transcribe the recording again and assign the
+text at that position before coding.</p>
+    </div>
+    <div class="section level2">
     <h2 id="rejected-runs">Rejected runs<a class="anchor" aria-label="anchor" href="#rejected-runs"></a></h2>
 
 
