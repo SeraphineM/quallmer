@@ -235,6 +235,8 @@ redact_call <- function(call) {
   nms <- names(call) %||% rep("", length(call))
 
   for (i in seq_along(call)[-1]) {
+    # An empty argument, as in `x[1, ]`, cannot be read into a variable
+    if (identical(call[[i]], quote(expr = ))) next
     nm <- nms[i]
     value <- call[[i]]
 

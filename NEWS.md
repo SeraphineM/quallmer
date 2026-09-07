@@ -97,6 +97,21 @@ Everything in this section postdates quallmer 0.4.0, released on CRAN on
   and without a tool and shows why the tool is what makes the extraction
   repeatable.
 
+* New `qlm_transcribe()` transcribes audio recordings, in parallel, from
+  local files or URLs: through the transcription endpoint of `openai/`
+  (`gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, `whisper-1`) or of any
+  provider registered with `qlm_register_provider()`, or through a chat
+  model that hears the recording, such as a Gemini model. No list of models
+  is kept; a model that cannot transcribe is refused by its provider, at no
+  cost. It returns a `qlm_transcript`, a named character vector whose
+  provenance table records each recording's hash, the model, language,
+  prompt, timestamp and reported usage. `qlm_code()` codes it as text on
+  any provider and records that provenance with the run, `qlm_trail()`
+  reports it, and `qlm_replicate()` and `qlm_backfill()` code the stored
+  transcripts again without another transcription request. A unit whose
+  text is `NA`, such as a failed transcription, is never sent to the model
+  and is recorded as failed with the reason (#178).
+
 * `qlm_code()` and `qlm_segment()` accept registered OpenAI-compatible
   provider prefixes. `qlm_register_provider()` adds session-specific endpoints;
   replication and backfill retain the recorded endpoint (#145).

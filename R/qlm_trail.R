@@ -167,6 +167,7 @@ qlm_trail <- function(..., path = NULL) {
       # reproduce the run, so it belongs in the report
       run$input_type <- meta_attr$object$input_type
       run$input_files <- meta_attr$user$input_files
+      run$transcription <- meta_attr$user$transcription
       run$metadata$n_units <- meta_attr$object$n_units
       run$metadata$ellmer_version <- meta_attr$system$ellmer_version
       # Passes that completed the run, and any other model they used: the
@@ -650,6 +651,9 @@ generate_trail_report <- function(trail, file) {
       }
       lines <- c(lines, "")
     }
+
+    # The recordings the text was transcribed from, and how (#178)
+    lines <- c(lines, transcription_lines(run$transcription))
 
     # Call (materials relating to intentions)
     if (!is.null(run$call)) {
@@ -1321,4 +1325,91 @@ collect_call_tools <- function(call) {
     }
   }
   found
+}
+
+
+#' The report block for a run coded from transcripts
+#'
+#' One row per unit with the file, its hash and the model, then one line per
+#' distinct configuration (model, prompt and endpoint) with the
+#' usage summed where the shapes agree. The `.rds` keeps the full table; the
+#' report need not repeat it.
+#'
+#' @param transcription The `transcription` table of a run, or `NULL`.
+#'
+#' @return Lines of markdown, or `character()`.
+#' @keywords internal
+#' @noRd
+transcription_lines <- function(transcription) {
+  if (!is.data.frame(transcription) || !nrow(transcription)) {
+    return(character())
+  }
+  n <- nrow(transcription)
+  lines <- c(
+    paste0(
+      "**Transcribed from (audio):** ", n, " file", if (n == 1L) "" else "s",
+      ", SHA-256 recorded at transcription time"
+    ),
+    "",
+    "| .id | Source | Bytes | SHA-256 | Model | Language | Status |",
+    "|---|---|---|---|---|---|---|"
+  )
+  for (k in seq_len(n)) {
+    f <- transcription[k, ]
+    lines <- c(lines, paste0(
+      "| ", f$.id, " | ", f$source, " | ",
+      if (is.na(f$size)) "" else format(f$size, big.mark = ",", scientific = FALSE),
+      " | ",
+      if (is.na(f$sha256)) "not recorded" else paste0("`", f$sha256, "`"),
+      " | ", f$model, " | ",
+      if (is.na(f$language)) "detected" else f$language,
+      " | ", f$status, " |"
+    ))
+  }
+  lines <- c(lines, "")
+  # One line per distinct configuration, not per model: the same model with
+  # another prompt or endpoint is another instrument, and a table combined
+  # from two runs can hold both. The units of each are named when there is
+  # more than one.
+  key <- paste(transcription$model, transcription$prompt, transcription$base_url, sep = "\r")
+  groups <- split(seq_len(n), factor(key, levels = unique(key)))
+  for (idx in groups) {
+    rows <- transcription[idx, ]
+    first <- rows[1, ]
+    settings <- c(
+      if (!is.na(first$prompt)) paste0("prompt: \"", first$prompt, "\""),
+      if (!is.na(first$base_url)) paste0("endpoint: ", first$base_url)
+    )
+    units <- if (length(groups) > 1L) paste0("units: ", paste(rows$.id, collapse = ", "))
+    lines <- c(lines, paste0(
+      "**Transcription model `", first$model, "`:** ",
+      paste(c(settings, transcription_usage_summary(rows$usage), units), collapse = "; ")
+    ))
+  }
+  c(lines, "")
+}
+
+#' Sum what a backend reported, when every unit reported the same shape
+#' @keywords internal
+#' @noRd
+transcription_usage_summary <- function(usage) {
+  usage <- usage[!vapply(usage, is.null, logical(1))]
+  if (!length(usage)) {
+    return("usage not reported")
+  }
+  types <- vapply(usage, function(u) u$type %||% if (!is.null(u$tokens)) "ellmer" else "other", character(1))
+  if (length(unique(types)) != 1L) {
+    return("usage reported per file in the .rds")
+  }
+  total <- function(field) sum(vapply(usage, function(u) as.numeric(u[[field]] %||% NA_real_), numeric(1)))
+  switch(unique(types),
+    duration = paste0("usage: ", total("seconds"), " seconds of audio"),
+    tokens = paste0("usage: ", total("input_tokens"), " input tokens, ", total("output_tokens"), " output tokens"),
+    ellmer = paste0(
+      "usage: ", sum(vapply(usage, function(u) as.numeric(u$tokens$input %||% NA_real_), numeric(1))),
+      " input tokens, ", sum(vapply(usage, function(u) as.numeric(u$tokens$output %||% NA_real_), numeric(1))),
+      " output tokens (audio tokens priced at the text rate)"
+    ),
+    "usage reported per file in the .rds"
+  )
 }
