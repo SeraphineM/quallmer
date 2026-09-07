@@ -31,8 +31,11 @@ different services with different credentials. When either changes, only
 portable chat settings (\code{params} and \code{echo}) are carried over; supply
 credentials, endpoint settings and other endpoint-specific arguments
 explicitly. An informational message names inherited arguments that were
-omitted and not explicitly replaced. Registered \code{tools} are never carried
-over.}
+omitted and not explicitly replaced. Registered \code{tools} are carried like
+the rest: kept on the same endpoint, since a hosted tool belongs to its
+provider, and dropped with the message when it changes; pass \code{tools} to
+replace them. An object read back from a trail records its tools by
+description and configuration only, and those are not sent either.}
 
 \item{codebook}{Optional replacement codebook. If \code{NULL} (default), uses
 the codebook from \code{x}.}

@@ -1,4 +1,4 @@
-.PHONY: articles article deploy-articles site readme
+.PHONY: articles article deploy-articles deploy-article site readme
 
 # Knit README.md from README.Rmd
 readme:
@@ -15,10 +15,11 @@ readme:
 define with_checkout_installed
 lib=$$(mktemp -d) && \
 R_LIBS="$$lib" R CMD INSTALL --no-multiarch . && \
-R_LIBS="$$lib" Rscript -e "$(1)"; \
+QUALLMER_LIVE_ARTICLES=1 R_LIBS="$$lib" Rscript -e "$(1)"; \
 status=$$?; rm -rf "$$lib"; exit $$status
 endef
 
+# Explicit article builds enable live examples; other renders leave them unrun.
 # Build all articles locally (with updated README)
 articles: readme
 	$(call with_checkout_installed,pkgdown::build_articles())
@@ -27,6 +28,11 @@ articles: readme
 # Usage: make article NAME=pkgdown/getting-started/workflow
 article:
 	$(call with_checkout_installed,pkgdown::build_article('$(NAME)'))
+
+# Build one article live and deploy it with whatever else is built
+# Usage: make deploy-article NAME=pkgdown/tutorials/tools
+deploy-article: article
+	$(MAKE) deploy-articles
 
 # Deploy articles and workshop materials to gh-pages without touching other content
 deploy-articles: readme
@@ -41,4 +47,4 @@ deploy-articles: readme
 
 # Full local site build (with updated README)
 site: readme
-	Rscript -e "pkgdown::build_site()"
+	QUALLMER_LIVE_ARTICLES=1 Rscript -e "pkgdown::build_site()"

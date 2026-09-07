@@ -50,13 +50,14 @@
 #' what it was; a `qlm_coded` object loaded from the `.rds` therefore needs a
 #' credential of its own before it can be replicated.
 #'
-#' Only literal values are redacted from a call. A credential read where it
-#' is needed, through an environment variable ellmer reads by default or a
-#' `credentials = function() Sys.getenv("MY_KEY")` argument, never enters the
-#' record and is the recommended form. That is also the only `credentials`
-#' callback the trail keeps, rebuilt without its environment; a callback of
-#' any other shape is replaced by `"<redacted>"`, since it may hold or
-#' capture the secret it returns.
+#' In a recorded call, a credential argument is kept only when it names a
+#' source that cannot itself contain the value: a variable, a qualified name,
+#' or an exact one-argument `Sys.getenv("MY_KEY")` lookup. Other computed
+#' expressions are replaced wholesale because their unevaluated arguments may
+#' contain a literal credential. The exact `credentials = function()
+#' Sys.getenv("MY_KEY")` callback is also kept, rebuilt without its environment;
+#' a callback of any other shape is replaced by `"<redacted>"`, since it may
+#' hold or capture the secret it returns.
 #' }
 #'
 #' @references
@@ -94,6 +95,7 @@ qlm_trail <- function(..., path = NULL) {
   # Extract runs from all objects
   runs <- list()
   redacted <- integer()
+  tools_kept <- integer()
   for (i in seq_along(objects)) {
     obj <- objects[[i]]
 
@@ -122,7 +124,14 @@ qlm_trail <- function(..., path = NULL) {
     # the .rds and the report agree; see redact_meta().
     redacted_meta <- redact_meta(meta_attr)
     if (!identical(redacted_meta, meta_attr)) {
-      redacted <- c(redacted, i)
+      # Two different things may have changed, and the message must not call
+      # a tool definition a credential
+      if (!identical(without_tools(redacted_meta), without_tools(meta_attr))) {
+        redacted <- c(redacted, i)
+      }
+      if (!identical(only_tools(redacted_meta), only_tools(meta_attr))) {
+        tools_kept <- c(tools_kept, i)
+      }
       meta_attr <- redacted_meta
       attr(obj, "meta") <- meta_attr
     }
@@ -233,12 +242,19 @@ qlm_trail <- function(..., path = NULL) {
     class = "qlm_trail"
   )
 
+  indices <- vapply(runs, function(r) r$object_index, integer(1))
   if (length(redacted) > 0) {
-    indices <- vapply(runs, function(r) r$object_index, integer(1))
     redacted_runs <- names(runs)[indices %in% redacted]
     cli::cli_alert_info(paste(
       "Credential values recorded for {.val {redacted_runs}} are replaced by",
       "{.val {REDACTED}} in the trail."
+    ))
+  }
+  if (length(tools_kept) > 0) {
+    tool_runs <- names(runs)[indices %in% tools_kept]
+    cli::cli_alert_info(paste(
+      "Tool definitions recorded for {.val {tool_runs}} are kept by name,",
+      "type and configuration only in the trail."
     ))
   }
 
@@ -545,6 +561,12 @@ generate_trail_report <- function(trail, file) {
     # Model and parameters
     if (!is.null(run$chat_args$name)) {
       lines <- c(lines, paste("**Model:**", run$chat_args$name))
+    }
+    # A run with a tool registered was coded by a different instrument from
+    # one without, and the report has to say so (#122)
+    if (length(run$chat_args$tools)) {
+      lines <- c(lines, paste("**Tools:**", format_tools(run$chat_args$tools)))
+      lines <- c(lines, "", format_tool_details(run$chat_args$tools), "")
     }
     if (!is.null(run$provider_resolution)) {
       lines <- c(lines, paste("**Requested model:**",
@@ -1227,6 +1249,82 @@ is_local_endpoint <- function(identity) {
   }
 
   host %in% c("localhost", "127.0.0.1", "::1", "0.0.0.0")
+}
+
+
+#' The metadata with its tool records removed, and only its tool records
+#'
+#' For telling a credential redaction from a tool one when the trail says
+#' what it changed.
+#'
+#' @param meta A `meta` attribute.
+#'
+#' @return `meta` without tools, or a list of just the tools.
+#' @keywords internal
+#' @noRd
+without_tools <- function(meta) {
+  if (!is.null(meta$object$chat_args)) {
+    meta$object$chat_args[["tools"]] <- NULL
+  }
+  if (is.call(meta$object$call)) {
+    meta$object$call <- strip_call_tools(meta$object$call)
+  }
+  if (length(meta$object$backfill)) {
+    meta$object$backfill <- lapply(meta$object$backfill, function(pass) {
+      if (!is.null(pass$overrides)) {
+        pass$overrides[["tools"]] <- NULL
+      }
+      pass
+    })
+  }
+  meta
+}
+
+only_tools <- function(meta) {
+  list(
+    run = meta$object$chat_args[["tools"]],
+    call = if (is.call(meta$object$call)) collect_call_tools(meta$object$call),
+    passes = lapply(meta$object$backfill, function(pass) pass$overrides[["tools"]])
+  )
+}
+
+
+#' A call without its `tools` arguments, at any depth, and just those
+#'
+#' @param call A recorded call.
+#'
+#' @return The call, or a list of the removed expressions.
+#' @keywords internal
+#' @noRd
+strip_call_tools <- function(call) {
+  if (!is.call(call)) {
+    return(call)
+  }
+  nms <- names(call) %||% rep("", length(call))
+  keep <- !(nms == "tools")
+  call <- call[keep]
+  for (i in seq_along(call)[-1]) {
+    if (is.call(call[[i]])) {
+      call[[i]] <- strip_call_tools(call[[i]])
+    }
+  }
+  call
+}
+
+collect_call_tools <- function(call) {
+  if (!is.call(call)) {
+    return(list())
+  }
+  nms <- names(call) %||% rep("", length(call))
+  found <- list()
+  for (i in seq_along(call)[-1]) {
+    if (identical(nms[i], "tools")) {
+      found <- c(found, list(call[[i]]))
+    } else if (is.call(call[[i]])) {
+      found <- c(found, collect_call_tools(call[[i]]))
+    }
+  }
+  found
 }
 
 

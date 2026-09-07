@@ -571,36 +571,6 @@ test_that("qlm_replicate drops provider-bound arguments when provider changes", 
 })
 
 
-test_that("qlm_replicate does not carry tools across a replication", {
-  skip_if_not_installed("mockery")
-
-  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
-  codebook <- qlm_codebook("Test", "Prompt", type_obj)
-
-  coded <- new_qlm_coded(
-    results = data.frame(id = 1L, score = 0.5),
-    codebook = codebook, data = "a", input_type = "text",
-    chat_args = list(name = "openai/gpt-4o-mini", tools = list("a tool"),
-                     params = list(temperature = 0)),
-    execution_args = list(),
-    batch = FALSE, metadata = list(n_units = 1), name = "run1",
-    call = quote(qlm_code())
-  )
-
-  seen <- NULL
-  f <- qlm_replicate
-  mockery::stub(f, "qlm_code", function(...) {
-    seen <<- list(...)
-    coded
-  })
-  f(coded, name = "run2")
-
-  # Provider-specific, so deliberately not round-tripped
-  expect_false("tools" %in% names(seen))
-  expect_equal(seen$params, list(temperature = 0))
-})
-
-
 test_that("qlm_replicate carries json_retries only where it applies", {
   skip_if_not_installed("mockery")
 
@@ -1116,6 +1086,48 @@ test_that("qlm_replicate does not send a credential the trail redacted (#154)", 
   msgs <- capture_messages(f(coded, api_key = "sk-new", name = "run3"))
   expect_true(any(grepl("`api_headers` carries a value redacted", msgs)))
   expect_equal(seen$api_key, "sk-new")
+})
+
+test_that("qlm_replicate carries tools on the same endpoint and drops them with the provider (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Prompt", type_obj)
+  web_search <- ellmer::openai_tool_web_search()
+  coded <- new_qlm_coded(
+    results = data.frame(id = 1L, score = 0.5),
+    codebook = codebook, data = "a", input_type = "text",
+    chat_args = list(name = "openai/gpt-4o-mini", tools = list(web_search)),
+    execution_args = list(), batch = FALSE,
+    metadata = list(n_units = 1), name = "run1", call = quote(qlm_code())
+  )
+  seen <- NULL
+  f <- qlm_replicate
+  mockery::stub(f, "qlm_code", function(...) { seen <<- list(...); coded })
+  mockery::stub(f, "replay_backfill", function(result, ...) result)
+
+  # Same endpoint: the run's instrument, tools included, is reproduced
+  f(coded, name = "run2")
+  expect_identical(seen$tools, list(web_search))
+
+  # Another provider: a hosted tool belongs to its provider, so it is dropped
+  # and named, like any endpoint-specific argument
+  expect_message(f(coded, model = "anthropic/claude-sonnet-4", name = "run3"),
+                 "not carrying over endpoint-specific argument: `tools`")
+  expect_null(seen$tools)
+
+  # An explicit replacement is used as given
+  lookup <- ellmer::tool(function() "ok", name = "lookup", description = "d")
+  suppressMessages(f(coded, model = "anthropic/claude-sonnet-4", tools = lookup, name = "run4"))
+  expect_identical(seen$tools, lookup)
+
+  # Read back from a trail, the tools are descriptions, and are not sent
+  saved <- coded
+  m <- attr(saved, "meta")
+  m$object$chat_args$tools <- tool_records(list(web_search))
+  attr(saved, "meta") <- m
+  msgs <- capture_messages(f(saved, name = "run5"))
+  expect_true(any(grepl("`tools` carries a value redacted", msgs)))
+  expect_null(seen$tools)
 })
 
 

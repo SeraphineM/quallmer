@@ -905,6 +905,33 @@ test_that("the JSON path diagnoses cost from its own chat, and stays quiet when 
   expect_null(attr(result, "qlm_backend_meta")$unpriced)
 })
 
+test_that("code_handler_json registers tools on the chat it builds (#122)", {
+  skip_if_not_installed("mockery")
+  registered <- list()
+  h <- code_handler_json
+  mockery::stub(h, "ellmer::chat", function(...) {
+    structure(list(register_tool = function(tl) {
+      registered[[length(registered) + 1L]] <<- tl
+      invisible(NULL)
+    }), class = "fake_chat")
+  })
+  mockery::stub(h, "model_name_hint", function(...) character())
+  mockery::stub(h, "json_chat_turns", function(chat, prompts, pc_args) {
+    list(text = '{"score": 1}', error = NA_character_, status = NA_integer_,
+         finish = NA_character_, usage = json_test_usage(1))
+  })
+  codebook <- qlm_codebook("Test", "Prompt", ellmer::type_object(score = ellmer::type_number("Score")))
+  web_search <- ellmer::openai_tool_web_search()
+
+  h("a", codebook, "openai/gpt-4o-mini", list(), list(), tools = list(web_search))
+  expect_length(registered, 1)
+  expect_identical(registered[[1]], web_search)
+
+  registered <- list()
+  h("a", codebook, "openai/gpt-4o-mini", list(), list())
+  expect_length(registered, 0)
+})
+
 
 # on_error (#171) --------------------------------------------------------------
 

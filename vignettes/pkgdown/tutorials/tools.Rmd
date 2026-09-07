@@ -1,0 +1,175 @@
+---
+title: "Coding with web-search tools"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# The runs below make about fifty provider requests, some with web search,
+# and need OpenAI and Anthropic keys. They run only when the site's articles
+# are being built for deployment, which the Makefile signals; a plain
+# pkgdown::build_site() in a development session renders the code unrun.
+live <- identical(Sys.getenv("QUALLMER_LIVE_ARTICLES"), "1")
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>", eval = live)
+```
+
+A language model answers from what it was trained on. Ask it for a figure from a web page and it will give you a figure, but unless it can reach the page, the figure comes from its memory of what such pages said, and the same question asked twice gets two answers. This tutorial shows how to give a model live web access through `qlm_code()`'s `tools` argument, why that turns an unreliable extraction into a reliable one, and how quallmer records that the tool was used, since a run with web access is a different instrument from one without.
+
+## The problem: a URL is just text
+
+`qlm_code()` takes text or images. A URL passed as input is a string in the prompt, nothing more. So a codebook that says "retrieve the page and extract the figures" is asking for something the model cannot do on its own. Some models will say so, in a `notes` field if the codebook gives them one. Others will produce plausible figures anyway, from training data that may be years old, and report the retrieval as successful.
+
+The symptom is inconsistency. Run the same extraction twice and the numbers move; run it on two models and they disagree, with nothing in the output to say which is right. That was the experience with this example in an earlier workshop, and the reason was not the codebook.
+
+A hosted web-search tool changes what the model is doing. The provider runs the search on the model's behalf during the request, and the model reads the results before it answers. In a diagnostic on a change-detection task over five countries, the same three models cited sources dated 2024 or earlier in 84 to 100 percent of their answers without the tool, and in 0 to 42 percent with it; one model's oldest citation without the tool was from 1988. The tool did not make the models cleverer. It gave them the current page.
+
+## Which tools, on which providers
+
+ellmer ships a hosted web-search tool for each of three providers, and `qlm_code()` registers whichever you pass on the chat before coding:
+
+| Provider | Tool | Model prefix |
+|---|---|---|
+| OpenAI | `ellmer::openai_tool_web_search()` | `openai/` |
+| Anthropic | `ellmer::claude_tool_web_search()` | `anthropic/` |
+| Google | `ellmer::google_tool_web_search()` | `google_gemini/` |
+
+A hosted tool belongs to its provider: OpenAI's search tool works on an OpenAI model and nowhere else. Two limits to know before starting. Tools cannot be used with `batch = TRUE`, because the batch API does not send them, and `qlm_code()` refuses the combination rather than record a tool that had no effect. And a hosted tool's calls are billed by the provider outside token pricing, so the `cost` column of a run that used one counts tokens only; the object's cost note says so.
+
+```{r packages}
+library(quallmer)
+library(ellmer)
+```
+
+## The example: figures from Wikipedia country pages
+
+We extract two figures, population and land area, from the Wikipedia article on each of ten countries. Both are verifiable, which is what makes the example useful: we can see whether the model looked.
+
+```{r urls}
+countries <- c("Argentina", "Australia", "Brazil", "Canada", "France",
+               "Germany", "India", "Japan", "United Kingdom", "United States")
+urls <- paste0("https://en.wikipedia.org/wiki/", gsub(" ", "_", countries))
+names(urls) <- countries
+```
+
+The names on the input vector become the `.id` of each row, so results are labelled by country.
+
+The codebook asks for the figures and, as important, for an account of where they came from. A model with web access can fill `source_url` with the page it read; a model without one cannot, and an honest `notes` field is where it will say so.
+
+```{r codebook}
+cb_geostats <- qlm_codebook(
+  name = "Country geostats from Wikipedia",
+  instructions = paste(
+    "The user supplies the URL of a Wikipedia country article. Retrieve the",
+    "page and extract the requested figures from its infobox. Report the URL",
+    "you actually read in `source_url`. Do not fabricate values: if you",
+    "cannot access the page or cannot find a figure, set it to NA and say",
+    "why in `notes`."
+  ),
+  schema = type_object(
+    population      = type_integer("Total population as given in the infobox", required = FALSE),
+    population_year = type_integer("Year the population figure refers to", required = FALSE),
+    area_km2        = type_number("Total area in square kilometres", required = FALSE),
+    retrieved       = type_boolean("TRUE if you retrieved the page during this request"),
+    source_url      = type_string("The URL you read the figures from", required = FALSE),
+    notes           = type_string("Caveats, or the reason a value is missing", required = FALSE)
+  ),
+  levels = list(population = "interval", area_km2 = "interval")
+)
+```
+
+## Without a tool
+
+First the run the way it was tried before: a model that does well on text, given URLs as text.
+
+```{r plain}
+coded_plain <- qlm_code(urls, cb_geostats, model = "openai/gpt-5-mini",
+                        name = "plain")
+coded_plain[, c(".id", "population", "population_year", "retrieved", "notes")]
+```
+
+Read the `retrieved` and `notes` columns before the figures. A model that reports `retrieved = TRUE` here did not retrieve anything; it cannot. The figures may still look right, because these are well-known countries and the training data contains many copies of these infoboxes, which is why the failure is easy to miss on a demonstration and hard to miss on real work.
+
+## With a tool
+
+The same call, with the provider's search tool registered:
+
+```{r web}
+coded_web <- qlm_code(urls, cb_geostats, model = "openai/gpt-5-mini",
+                      tools = openai_tool_web_search(), name = "web")
+```
+
+The object records the tool, and says so when printed:
+
+```{r print-web}
+coded_web
+```
+
+The `# Tools:` line names what was registered and whether the provider ran it (`hosted`) or R did (`custom`). The `# Cost:` line ends with a note that hosted tool calls are billed separately and not counted.
+
+## Consistency is the test
+
+The figures with the tool may or may not differ much from the figures without it, on countries this well known. What differs is what happens when you ask again. A replication reproduces the run's settings, tools included, so `qlm_replicate()` is the right way to ask again:
+
+```{r replicate}
+plain_again <- qlm_replicate(coded_plain, name = "plain_again")
+web_again <- qlm_replicate(coded_web, name = "web_again")
+```
+
+Two runs that answered from memory:
+
+```{r compare-plain}
+qlm_compare(coded_plain, plain_again, by = "population")
+```
+
+Two runs that read the page:
+
+```{r compare-web}
+qlm_compare(coded_web, web_again, by = "population")
+```
+
+The comparison on the interval level is what the codebook's `levels` set up. Agreement between two runs that read the same page should be near perfect, with any difference traceable to the page changing between them, which `population_year` and `source_url` will show. Agreement between two runs that answered from memory is whatever it happens to be.
+
+## Across providers
+
+Each provider has its own tool. A replication on another provider drops the original's tool, since it would not work there, and says so; pass the new provider's tool explicitly:
+
+```{r claude}
+coded_claude <- qlm_replicate(coded_web, model = "anthropic/claude-sonnet-4-5",
+                              tools = claude_tool_web_search(), name = "claude_web")
+qlm_compare(coded_web, coded_claude, by = c("population", "area_km2"))
+```
+
+Two models reading the same page should agree on what it says. Where they do not, `notes` and `source_url` usually explain it: one read a different revision, one took a figure from the article body rather than the infobox, one did not search at all. That last case is worth watching for. In the diagnostic above, one provider's model made no search calls on some units even with the tool registered; a `retrieved` field in the schema, as here, makes the model say what it did, and a `source_url` makes it say where.
+
+## What is recorded, and what carries
+
+Everything a tool changes about a run is kept with the run:
+
+- `print()` shows the tools, and `qlm_trail()`'s report has a `**Tools:**` line for each run, so a coding done with web access is disclosed as one.
+- A backfill of the run, with `qlm_backfill()` or `qlm_code(backfill = )`, registers the same tools on its passes, so the units it recovers are coded by the same instrument.
+- A replication on the same endpoint carries the tools; on another provider or endpoint it drops them with a message, as it does credentials, and takes whatever `tools` you pass instead.
+- The audit trail keeps tools by name, type, description and configuration rather than as objects, and the report lists each tool's configuration in full: for a web search, the domains it was allowed to reach and any location it was given, which decide what the model could have read. A custom tool from `ellmer::tool()` wraps an R function, and a function saved to a file carries its environment with it; the trail is written to be shared and does not do that. An object read back from a trail therefore knows which tools its run used but cannot register them again; pass them to replicate it.
+
+```{r trail}
+trail <- qlm_trail(coded_plain, coded_web, coded_claude, path = tempfile("geostats"))
+```
+
+## Custom tools
+
+`ellmer::tool()` wraps an R function as a tool the model can call: a lookup in a local table, a call to an API of your own. `qlm_code()` registers it the same way, with one difference in effect. On the JSON path, quallmer's request loop runs the tool when the model asks for it. On the structured path, the tool's definition is sent but `ellmer::parallel_chat_structured()` runs no tool-calling loop, so the model may ask for the tool and get no answer. To use a custom tool, set `structured = "json"`:
+
+```{r custom, eval = FALSE}
+lookup_iso <- tool(
+  function(country) countrycode::countrycode(country, "country.name", "iso3c"),
+  name = "lookup_iso",
+  description = "Return the ISO 3166-1 alpha-3 code for a country name.",
+  arguments = list(country = type_string("Country name"))
+)
+qlm_code(countries, cb_iso, model = "openai/gpt-5-mini",
+         tools = lookup_iso, structured = "json")
+```
+
+A hosted tool has no such restriction, because the provider runs it inside the request.
+
+## Summary
+
+A URL in the input is text until the model can reach it. Give it a hosted web-search tool and it reads the page; ask the codebook to make it report what it read; replicate to check that the answer holds; and let the object, the print output and the trail say that the tool was used, because the result is not the same coding without it.

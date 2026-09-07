@@ -26,6 +26,26 @@
 #'   [qlm_register_provider()] and require an explicit model name.
 #'   Examples: `"openai/gpt-4o-mini"`, `"anthropic/claude-3-5-sonnet-20241022"`,
 #'   `"ollama/llama3.2"`, `"openai"` (uses default OpenAI model).
+#' @param tools Optional list of \pkg{ellmer} tool objects to register on the
+#'   chat before coding: a provider's hosted web-search tool
+#'   ([ellmer::openai_tool_web_search()], [ellmer::claude_tool_web_search()],
+#'   [ellmer::google_tool_web_search()]) or a custom tool from [ellmer::tool()].
+#'   A single tool may be passed directly. Default is `NULL`, no tools.
+#'
+#'   Tools change the instrument: with a hosted web search the model draws
+#'   on live sources rather than its training data, so they are recorded on
+#'   the object, disclosed by `print()` and [qlm_trail()], carried to backfill
+#'   passes and to a replication on the same endpoint (a provider's hosted
+#'   tool belongs to that provider), and kept in the trail as name, type,
+#'   description and configuration rather than as objects.
+#'
+#'   Three limits. A hosted tool takes effect on both coding paths, but a
+#'   custom tool only on the JSON path: the structured transport sends a
+#'   custom tool's definition and runs no tool-calling loop, so the model
+#'   may request it and get no
+#'   result. Tools cannot be used with `batch = TRUE`, which does not send
+#'   them. And a hosted tool's calls are billed by the provider outside
+#'   token pricing, so the run's cost is tokens only, as its cost note says.
 #' @param structured character; how the output schema is obtained.
 #'   `"structured"` sends it through the provider's structured-output
 #'   mechanism. `"json"` asks for JSON, puts the schema in the system prompt,
@@ -511,7 +531,7 @@
 #'
 #' @export
 qlm_code <- function(x, codebook, model, ...,
-                     batch = FALSE,
+                     batch = FALSE, tools = NULL,
                      structured = c("auto", "structured", "json"),
                      json_retries = 2L,
                      on_error = c("continue", "return", "stop"),
@@ -529,6 +549,16 @@ qlm_code <- function(x, codebook, model, ...,
   if (!is_count(json_retries)) {
     cli::cli_abort("{.arg json_retries} must be a single non-negative integer.")
   }
+
+  # `batch` gates the dispatch below with `if (batch)`, which accepts any
+  # truthy value; the tools check has to see the same value, so settle it
+  # first
+  if (!is.logical(batch) || length(batch) != 1L || is.na(batch)) {
+    cli::cli_abort("{.arg batch} must be {.code TRUE} or {.code FALSE}.")
+  }
+  # Checked before any paid call, and refused with batch, which cannot send
+  # tools; see check_tools()
+  tools <- check_tools(tools, batch = batch)
 
   # Accept both qlm_codebook and task objects, converting if needed. A
   # qlm_codebook goes through too: one saved before a field existed is read
@@ -754,6 +784,7 @@ qlm_code <- function(x, codebook, model, ...,
     attempt <- try_structured_call(
       x = x, codebook = codebook, model = model,
       chat_args = chat_args, execution_args = execution_args, batch = batch,
+      tools = tools,
       cost_message = is.null(prices), local = resolved_files$local
     )
 
@@ -867,6 +898,7 @@ qlm_code <- function(x, codebook, model, ...,
       chat_args = chat_args,
       execution_args = execution_args,
       batch = batch,
+      tools = tools,
       json_retries = json_retries,
       model_hint = model_hint,
       cost_message = is.null(attempt) && is.null(prices),
@@ -909,6 +941,15 @@ qlm_code <- function(x, codebook, model, ...,
   results <- settled$results
   prices <- settled$prices
   cost_note <- settled$cost_note
+  # A hosted tool's calls are billed by the provider outside token pricing,
+  # so a costed run with one is tokens only, and the note must say so even
+  # where ellmer priced the tokens itself and there would be no note
+  if (isTRUE(execution_args$include_cost) && has_hosted_tool(tools)) {
+    cost_note <- paste0(
+      cost_note %||% "from ellmer's price table",
+      "; tokens only, hosted tool calls are billed separately and not counted"
+    )
+  }
 
   # An audio cost is computed at the text rate, whoever supplied the rates,
   # so the qualification joins whatever note the cost already carries rather
@@ -956,6 +997,11 @@ qlm_code <- function(x, codebook, model, ...,
 
   # Add model to chat_args for easy access
   chat_args$name <- model
+  # Recorded for print(), the trail, and whatever completes or reproduces
+  # the run; a tool changes the instrument (#122)
+  if (!is.null(tools)) {
+    chat_args$tools <- tools
+  }
 
   # An ordinal enum is stored as an ordered factor in the enum's order, the
   # shape the reliability statistics read the scale order from (#165)
@@ -1022,7 +1068,9 @@ default_structured_mode <- function(model) {
 #' the provider completed are judged: a refused request or a cut-off
 #' response says nothing about whether the endpoint honours the schema.
 #'
-#' @param x,codebook,model,chat_args,execution_args,batch As in [qlm_code()].
+#' @param x,codebook,model,chat_args,execution_args,batch,tools As in
+#'   [qlm_code()]; `tools` already checked by `check_tools()`, and registered
+#'   on every chat this function builds.
 #' @param cost_message Whether to say now why the cost will be `NA`.
 #' @param local The local path of each element of `x`, from
 #'   `resolve_input_files()`, or `NULL` for a text input.
@@ -1037,7 +1085,7 @@ default_structured_mode <- function(model) {
 #' @keywords internal
 #' @noRd
 try_structured_call <- function(x, codebook, model, chat_args, execution_args, batch,
-                                cost_message = TRUE, local = NULL) {
+                                tools = NULL, cost_message = TRUE, local = NULL) {
   system_prompt <- if (!is.null(codebook$role)) {
     paste(codebook$role, codebook$instructions, sep = "\n\n")
   } else {
@@ -1045,7 +1093,16 @@ try_structured_call <- function(x, codebook, model, chat_args, execution_args, b
   }
 
   build_chat <- function(prompt) {
-    do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
+    chat <- do.call(ellmer::chat, c(list(name = model, system_prompt = prompt), chat_args))
+    # Register tools (e.g. a hosted web-search tool) on the chat object. This
+    # can't be routed through chat_args/`...` like other ellmer::chat() args,
+    # because ellmer's chat_*() constructors have no `tools` parameter -- tools
+    # are only registered via chat$register_tool(), which requires the chat
+    # object to already exist.
+    for (tl in tools) {
+      chat$register_tool(tl)
+    }
+    chat
   }
   chat <- build_chat(system_prompt)
 
@@ -1511,6 +1568,9 @@ print.qlm_coded <- function(x, ...) {
   } else {
     cat("# Codebook: ", codebook_attr$name, "\n", sep = "")
     cat("# Model:    ", meta_attr$object$chat_args$name %||% "unknown", "\n", sep = "")
+    if (length(meta_attr$object$chat_args$tools)) {
+      cat("# Tools:    ", format_tools(meta_attr$object$chat_args$tools), "\n", sep = "")
+    }
     if (!is.null(meta_attr$object$provider_resolution)) {
       cat("# Requested model: ",
           provider_request_label(meta_attr$object$provider_resolution), "\n", sep = "")
@@ -1575,8 +1635,3 @@ print.qlm_coded <- function(x, ...) {
   # Print data using parent class method
   NextMethod()
 }
-
-
-
-
-
