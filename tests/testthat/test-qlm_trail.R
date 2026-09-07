@@ -1261,6 +1261,10 @@ test_that("transcription_lines sums usage only when every unit reported the same
 
   record$usage <- list(NULL, NULL)
   expect_true(any(grepl("usage not reported", transcription_lines(record), fixed = TRUE)))
+
+  # A shape this version does not know how to sum is left to the .rds
+  record$usage <- list(list(type = "characters", n = 10), list(type = "characters", n = 20))
+  expect_true(any(grepl("usage reported per file in the .rds", transcription_lines(record), fixed = TRUE)))
 })
 
 

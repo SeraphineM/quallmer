@@ -631,3 +631,45 @@ test_that("a Gemini failure stays in place, and an empty answer is one", {
   expect_match(prov$.error[3], "no transcript text")
   expect_equal(unname(out[[1]]), "first")
 })
+
+
+# Edges ----------------------------------------------------------------------
+
+test_that("assigning to no position leaves a transcript as it was", {
+  tr <- fake_transcript(c("a", "b"))
+  before <- attr(tr, "provenance")
+  tr[integer(0)] <- "nothing"
+  expect_equal(as.character(tr), c(a = "transcript of a", b = "transcript of b"))
+  expect_identical(attr(tr, "provenance"), before)
+})
+
+
+test_that("a transcript and its provenance must be the same length", {
+  prov <- attr(fake_transcript(c("a", "b")), "provenance")
+  expect_error(new_qlm_transcript(c("only one"), prov), "1 element but its provenance 2 rows")
+})
+
+
+test_that("the chat route returns every unit failed when no upload succeeds", {
+  seen <- gemini_runner()
+  testthat::local_mocked_bindings(upload_input_file = function(chat, path) stop("HTTP 503 Service Unavailable.", call. = FALSE))
+  paths <- c(audio_file(as.raw(1:8)), audio_file(as.raw(9:16)))
+  expect_warning(out <- qlm_transcribe(paths, model = "google_gemini/gemini-2.5-flash"),
+                 "2 of 2 transcriptions failed")
+  expect_equal(attr(out, "provenance")$status, c("failed", "failed"))
+  expect_true(all(grepl("^upload failed: HTTP 503", attr(out, "provenance")$.error)))
+  # No conversation was started for nothing
+  expect_null(seen$prompts)
+})
+
+
+test_that("a unit the chat pool never submitted is recorded as such", {
+  seen <- gemini_runner(function(prompts) list(
+    fake_chat("first"), request_error("HTTP 500 Internal Server Error."), NULL
+  ))
+  paths <- c(audio_file(as.raw(1:8)), audio_file(as.raw(9:16)), audio_file(as.raw(17:24)))
+  expect_warning(out <- qlm_transcribe(paths, model = "google_gemini/gemini-2.5-flash", on_error = "return"),
+                 "1 file was not submitted")
+  expect_equal(attr(out, "provenance")$status, c("ok", "failed", "unsubmitted"))
+  expect_equal(seen$on_error, "return")
+})

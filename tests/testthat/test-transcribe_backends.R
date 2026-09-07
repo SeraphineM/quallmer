@@ -130,3 +130,9 @@ test_that("the route is decided by the provider prefix alone", {
   expect_equal(transcription_backend("google_gemini/gemini-3.5-transcribe"), "chat")
   expect_equal(transcription_backend("anthropic/claude-sonnet-5"), "chat")
 })
+
+
+test_that("a failure with no response behind it has no usage", {
+  expect_null(transcription_usage(NULL))
+  expect_null(transcription_usage(httr2::response(status_code = 500, body = charToRaw("not json"))))
+})
