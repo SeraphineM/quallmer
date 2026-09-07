@@ -553,6 +553,101 @@ test_that("qlm_code passes provider-specific arguments to ellmer::chat", {
 })
 
 
+# The chat is built inside try_structured_call(), so tools are observed there:
+# a stub with a chat that records what is registered on it.
+tools_stub <- function(registered, results = data.frame(score = c(0.5, 0.8))) {
+  results$id <- NULL
+  tsc <- try_structured_call
+  mockery::stub(tsc, "ellmer::chat", function(...) {
+    structure(
+      list(register_tool = function(tool) {
+        registered$tools <- c(registered$tools, list(tool))
+        invisible(NULL)
+      }),
+      class = "Chat"
+    )
+  })
+  mockery::stub(tsc, "structured_chat_turns", turns_stub(results))
+  f <- qlm_code
+  mockery::stub(f, "code_handler_json", function(...) stop("Unexpected fallback in tools fixture"))
+  mockery::stub(f, "try_structured_call", tsc)
+  f
+}
+
+test_that("qlm_code registers a single tool passed via `tools`", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  registered <- new.env()
+  f <- tools_stub(registered)
+  web_search <- ellmer::openai_tool_web_search()
+
+  # Passed bare, not wrapped in list() -- should be auto-wrapped.
+  f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini", tools = web_search)
+
+  expect_length(registered$tools, 1)
+  expect_identical(registered$tools[[1]], web_search)
+})
+
+test_that("qlm_code registers multiple tools, in order", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  registered <- new.env()
+  f <- tools_stub(registered)
+  web_search <- ellmer::openai_tool_web_search()
+  custom_tool <- ellmer::tool(function() "ok", name = "fake_tool", description = "A test tool.")
+
+  f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini",
+    tools = list(web_search, custom_tool))
+
+  expect_length(registered$tools, 2)
+  expect_identical(registered$tools[[1]], web_search)
+  expect_identical(registered$tools[[2]], custom_tool)
+})
+
+test_that("qlm_code does not register any tools when tools is NULL (default)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  registered <- new.env()
+  f <- tools_stub(registered)
+
+  f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini")
+
+  expect_null(registered$tools)
+})
+
+test_that("qlm_code rejects non-tool objects passed as `tools`", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+
+  expect_error(
+    qlm_code(c("text1"), codebook, model = "openai/gpt-4o-mini", tools = "not a tool"),
+    "must be a list of.*tool objects"
+  )
+  expect_error(
+    qlm_code(c("text1"), codebook, model = "openai/gpt-4o-mini",
+             tools = list(ellmer::openai_tool_web_search(), "not a tool")),
+    "must be a list of.*tool objects"
+  )
+})
+
+test_that("qlm_code records tools in chat_args metadata for reproducibility", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  web_search <- ellmer::openai_tool_web_search()
+
+  result <- f(c("text1", "text2"), codebook, model = "openai/gpt-4o-mini", tools = web_search)
+
+  meta_attr <- attr(result, "meta")
+  expect_length(meta_attr$object$chat_args$tools, 1)
+  expect_identical(meta_attr$object$chat_args$tools[[1]], web_search)
+})
+
+
 test_that("qlm_code runs the structured adapter in parallel when batch=FALSE", {
   skip_if_not_installed("ellmer")
 
@@ -2058,6 +2153,164 @@ test_that("qlm_code rejects malformed prices before any request (#135)", {
   )
 })
 
+test_that("qlm_code refuses tools with batch = TRUE before any call", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  expect_error(
+    qlm_code("a", codebook, model = "openai/gpt-4o-mini", batch = TRUE,
+             tools = ellmer::openai_tool_web_search()),
+    "cannot be used with `batch = TRUE`"
+  )
+})
+
+test_that("a real Chat accepts what qlm_code registers, under the names print() shows", {
+  # The stubbed chats above record calls to register_tool() whether or not a
+  # real Chat has that method; this pins the method and the tool names
+  ch <- ellmer::chat_openai(
+    model = "gpt-4o-mini",
+    credentials = function() list(Authorization = "Bearer fake")
+  )
+  tools <- check_tools(list(
+    ellmer::openai_tool_web_search(),
+    ellmer::tool(function() "ok", name = "lookup", description = "Looks things up.")
+  ))
+  for (tl in tools) ch$register_tool(tl)
+  expect_named(ch$get_tools(), c("web_search", "lookup"))
+  expect_equal(format_tools(tools), "web_search (hosted), lookup (custom)")
+})
+
+test_that("print discloses tools, and a hosted tool is noted on the cost (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  priced <- data.frame(id = 1:2, score = c(0.5, 0.8), input_tokens = 10L, output_tokens = 5L,
+                       cached_input_tokens = 0L, cost = 0.01)
+  web_search <- ellmer::openai_tool_web_search()
+  lookup <- ellmer::tool(function() "ok", name = "lookup", description = "d")
+
+  f <- tools_stub(new.env(), results = priced)
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = list(web_search, lookup), include_tokens = TRUE, include_cost = TRUE)
+  out <- capture.output(print(coded))
+  expect_true(any(grepl("^# Tools:    web_search \\(hosted\\), lookup \\(custom\\)$", out)))
+  note <- attr(coded, "meta")$user$cost_note
+  expect_match(note, "^from ellmer's price table; tokens only, hosted tool calls are billed separately")
+  expect_true(any(grepl("^# Cost:     from ellmer's price table; tokens only", out)))
+
+  # A custom tool runs in R and costs nothing at the provider: no note
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = lookup, include_tokens = TRUE, include_cost = TRUE)
+  expect_null(attr(coded, "meta")$user$cost_note)
+
+  # No cost column asked for: nothing to annotate
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", tools = web_search)
+  expect_null(attr(coded, "meta")$user$cost_note)
+})
+
+test_that("the trail keeps a run's tools by description, and none of a custom tool's code (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  secret <- "t00l3cret"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "Looks things up.")
+  })
+  f <- tools_stub(new.env())
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = list(ellmer::openai_tool_web_search(), lookup))
+  # The object itself keeps the tools, for a backfill or replication to reuse
+  expect_true(is_ellmer_tool(attr(coded, "meta")$object$chat_args$tools[[2]]))
+
+  stem <- tempfile()
+  trail <- suppressMessages(qlm_trail(coded, path = stem))
+  recorded <- attr(trail$runs[[1]]$coded, "meta")$object$chat_args$tools
+  expect_true(is_tool_record(recorded))
+  expect_equal(vapply(recorded, `[[`, "", "name"), c("web_search", "lookup"))
+
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("^\\*\\*Tools:\\*\\* web_search \\(hosted\\), lookup \\(custom\\)$", report)))
+  rds_file <- paste0(stem, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  expect_length(grepRaw(secret, bytes, fixed = TRUE), 0)
+})
+
+test_that("qlm_code requires batch to be a single logical, so tools cannot slip past it", {
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  web_search <- ellmer::openai_tool_web_search()
+  for (bad in list(1, NA, c(TRUE, FALSE), "TRUE", 0)) {
+    expect_error(qlm_code("a", codebook, model = "openai/gpt-4o-mini", batch = bad),
+                 "must be `TRUE` or `FALSE`")
+    expect_error(qlm_code("a", codebook, model = "openai/gpt-4o-mini", batch = bad, tools = web_search),
+                 "must be `TRUE` or `FALSE`")
+  }
+})
+
+test_that("a trail says tool definitions were kept, and does not call them credentials (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini",
+             tools = ellmer::openai_tool_web_search())
+  msgs <- capture_messages(qlm_trail(coded))
+  expect_true(any(grepl("Tool definitions recorded for \"run", msgs)))
+  expect_false(any(grepl("Credential values", msgs)))
+})
+
+test_that("a comparison's recorded call is redacted at depth, and named for what it was (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  a <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", name = "a")
+  b <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", name = "b")
+  comparison <- qlm_compare(a, b, by = "score", level = "interval")
+  m <- attr(comparison, "meta")
+  m$object$call <- quote(qlm_compare(
+    qlm_code(x, cb, tools = ellmer::tool(function() "NESTED_SECRET", name = "t", description = "d")),
+    b
+  ))
+  attr(comparison, "meta") <- m
+
+  stem <- tempfile()
+  msgs <- capture_messages(qlm_trail(a, b, comparison, path = stem))
+  expect_true(any(grepl("Tool definitions recorded", msgs)))
+  expect_false(any(grepl("Credential values", msgs)))
+  rds_file <- paste0(stem, ".rds")
+  bytes <- memDecompress(readBin(rds_file, "raw", file.size(rds_file)), "gzip")
+  expect_length(grepRaw("NESTED_SECRET", bytes, fixed = TRUE), 0)
+  expect_false(any(grepl("NESTED_SECRET", readLines(paste0(stem, ".qmd")), fixed = TRUE)))
+})
+
+test_that("the trail report says what each tool could do (#122)", {
+  skip_if_not_installed("mockery")
+  type_obj <- ellmer::type_object(score = ellmer::type_number("Score"))
+  codebook <- qlm_codebook("Test", "Test prompt", type_obj)
+  f <- tools_stub(new.env())
+  search <- ellmer::openai_tool_web_search(allowed_domains = "wikipedia.org")
+  echo <- ellmer::tool(function(x, n) x, name = "echo", description = "Echoes the text.",
+                       arguments = list(x = ellmer::type_string("The text"),
+                                        n = ellmer::type_integer("Count", required = FALSE)))
+  coded <- f(c("a", "b"), codebook, model = "openai/gpt-4o-mini", tools = list(search, echo))
+
+  stem <- tempfile()
+  suppressMessages(qlm_trail(coded, path = stem))
+  report <- readLines(paste0(stem, ".qmd"))
+  expect_true(any(grepl("^\\*\\*Tools:\\*\\* web_search \\(hosted\\), echo \\(custom\\)$", report)))
+  expect_true(any(grepl('"allowed_domains":"wikipedia.org"', report, fixed = TRUE)))
+  tool_line <- report[grepl("^- echo \\(custom\\):", report)]
+  expect_length(tool_line, 1)
+  expect_match(tool_line, '"description":"The text"')
+  expect_match(tool_line, '"description":"Count"')
+  expect_match(tool_line, '"required":\\["x"\\]')
+  # print() stays compact
+  out <- capture.output(print(coded))
+  expect_true(any(grepl("^# Tools:    web_search \\(hosted\\), echo \\(custom\\)$", out)))
+  expect_false(any(grepl("allowed_domains", out)))
+})
+
 
 test_that("print.qlm_coded reaches tibble's print method", {
   # tibble was in Imports but not in the NAMESPACE, so from an installed
@@ -2068,4 +2321,33 @@ test_that("print.qlm_coded reaches tibble's print method", {
 
   examples <- readRDS(system.file("extdata", "example_objects.rds", package = "quallmer"))
   expect_output(print(examples$example_coded_incomplete), "# A tibble: 8", fixed = TRUE)
+})
+
+test_that("tools survive per-unit JSON fallback with structured usage retained", {
+  seen <- list()
+  local_mocked_bindings(
+    structured_chat_turns = function(chat, prompts, type, batch, execution_args) {
+      seen$structured <<- names(chat$get_tools())
+      list(json_turn(list(score = "invalid")),
+           json_turn(list(score = 1), finish_reason = "max_tokens"))
+    },
+    json_chat_turns = function(chat, prompts, pc_args) {
+      seen$json <<- names(chat$get_tools())
+      seen$prompts <<- prompts
+      turn_records(list(text_turn('{"score": 2}')))
+    }
+  )
+  cb <- qlm_codebook("Test", "Score", ellmer::type_object(score = ellmer::type_number()))
+  expect_warning(
+    result <- qlm_code(c(invalid = "retry me", cutoff = "keep me"), cb,
+                       model = "openai/gpt-4o-mini", tools = ellmer::openai_tool_web_search(),
+                       credentials = function() "offline", include_tokens = TRUE),
+    "falling back"
+  )
+  expect_identical(seen$structured, "web_search")
+  expect_identical(seen$json, "web_search")
+  expect_length(seen$prompts, 1)
+  expect_equal(result$score, c(2, NA))
+  expect_match(conditionMessage(result$.error[[2]]), "max_tokens")
+  expect_equal(result$input_tokens, c(20, 10))
 })

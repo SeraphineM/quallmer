@@ -84,7 +84,7 @@ test_that("redact_chat_args() leaves unnamed input alone", {
 
 # ---- redact_call() -----------------------------------------------------------
 
-test_that("redact_call() replaces credential literals and nothing else", {
+test_that("redact_call() replaces credential literals and keeps safe context", {
   call <- quote(qlm_code(
     x, cb, model = "m",
     api_key = "sk-abc",
@@ -106,7 +106,8 @@ test_that("redact_call() keeps an argument that names its source rather than hol
     api_key = Sys.getenv("OPENAI_API_KEY"),
     base_url = my_url,
     api_headers = my_headers,
-    credentials = my_creds
+    credentials = my_creds,
+    endpoint = base::identity
   ))
   expect_identical(redact_call(call), call)
 })
@@ -148,14 +149,15 @@ test_that("redact_call() is a no-op on calls without named arguments and on non-
   expect_identical(redact_call("a string"), "a string")
 })
 
-test_that("redact_header_expr() only touches credential-named string literals", {
+test_that("redact_header_expr() replaces whole credential-named entries", {
   expr <- quote(list(Authorization = paste("Bearer", key), `X-Api-Key` = "k", accept = "json"))
   out <- redact_header_expr(expr)
   expect_identical(
     out,
-    quote(list(Authorization = paste("Bearer", key), `X-Api-Key` = "<redacted>", accept = "json"))
+    quote(list(Authorization = "<redacted>", `X-Api-Key` = "<redacted>", accept = "json"))
   )
-  expect_identical(redact_header_expr(quote(c("a", "b"))), quote(c("a", "b")))
+  expect_identical(redact_header_expr(quote(c("a", "b"))), REDACTED)
+  expect_identical(redact_header_expr(quote(setNames("secret", "Authorization"))), REDACTED)
   expect_identical(redact_header_expr(quote(my_headers)), quote(my_headers))
 })
 
@@ -253,4 +255,109 @@ test_that("drop_redacted_args() removes what a trail redacted and nothing else",
 test_that("redacted_args_note() reads correctly for one and for several", {
   expect_match(redacted_args_note("api_key"), "^`api_key` carries a value redacted .* it is not sent\\. Supply it in `\\.\\.\\.` if the endpoint needs it\\.$")
   expect_match(redacted_args_note(c("api_key", "base_url")), "^`api_key`, `base_url` carry values .* they are not sent\\. Supply them .* needs them\\.$")
+})
+
+test_that("the trail keeps tools by description, and a replay does not send descriptions (#122)", {
+  web_search <- ellmer::openai_tool_web_search()
+  secret <- "t00l3cret"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "d")
+  })
+  meta <- list(object = list(
+    chat_args = list(name = "openai/gpt-4o-mini", tools = list(web_search, lookup)),
+    backfill = list(list(overrides = list(tools = list(lookup)), attempted = "a", recovered = "a"))
+  ))
+  out <- redact_meta(meta)
+  expect_true(is_tool_record(out$object$chat_args$tools))
+  expect_equal(vapply(out$object$chat_args$tools, `[[`, "", "name"), c("web_search", "lookup"))
+  expect_true(is_tool_record(out$object$backfill[[1]]$overrides$tools))
+  # The unredacted metadata serialises the closure's environment, with the
+  # secret in it; the redacted metadata carries nothing of the kind
+  expect_true(length(grepRaw(secret, serialize(meta, NULL), fixed = TRUE)) > 0)
+  expect_length(grepRaw(secret, serialize(out, NULL), fixed = TRUE), 0)
+
+  dropped <- drop_redacted_args(out$object$chat_args)
+  expect_equal(dropped$dropped, "tools")
+  expect_null(dropped$args$tools)
+  kept <- drop_redacted_args(list(tools = list(web_search)))
+  expect_length(kept$dropped, 0)
+  expect_identical(kept$args$tools, list(web_search))
+})
+
+test_that("a bare tool in a backfill's overrides is recorded, not serialised (#122)", {
+  secret <- "b4r3t00l"
+  lookup <- local({
+    captured <- secret
+    ellmer::tool(function() captured, name = "lookup", description = "d")
+  })
+  web_search <- ellmer::openai_tool_web_search()
+  # A backfill keeps `...` as given: one tool, unwrapped
+  meta <- list(object = list(
+    chat_args = list(name = "openai/gpt-4o-mini"),
+    backfill = list(
+      list(overrides = list(tools = lookup), attempted = "a", recovered = "a"),
+      list(overrides = list(tools = web_search), attempted = "b", recovered = "b")
+    )
+  ))
+  out <- redact_meta(meta)
+  expect_true(is_tool_record(out$object$backfill[[1]]$overrides$tools))
+  expect_equal(out$object$backfill[[1]]$overrides$tools[[1]]$name, "lookup")
+  expect_equal(out$object$backfill[[2]]$overrides$tools[[1]]$type, "hosted")
+  expect_length(grepRaw(secret, serialize(out, NULL), fixed = TRUE), 0)
+  # And a bare tool on the run itself, should one ever be recorded that way
+  bare <- list(object = list(chat_args = list(name = "m", tools = lookup)))
+  expect_true(is_tool_record(redact_meta(bare)$object$chat_args$tools))
+})
+
+test_that("redact_call() replaces an inline tools expression and keeps a name (#122)", {
+  inline <- quote(qlm_code(x, cb, tools = ellmer::tool(function() "SECRET", name = "t", description = "d")))
+  expect_identical(redact_call(inline), quote(qlm_code(x, cb, tools = "<redacted>")))
+  listed <- quote(qlm_code(x, cb, tools = list(ellmer::openai_tool_web_search())))
+  expect_identical(redact_call(listed), quote(qlm_code(x, cb, tools = "<redacted>")))
+  named <- quote(qlm_code(x, cb, tools = my_tools))
+  expect_identical(redact_call(named), named)
+  expect_false(any(grepl("SECRET", deparse(redact_call(inline)), fixed = TRUE)))
+})
+
+test_that("redact_call() reaches into nested calls (#122)", {
+  nested <- quote(qlm_compare(
+    qlm_code(x, cb, tools = ellmer::tool(function() "NESTED_SECRET", name = "t", description = "d")),
+    qlm_code(x, cb, api_key = "sk-inner", base_url = "https://u:p@h/v1"),
+    other
+  ))
+  out <- redact_call(nested)
+  expect_identical(out, quote(qlm_compare(
+    qlm_code(x, cb, tools = "<redacted>"),
+    qlm_code(x, cb, api_key = "<redacted>", base_url = "https://h/v1"),
+    other
+  )))
+  expect_false(any(grepl("NESTED_SECRET|sk-inner|u:p@", deparse(out))))
+  # Positional inner calls, with no names on the outer call at all
+  bare <- quote(f(qlm_code(x, cb, api_key = "sk-x")))
+  expect_identical(redact_call(bare), quote(f(qlm_code(x, cb, api_key = "<redacted>"))))
+})
+
+test_that("computed credential expressions cannot survive in a trail (#123)", {
+  secrets <- c("COMPUTED_SECRET", "CALLBACK_SECRET", "URL_SECRET", "HEADER_SECRET")
+  meta <- list(object = list(call = quote(qlm_code(
+    x, cb,
+    api_key = paste0("sk-", "COMPUTED_SECRET"),
+    credentials = local(function() "CALLBACK_SECRET"),
+    base_url = paste0("https://u:", "URL_SECRET", "@host/v1"),
+    api_headers = setNames(paste("Bearer", "HEADER_SECRET"), "Authorization")
+  ))))
+
+  out <- redact_meta(meta)
+  expect_identical(out$object$call, quote(qlm_code(
+    x, cb,
+    api_key = "<redacted>",
+    credentials = "<redacted>",
+    base_url = "<redacted>",
+    api_headers = "<redacted>"
+  )))
+  raw <- serialize(out, NULL)
+  expect_true(all(vapply(secrets, function(secret) {
+    length(grepRaw(secret, raw, fixed = TRUE)) == 0L
+  }, logical(1))))
 })

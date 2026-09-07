@@ -32,8 +32,11 @@
 #'   portable chat settings (`params` and `echo`) are carried over; supply
 #'   credentials, endpoint settings and other endpoint-specific arguments
 #'   explicitly. An informational message names inherited arguments that were
-#'   omitted and not explicitly replaced. Registered `tools` are never carried
-#'   over.
+#'   omitted and not explicitly replaced. Registered `tools` are carried like
+#'   the rest: kept on the same endpoint, since a hosted tool belongs to its
+#'   provider, and dropped with the message when it changes; pass `tools` to
+#'   replace them. An object read back from a trail records its tools by
+#'   description and configuration only, and those are not sent either.
 #' @param codebook Optional replacement codebook. If `NULL` (default), uses
 #'   the codebook from `x`.
 #' @param model Optional replacement model (e.g., `"openai/gpt-4o"`). If `NULL`
@@ -188,10 +191,13 @@ restore_run_args <- function(x, overrides = list(), model = NULL, batch = FALSE)
   # Everything the original passed to ellmer::chat() -- params, api_args,
   # base_url, credentials -- must be restored for the same provider, or a
   # replication runs with different model settings than the run it claims to
-  # replicate. Two exclusions: `name` is the model and is passed separately,
-  # and registered `tools` are not safe to recreate automatically.
+  # replicate. One exclusion: `name` is the model and is passed separately.
+  # Registered `tools` travel with the rest: a provider's hosted tool belongs
+  # to that provider, so the endpoint rule below drops them when it changes,
+  # and an object read back from a trail carries their descriptions rather
+  # than the objects, which drop_redacted_args() sets aside.
   original_chat_args <- meta_attr$object$chat_args %||% list()
-  original_chat_args[c("name", "tools")] <- NULL
+  original_chat_args[["name"]] <- NULL
   # An object read back from a trail carries "<redacted>" where a credential
   # was; that is not a value to send. An override in `...` supersedes it
   # silently, as it would any recorded value.
