@@ -415,10 +415,6 @@ check_transcription_sources <- function(x, is_url, backend, call = rlang::caller
   invisible(x)
 }
 
-format_bytes <- function(n) {
-  paste0(format(round(n / 1024^2), big.mark = ","), " MB")
-}
-
 #' `NULL`, or a single non-missing string
 #' @keywords internal
 #' @noRd

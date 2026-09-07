@@ -1,23 +1,33 @@
 # Helpers ---------------------------------------------------------------------
 
 # qlm_code() with the network stubbed out. The chat is built for real by
-# ellmer::chat(), offline, from a dummy key in the environment, so the
-# capability check reads a real provider object. Uploads are answered by
-# `upload`; the structured call by `results`, or by an error in `errors`.
-# Every step is logged in `calls$log`, in order.
+# ellmer::chat(), offline, from a dummy key in the environment, so the run
+# sees a real provider object. Uploads are answered by `upload`, downloads
+# by `download`; the structured call by `results`, or by an error in
+# `errors`. Every step is logged in `calls$log`, in order.
 audio_runner <- function(results = function(prompts) data.frame(language = rep("en", length(prompts))),
-                         errors = NULL, upload = fake_upload, calls = new.env(),
-                         env = parent.frame()) {
+                         errors = NULL, upload = fake_upload, download = fake_download(),
+                         calls = new.env(), env = parent.frame()) {
   withr::local_envvar(
-    c(GEMINI_API_KEY = "test", OPENAI_API_KEY = "test", ANTHROPIC_API_KEY = "test"),
+    c(GEMINI_API_KEY = "test", OPENAI_API_KEY = "test", ANTHROPIC_API_KEY = "test",
+      DEEPSEEK_API_KEY = "test"),
     .local_envir = env
   )
   calls$log <- character()
+  calls$downloads <- character()
   testthat::local_mocked_bindings(
     upload_input_file = function(chat, path) {
       calls$log <- c(calls$log, paste0("upload:", basename(path)))
       upload(chat, path)
     },
+    download_input_url = function(url, dest) {
+      calls$log <- c(calls$log, paste0("download:", url))
+      calls$downloads <- c(calls$downloads, dest)
+      download(url, dest)
+    },
+    # The fixtures are not real video, so the durations notice takes the
+    # no-av branch whether or not av is installed; the notice has its own test
+    has_av = function() FALSE,
     .env = env
   )
   tsc <- try_structured_call
@@ -48,9 +58,11 @@ json_calls_stub <- function(calls) {
 # Input types and file checks ---------------------------------------------------
 
 test_that("input types are declared in one place", {
-  expect_equal(input_types(), c("text", "image", "audio"))
-  expect_equal(file_input_types(), c("image", "audio"))
+  expect_equal(input_types(), c("text", "image", "audio", "video"))
+  expect_equal(file_input_types(), c("image", "audio", "video"))
+  expect_equal(uploaded_input_types(), c("audio", "video"))
   expect_equal(audio_codebook()$input_type, "audio")
+  expect_equal(video_codebook()$input_type, "video")
 })
 
 
@@ -89,154 +101,6 @@ test_that("qlm_code checks the files before anything else is built", {
     "does not exist"
   )
   expect_length(calls$log, 0L)
-})
-
-
-# The capability gate ------------------------------------------------------------
-
-test_that("the family pattern accepts recognised Gemini chat models only", {
-  families <- input_capabilities()$audio$families
-  accepted <- c(
-    "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro",
-    "gemini-3-flash-preview", "gemini-3.7-flash", "gemini-2.5-flash-preview-05-20",
-    "gemini-2.0-flash-001", "gemini-2.5-pro-latest"
-  )
-  refused <- c(
-    "gemini-2.5-flash-preview-tts", "gemini-2.5-flash-image", "gemini-3.5-transcribe",
-    "gemini-2.5-flash-live", "gemini-embedding-001", "gemini-4-ultra",
-    "gemini-2.5-flash-preview-native-audio-dialog", "imagen-4", "gpt-4o"
-  )
-  expect_true(all(grepl(families, accepted)))
-  expect_false(any(grepl(families, refused)))
-})
-
-
-test_that("text and image inputs are not gated", {
-  chat <- structure(list(), class = "Chat")
-  expect_null(check_input_capability("text", chat, "openai/gpt-4o-mini"))
-  expect_null(check_input_capability("image", chat, "openai/gpt-4o-mini"))
-})
-
-
-test_that("a recognised Gemini model passes, and the default model is resolved from the chat", {
-  withr::local_envvar(c(GEMINI_API_KEY = "test"))
-  chat <- ellmer::chat("google_gemini/gemini-2.5-flash")
-  out <- check_input_capability("audio", chat, "google_gemini/gemini-2.5-flash")
-  expect_null(out$registered)
-
-  # No model given: the check reads the one ellmer filled in
-  default <- suppressMessages(ellmer::chat("google_gemini"))
-  expect_match(default$get_model(), "^gemini-")
-  expect_no_error(check_input_capability("audio", default, "google_gemini"))
-})
-
-
-test_that("a Gemini model outside the recognised families is refused with the registration call", {
-  withr::local_envvar(c(GEMINI_API_KEY = "test"))
-  tts <- ellmer::chat("google_gemini/gemini-2.5-flash-preview-tts")
-  expect_error(
-    check_input_capability("audio", tts, "google_gemini/gemini-2.5-flash-preview-tts"),
-    "not recognised as accepting audio input"
-  )
-  unknown <- ellmer::chat("google_gemini/gemini-4-ultra")
-  expect_error(
-    check_input_capability("audio", unknown, "google_gemini/gemini-4-ultra"),
-    'qlm_register_model\\("google_gemini/gemini-4-ultra", input_type = "audio"\\)'
-  )
-})
-
-
-test_that("a provider without audio upload is refused before the model is looked at", {
-  withr::local_envvar(c(OPENAI_API_KEY = "test", ANTHROPIC_API_KEY = "test"))
-  openai <- ellmer::chat("openai/gpt-4o-mini")
-  expect_error(
-    check_input_capability("audio", openai, "openai/gpt-4o-mini"),
-    "reached through OpenAI, which does not"
-  )
-  anthropic <- ellmer::chat("anthropic/claude-sonnet-4-5")
-  expect_error(
-    check_input_capability("audio", anthropic, "anthropic/claude-sonnet-4-5"),
-    "transcribe the recordings first"
-  )
-})
-
-
-test_that("Vertex shares Gemini's provider class but has no file upload, and is refused", {
-  # The gate reads the provider's name, which is what separates the two
-  vertex <- list(
-    get_provider = function() structure(list(), class = "ellmer::ProviderGoogleGemini", name = "Google/Vertex"),
-    get_model = function() "gemini-2.5-flash"
-  )
-  expect_error(
-    check_input_capability("audio", vertex, "google_vertex/gemini-2.5-flash"),
-    "reached through Google/Vertex, which does not"
-  )
-})
-
-
-test_that("a chat whose provider cannot be read is refused rather than trusted", {
-  chat <- structure(list(), class = "Chat")
-  expect_error(
-    check_input_capability("audio", chat, "google_gemini/gemini-2.5-flash"),
-    "needs a provider that accepts audio"
-  )
-})
-
-
-# Registration -------------------------------------------------------------------
-
-test_that("qlm_register_model validates its arguments", {
-  withr::defer(reset_registered_input_models())
-  expect_error(qlm_register_model("google_gemini/x", input_type = "text"), "must be one of")
-  expect_error(qlm_register_model("google_gemini", input_type = "audio"), "provider/model")
-  expect_error(qlm_register_model(c("a/b", "c/d")), "single string")
-  expect_error(qlm_register_model("qwen/qwen3-max"), "Can't reach provider")
-})
-
-
-test_that("a registration accepts one exact pair for the session, and the run records it", {
-  withr::defer(reset_registered_input_models())
-  withr::local_envvar(c(GEMINI_API_KEY = "test"))
-
-  chat <- ellmer::chat("google_gemini/gemini-4-ultra")
-  expect_error(check_input_capability("audio", chat, "google_gemini/gemini-4-ultra"))
-
-  expect_message(
-    out <- qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"),
-    "Accepting"
-  )
-  expect_equal(out, "google_gemini/gemini-4-ultra")
-  expect_true(is_registered_input_model("audio", "google_gemini", "gemini-4-ultra"))
-  # Exact: a sibling is not accepted
-  expect_false(is_registered_input_model("audio", "google_gemini", "gemini-4-ultra-preview"))
-
-  accepted <- check_input_capability("audio", chat, "google_gemini/gemini-4-ultra")
-  expect_equal(accepted$registered, "google_gemini/gemini-4-ultra")
-
-  # Through qlm_code(), the acceptance is recorded on the run
-  wav <- audio_file()
-  f <- audio_runner()
-  coded <- f(c(a = wav), audio_codebook(), model = "google_gemini/gemini-4-ultra")
-  expect_equal(qlm_meta(coded, type = "user")$input_model_registered, "google_gemini/gemini-4-ultra")
-
-  # A run whose model the table accepts records nothing
-  plain <- f(c(a = wav), audio_codebook(), model = "google_gemini/gemini-2.5-flash")
-  expect_null(qlm_meta(plain, type = "user")$input_model_registered)
-
-  reset_registered_input_models()
-  expect_false(is_registered_input_model("audio", "google_gemini", "gemini-4-ultra"))
-})
-
-
-test_that("a registration bypasses only the model check", {
-  withr::defer(reset_registered_input_models())
-  withr::local_envvar(c(OPENAI_API_KEY = "test"))
-  suppressMessages(qlm_register_model("openai/gpt-audio", input_type = "audio"))
-  chat <- ellmer::chat("openai/gpt-audio")
-  expect_error(
-    check_input_capability("audio", chat, "openai/gpt-audio"),
-    "reached through OpenAI, which does not"
-  )
 })
 
 
@@ -334,7 +198,7 @@ test_that("the audio cost note joins the existing note and is said once", {
 })
 
 
-test_that("batch is refused for audio before any upload", {
+test_that("batch is refused for audio and video before any upload", {
   calls <- new.env()
   wav <- audio_file()
   f <- audio_runner(calls = calls)
@@ -342,19 +206,73 @@ test_that("batch is refused for audio before any upload", {
     f(c(a = wav), audio_codebook(), model = "google_gemini/gemini-2.5-flash", batch = TRUE),
     "batch = TRUE.*not supported for audio"
   )
+  expect_error(
+    f(c(a = video_file()), video_codebook(), model = "google_gemini/gemini-2.5-flash",
+      batch = TRUE),
+    "batch = TRUE.*not supported for video"
+  )
   expect_length(calls$log, 0L)
 })
 
 
-test_that("a provider that cannot take audio is refused before any upload", {
+# No gate: a provider is tried, and its refusal reported with what is known -------
+
+test_that("a provider without file management fails at the upload, with the hint", {
+  # The real ellmer upload, so that its `not_implemented` refusal is what
+  # the run sees; DeepSeek has no file management through ellmer
   calls <- new.env()
   wav <- audio_file()
-  f <- audio_runner(calls = calls)
-  expect_error(
-    f(c(a = wav), audio_codebook(), model = "openai/gpt-4o-mini"),
-    "reached through OpenAI"
+  f <- audio_runner(upload = function(chat, path) chat$file_upload(path), calls = calls)
+  err <- tryCatch(
+    f(c(a = wav), audio_codebook(), model = "deepseek/deepseek-chat"),
+    error = function(e) conditionMessage(e)
   )
-  expect_length(calls$log, 0L)
+  expect_match(err, "Uploading 1 of 1 audio file failed")
+  expect_match(err, "doesn't support file management")
+  expect_match(err, "only Google Gemini .* is known to accept audio input")
+  expect_false("inference" %in% calls$log)
+})
+
+
+test_that("a provider that uploads and then refuses is reported with the hint", {
+  calls <- new.env()
+  clip <- video_file()
+  f <- audio_runner(errors = rep("HTTP 400 Bad Request. Unsupported file type.", 3), calls = calls)
+  mockery::stub(f, "code_handler_json", json_calls_stub(calls))
+  err <- tryCatch(
+    f(c(a = clip), video_codebook(), model = "openai/gpt-4o-mini"),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, "Unsupported file type")
+  expect_match(err, "only Google Gemini .* is known to accept video input")
+  expect_match(err, "Video input.*section")
+  expect_null(calls$json)
+  # The upload and the one refused request were made
+  expect_equal(calls$log, c(paste0("upload:", basename(clip)), "inference"))
+
+  # The same under structured = "structured"
+  err2 <- tryCatch(
+    f(c(a = clip), video_codebook(), model = "openai/gpt-4o-mini", structured = "structured"),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err2, "only Google Gemini")
+
+  # A text codebook refused the same way gets no such hint
+  text <- qlm_codebook("T", "P", ellmer::type_object(language = ellmer::type_string("l")))
+  err3 <- tryCatch(
+    f(c(a = "hello"), text, model = "openai/gpt-4o-mini", structured = "structured"),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err3, "Unsupported file type")
+  expect_no_match(err3, "only Google Gemini")
+})
+
+
+test_that("the hint names the input type, and is nothing for text and images", {
+  expect_null(known_input_providers_hint("text"))
+  expect_null(known_input_providers_hint("image"))
+  expect_match(known_input_providers_hint("audio"), "accept audio input")
+  expect_match(known_input_providers_hint("video"), "Video input.* section")
 })
 
 
@@ -468,28 +386,6 @@ test_that("a run coded without hashes proceeds with a notice, and text runs are 
 })
 
 
-test_that("a run that relied on a registration needs it again in this session", {
-  withr::defer(reset_registered_input_models())
-  paths <- c(a = audio_file())
-  run <- audio_run(paths, registered = "google_gemini/gemini-4-ultra",
-                   model = "google_gemini/gemini-4-ultra")
-
-  expect_error(
-    check_registered_input_model(run, "google_gemini/gemini-4-ultra"),
-    'qlm_register_model\\("google_gemini/gemini-4-ultra", input_type = "audio"\\)'
-  )
-  # Another model is checked afresh by qlm_code(), not here
-  expect_silent(check_registered_input_model(run, "google_gemini/gemini-2.5-flash"))
-
-  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
-  expect_silent(check_registered_input_model(run, "google_gemini/gemini-4-ultra"))
-
-  # A run that never relied on one is left alone
-  plain <- audio_run(paths)
-  expect_silent(check_registered_input_model(plain, "google_gemini/gemini-2.5-flash"))
-})
-
-
 test_that("check_file_inputs lets an image be a URL, and only an image (#177)", {
   png <- withr::local_tempfile(fileext = ".png")
   writeLines("", png)
@@ -556,7 +452,7 @@ test_that("verify_input_files skips URLs and checks the files beside them (#177)
 test_that("as_input_content dispatches on the input type", {
   expect_equal(as_input_content(c("a", "b"), list(input_type = "text"), NULL),
                list("a", "b"))
-  expect_error(as_input_content("a", list(input_type = "video"), NULL),
+  expect_error(as_input_content("a", list(input_type = "hologram"), NULL),
                "Unknown input type")
 })
 
@@ -636,24 +532,402 @@ test_that("merge_input_files fills a pass's rows and builds a table for a legacy
 })
 
 
-test_that("a registration a backfill pass relied on is required again, like the run's", {
-  withr::defer(reset_registered_input_models())
-  paths <- c(a = audio_file(), b = audio_file())
-  run <- audio_run(paths, failed = "b")
-  meta_attr <- attr(run, "meta")
-  meta_attr$object$backfill <- list(backfill_pass(
-    model = "google_gemini/gemini-4-ultra", overrides = list(), attempted = "b",
-    recovered = "b", registered = "google_gemini/gemini-4-ultra"
-  ))
-  attr(run, "meta") <- meta_attr
 
-  expect_equal(recorded_registrations(run), "google_gemini/gemini-4-ultra")
+
+# Video input (#179) ---------------------------------------------------------------
+
+test_that("check_file_inputs takes video paths, YouTube links and video URLs", {
+  clip <- video_file()
+  expect_invisible(check_file_inputs(clip, "video"))
+  expect_invisible(check_file_inputs(video_file(ext = "MP4"), "video"))
+  expect_invisible(check_file_inputs(video_file(ext = "webm"), "video"))
+  urls <- c("https://www.youtube.com/watch?v=jNQXAC9IVRw", "https://youtu.be/jNQXAC9IVRw",
+            "https://www.youtube.com/shorts/abc", "https://m.youtube.com/live/abc",
+            "https://archive.org/download/PolAd_x/PolAd_x.mp4?download=1")
+  expect_invisible(check_file_inputs(c(clip, urls), "video"))
+
+  expect_error(check_file_inputs(123, "video"), "video file paths or URLs")
   expect_error(
-    check_registered_input_model(run, "google_gemini/gemini-4-ultra"),
-    "qlm_register_model"
+    check_file_inputs(c(clip, "/nowhere/missing.mp4"), "video"),
+    "1 video file does not exist.*missing.mp4.*or a URL"
   )
-  # The run's own model needed no registration
-  expect_silent(check_registered_input_model(run, "google_gemini/gemini-2.5-flash"))
-  suppressMessages(qlm_register_model("google_gemini/gemini-4-ultra", input_type = "audio"))
-  expect_silent(check_registered_input_model(run, "google_gemini/gemini-4-ultra"))
+  err <- tryCatch(check_file_inputs("/nowhere/missing.mp4", "video"), error = function(e) conditionMessage(e))
+  expect_no_match(err, "data:")
+  # A URL without its scheme is a path
+  expect_error(check_file_inputs("youtube.com/watch?v=x", "video"), "does not exist")
+})
+
+
+test_that("video files and URLs must carry an extension the upload can label", {
+  clip <- video_file()
+  mkv <- video_file(ext = "mkv")
+  txt <- video_file(ext = "txt")
+  expect_error(check_file_inputs(c(clip, mkv), "video"), "extension the upload cannot label.*\\.mkv")
+  expect_error(check_file_inputs(txt, "video"), "Video files must be one of")
+  # A video URL is downloaded and uploaded like a file, so it is checked like one
+  expect_error(
+    check_file_inputs("https://example.org/clip", "video"),
+    "file or URL has an extension the upload cannot label.*must end in one of these extensions"
+  )
+  expect_error(check_file_inputs("https://example.org/clip.mkv", "video"), "cannot label")
+  # A YouTube link has no file to label
+  expect_invisible(check_file_inputs("https://youtu.be/jNQXAC9IVRw", "video"))
+  # No inline video
+  expect_error(check_file_inputs("data:video/mp4;base64,AAAA", "video"), "data:.*URI.*video input does not accept")
+})
+
+
+test_that("URL predicates tell paths, URLs and YouTube links apart", {
+  x <- c("/a/b.mp4", "https://example.org/b.mp4", "http://example.org/b.mp4",
+         "data:image/png;base64,AA", "https://www.youtube.com/watch?v=x", "youtu.be/x", NA)
+  expect_equal(is_input_url(x), c(FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE))
+  expect_equal(is_input_url(x, data = TRUE), c(FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE))
+  expect_equal(is_image_url(x), is_input_url(x, data = TRUE))
+  expect_equal(is_youtube_url(x), c(FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE))
+  expect_equal(url_extension("https://a.org/x/clip.MP4?dl=1#t"), "mp4")
+  expect_equal(url_extension("https://a.org/clip"), "")
+})
+
+
+test_that("a video run sends a path by upload, a YouTube link by reference and a URL by download then upload", {
+  calls <- new.env()
+  clip <- video_file(as.raw(1:10))
+  x <- c(clip = clip, zoo = "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+         ad = "https://user:secret@archive.org/download/ad/ad.mp4")
+  f <- audio_runner(calls = calls, download = fake_download(as.raw(11:30)))
+
+  expect_message(
+    coded <- f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "Uploading 2 video files"
+  )
+  expect_equal(coded$.id, c("clip", "zoo", "ad"))
+  expect_equal(coded$language, rep("en", 3))
+
+  # The download precedes the uploads, which precede the one inference call
+  expect_length(calls$downloads, 1L)
+  expect_equal(calls$log, c(
+    "download:https://user:secret@archive.org/download/ad/ad.mp4",
+    paste0("upload:", basename(clip)),
+    paste0("upload:", basename(calls$downloads)),
+    "inference"
+  ))
+  # The downloaded file has the URL's extension, and is gone when the run returns
+  expect_match(calls$downloads, "\\.mp4$")
+  expect_false(file.exists(calls$downloads))
+
+  # One reference per element, in order; the YouTube one carries the URL itself
+  expect_length(calls$prompts, 3L)
+  expect_true(all(vapply(calls$prompts, inherits, logical(1), "ellmer::ContentUploaded")))
+  expect_equal(calls$prompts[[2]]@uri, "https://www.youtube.com/watch?v=jNQXAC9IVRw")
+  expect_equal(calls$prompts[[2]]@provider, "Google/Gemini")
+  expect_match(calls$prompts[[1]]@uri, "^files/")
+  expect_match(calls$prompts[[3]]@uri, "^files/")
+
+  # Provenance: hash for the path and the downloaded bytes, the redacted URL, nothing for YouTube
+  files <- qlm_meta(coded, "input_files")
+  expect_equal(files$.id, c("clip", "zoo", "ad"))
+  expect_equal(files$file, c(basename(clip), "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+                             "https://archive.org/download/ad/ad.mp4"))
+  expect_equal(files$size, c(10, NA, 20))
+  expect_equal(files$sha256[1], hash_file(clip))
+  expect_true(is.na(files$sha256[2]))
+  expect_equal(files$sha256[3], digest::digest(as.raw(11:30), algo = "sha256", serialize = FALSE))
+  expect_equal(qlm_meta(coded, type = "object")$input_type, "video")
+  # No audio cost note on a video run
+  expect_null(qlm_meta(coded, type = "user")$cost_note)
+})
+
+
+test_that("a failed download stops the run before any upload, naming the URL", {
+  calls <- new.env()
+  x <- c(a = video_file(), b = "https://example.org/gone.mp4", c = "https://example.org/ok.mp4")
+  flaky <- function(url, dest) {
+    if (grepl("gone", url)) stop("cannot open URL 'https://example.org/gone.mp4': HTTP status was '404 Not Found'", call. = FALSE)
+    fake_download()(url, dest)
+  }
+  f <- audio_runner(download = flaky, calls = calls)
+  err <- tryCatch(
+    suppressMessages(f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, "Downloading 1 of 2 video URLs failed, so nothing was uploaded or sent")
+  expect_match(err, "gone.mp4: cannot open URL")
+  expect_match(err, "404")
+  expect_false(any(grepl("^upload:", calls$log)))
+  # The download that did succeed is cleaned up
+  expect_false(any(file.exists(calls$downloads)))
+
+  # A warning from download.file() is a failure too, and the URL it quotes
+  # is redacted along with the label
+  secret <- c(a = "https://user:hunter2@example.org/ad.mp4?api_key=SECRET123")
+  warns <- function(url, dest) {
+    warning(paste0("cannot open URL '", url, "': HTTP status was '403 Forbidden'"))
+    invisible(dest)
+  }
+  g <- audio_runner(download = warns, calls = calls)
+  err <- tryCatch(
+    suppressMessages(g(secret, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, "403 Forbidden")
+  expect_match(err, "https://example.org/ad.mp4\\?api_key=<redacted>")
+  expect_no_match(err, "SECRET123|hunter2")
+})
+
+
+test_that("redact_urls_in_text redacts every URL a message quotes", {
+  text <- "cannot open URL 'https://k:pw@a.org/x.mp4?token=abc&v=1' after http://b.org/y.mp4; done"
+  expect_equal(
+    redact_urls_in_text(text),
+    "cannot open URL 'https://a.org/x.mp4?token=<redacted>&v=1' after http://b.org/y.mp4; done"
+  )
+  expect_equal(redact_urls_in_text("no url here"), "no url here")
+})
+
+
+test_that("a download that fails the size check is removed", {
+  calls <- new.env()
+  x <- c(a = "https://example.org/big.mp4")
+  f <- audio_runner(calls = calls)
+  testthat::local_mocked_bindings(max_upload_bytes = function() 10)
+  expect_error(
+    suppressMessages(f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    "exceeds the"
+  )
+  expect_length(calls$downloads, 1L)
+  expect_false(file.exists(calls$downloads))
+})
+
+
+test_that("verify_input_files checks files and leaves every URL to the run that downloads it", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+
+  seen <- character()
+  testthat::local_mocked_bindings(download_input_url = function(url, dest) {
+    seen <<- c(seen, url)
+    writeBin(as.raw(11:30), dest)
+    invisible(dest)
+  })
+  expect_silent(verify_input_files(run))
+  expect_silent(verify_input_files(run, ids = c("ad", "zoo")))
+  expect_length(seen, 0L)
+
+  writeBin(as.raw(99:110), clip)
+  expect_error(verify_input_files(run), 'differs from the one this run coded: "clip"')
+  expect_silent(verify_input_files(run, ids = "ad"))
+})
+
+
+test_that("the download a run uploads is checked against the hashes it was handed", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip = clip, ad = "https://example.org/ad.mp4", zoo = "https://youtu.be/x")
+  run <- media_run(x, input_type = "video", local = c(clip, downloaded, NA))
+
+  expected <- expected_url_hashes(run)
+  expect_equal(expected$url, "https://example.org/ad.mp4")
+  expect_equal(expected$.id, "ad")
+  expect_equal(expected$sha256, hash_file(downloaded))
+  expect_equal(nrow(expected_url_hashes(run, ids = c("clip", "zoo"))), 0L)
+  expect_equal(nrow(expected_url_hashes(media_run(c(a = audio_file())))), 0L)
+
+  calls <- new.env()
+  # The same bytes: the run proceeds, with one download
+  f <- audio_runner(calls = calls, download = fake_download(as.raw(11:30)))
+  coded <- with_expected_hashes(expected, suppressMessages(
+    f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")
+  ))
+  expect_equal(sum(grepl("^download:", calls$log)), 1L)
+  expect_equal(qlm_meta(coded, "input_files")$sha256[2], hash_file(downloaded))
+
+  # Different bytes: refused after the download and before any upload
+  g <- audio_runner(calls = calls, download = fake_download(as.raw(99:110)))
+  err <- tryCatch(
+    with_expected_hashes(expected, suppressMessages(
+      g(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")
+    )),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, 'The video file of 1 unit differs from the one this run coded: "ad"')
+  expect_match(err, "URL now serves different bytes")
+  expect_false(any(grepl("^upload:", calls$log)))
+  expect_false(any(file.exists(calls$downloads)))
+  # The expectation does not outlive the call
+  expect_null(input_state$expected)
+
+  # With no expectation in force, any bytes are accepted
+  coded2 <- suppressMessages(g(x, video_codebook(), model = "google_gemini/gemini-2.5-flash"))
+  expect_s3_class(coded2, "qlm_coded")
+})
+
+
+
+test_that("a failed upload after a download removes the temporary file, and names the URL", {
+  calls <- new.env()
+  clip <- video_file()
+  x <- c(a = clip, b = "https://example.org/ad.mp4")
+  flaky <- function(chat, path) {
+    if (basename(path) != basename(clip)) stop("HTTP 503 Service Unavailable.", call. = FALSE)
+    fake_upload(chat, path)
+  }
+  f <- audio_runner(upload = flaky, calls = calls)
+  err <- tryCatch(
+    suppressMessages(f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, "Uploading 1 of 2 video files failed")
+  # Named by the URL the user gave, not the temporary file
+  expect_match(err, "https://example.org/ad.mp4: HTTP 503")
+  expect_false(any(file.exists(calls$downloads)))
+  expect_false("inference" %in% calls$log)
+})
+
+
+test_that("what is about to be uploaded is said once, with durations when av can read them", {
+  calls <- new.env()
+  x <- c(a = video_file(as.raw(rep(1:100, 10))), b = "https://youtu.be/x")
+  f <- audio_runner(calls = calls)
+
+  testthat::local_mocked_bindings(has_av = function() FALSE)
+  expect_message(
+    f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "Uploading 1 video file, 1.0 KB in all.*install the av package"
+  )
+
+  testthat::local_mocked_bindings(has_av = function() TRUE, video_duration = function(path) 12.4)
+  expect_message(
+    f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "12 seconds in all.*roughly 3,720 input tokens\\.$"
+  )
+
+  # A duration av cannot read is left out of the estimate and said
+  y <- c(a = video_file(as.raw(1:50)), b = video_file(as.raw(51:100)))
+  testthat::local_mocked_bindings(
+    has_av = function() TRUE,
+    video_duration = function(path) if (basename(path) == basename(y[["a"]])) 10 else NA_real_
+  )
+  expect_message(
+    f(y, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "Uploading 2 video files, 10 seconds in all.*3,000 input tokens, not counting 1 file whose duration could not be read"
+  )
+  testthat::local_mocked_bindings(has_av = function() TRUE, video_duration = function(path) NA_real_)
+  expect_message(
+    f(y, video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "Uploading 2 video files, 0.1 KB in all.*the durations could not be read"
+  )
+
+  # A YouTube-only run has nothing to upload, and says nothing
+  expect_no_message(
+    f(x["b"], video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    message = "Uploading"
+  )
+  expect_equal(format_seconds(3600 * 1.5), "1.5 hours")
+  expect_equal(format_seconds(90), "1.5 minutes")
+  expect_equal(format_bytes(3 * 1024^3), "3.0 GB")
+  expect_equal(format_bytes(1.5 * 1024^2), "1.5 MB")
+})
+
+
+test_that("a video file over the upload's limit is refused before anything is sent", {
+  calls <- new.env()
+  small <- video_file(as.raw(1:10))
+  big <- video_file(as.raw(1:100))
+  f <- audio_runner(calls = calls)
+  testthat::local_mocked_bindings(max_upload_bytes = function() 50)
+  expect_error(
+    suppressMessages(f(c(a = small, b = big), video_codebook(), model = "google_gemini/gemini-2.5-flash")),
+    "1 video file exceeds the .* the provider's upload accepts"
+  )
+  expect_length(calls$log, 0L)
+})
+
+
+test_that("file provenance records downloaded bytes against the URL, and nothing for a YouTube link", {
+  clip <- video_file(as.raw(1:10))
+  downloaded <- video_file(as.raw(11:30))
+  x <- c(clip, "https://key:abc@example.org/ad.mp4?token=xyz", "https://youtu.be/x")
+  table <- file_provenance(x, c("a", "b", "c"), local = c(clip, downloaded, NA))
+  expect_equal(table$file, c(basename(clip), "https://example.org/ad.mp4?token=<redacted>", "https://youtu.be/x"))
+  expect_equal(table$size, c(10, 20, NA))
+  expect_equal(table$sha256, c(hash_file(clip), hash_file(downloaded), NA))
+  # Without `local`, a URL has no bytes here (the image case)
+  expect_true(all(is.na(file_provenance(x[2:3], c("b", "c"))$sha256)))
+})
+
+
+test_that("merge_input_files names a legacy run's URLs by their URL", {
+  clip <- video_file(as.raw(1:10))
+  x <- c(a = clip, b = "https://example.org/ad.mp4")
+  legacy <- media_run(x, input_type = "video", with_hashes = FALSE)
+  pass <- media_run(x["a"], input_type = "video")
+  table <- qlm_meta(merge_input_files(legacy, pass), "input_files")
+  expect_equal(table$file, c(basename(clip), "https://example.org/ad.mp4"))
+  expect_equal(table$sha256, c(hash_file(clip), NA))
+})
+
+
+test_that("resolve_input_files leaves audio and image inputs where they are", {
+  wav <- audio_file()
+  expect_equal(resolve_input_files(c(a = wav), "audio"), list(local = wav, temp = character()))
+  png <- withr::local_tempfile(fileext = ".png")
+  writeLines("", png)
+  out <- resolve_input_files(c(png, "https://example.org/a.jpg"), "image")
+  expect_equal(out$local, c(png, NA))
+  expect_length(out$temp, 0L)
+})
+
+
+test_that("two units sharing a URL are each held to their own recorded bytes", {
+  first <- video_file(as.raw(1:10))
+  second <- video_file(as.raw(11:30))
+  url <- "https://example.org/ad.mp4"
+  x <- c(a = url, b = url)
+  run <- media_run(x, input_type = "video", local = c(first, second))
+  expected <- expected_url_hashes(run)
+  expect_equal(expected$.id, c("a", "b"))
+  expect_equal(expected$sha256, c(hash_file(first), hash_file(second)))
+
+  # Both downloads now return the first unit's bytes: the second has changed
+  calls <- new.env()
+  f <- audio_runner(calls = calls, download = fake_download(as.raw(1:10)))
+  err <- tryCatch(
+    with_expected_hashes(expected, suppressMessages(
+      f(x, video_codebook(), model = "google_gemini/gemini-2.5-flash")
+    )),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, 'differs from the one this run coded: "b"')
+  expect_no_match(err, '"a"')
+  expect_false(any(grepl("^upload:", calls$log)))
+
+  # Unnamed input is matched by position, as .id is
+  unnamed <- media_run(unname(x), input_type = "video", local = c(first, second))
+  expect_equal(expected_url_hashes(unnamed)$.id, c("1", "2"))
+  g <- audio_runner(calls = calls, download = fake_download(as.raw(11:30)))
+  err2 <- tryCatch(
+    with_expected_hashes(expected_url_hashes(unnamed), suppressMessages(
+      g(unname(x), video_codebook(), model = "google_gemini/gemini-2.5-flash")
+    )),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err2, 'differs from the one this run coded: "1"')
+})
+
+
+test_that("video_duration gives NA for a file av cannot read, and never an error", {
+  skip_if_not_installed("av")
+  garbage <- video_file(as.raw(1:64))
+  expect_identical(video_duration(garbage), NA_real_)
+  # And so a run over such a file is not stopped by the notice
+  calls <- new.env()
+  f <- audio_runner(calls = calls)
+  testthat::local_mocked_bindings(has_av = function() TRUE)
+  expect_message(
+    coded <- f(c(a = garbage), video_codebook(), model = "google_gemini/gemini-2.5-flash"),
+    "durations could not be read"
+  )
+  expect_s3_class(coded, "qlm_coded")
 })

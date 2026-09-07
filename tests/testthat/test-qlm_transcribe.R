@@ -34,7 +34,7 @@ test_that("qlm_transcribe refuses files the backend could not take, before any r
   expect_true("webm" %in% transcription_extensions("endpoint"))
 
   testthat::local_mocked_bindings(transcription_size_limit = function(backend) 10)
-  expect_error(qlm_transcribe(wav), "over the 0 MB limit")
+  expect_error(qlm_transcribe(wav), "over the 0.0 KB limit")
   expect_length(seen$reqs, 0)
 })
 
@@ -338,7 +338,7 @@ test_that("a failed download follows on_error", {
 
   # An oversized download is a failure of that unit, too
   testthat::local_mocked_bindings(transcription_size_limit = function(backend) 10)
-  expect_warning(out <- qlm_transcribe(urls[1]), "over the 0 MB limit")
+  expect_warning(out <- qlm_transcribe(urls[1]), "over the 0.0 KB limit")
   expect_equal(attr(out, "provenance")$status, "failed")
 })
 

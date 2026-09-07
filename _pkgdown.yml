@@ -80,9 +80,8 @@ reference:
       - qlm_transcribe
 
   - title: Advanced configuration
-    desc: Optional session configuration for additional models and provider endpoints
+    desc: Optional session configuration for provider endpoints
     contents:
-      - qlm_register_model
       - qlm_register_provider
 
   - title: Human-coded data
