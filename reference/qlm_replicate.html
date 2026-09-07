@@ -35,6 +35,7 @@ only while the endpoint itself is unchanged."><meta property="og:image" content=
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials"><li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/tools.html">Coding with web-search tools</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul></li>
 <li class="nav-item dropdown">
@@ -108,8 +109,11 @@ different services with different credentials. When either changes, only
 portable chat settings (<code>params</code> and <code>echo</code>) are carried over; supply
 credentials, endpoint settings and other endpoint-specific arguments
 explicitly. An informational message names inherited arguments that were
-omitted and not explicitly replaced. Registered <code>tools</code> are never carried
-over.</p></dd>
+omitted and not explicitly replaced. Registered <code>tools</code> are carried like
+the rest: kept on the same endpoint, since a hosted tool belongs to its
+provider, and dropped with the message when it changes; pass <code>tools</code> to
+replace them. An object read back from a trail records its tools by
+description and configuration only, and those are not sent either.</p></dd>
 
 
 <dt id="arg-codebook">codebook<a class="anchor" aria-label="anchor" href="#arg-codebook"></a></dt>

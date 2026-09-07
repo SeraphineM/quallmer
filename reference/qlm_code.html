@@ -29,6 +29,7 @@ metadata for reproducibility."><meta property="og:image" content="https://quallm
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-tutorials" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Tutorials</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-tutorials"><li><a class="dropdown-item" href="../articles/pkgdown/tutorials/trail.html">The quallmer audit trail</a></li>
+    <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/tools.html">Coding with web-search tools</a></li>
     <li><a class="dropdown-item" href="../articles/pkgdown/tutorials/validate.html">Using the quallmer.app</a></li>
   </ul></li>
 <li class="nav-item dropdown">
@@ -71,6 +72,7 @@ metadata for reproducibility.</p>
 <span>  <span class="va">model</span>,</span>
 <span>  <span class="va">...</span>,</span>
 <span>  batch <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  tools <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  structured <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"structured"</span>, <span class="st">"json"</span><span class="op">)</span>,</span>
 <span>  json_retries <span class="op">=</span> <span class="fl">2L</span>,</span>
 <span>  on_error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"continue"</span>, <span class="st">"return"</span>, <span class="st">"stop"</span><span class="op">)</span>,</span>
@@ -126,6 +128,27 @@ Arguments recognized by <code><a href="https://ellmer.tidyverse.org/reference/pa
 instead of <code><a href="https://ellmer.tidyverse.org/reference/parallel_chat.html" class="external-link">ellmer::parallel_chat_structured()</a></code>. Batch processing is more
 cost-effective for large jobs but may have longer turnaround times.
 Default is <code>FALSE</code>. See <code><a href="https://ellmer.tidyverse.org/reference/batch_chat.html" class="external-link">ellmer::batch_chat_structured()</a></code> for details.</p></dd>
+
+
+<dt id="arg-tools">tools<a class="anchor" aria-label="anchor" href="#arg-tools"></a></dt>
+<dd><p>Optional list of <span class="pkg">ellmer</span> tool objects to register on the
+chat before coding: a provider's hosted web-search tool
+(<code><a href="https://ellmer.tidyverse.org/reference/openai_tool_web_search.html" class="external-link">ellmer::openai_tool_web_search()</a></code>, <code><a href="https://ellmer.tidyverse.org/reference/claude_tool_web_search.html" class="external-link">ellmer::claude_tool_web_search()</a></code>,
+<code><a href="https://ellmer.tidyverse.org/reference/google_tool_web_search.html" class="external-link">ellmer::google_tool_web_search()</a></code>) or a custom tool from <code><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">ellmer::tool()</a></code>.
+A single tool may be passed directly. Default is <code>NULL</code>, no tools.</p>
+<p>Tools change the instrument: with a hosted web search the model draws
+on live sources rather than its training data, so they are recorded on
+the object, disclosed by <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="qlm_trail.html">qlm_trail()</a></code>, carried to backfill
+passes and to a replication on the same endpoint (a provider's hosted
+tool belongs to that provider), and kept in the trail as name, type,
+description and configuration rather than as objects.</p>
+<p>Three limits. A hosted tool takes effect on both coding paths, but a
+custom tool only on the JSON path: the structured transport sends a
+custom tool's definition and runs no tool-calling loop, so the model
+may request it and get no
+result. Tools cannot be used with <code>batch = TRUE</code>, which does not send
+them. And a hosted tool's calls are billed by the provider outside
+token pricing, so the run's cost is tokens only, as its cost note says.</p></dd>
 
 
 <dt id="arg-structured">structured<a class="anchor" aria-label="anchor" href="#arg-structured"></a></dt>
